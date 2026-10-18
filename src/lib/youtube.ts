@@ -1,6 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
-import { parseYouTubeXml, type Segment } from "./subtitles";
+import { normalize, parseYouTubeXml, type Segment } from "./subtitles";
 import { getCached, setCached } from "./db";
 import { transcribeAudio, whisperEnabled, WHISPER_MAX_BYTES } from "./whisper";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
@@ -14,6 +14,7 @@ export const WHISPER = "whisper";
 export type Track = { languageCode: string; name: string; auto: boolean };
 
 export type Transcript = {
+  contributedBy?: number; // id người dùng app đã gửi phụ đề này lên (lấy trên điện thoại)
   videoId: string;
   title: string;
   track: Track; // track đang dùng (languageCode = "whisper" nếu do Whisper tạo)
@@ -386,5 +387,74 @@ export async function getYouTubeTranscript(
   if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
   const result = { videoId, title, track: WHISPER_TRACK, tracks, segments };
   setCached(`yt:${videoId}:${WHISPER}`, result, null);
+  return result;
+}
+
+/** Phụ đề đã lưu (không gọi YouTube) — app hỏi trước khi tự lấy trên điện thoại */
+export async function getSavedTranscript(videoId: string): Promise<Transcript | null> {
+  await connection();
+  return (
+    germanOnly(getCached<Transcript>(`ytp:${videoId}:default`)) ??
+    germanOnly(getCached<Transcript>(`yt:${videoId}:${WHISPER}`))
+  );
+}
+
+/**
+ * Lưu phụ đề app lấy được trên điện thoại (IP nhà mạng nên YouTube không chặn như VPS).
+ * Chỉ nhận phụ đề tiếng Đức, kiểm tra dữ liệu, thêm dấu câu nếu là phụ đề tự động chưa có dấu câu.
+ * Video đã có phụ đề lưu sẵn thì giữ bản cũ (admin xoá được ở trang "Phụ đề đã lưu").
+ */
+export async function saveUploadedTranscript(
+  videoId: string,
+  input: { title?: unknown; track?: unknown; tracks?: unknown; segments?: unknown },
+  userId: number,
+): Promise<Transcript | string> {
+  const existing = await getSavedTranscript(videoId);
+  if (existing) return existing;
+
+  const isTrack = (t: unknown): t is Track =>
+    !!t &&
+    typeof (t as Track).languageCode === "string" &&
+    typeof (t as Track).name === "string" &&
+    typeof (t as Track).auto === "boolean";
+  const track = input.track;
+  if (!isTrack(track) || !isGerman(track)) return "Chỉ nhận phụ đề tiếng Đức";
+  const tracks = (Array.isArray(input.tracks) ? input.tracks : []).filter(isTrack).filter(isGerman).slice(0, 10);
+  const title = typeof input.title === "string" ? input.title.trim().slice(0, 200) : "";
+  const raw = Array.isArray(input.segments) ? input.segments : [];
+  if (!title || !raw.length || raw.length > 20_000) return "Dữ liệu phụ đề không hợp lệ";
+
+  const segments: Segment[] = [];
+  for (const r of raw as Segment[]) {
+    const ok =
+      r &&
+      Number.isFinite(r.start) &&
+      Number.isFinite(r.end) &&
+      r.start >= 0 &&
+      r.end >= r.start &&
+      r.end < 24 * 3600 &&
+      typeof r.text === "string" &&
+      r.text.length <= 500;
+    if (!ok) return "Dữ liệu phụ đề không hợp lệ";
+    const words = Array.isArray(r.words)
+      ? r.words.filter((w): w is [number, string] => Number.isFinite(w?.[0]) && typeof w?.[1] === "string")
+      : undefined;
+    segments.push({ start: r.start, end: r.end, text: r.text.trim(), ...(words?.length ? { words } : {}) });
+  }
+
+  let clean = normalize(segments);
+  if (!clean.length) return "Phụ đề trống";
+  if (track.auto && punctuationEnabled() && lacksPunctuation(clean)) clean = await addPunctuation(clean);
+
+  const result: Transcript = {
+    videoId,
+    title,
+    track,
+    tracks: tracks.some((t) => t.languageCode === track.languageCode) ? tracks : [track, ...tracks],
+    segments: clean,
+    contributedBy: userId,
+  };
+  setCached(`ytp:${videoId}:default`, result, null);
+  setCached(`ytp:${videoId}:${track.languageCode}`, result, null);
   return result;
 }
