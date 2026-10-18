@@ -135,7 +135,19 @@ async function fetchPlayer(videoId: string): Promise<PlayerResponse> {
   const vision = await fetchVisionPlayer(videoId);
   if (vision) return vision;
   if (!player) throw new Error(`YouTube trả về lỗi ${res.status}`);
-  throw new Error(player.playabilityStatus?.reason || `Video không khả dụng (${status})`);
+  const reason = player.playabilityStatus?.reason ?? "";
+  if (/in deinem Land|in your country/i.test(reason)) throw new GeoBlockedError();
+  throw new Error(reason || `Video không khả dụng (${status})`);
+}
+
+/** Video bị chủ kênh giới hạn quốc gia (vd. ARD/WDR chỉ cho xem ở Đức) — yt-dlp cũng không tải được */
+class GeoBlockedError extends Error {
+  constructor() {
+    super(
+      "Video này chỉ cho xem ở một số quốc gia (thường là video của đài truyền hình Đức như ARD, WDR, ZDF), " +
+        "server không lấy được phụ đề. Hãy tải video về máy rồi dùng mục “File trên máy”.",
+    );
+  }
 }
 
 function pickAudio(formats: AudioFormat[]): AudioFormat | undefined {
@@ -230,6 +242,7 @@ async function orYtdlp<T>(primary: () => Promise<T>, fallback: () => Promise<T>)
   try {
     return await primary();
   } catch (e) {
+    if (e instanceof GeoBlockedError) throw e; // yt-dlp cũng bị chặn theo quốc gia → khỏi thử, giữ lý do rõ ràng
     try {
       return await fallback();
     } catch (err) {
