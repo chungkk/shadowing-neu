@@ -21,6 +21,7 @@ export type Transcript = {
 };
 
 const UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14)";
+const isGerman = (t: Track) => t.languageCode.startsWith("de");
 const WHISPER_TRACK: Track = { languageCode: WHISPER, name: "🤖 Whisper (AI)", auto: false };
 const YOUTUBE_CACHE_MS = 7 * 24 * 3600 * 1000;
 
@@ -284,8 +285,9 @@ async function fromYtdlp(videoId: string): Promise<Source> {
  * Lấy phụ đề cho video:
  * - `lang` = mã ngôn ngữ → track YouTube đó
  * - `lang` = "whisper"   → tạo bằng Whisper
- * - không truyền         → ưu tiên tiếng Đức thủ công > tiếng Đức tự động > track đầu tiên;
- *                          video không có phụ đề → tự dùng Whisper (nếu đã cấu hình)
+ * - không truyền         → ưu tiên phụ đề tiếng Đức có sẵn trên YouTube (thủ công > tự động);
+ *                          không có tiếng Đức / tải phụ đề lỗi → tự dùng Whisper (Groq) nếu được phép,
+ *                          không được phép thì dùng track YouTube đầu tiên
  * Kết quả được cache trong SQLite (Whisper: vĩnh viễn, YouTube: 7 ngày).
  * `whisper: false` (khách chưa đăng nhập) → không được chạy Whisper mới (tốn tiền API),
  * nhưng vẫn dùng được kết quả Whisper đã có trong cache.
@@ -303,7 +305,7 @@ export async function getYouTubeTranscript(
   // Whisper đã từng chạy cho video này → dùng lại, khỏi tốn tiền
   if (lang === WHISPER || !lang) {
     const w = getCached<Transcript>(`yt:${videoId}:${WHISPER}`);
-    if (w && (lang === WHISPER || w.tracks.length === 1)) return w;
+    if (w && (lang === WHISPER || !w.tracks.some((t) => isGerman(t)))) return w;
   }
 
   // IP server (VPS) bị YouTube chặn ("…kein Bot…") → dùng yt-dlp + PO token
@@ -314,35 +316,48 @@ export async function getYouTubeTranscript(
   const canWhisper = whisper && whisperEnabled();
   const tracks = [...ytTracks.map((t) => t.track), ...(canWhisper ? [WHISPER_TRACK] : [])];
 
-  let result: Transcript;
-  if (lang !== WHISPER && ytTracks.length) {
-    const de = ytTracks.filter((t) => t.track.languageCode.startsWith("de"));
-    const picked =
+  // Phụ đề YouTube có sẵn được ưu tiên (miễn phí, nhanh); Whisper chỉ là phương án sau
+  let picked: (typeof ytTracks)[number] | undefined;
+  if (lang !== WHISPER) {
+    const de = ytTracks.filter((t) => isGerman(t.track));
+    picked =
       (lang && ytTracks.find((t) => t.track.languageCode === lang)) ||
       de.find((t) => !t.track.auto) ||
       de[0] ||
-      ytTracks[0];
-    const segments = await picked.load();
-    if (!segments.length) throw new Error("Phụ đề rỗng hoặc không đọc được.");
-    result = { videoId, title, track: picked.track, tracks, segments };
-    setCached(cacheKey, result, YOUTUBE_CACHE_MS);
-  } else {
-    if (!whisper) {
-      throw new Error(
-        (lang === WHISPER ? "" : "Video này không có phụ đề. ") + "Đăng nhập để tạo phụ đề bằng Whisper (AI).",
-      );
-    }
-    if (!whisperEnabled()) {
-      throw new Error(
-        (lang === WHISPER ? "Whisper chưa được bật." : "Video này không có phụ đề.") +
-          " Cấu hình Whisper (TRANSCRIBE_API_KEY hoặc TRANSCRIBE_API_URL) trong .env.local để tự tạo phụ đề.",
-      );
-    }
-    const { blob, filename } = await audio();
-    const segments = await transcribeAudio(blob, filename);
-    if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
-    result = { videoId, title, track: WHISPER_TRACK, tracks, segments };
-    setCached(`yt:${videoId}:${WHISPER}`, result, null);
+      (canWhisper ? undefined : ytTracks[0]); // không có tiếng Đức → Whisper nếu được
   }
+  if (picked) {
+    let ytError: Error;
+    try {
+      const segments = await picked.load();
+      if (segments.length) {
+        const result = { videoId, title, track: picked.track, tracks, segments };
+        setCached(cacheKey, result, YOUTUBE_CACHE_MS);
+        return result;
+      }
+      ytError = new Error("Phụ đề rỗng hoặc không đọc được.");
+    } catch (e) {
+      ytError = e as Error;
+    }
+    if (!canWhisper) throw ytError; // phụ đề YouTube lỗi → thử Whisper nếu được phép
+  }
+
+  // Không có phụ đề tiếng Đức (hoặc tải lỗi) → tạo bằng Whisper (Groq)
+  if (!whisper) {
+    throw new Error(
+      (lang === WHISPER ? "" : "Video này không có phụ đề tiếng Đức. ") + "Đăng nhập để tạo phụ đề bằng Whisper (AI).",
+    );
+  }
+  if (!whisperEnabled()) {
+    throw new Error(
+      (lang === WHISPER ? "Whisper chưa được bật." : "Video này không có phụ đề tiếng Đức.") +
+        " Cấu hình Whisper (TRANSCRIBE_API_KEY hoặc TRANSCRIBE_API_URL) trong .env.local để tự tạo phụ đề.",
+    );
+  }
+  const { blob, filename } = await audio();
+  const segments = await transcribeAudio(blob, filename);
+  if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
+  const result = { videoId, title, track: WHISPER_TRACK, tracks, segments };
+  setCached(`yt:${videoId}:${WHISPER}`, result, null);
   return result;
 }
