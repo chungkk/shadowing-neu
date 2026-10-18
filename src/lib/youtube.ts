@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { parseYouTubeXml, type Segment } from "./subtitles";
 import { getCached, setCached } from "./db";
 import { transcribeAudio, whisperEnabled, WHISPER_MAX_BYTES } from "./whisper";
+import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
 import { YtdlpMissingError, ytdlpAudio, ytdlpCaptions, ytdlpVideo } from "./ytdlp";
 
 export { extractVideoId } from "./youtube-id";
@@ -299,7 +300,8 @@ export async function getYouTubeTranscript(
   { whisper = false }: { whisper?: boolean } = {},
 ): Promise<Transcript> {
   await connection(); // luôn chạy lúc request (đọc cache có hạn dùng Date.now())
-  const cacheKey = `yt:${videoId}:${lang || "default"}`;
+  // "ytp:" — bản có thêm dấu câu cho phụ đề tự động (đổi tiền tố để không dùng lại cache cũ chưa có dấu câu)
+  const cacheKey = `ytp:${videoId}:${lang || "default"}`;
   const cached = getCached<Transcript>(cacheKey);
   if (cached) return cached;
 
@@ -330,7 +332,11 @@ export async function getYouTubeTranscript(
   if (picked) {
     let ytError: Error;
     try {
-      const segments = await picked.load();
+      let segments = await picked.load();
+      // Phụ đề tự động không có dấu câu → nhờ mô hình ngôn ngữ thêm vào (để chia được thành câu)
+      if (picked.track.auto && punctuationEnabled() && lacksPunctuation(segments)) {
+        segments = await addPunctuation(segments);
+      }
       if (segments.length) {
         const result = { videoId, title, track: picked.track, tracks, segments };
         setCached(cacheKey, result, YOUTUBE_CACHE_MS);
