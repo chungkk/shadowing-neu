@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getCached, savedTranscriptKeys } from "@/lib/db";
-import { toSrt } from "@/lib/subtitles";
+import { mergeIntoSentences, toSrt } from "@/lib/subtitles";
 import type { Transcript } from "@/lib/youtube";
 import TranscriptForm from "../TranscriptForm";
 
@@ -48,7 +48,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
         videoId={videoId}
         storageKey={current.key}
         title={current.t.title}
-        srt={toSrt(current.t.segments)}
+        srt={toSrt(mergeIntoSentences(current.t.segments))}
       />
     </>
   );

@@ -418,7 +418,7 @@ export default function ShadowPlayer({
           >
             <Languages className="size-4" /> Bản dịch
           </button>
-          <button className="btn" onClick={() => downloadSrt(title, rawSegments)} title="Tải phụ đề .srt">
+          <button className="btn" onClick={() => downloadSrt(title, segments)} title="Tải phụ đề .srt">
             <Download className="size-4" /> .srt
           </button>
         </div>

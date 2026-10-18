@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLesson } from "@/lib/db";
-import { toSrt } from "@/lib/subtitles";
+import { mergeIntoSentences, toSrt } from "@/lib/subtitles";
 import LessonForm from "../LessonForm";
 
 async function Edit({ params }: PageProps<"/admin/[id]">) {
@@ -19,7 +19,7 @@ async function Edit({ params }: PageProps<"/admin/[id]">) {
         description: lesson.description,
         level: lesson.level,
         published: lesson.published,
-        srt: toSrt(lesson.segments),
+        srt: toSrt(mergeIntoSentences(lesson.segments)),
       }}
     />
   );

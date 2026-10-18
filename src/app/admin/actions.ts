@@ -5,7 +5,7 @@ import { refresh } from "next/cache";
 import { envAdminEmail, requireAdmin } from "@/lib/auth";
 import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
-import { parseSubtitleFile, toSrt } from "@/lib/subtitles";
+import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 
 export type FormState = { error?: string };
 
@@ -33,7 +33,7 @@ export async function fetchSubtitles(url: string, lang?: string): Promise<FetchR
       lang: d.track.languageCode,
       auto: d.track.auto,
       tracks: d.tracks,
-      srt: toSrt(d.segments),
+      srt: toSrt(mergeIntoSentences(d.segments)), // gộp sẵn thành câu để admin đọc / sửa theo câu
     };
   } catch (e) {
     return { error: (e as Error).message };
