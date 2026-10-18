@@ -24,7 +24,7 @@ const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "s
 
 function open() {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const db = new DatabaseSync(DB_PATH);
+  const db = new DatabaseSync(DB_PATH, { timeout: 5000 }); // chờ tối đa 5s nếu DB đang bị khoá
   db.exec(`
     CREATE TABLE IF NOT EXISTS lessons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,13 +42,22 @@ function open() {
       data TEXT NOT NULL,
       expires_at INTEGER -- ms, NULL = không hết hạn
     );
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user', -- 'user' | 'admin'
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   return db;
 }
 
-// Giữ 1 kết nối duy nhất (kể cả khi dev server hot-reload)
+// Giữ 1 kết nối duy nhất (kể cả khi dev server hot-reload).
+// Mở lúc dùng lần đầu, không mở lúc import (lúc build nhiều worker import cùng lúc → "database is locked").
 const g = globalThis as unknown as { __db?: DatabaseSync };
-const db = (g.__db ??= open());
+const conn = () => (g.__db ??= open());
 
 type Row = {
   id: number;
@@ -74,7 +83,7 @@ const toSummary = (r: Row): LessonSummary => ({
 });
 
 export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
-  const rows = db
+  const rows = conn()
     .prepare(
       `SELECT id, title, video_id, description, level, published, created_at,
               json_array_length(segments) AS segment_count
@@ -86,7 +95,7 @@ export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
 }
 
 export function getLesson(id: number): Lesson | null {
-  const r = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as Row | undefined;
+  const r = conn().prepare("SELECT * FROM lessons WHERE id = ?").get(id) as Row | undefined;
   if (!r) return null;
   const { segmentCount, ...rest } = toSummary(r);
   void segmentCount;
@@ -96,7 +105,7 @@ export function getLesson(id: number): Lesson | null {
 export type LessonInput = Omit<Lesson, "id" | "createdAt">;
 
 export function createLesson(l: LessonInput): number {
-  const res = db
+  const res = conn()
     .prepare(
       "INSERT INTO lessons (title, video_id, description, level, segments, published) VALUES (?, ?, ?, ?, ?, ?)",
     )
@@ -105,17 +114,17 @@ export function createLesson(l: LessonInput): number {
 }
 
 export function updateLesson(id: number, l: LessonInput) {
-  db.prepare(
+  conn().prepare(
     "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ? WHERE id = ?",
   ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, id);
 }
 
 export function deleteLesson(id: number) {
-  db.prepare("DELETE FROM lessons WHERE id = ?").run(id);
+  conn().prepare("DELETE FROM lessons WHERE id = ?").run(id);
 }
 
 export function getCached<T>(key: string): T | null {
-  const r = db.prepare("SELECT data, expires_at FROM transcript_cache WHERE key = ?").get(key) as
+  const r = conn().prepare("SELECT data, expires_at FROM transcript_cache WHERE key = ?").get(key) as
     | { data: string; expires_at: number | null }
     | undefined;
   if (!r || (r.expires_at !== null && r.expires_at < Date.now())) return null;
@@ -123,9 +132,62 @@ export function getCached<T>(key: string): T | null {
 }
 
 export function setCached(key: string, data: unknown, ttlMs: number | null) {
-  db.prepare("INSERT OR REPLACE INTO transcript_cache (key, data, expires_at) VALUES (?, ?, ?)").run(
+  conn().prepare("INSERT OR REPLACE INTO transcript_cache (key, data, expires_at) VALUES (?, ?, ?)").run(
     key,
     JSON.stringify(data),
     ttlMs === null ? null : Date.now() + ttlMs,
   );
+}
+
+export type Role = "user" | "admin";
+
+export type User = {
+  id: number;
+  email: string;
+  name: string;
+  role: Role;
+  createdAt: string;
+};
+
+type UserRow = { id: number; email: string; name: string; password_hash: string; role: Role; created_at: string };
+
+const toUser = (r: UserRow): User => ({ id: r.id, email: r.email, name: r.name, role: r.role, createdAt: r.created_at });
+
+export function getUserById(id: number): User | null {
+  const r = conn().prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined;
+  return r ? toUser(r) : null;
+}
+
+/** Trả về cả password_hash — chỉ dùng trong lib/auth để kiểm tra đăng nhập */
+export function getUserWithHash(email: string): (User & { passwordHash: string }) | null {
+  const r = conn().prepare("SELECT * FROM users WHERE email = ?").get(email) as UserRow | undefined;
+  return r ? { ...toUser(r), passwordHash: r.password_hash } : null;
+}
+
+export function createUser(u: { email: string; name: string; passwordHash: string; role: Role }): number {
+  const res = conn()
+    .prepare("INSERT INTO users (email, name, password_hash, role) VALUES (?, ?, ?, ?)")
+    .run(u.email, u.name, u.passwordHash, u.role);
+  return Number(res.lastInsertRowid);
+}
+
+/** Tạo hoặc cập nhật tài khoản admin lấy từ biến môi trường (ADMIN_EMAIL + ADMIN_PASSWORD) */
+export function upsertEnvAdmin(email: string, passwordHash: string): number {
+  conn().prepare(
+    `INSERT INTO users (email, name, password_hash, role) VALUES (?, 'Admin', ?, 'admin')
+     ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash, role = 'admin'`,
+  ).run(email, passwordHash);
+  return (conn().prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: number }).id;
+}
+
+export function listUsers(): User[] {
+  return (conn().prepare("SELECT * FROM users ORDER BY created_at DESC, id DESC").all() as UserRow[]).map(toUser);
+}
+
+export function setUserRole(id: number, role: Role) {
+  conn().prepare("UPDATE users SET role = ? WHERE id = ?").run(role, id);
+}
+
+export function deleteUser(id: number) {
+  conn().prepare("DELETE FROM users WHERE id = ?").run(id);
 }

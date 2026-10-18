@@ -10,13 +10,19 @@ App Next.js đơn giản để luyện shadowing tiếng Đức:
 
 ```bash
 npm install
-cp .env.example .env.local   # đặt ADMIN_PASSWORD và AUTH_SECRET
+cp .env.example .env.local   # đặt ADMIN_EMAIL, ADMIN_PASSWORD và AUTH_SECRET
 npm run dev                  # http://localhost:3000
 ```
 
 ## Admin
 
-Vào `/admin` (link "Quản trị" ở cuối trang chủ), đăng nhập bằng `ADMIN_PASSWORD`.
+Đăng nhập ở `/login` bằng `ADMIN_EMAIL` + `ADMIN_PASSWORD` → link "Quản trị" hiện trên thanh đầu trang.
+Quản lý tài khoản (cấp/bỏ quyền admin, xoá) ở `/admin/users`.
+
+**Phân quyền:**
+- **Khách**: học bài admin đăng, dán link YouTube (phụ đề YouTube), dùng file local kèm file phụ đề.
+- **Học viên** (tự đăng ký ở `/register`): như khách + tạo phụ đề bằng Whisper (tốn tiền API nên cần đăng nhập).
+- **Admin**: như học viên + tạo/sửa/xoá bài học, quản lý người dùng.
 
 1. **+ Bài mới** → dán link YouTube → **Lấy phụ đề** (tự điền tiêu đề + phụ đề dạng SRT).
 2. Sửa lại chính tả / dấu câu / thời gian ngay trong ô SRT nếu cần (sub tự động hay sai).
@@ -65,10 +71,10 @@ src/
   app/watch/[videoId]/         # luyện với video YouTube bất kỳ
   app/lesson/[id]/             # luyện bài do admin đăng
   app/local/                   # luyện với file trên máy
-  app/admin/                   # đăng nhập, danh sách, tạo/sửa bài (server actions)
+  app/admin/                   # danh sách, tạo/sửa bài, quản lý người dùng (server actions)
+  app/login, app/register      # đăng nhập / đăng ký (app/auth-actions.ts)
   lib/db.ts                    # SQLite (bảng lessons)
-  lib/auth.ts                  # đăng nhập admin bằng cookie ký HMAC
-  app/api/youtube/route.ts     # lấy phụ đề YouTube (Innertube API)
+  lib/auth.ts                  # mật khẩu (scrypt), phiên đăng nhập cookie ký HMAC, phân quyền
   app/api/transcribe/route.ts  # proxy tới Whisper API
   components/ShadowPlayer.tsx  # màn hình luyện shadowing
   components/YouTubePlayer.tsx # YouTube IFrame API

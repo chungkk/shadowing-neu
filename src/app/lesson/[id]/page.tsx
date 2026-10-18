@@ -11,14 +11,18 @@ async function LessonView({ params }: PageProps<"/lesson/[id]">) {
   if (!lesson || (!lesson.published && !(await isAdmin()))) notFound();
 
   return (
-    <ShadowPlayer title={lesson.title} media={{ kind: "youtube", videoId: lesson.videoId }} segments={lesson.segments}>
-      <div className="flex flex-col gap-1 text-sm">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded bg-accent/15 px-1.5 py-0.5 font-semibold text-accent">{lesson.level}</span>
-          {!lesson.published && <span className="text-muted">(Bản nháp)</span>}
+    <ShadowPlayer
+      title={lesson.title}
+      level={lesson.level}
+      media={{ kind: "youtube", videoId: lesson.videoId }}
+      segments={lesson.segments}
+    >
+      {(!lesson.published || lesson.description) && (
+        <div className="flex flex-col gap-1 rounded-xl bg-card-2/60 p-3 text-sm">
+          {!lesson.published && <span className="font-bold text-amber">Bản nháp — chỉ admin xem được</span>}
+          {lesson.description && <p className="whitespace-pre-line text-muted">{lesson.description}</p>}
         </div>
-        {lesson.description && <p className="whitespace-pre-line text-muted">{lesson.description}</p>}
-      </div>
+      )}
     </ShadowPlayer>
   );
 }

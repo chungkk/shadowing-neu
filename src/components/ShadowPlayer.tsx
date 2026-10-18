@@ -2,11 +2,31 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Download,
+  Eye,
+  EyeOff,
+  Keyboard,
+  Languages,
+  Mic,
+  Pause,
+  Play,
+  RotateCcw,
+  Settings2,
+  Square,
+  Volume2,
+  Zap,
+} from "lucide-react";
 import { formatTime, mergeIntoSentences, toSrt, type Segment } from "@/lib/subtitles";
 import type { PlayerHandle } from "@/lib/player";
 import { useRecorder } from "@/hooks/useRecorder";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
 import LocalPlayer from "./LocalPlayer";
+import LevelBadge from "./LevelBadge";
 
 export type Media =
   | { kind: "youtube"; videoId: string }
@@ -20,6 +40,7 @@ type Settings = {
   autoNext: boolean;
   autoRecord: boolean; // tự ghi âm trong lúc nghỉ
   hideText: boolean;
+  hideMedia: boolean; // thu gọn khung video (vẫn phát tiếng)
   merge: boolean; // gộp dòng thành câu
 };
 
@@ -31,21 +52,20 @@ const DEFAULTS: Settings = {
   autoNext: false,
   autoRecord: false,
   hideText: false,
+  hideMedia: false,
   merge: true,
 };
 
 const SETTINGS_KEY = "shadow-settings";
+const NO_SETTINGS: Partial<Settings> = {};
+const RATES = [0.5, 0.75, 0.85, 1, 1.25];
 
-function loadSettings(): Settings {
-  try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") };
-  } catch {
-    return DEFAULTS;
-  }
-}
+/** "Guten Tag!" → "****** ***!" (chế độ ẩn chữ) */
+const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "*");
 
 export default function ShadowPlayer({
   title,
+  level,
   media,
   segments: rawSegments,
   backHref = "/",
@@ -53,20 +73,25 @@ export default function ShadowPlayer({
   children,
 }: {
   title: string;
+  level?: string;
   media: Media;
   segments: Segment[];
   backHref?: string;
   onBack?: () => void; // nếu có thì dùng thay cho backHref
-  children?: ReactNode; // thông tin thêm hiển thị dưới tiêu đề
+  children?: ReactNode; // thông tin thêm hiển thị dưới video
 }) {
-  const [settings, setSettings] = useState<Settings>(loadSettings);
+  // Đọc cài đặt qua useSyncExternalStore: server và lần hydrate đầu dùng DEFAULTS, không lệch HTML
+  const [stored, setStored] = useLocalStorage(SETTINGS_KEY, NO_SETTINGS);
+  const settings = useMemo<Settings>(() => ({ ...DEFAULTS, ...stored }), [stored]);
   const segments = useMemo(
     () => (settings.merge ? mergeIntoSentences(rawSegments) : rawSegments),
     [rawSegments, settings.merge],
   );
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
+  const [panel, setPanel] = useState<"settings" | "keys" | null>(null);
   const recorder = useRecorder();
 
   const handleRef = useRef<PlayerHandle | null>(null);
@@ -81,15 +106,10 @@ export default function ShadowPlayer({
     live.current = { settings, segments, idx, recorder };
   });
 
-  const update = (patch: Partial<Settings>) => {
-    setSettings((s) => {
-      const next = { ...s, ...patch };
-      try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
+  const update = useCallback(
+    (patch: Partial<Settings>) => setStored({ ...live.current.settings, ...patch }),
+    [setStored],
+  );
 
   const clearGap = useCallback(() => {
     if (gapTimerRef.current) clearTimeout(gapTimerRef.current);
@@ -168,6 +188,7 @@ export default function ShadowPlayer({
       const h = handleRef.current;
       if (!h) return;
       const t = h.getTime();
+      setTime((prev) => (Math.floor(prev) === Math.floor(t) ? prev : t)); // chỉ render lại mỗi giây
       const { settings, segments, idx } = live.current;
       if (stopAtRef.current !== null) {
         if (t >= stopAtRef.current - 0.03) {
@@ -213,7 +234,7 @@ export default function ShadowPlayer({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing, pause, go]);
+  }, [playing, pause, go, update]);
 
   const onReady = useCallback((h: PlayerHandle) => {
     handleRef.current = h;
@@ -221,43 +242,210 @@ export default function ShadowPlayer({
 
   const current = segments[idx];
   const isRecording = recorder.recordingKey !== null;
+  const progress = segments.length ? Math.round(((idx + 1) / segments.length) * 100) : 0;
+  const prev = () => go(Math.max(0, idx - 1));
+  const next = () => go(Math.min(segments.length - 1, idx + 1));
+  const togglePlay = () => (playing ? pause() : go(idx));
+  const backLabel = (
+    <>
+      <ChevronLeft className="size-4" /> Quay lại
+    </>
+  );
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
-      <div className="flex items-center gap-3">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 p-4 md:p-6">
+      {/* Dòng tiêu đề */}
+      <div className="flex flex-wrap items-center gap-3">
         {onBack ? (
           <button onClick={onBack} className="btn shrink-0">
-            ← Quay lại
+            {backLabel}
           </button>
         ) : (
           <Link href={backHref} className="btn shrink-0">
-            ← Quay lại
+            {backLabel}
           </Link>
         )}
-        <h1 className="flex-1 truncate text-lg font-semibold">{title}</h1>
-        <button className="btn shrink-0" onClick={() => downloadSrt(title, rawSegments)} title="Tải phụ đề .srt">
-          ⬇ .srt
-        </button>
+        <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-link">{title}</h1>
+        {level && <LevelBadge level={level} />}
+        <div className="flex gap-2">
+          <button className="btn" onClick={() => update({ hideMedia: !settings.hideMedia })}>
+            {settings.hideMedia ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            {settings.hideMedia ? "Hiện video" : "Ẩn video"}
+          </button>
+          <button className="btn" onClick={() => update({ hideText: !settings.hideText })}>
+            {settings.hideText ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            {settings.hideText ? "Hiện chữ" : "Ẩn chữ"}
+          </button>
+          <button className="btn" onClick={() => downloadSrt(title, rawSegments)} title="Tải phụ đề .srt">
+            <Download className="size-4" /> .srt
+          </button>
+        </div>
       </div>
-      {children}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-        {/* Cột trái: player + câu hiện tại + điều khiển */}
-        <div className="flex flex-col gap-4">
-          {media.kind === "youtube" ? (
-            <YouTubePlayer videoId={media.videoId} onReady={onReady} />
-          ) : (
-            <LocalPlayer src={media.src} isVideo={media.isVideo} onReady={onReady} />
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+        {/* Cột 1: video + điều khiển */}
+        <div className="card flex flex-col gap-4 self-start">
+          <div className="flex items-center justify-between">
+            <span className="label">Video</span>
+            <span className="pill bg-card-2 px-3 py-1.5 text-base text-link">
+              <Clock className="size-4" /> {formatTime(time)}
+            </span>
+          </div>
+          <div className={settings.hideMedia ? "h-0 overflow-hidden" : "overflow-hidden rounded-2xl"}>
+            {media.kind === "youtube" ? (
+              <YouTubePlayer videoId={media.videoId} onReady={onReady} />
+            ) : (
+              <LocalPlayer src={media.src} isVideo={media.isVideo} onReady={onReady} />
+            )}
+          </div>
+          {settings.hideMedia && (
+            <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
+          )}
+          <span className="label text-link">Điều khiển</span>
+          <div className="grid grid-cols-2 gap-3">
+            <button className="btn btn-primary py-3 text-base" onClick={togglePlay}>
+              {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+              {playing ? "Dừng" : "Phát"}
+            </button>
+            <button className="btn py-3 text-base uppercase" onClick={() => go(idx)}>
+              <RotateCcw className="size-5" /> Phát lại
+            </button>
+          </div>
+          {children}
+        </div>
+
+        {/* Cột 2: luyện tập câu hiện tại */}
+        <div className="card flex flex-col gap-4 self-start">
+          <div className="flex justify-center">
+            <div className="flex rounded-xl bg-card-2 p-1 text-sm font-bold">
+              {(
+                [
+                  ["segment", "Từng câu"],
+                  ["free", "Liên tục"],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  onClick={() => update({ mode: m })}
+                  className={`cursor-pointer rounded-lg px-4 py-1.5 transition ${
+                    settings.mode === m ? "bg-accent text-white" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Thanh công cụ */}
+          <div className="flex items-center gap-1 rounded-2xl border border-border bg-card-2/60 px-2 py-1.5">
+            <button className="btn-icon" title="Câu trước (←)" onClick={prev}>
+              <ChevronLeft className="size-5" />
+            </button>
+            <button className="btn-icon" title="Phát lại câu" onClick={() => go(idx)}>
+              <RotateCcw className="size-5" />
+            </button>
+            <button className="btn-icon" title="Phát / dừng (Space)" onClick={togglePlay}>
+              {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+            </button>
+            <button className="btn-icon" title="Câu sau (→)" onClick={next}>
+              <ChevronRight className="size-5" />
+            </button>
+            <div className="flex-1" />
+            <button
+              className="btn-icon w-auto gap-1 px-2 font-bold"
+              title="Tốc độ phát"
+              onClick={() => {
+                const r = RATES[(RATES.indexOf(settings.rate) + 1) % RATES.length];
+                update({ rate: r });
+                handleRef.current?.setRate(r);
+              }}
+            >
+              <Zap className="size-5" /> {settings.rate}×
+            </button>
+            <button
+              className={`btn-icon ${panel === "settings" ? "bg-white/10" : ""}`}
+              title="Cài đặt"
+              onClick={() => setPanel(panel === "settings" ? null : "settings")}
+            >
+              <Settings2 className="size-5" />
+            </button>
+            <button
+              className={`btn-icon ${panel === "keys" ? "bg-white/10" : ""}`}
+              title="Phím tắt"
+              onClick={() => setPanel(panel === "keys" ? null : "keys")}
+            >
+              <Keyboard className="size-5" />
+            </button>
+          </div>
+
+          {panel === "settings" && (
+            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card-2/40 p-4 text-sm">
+              <label className="field">
+                Lặp mỗi câu
+                <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
+                  {[1, 2, 3, 5].map((r) => (
+                    <option key={r} value={r}>
+                      {r} lần
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Nghỉ để nói
+                <select value={settings.gapFactor} onChange={(e) => update({ gapFactor: Number(e.target.value) })}>
+                  <option value={0}>Không</option>
+                  <option value={1}>1× độ dài câu</option>
+                  <option value={1.2}>1.2×</option>
+                  <option value={1.5}>1.5×</option>
+                  <option value={2}>2×</option>
+                </select>
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={settings.autoNext} onChange={(e) => update({ autoNext: e.target.checked })} />
+                Tự sang câu tiếp
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={settings.autoRecord}
+                  onChange={(e) => update({ autoRecord: e.target.checked })}
+                />
+                Tự ghi âm khi nghỉ
+              </label>
+              <label className="check col-span-2">
+                <input
+                  type="checkbox"
+                  checked={settings.merge}
+                  onChange={(e) => {
+                    // Danh sách câu thay đổi → dừng và về câu đầu
+                    pause();
+                    setIdx(0);
+                    update({ merge: e.target.checked });
+                  }}
+                />
+                Gộp các dòng phụ đề thành câu hoàn chỉnh
+              </label>
+            </div>
+          )}
+          {panel === "keys" && (
+            <p className="rounded-2xl border border-border bg-card-2/40 p-4 text-sm leading-7 text-muted">
+              <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm ·{" "}
+              <kbd>P</kbd> nghe lại · <kbd>H</kbd> ẩn chữ. Nên đeo tai nghe khi ghi âm.
+            </p>
           )}
 
-          <div className="card flex min-h-32 flex-col items-center justify-center gap-2 text-center">
-            <div className="text-xs text-muted">
-              Câu {idx + 1}/{segments.length}
-              {current && ` · ${formatTime(current.start)}`}
+          {/* Câu hiện tại */}
+          <div className="flex min-h-48 flex-col gap-3 rounded-2xl border border-border bg-background/60 p-5">
+            <div className="flex items-center justify-between">
+              <span className="label text-link">
+                Câu {idx + 1}/{segments.length}
+              </span>
+              {current && <span className="text-xs text-muted">{formatTime(current.start)}</span>}
             </div>
             {current && (
               <p
-                className={`text-2xl leading-relaxed font-medium transition ${
+                className={`text-2xl leading-relaxed font-bold transition ${
                   settings.hideText ? "cursor-pointer blur-md select-none hover:blur-none" : ""
                 }`}
                 title={settings.hideText ? "Di chuột để xem" : undefined}
@@ -268,164 +456,95 @@ export default function ShadowPlayer({
                     href={`https://www.dict.cc/?s=${encodeURIComponent(w.replace(/[^\p{L}\p{N}-]/gu, ""))}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded px-0.5 hover:bg-accent/15"
+                    className="rounded px-0.5 hover:bg-accent/20"
                   >
                     {w}{" "}
                   </a>
                 ))}
               </p>
             )}
-            {current && (
-              <a
-                className="text-xs text-muted underline"
-                target="_blank"
-                rel="noreferrer"
-                href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
-              >
-                Dịch câu này
-              </a>
-            )}
-            <div className="h-1.5 w-full max-w-md overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
-              {gap && (
-                <div
-                  key={gap.id}
-                  className="gap-bar h-full bg-accent"
-                  style={{ animationDuration: `${gap.ms}ms` }}
-                />
+            <div className="mt-auto flex items-center gap-3">
+              {current && (
+                <a
+                  className="inline-flex items-center gap-1 text-xs font-bold text-link hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
+                >
+                  <Languages className="size-4" /> Dịch câu này
+                </a>
               )}
+              <span className="ml-auto text-xs font-bold text-amber">
+                {gap ? (isRecording ? "🎙 Đến lượt bạn — đang ghi âm…" : "🗣 Đến lượt bạn nói…") : ""}
+              </span>
             </div>
-            <div className="h-4 text-xs text-accent">
-              {gap ? (isRecording ? "🎙 Đến lượt bạn — đang ghi âm…" : "🗣 Đến lượt bạn nói…") : ""}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              {gap && (
+                <div key={gap.id} className="gap-bar h-full bg-amber" style={{ animationDuration: `${gap.ms}ms` }} />
+              )}
             </div>
           </div>
 
-          {/* Nút điều khiển chính */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button className="btn" onClick={() => go(Math.max(0, idx - 1))}>
-              ⏮ Trước
-            </button>
-            <button className="btn btn-primary min-w-28" onClick={() => (playing ? pause() : go(idx))}>
-              {playing ? "⏸ Dừng" : "▶ Phát câu"}
-            </button>
-            <button className="btn" onClick={() => go(Math.min(segments.length - 1, idx + 1))}>
-              Sau ⏭
-            </button>
+          {/* Ghi âm */}
+          <div className="grid grid-cols-2 gap-3">
             <button
-              className={`btn ${isRecording ? "border-red-500 text-red-600" : ""}`}
+              className={`btn btn-red py-3 ${isRecording ? "animate-pulse bg-red text-white" : ""}`}
               onClick={() => (isRecording ? recorder.stop() : recorder.start(idx))}
             >
-              {isRecording ? "⏹ Dừng ghi" : "🎙 Ghi âm"}
+              {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
+              {isRecording ? "Dừng ghi" : "Ghi âm"}
             </button>
-            <button className="btn" disabled={!recorder.recordings[idx]} onClick={() => recorder.play(idx)}>
-              🔊 Nghe lại
+            <button className="btn py-3 uppercase" disabled={!recorder.recordings[idx]} onClick={() => recorder.play(idx)}>
+              <Volume2 className="size-5" /> Nghe lại
             </button>
           </div>
 
-          {/* Cài đặt */}
-          <div className="card grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <label className="field">
-              Chế độ
-              <select value={settings.mode} onChange={(e) => update({ mode: e.target.value as Settings["mode"] })}>
-                <option value="segment">Từng câu</option>
-                <option value="free">Liên tục</option>
-              </select>
-            </label>
-            <label className="field">
-              Tốc độ
-              <select
-                value={settings.rate}
-                onChange={(e) => {
-                  update({ rate: Number(e.target.value) });
-                  handleRef.current?.setRate(Number(e.target.value));
-                }}
-              >
-                {[0.5, 0.75, 0.85, 1, 1.25].map((r) => (
-                  <option key={r} value={r}>
-                    {r}×
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Lặp mỗi câu
-              <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
-                {[1, 2, 3, 5].map((r) => (
-                  <option key={r} value={r}>
-                    {r} lần
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Nghỉ để nói
-              <select value={settings.gapFactor} onChange={(e) => update({ gapFactor: Number(e.target.value) })}>
-                <option value={0}>Không</option>
-                <option value={1}>1× độ dài câu</option>
-                <option value={1.2}>1.2×</option>
-                <option value={1.5}>1.5×</option>
-                <option value={2}>2×</option>
-              </select>
-            </label>
-            <label className="check">
-              <input type="checkbox" checked={settings.autoNext} onChange={(e) => update({ autoNext: e.target.checked })} />
-              Tự sang câu tiếp
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={settings.autoRecord}
-                onChange={(e) => update({ autoRecord: e.target.checked })}
-              />
-              Tự ghi âm khi nghỉ
-            </label>
-            <label className="check">
-              <input type="checkbox" checked={settings.hideText} onChange={(e) => update({ hideText: e.target.checked })} />
-              Ẩn chữ (H)
-            </label>
-            <label className="check">
-              <input type="checkbox" checked={settings.merge} onChange={(e) => {
-                  // Danh sách câu thay đổi → dừng và về câu đầu
-                  pause();
-                  setIdx(0);
-                  update({ merge: e.target.checked });
-                }}
-              />
-              Gộp thành câu
-            </label>
-          </div>
-
-          <p className="text-center text-xs text-muted">
-            Phím tắt: <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm ·{" "}
-            <kbd>P</kbd> nghe lại · <kbd>H</kbd> ẩn chữ. Nên đeo tai nghe khi ghi âm.
-          </p>
+          <button className="btn btn-primary py-3.5 text-base" disabled={idx >= segments.length - 1} onClick={next}>
+            Câu tiếp theo <ChevronRight className="size-5" />
+          </button>
         </div>
 
-        {/* Cột phải: toàn bộ transcript */}
-        <div ref={listRef} className="card relative max-h-[75vh] overflow-y-auto p-1">
-          {segments.map((s, i) => (
-            <div
-              key={i}
-              data-idx={i}
-              onClick={() => go(i)}
-              className={`group flex cursor-pointer gap-2 rounded-md px-2 py-1.5 text-sm ${
-                i === idx ? "bg-accent/15" : "hover:bg-black/5 dark:hover:bg-white/5"
-              }`}
-            >
-              <span className="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted">{formatTime(s.start)}</span>
-              <span className={`flex-1 ${settings.hideText && i === idx ? "blur-sm" : ""}`}>{s.text}</span>
-              {recorder.recordings[i] && (
-                <button
-                  title="Nghe bản ghi của bạn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    recorder.play(i);
-                  }}
-                >
-                  🔊
-                </button>
-              )}
-            </div>
-          ))}
+        {/* Cột 3: toàn bộ transcript */}
+        <div className="card flex max-h-[80vh] flex-col gap-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
+          <div className="flex items-center justify-between">
+            <span className="label">Transcript</span>
+            <span className="pill bg-card-2 px-3 py-1 text-sm">{progress}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-card-2">
+            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          <div ref={listRef} className="relative -mx-1 flex flex-1 flex-col gap-3 overflow-y-auto px-1 py-1">
+            {segments.map((s, i) => (
+              <div
+                key={i}
+                data-idx={i}
+                onClick={() => go(i)}
+                className={`cursor-pointer rounded-2xl border-2 p-4 transition ${
+                  i === idx ? "border-accent bg-accent/10" : "border-border hover:border-accent/50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="pill bg-card-2 text-foreground">#{i + 1}</span>
+                  <span className="font-mono text-xs text-muted">{formatTime(s.start)}</span>
+                  {recorder.recordings[i] && (
+                    <button
+                      className="ml-auto cursor-pointer text-link hover:text-foreground"
+                      title="Nghe bản ghi của bạn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        recorder.play(i);
+                      }}
+                    >
+                      <Volume2 className="size-5" />
+                    </button>
+                  )}
+                </div>
+                <p className={`mt-2 text-sm leading-relaxed ${settings.hideText ? "font-mono tracking-wider text-muted" : ""}`}>
+                  {settings.hideText ? mask(s.text) : s.text}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

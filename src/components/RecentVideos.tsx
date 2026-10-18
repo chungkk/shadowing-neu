@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { SectionHeader } from "./LessonGrid";
 
 type Recent = { videoId: string; title: string };
 const KEY = "shadow-recent";
@@ -13,20 +14,21 @@ export function RecentVideos() {
   const [recent] = useLocalStorage(KEY, EMPTY);
   if (!recent.length) return null;
   return (
-    <section className="card">
-      <h2 className="mb-2 text-sm font-semibold text-muted">Video bạn đã mở gần đây</h2>
-      <ul className="flex flex-col">
+    <section className="flex flex-col gap-4">
+      <SectionHeader title="Video bạn đã mở gần đây" count={`${recent.length}`} />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {recent.map((r) => (
-          <li key={r.videoId}>
-            <Link
-              href={`/watch/${r.videoId}`}
-              className="block truncate rounded px-2 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              {r.title}
-            </Link>
-          </li>
+          <Link
+            key={r.videoId}
+            href={`/watch/${r.videoId}`}
+            className="group overflow-hidden rounded-2xl border-2 border-border bg-card transition hover:border-accent"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />
+            <div className="line-clamp-2 p-3 text-sm font-bold">{r.title}</div>
+          </Link>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

@@ -2,24 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
-import { checkPassword, createSession, destroySession, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteLesson, LEVELS, updateLesson, type Level } from "@/lib/db";
+import { envAdminEmail, requireAdmin } from "@/lib/auth";
+import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
 import { parseSubtitleFile, toSrt } from "@/lib/subtitles";
 
 export type FormState = { error?: string };
-
-export async function login(_: FormState, formData: FormData): Promise<FormState> {
-  if (!process.env.ADMIN_PASSWORD) return { error: "Chưa cấu hình ADMIN_PASSWORD trong .env.local" };
-  if (!checkPassword(String(formData.get("password") ?? ""))) return { error: "Sai mật khẩu" };
-  await createSession();
-  redirect("/admin");
-}
-
-export async function logout() {
-  await destroySession();
-  redirect("/");
-}
 
 export type FetchResult =
   | { error: string }
@@ -38,7 +26,7 @@ export async function fetchSubtitles(url: string, lang?: string): Promise<FetchR
   const videoId = extractVideoId(url);
   if (!videoId) return { error: "Link YouTube không hợp lệ" };
   try {
-    const d = await getYouTubeTranscript(videoId, lang || undefined);
+    const d = await getYouTubeTranscript(videoId, lang || undefined, { whisper: true });
     return {
       title: d.title,
       videoId: d.videoId,
@@ -70,7 +58,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   // Chưa bấm "Lấy phụ đề" → tự lấy luôn khi lưu
   if (!srt.trim()) {
     try {
-      const d = await getYouTubeTranscript(videoId);
+      const d = await getYouTubeTranscript(videoId, undefined, { whisper: true });
       segments = d.segments;
       title ||= d.title;
     } catch (e) {
@@ -89,5 +77,24 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
 export async function removeLesson(id: number) {
   await requireAdmin();
   deleteLesson(id);
+  refresh();
+}
+
+/** Không cho sửa chính mình hoặc tài khoản admin cố định (ADMIN_EMAIL) */
+async function editableUser(id: number) {
+  const me = await requireAdmin();
+  const target = getUserById(id);
+  if (!target || target.id === me.id || target.email === envAdminEmail()) return null;
+  return target;
+}
+
+export async function changeUserRole(id: number, role: Role) {
+  if (role !== "user" && role !== "admin") return;
+  if (await editableUser(id)) setUserRole(id, role);
+  refresh();
+}
+
+export async function removeUser(id: number) {
+  if (await editableUser(id)) deleteUser(id);
   refresh();
 }

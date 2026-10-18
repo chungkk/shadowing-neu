@@ -23,18 +23,18 @@ export default function YouTubeUrlForm() {
         router.push(`/watch/${id}`);
       }}
     >
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <input
           className="input flex-1"
           placeholder="Dán link YouTube… (https://www.youtube.com/watch?v=…)"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className="btn btn-primary" disabled={pending}>
+        <button className="btn btn-primary px-6" disabled={pending}>
           {pending ? "Đang lấy phụ đề…" : "Bắt đầu"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </form>
   );
 }

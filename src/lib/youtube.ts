@@ -228,8 +228,14 @@ async function fetchCaptions(url: string): Promise<Segment[]> {
  * - không truyền         → ưu tiên tiếng Đức thủ công > tiếng Đức tự động > track đầu tiên;
  *                          video không có phụ đề → tự dùng Whisper (nếu đã cấu hình)
  * Kết quả được cache trong SQLite (Whisper: vĩnh viễn, YouTube: 7 ngày).
+ * `whisper: false` (khách chưa đăng nhập) → không được chạy Whisper mới (tốn tiền API),
+ * nhưng vẫn dùng được kết quả Whisper đã có trong cache.
  */
-export async function getYouTubeTranscript(videoId: string, lang?: string): Promise<Transcript> {
+export async function getYouTubeTranscript(
+  videoId: string,
+  lang?: string,
+  { whisper = false }: { whisper?: boolean } = {},
+): Promise<Transcript> {
   await connection(); // luôn chạy lúc request (đọc cache có hạn dùng Date.now())
   const cacheKey = `yt:${videoId}:${lang || "default"}`;
   const cached = getCached<Transcript>(cacheKey);
@@ -251,7 +257,8 @@ export async function getYouTubeTranscript(videoId: string, lang?: string): Prom
     },
     baseUrl: t.baseUrl,
   }));
-  const tracks = [...ytTracks.map((t) => t.track), ...(whisperEnabled() ? [WHISPER_TRACK] : [])];
+  const canWhisper = whisper && whisperEnabled();
+  const tracks = [...ytTracks.map((t) => t.track), ...(canWhisper ? [WHISPER_TRACK] : [])];
 
   let result: Transcript;
   if (lang !== WHISPER && ytTracks.length) {
@@ -266,6 +273,11 @@ export async function getYouTubeTranscript(videoId: string, lang?: string): Prom
     result = { videoId, title, track: picked.track, tracks, segments };
     setCached(cacheKey, result, YOUTUBE_CACHE_MS);
   } else {
+    if (!whisper) {
+      throw new Error(
+        (lang === WHISPER ? "" : "Video này không có phụ đề. ") + "Đăng nhập để tạo phụ đề bằng Whisper (AI).",
+      );
+    }
     if (!whisperEnabled()) {
       throw new Error(
         (lang === WHISPER ? "Whisper chưa được bật." : "Video này không có phụ đề.") +

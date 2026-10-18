@@ -1,33 +1,40 @@
 @import "tailwindcss";
 
+/* Giao diện tối: nền đen ánh xanh lá · xanh lá (chính) · vàng (nhấn) · đỏ (ghi âm / xoá) */
 :root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --card: #ffffff;
-  --border: #e7e5e4;
-  --muted: #78716c;
-  --accent: #d97706;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #f5f5f4;
-    --card: #1c1917;
-    --border: #292524;
-    --muted: #a8a29e;
-    --accent: #f59e0b;
-  }
+  color-scheme: dark;
+  --background: #0c110e;
+  --sidebar: #070a08;
+  --foreground: #eef5ef;
+  --card: #131b16;
+  --card-2: #1b261f;
+  --border: #26362c;
+  --muted: #8ea395;
+  --link: #facc15;
+  --accent: #16a34a;
+  --accent-dark: #14532d;
+  --amber: #facc15;
+  --amber-dark: #854d0e;
+  --red: #dc2626;
+  --red-dark: #7f1d1d;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-sidebar: var(--sidebar);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-2: var(--card-2);
   --color-border: var(--border);
   --color-muted: var(--muted);
+  --color-link: var(--link);
   --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
+  --color-accent-dark: var(--accent-dark);
+  --color-amber: var(--amber);
+  --color-amber-dark: var(--amber-dark);
+  --color-red: var(--red);
+  --color-red-dark: var(--red-dark);
+  --font-sans: var(--font-nunito);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -39,22 +46,40 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-lg border border-border bg-card p-4;
+    @apply rounded-2xl border border-border bg-card p-4;
+  }
+  /* Tiêu đề nhỏ in hoa của từng khung: "VIDEO", "TRANSCRIPT"… */
+  .label {
+    @apply text-sm font-extrabold tracking-wider text-foreground uppercase;
   }
   .btn {
-    @apply cursor-pointer rounded-md border border-border bg-card px-3 py-2 text-sm font-medium transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card-2 px-3.5 py-2 text-sm font-bold transition select-none hover:border-accent disabled:cursor-not-allowed disabled:opacity-40;
   }
+  /* Nút lớn kiểu "nổi" có viền dưới đậm */
   .btn-primary {
-    @apply border-accent bg-accent text-white hover:opacity-90;
+    @apply border-accent bg-accent tracking-wide text-white uppercase shadow-[0_4px_0_var(--accent-dark)] hover:brightness-110 active:translate-y-0.5 active:shadow-[0_2px_0_var(--accent-dark)];
+  }
+  .btn-amber {
+    @apply border-2 border-amber bg-amber/10 tracking-wide text-amber uppercase shadow-[0_4px_0_var(--amber-dark)] hover:border-amber active:translate-y-0.5 active:shadow-[0_2px_0_var(--amber-dark)];
+  }
+  .btn-red {
+    @apply border-2 border-red bg-red/15 tracking-wide text-red-400 uppercase shadow-[0_4px_0_var(--red-dark)] hover:border-red active:translate-y-0.5 active:shadow-[0_2px_0_var(--red-dark)];
+  }
+  /* Dải đen – đỏ – vàng (cờ Đức) */
+  .flag-stripe {
+    background: linear-gradient(to right, #000 0 33.3%, var(--red) 33.3% 66.6%, var(--amber) 66.6%);
+  }
+  .btn-icon {
+    @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40;
   }
   .input {
-    @apply rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-accent;
+    @apply rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-accent;
   }
   .field {
     @apply flex flex-col gap-1 text-muted;
   }
   .field select {
-    @apply rounded-md border border-border bg-card px-2 py-1.5 text-foreground;
+    @apply rounded-lg border border-border bg-background px-2 py-1.5 text-foreground;
   }
   .check {
     @apply flex cursor-pointer items-center gap-2;
@@ -62,8 +87,11 @@ body {
   .check input {
     @apply accent-accent;
   }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold;
+  }
   kbd {
-    @apply rounded border border-border bg-card px-1 font-mono text-[10px];
+    @apply rounded border border-border bg-card-2 px-1 font-mono text-[10px];
   }
 }
 

@@ -8,7 +8,7 @@ import { transcribeFile } from "@/lib/audio";
 
 type Session = { title: string; media: Media & { kind: "local" }; segments: Segment[] };
 
-export default function LocalApp() {
+export default function LocalApp({ canTranscribe }: { canTranscribe: boolean }) {
   const [session, setSession] = useState<Session | null>(null);
   const [media, setMedia] = useState<File | null>(null);
   const [subs, setSubs] = useState<File | null>(null);
@@ -54,31 +54,38 @@ export default function LocalApp() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 pt-12">
-      <Link href="/" className="text-sm text-muted hover:underline">
-        ← Trang chủ
-      </Link>
-      <h1 className="text-2xl font-bold">Luyện với file trên máy</h1>
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 md:p-6">
+      <h1 className="text-2xl font-extrabold">Luyện với file trên máy</h1>
 
-      <label className="card flex cursor-pointer flex-col gap-1">
-        <span className="text-sm font-semibold">1. File audio / video</span>
+      <label className="card flex cursor-pointer flex-col gap-2 transition hover:border-accent">
+        <span className="label text-link">1. File audio / video</span>
         <span className="text-xs text-muted">mp3, m4a, wav, mp4, webm…</span>
-        <input type="file" accept="audio/*,video/*" onChange={(e) => setMedia(e.target.files?.[0] ?? null)} />
+        <input className="text-sm file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-card-2 file:px-3 file:py-2 file:font-bold file:text-foreground" type="file" accept="audio/*,video/*" onChange={(e) => setMedia(e.target.files?.[0] ?? null)} />
       </label>
 
-      <label className="card flex cursor-pointer flex-col gap-1">
-        <span className="text-sm font-semibold">2. File phụ đề (không bắt buộc)</span>
+      <label className="card flex cursor-pointer flex-col gap-2 transition hover:border-accent">
+        <span className="label text-link">2. File phụ đề (không bắt buộc)</span>
         <span className="text-xs text-muted">
-          .srt hoặc .vtt. Nếu bỏ trống, app sẽ tự tạo phụ đề bằng AI nhận dạng giọng nói (Whisper).
+          .srt hoặc .vtt.{" "}
+          {canTranscribe ? (
+            "Nếu bỏ trống, app sẽ tự tạo phụ đề bằng AI nhận dạng giọng nói (Whisper)."
+          ) : (
+            <>
+              <Link href="/login?next=/local" className="text-accent underline">
+                Đăng nhập
+              </Link>{" "}
+              để tự tạo phụ đề bằng AI (Whisper) khi không có file phụ đề.
+            </>
+          )}
         </span>
-        <input type="file" accept=".srt,.vtt" onChange={(e) => setSubs(e.target.files?.[0] ?? null)} />
+        <input className="text-sm file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-card-2 file:px-3 file:py-2 file:font-bold file:text-foreground" type="file" accept=".srt,.vtt" onChange={(e) => setSubs(e.target.files?.[0] ?? null)} />
       </label>
 
-      <button className="btn btn-primary" disabled={!media || !!status} onClick={start}>
+      <button className="btn btn-primary py-3.5 text-base" disabled={!media || !!status || (!subs && !canTranscribe)} onClick={start}>
         {status || (subs ? "Bắt đầu shadowing" : "Tạo phụ đề & bắt đầu")}
       </button>
 
-      {error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
     </main>
   );
 }

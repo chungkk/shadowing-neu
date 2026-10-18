@@ -56,7 +56,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
             </button>
           </div>
         </label>
-        {fetchError && <p className="text-sm text-red-600">{fetchError}</p>}
+        {fetchError && <p className="text-sm text-red-400">{fetchError}</p>}
         {info && (
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
             {info.tracks.length > 1 && (
@@ -123,7 +123,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         />
       </label>
 
-      {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
 
       <div className="flex gap-2">
         <button className="btn btn-primary" disabled={saving || fetching}>

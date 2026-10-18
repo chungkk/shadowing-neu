@@ -1,14 +1,20 @@
 "use client";
 
-export default function DeleteButton({ action }: { action: () => Promise<void> }) {
+export default function DeleteButton({
+  action,
+  confirmText = "Xoá bài học này?",
+}: {
+  action: () => Promise<void>;
+  confirmText?: string;
+}) {
   return (
     <form
       action={action}
       onSubmit={(e) => {
-        if (!confirm("Xoá bài học này?")) e.preventDefault();
+        if (!confirm(confirmText)) e.preventDefault();
       }}
     >
-      <button className="btn text-red-600">Xoá</button>
+      <button className="btn text-red-400">Xoá</button>
     </form>
   );
 }

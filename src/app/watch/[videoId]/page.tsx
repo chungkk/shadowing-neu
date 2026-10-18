@@ -3,27 +3,32 @@ import Link from "next/link";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import TrackSelect from "@/components/TrackSelect";
 import { RememberVideo } from "@/components/RecentVideos";
-import { getYouTubeTranscript, WHISPER } from "@/lib/youtube";
+import { extractVideoId, getYouTubeTranscript, WHISPER } from "@/lib/youtube";
+import { getCurrentUser } from "@/lib/auth";
 
 async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
-  const { videoId } = await params;
+  const { videoId: rawId } = await params;
   const { lang } = await searchParams;
+  const user = await getCurrentUser();
+  const opts = { whisper: !!user }; // chỉ người đã đăng nhập mới được chạy Whisper (tốn tiền API)
 
   let data: Awaited<ReturnType<typeof getYouTubeTranscript>>;
   let notice = "";
   try {
+    const videoId = extractVideoId(rawId);
+    if (!videoId) throw new Error("Link YouTube không hợp lệ");
     try {
-      data = await getYouTubeTranscript(videoId, typeof lang === "string" ? lang : undefined);
+      data = await getYouTubeTranscript(videoId, typeof lang === "string" ? lang : undefined, opts);
     } catch (e) {
       // Chọn Whisper nhưng thất bại → quay về phụ đề YouTube, kèm thông báo
       if (lang !== WHISPER) throw e;
       notice = (e as Error).message;
-      data = await getYouTubeTranscript(videoId);
+      data = await getYouTubeTranscript(videoId, undefined, opts);
     }
   } catch (e) {
     return (
       <main className="mx-auto flex max-w-xl flex-col items-center gap-4 p-4 pt-20 text-center">
-        <p className="rounded-md bg-red-500/10 p-4 text-sm text-red-600">{(e as Error).message}</p>
+        <p className="rounded-md bg-red-500/10 p-4 text-sm text-red-400">{(e as Error).message}</p>
         <Link href="/" className="btn">
           ← Về trang chủ
         </Link>
@@ -43,10 +48,19 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
               {!notice &&
                 data.tracks.some((t) => t.languageCode === WHISPER) &&
                 " Thử chọn “Whisper (AI)” để có phụ đề tốt hơn (video ngắn)."}
+              {!user && (
+                <>
+                  {" "}
+                  <Link href={`/login?next=${encodeURIComponent(`/watch/${data.videoId}`)}`} className="underline">
+                    Đăng nhập
+                  </Link>{" "}
+                  để tạo phụ đề tốt hơn bằng Whisper (AI).
+                </>
+              )}
             </span>
           )}
           {data.track.languageCode === WHISPER && <span>Phụ đề do Whisper (AI) tạo.</span>}
-          {notice && <span className="basis-full text-red-600">⚠ Không tạo được bằng Whisper: {notice}</span>}
+          {notice && <span className="basis-full text-red-400">⚠ Không tạo được bằng Whisper: {notice}</span>}
         </div>
       </ShadowPlayer>
     </>
