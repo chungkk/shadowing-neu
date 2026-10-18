@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, FileAudio, House, LogIn, LogOut, Settings, UserCog, Users } from "lucide-react";
+import { BookMarked, Captions, FileAudio, House, LogIn, LogOut, Settings, UserCog, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 
@@ -18,6 +18,7 @@ const USER_ITEMS: Item[] = [
 ];
 const ADMIN_ITEMS: Item[] = [
   { href: "/admin", label: "Quản trị bài học", icon: Settings },
+  { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
 ];
 
@@ -70,7 +71,7 @@ export default function Sidebar({ user }: { user: { name: string; role: string }
 }
 
 const NAV_CLASS =
-  "fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-border bg-sidebar px-2 md:sticky md:top-0 md:h-screen md:w-20 md:flex-col md:justify-start md:gap-3 md:border-t-0 md:border-r md:py-4";
+  "fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around gap-1 overflow-x-auto border-t border-border bg-sidebar px-2 *:shrink-0 md:sticky md:top-0 md:h-screen md:w-20 md:flex-col md:justify-start md:gap-3 md:border-t-0 md:border-r md:py-4";
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (

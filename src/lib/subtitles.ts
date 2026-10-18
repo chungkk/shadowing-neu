@@ -96,62 +96,96 @@ function endsSentence(word: string): boolean {
   return !ABBREVIATIONS.has(w) && !/^\d{1,2}\.$/.test(w);
 }
 
-/**
- * Gộp các dòng ngắn thành câu: kết thúc khi gặp dấu câu (. ! ? …)
- * hoặc khi đoạn đã dài quá maxDuration giây (cho sub không có dấu câu).
- */
-export function mergeIntoSentences(segs: Segment[], maxDuration = 15): Segment[] {
-  const out: Segment[] = [];
-  let cur: Segment | null = null;
-  for (const s of segs.flatMap(splitSentences)) {
-    // Không gộp qua khoảng im lặng dài
-    if (cur && s.start - cur.end > 2) {
-      out.push(cur);
-      cur = null;
+// Độ dài câu dễ nói theo nhất: khoảng 2–8 giây, 4–16 từ
+const MAX_SEC = 8; // dài hơn → tách ở dấu phẩy
+const MAX_WORDS = 16;
+const MIN_SEC = 1.5; // ngắn hơn → ghép với câu bên cạnh
+const MIN_WORDS = 3;
+const LONG_SEC = 12; // dài thế này mà không có dấu phẩy → tách ở chỗ ngừng hơi dài nhất
+const SILENCE = 2; // im lặng lâu hơn → luôn ngắt câu
+
+type Tok = { t: number; end: number; w: string };
+
+/** Trải mọi dòng phụ đề thành từng từ có thời gian (không có thời gian từng từ → chia theo số ký tự) */
+function tokenize(segs: Segment[]): Tok[] {
+  const toks: Tok[] = [];
+  for (const s of segs) {
+    let words = s.words;
+    if (!words) {
+      const ws = s.text.split(/\s+/).filter(Boolean);
+      const total = ws.reduce((n, w) => n + w.length + 1, 0);
+      let t = s.start;
+      words = ws.map((w): Word => {
+        const start = t;
+        t += ((s.end - s.start) * (w.length + 1)) / total;
+        return [start, w];
+      });
     }
-    if (!cur) cur = { start: s.start, end: s.end, text: s.text };
-    else {
-      cur.text += " " + s.text;
-      cur.end = s.end;
-    }
-    if (endsSentence(cur.text.split(" ").at(-1) ?? "") || cur.end - cur.start >= maxDuration) {
-      out.push(cur);
-      cur = null;
-    }
+    words.forEach(([t, w], i) => toks.push({ t, end: i < words.length - 1 ? words[i + 1][0] : s.end, w }));
   }
-  if (cur) out.push(cur);
+  return toks;
+}
+
+const dur = (g: Tok[]) => g[g.length - 1].end - g[0].t;
+
+/** Chỗ tách hợp lý trước từ thứ k: sau dấu phẩy / chấm phẩy / hai chấm, hoặc trước "–" (đổi người nói) */
+const isBreak = (g: Tok[], k: number) => /[,;:]["»“”']?$/.test(g[k - 1].w) || /^[–-]/.test(g[k].w);
+
+/** Tách câu quá dài ở dấu phẩy gần giữa nhất (đệ quy); không có dấu phẩy mà rất dài → chỗ ngừng hơi dài nhất */
+function splitLong(g: Tok[]): Tok[][] {
+  if (dur(g) <= MAX_SEC && g.length <= MAX_WORDS) return [g];
+  // vị trí tách k: mỗi nửa còn ít nhất MIN_WORDS từ
+  const ks: number[] = [];
+  for (let k = MIN_WORDS; k <= g.length - MIN_WORDS; k++) ks.push(k);
+  const mid = (g[0].t + g[g.length - 1].end) / 2;
+  let best = ks.filter((k) => isBreak(g, k)).sort((a, b) => Math.abs(g[a].t - mid) - Math.abs(g[b].t - mid))[0];
+  if (best === undefined && (dur(g) > LONG_SEC || g.length > MAX_WORDS * 1.5)) {
+    best = ks.sort((a, b) => g[b].t - g[b - 1].end - (g[a].t - g[a - 1].end))[0];
+  }
+  if (best === undefined) return [g];
+  return [...splitLong(g.slice(0, best)), ...splitLong(g.slice(best))];
+}
+
+/** Ghép câu quá ngắn ("Und Ihnen?") với câu kế bên nếu sát nhau và ghép xong không quá dài */
+function mergeShort(groups: Tok[][]): Tok[][] {
+  const isShort = (g: Tok[]) => dur(g) < MIN_SEC || g.length <= MIN_WORDS;
+  const fits = (a: Tok[], b: Tok[]) =>
+    b[0].t - a[a.length - 1].end <= 1 && b[b.length - 1].end - a[0].t <= MAX_SEC && a.length + b.length <= MAX_WORDS;
+  const out: Tok[][] = [];
+  for (const g of groups) {
+    const prev = out[out.length - 1];
+    if (prev && (isShort(prev) || isShort(g)) && fits(prev, g)) out[out.length - 1] = [...prev, ...g];
+    else out.push(g);
+  }
   return out;
 }
 
 /**
- * Tách 1 dòng chứa chỗ hết câu ở giữa ("…nicht glauben. Ich habe") thành từng phần.
- * Có thời gian từng từ → cắt đúng lúc từ đầu câu sau bắt đầu; không có → chia theo tỉ lệ số ký tự.
+ * Gộp các dòng phụ đề thành câu để luyện: ngắt ở dấu kết thúc câu (. ! ? …) hoặc khoảng im lặng dài,
+ * rồi tách câu quá dài ở dấu phẩy và ghép câu quá ngắn với câu bên cạnh.
  */
-function splitSentences(seg: Segment): Segment[] {
-  const words: Word[] = seg.words ?? seg.text.split(/\s+/).filter(Boolean).map((w): Word => [NaN, w]);
-  const parts: Word[][] = [[]];
-  words.forEach((w, i) => {
-    parts.at(-1)!.push(w);
-    if (endsSentence(w[1]) && i < words.length - 1) parts.push([]);
-  });
-  if (parts.length < 2) return [seg];
-
-  const texts = parts.map((p) => p.map(([, w]) => w).join(" "));
-  if (seg.words) {
-    return parts.map((p, i) => ({
-      start: i === 0 ? seg.start : p[0][0],
-      end: i < parts.length - 1 ? parts[i + 1][0][0] : seg.end,
-      text: texts[i],
-    }));
+export function mergeIntoSentences(segs: Segment[]): Segment[] {
+  const toks = tokenize(segs);
+  const groups: Tok[][] = [];
+  let cur: Tok[] = [];
+  for (const tok of toks) {
+    if (cur.length && tok.t - cur[cur.length - 1].end > SILENCE) {
+      groups.push(cur);
+      cur = [];
+    }
+    cur.push(tok);
+    if (endsSentence(tok.w)) {
+      groups.push(cur);
+      cur = [];
+    }
   }
-  const total = texts.reduce((n, t) => n + t.length, 0);
-  const dur = seg.end - seg.start;
-  let t = seg.start;
-  return texts.map((text) => {
-    const start = t;
-    t += (dur * text.length) / total;
-    return { start, end: t, text };
-  });
+  if (cur.length) groups.push(cur);
+
+  return mergeShort(groups.flatMap(splitLong)).map((g) => ({
+    start: g[0].t,
+    end: g[g.length - 1].end,
+    text: g.map((x) => x.w).join(" "),
+  }));
 }
 
 export function formatTime(t: number): string {

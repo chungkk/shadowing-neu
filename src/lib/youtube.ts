@@ -23,8 +23,13 @@ export type Transcript = {
 
 const UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14)";
 const isGerman = (t: Track) => t.languageCode.startsWith("de");
+
+/** Bản cache cũ có thể lẫn track ngôn ngữ khác → lọc lại; track đang dùng không phải tiếng Đức thì bỏ cache */
+function germanOnly(t: Transcript | null): Transcript | null {
+  if (!t || (t.track.languageCode !== WHISPER && !isGerman(t.track))) return null;
+  return { ...t, tracks: t.tracks.filter((x) => x.languageCode === WHISPER || isGerman(x)) };
+}
 const WHISPER_TRACK: Track = { languageCode: WHISPER, name: "🤖 Whisper (AI)", auto: false };
-const YOUTUBE_CACHE_MS = 7 * 24 * 3600 * 1000;
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
@@ -301,9 +306,9 @@ async function fromYtdlp(videoId: string): Promise<Source> {
  * - `lang` = mã ngôn ngữ → track YouTube đó
  * - `lang` = "whisper"   → tạo bằng Whisper
  * - không truyền         → ưu tiên phụ đề tiếng Đức có sẵn trên YouTube (thủ công > tự động);
- *                          không có tiếng Đức / tải phụ đề lỗi → tự dùng Whisper (Groq) nếu được phép,
- *                          không được phép thì dùng track YouTube đầu tiên
- * Kết quả được cache trong SQLite (Whisper: vĩnh viễn, YouTube: 7 ngày).
+ *                          không có tiếng Đức / tải phụ đề lỗi → tự dùng Whisper (Groq) nếu được phép
+ * Chỉ dùng phụ đề tiếng Đức. Kết quả lưu vĩnh viễn trong SQLite (cả YouTube lẫn Whisper):
+ * ai lấy phụ đề video nào thì người sau mở cùng video có ngay.
  * `whisper: false` (khách chưa đăng nhập) → không được chạy Whisper mới (tốn tiền API),
  * nhưng vẫn dùng được kết quả Whisper đã có trong cache.
  */
@@ -315,32 +320,32 @@ export async function getYouTubeTranscript(
   await connection(); // luôn chạy lúc request (đọc cache có hạn dùng Date.now())
   // "ytp:" — bản có thêm dấu câu cho phụ đề tự động (đổi tiền tố để không dùng lại cache cũ chưa có dấu câu)
   const cacheKey = `ytp:${videoId}:${lang || "default"}`;
-  const cached = getCached<Transcript>(cacheKey);
+  const cached = germanOnly(getCached<Transcript>(cacheKey));
   if (cached) return cached;
 
   // Whisper đã từng chạy cho video này → dùng lại, khỏi tốn tiền
   if (lang === WHISPER || !lang) {
-    const w = getCached<Transcript>(`yt:${videoId}:${WHISPER}`);
+    const w = germanOnly(getCached<Transcript>(`yt:${videoId}:${WHISPER}`));
     if (w && (lang === WHISPER || !w.tracks.some((t) => isGerman(t)))) return w;
   }
 
   // IP server (VPS) bị YouTube chặn ("…kein Bot…") → dùng yt-dlp + PO token
-  const { title, tracks: ytTracks, audio } = await orYtdlp(
+  const { title, tracks: allTracks, audio } = await orYtdlp(
     () => fromInnertube(videoId),
     () => fromYtdlp(videoId),
   );
   const canWhisper = whisper && whisperEnabled();
-  const tracks = [...ytTracks.map((t) => t.track), ...(canWhisper ? [WHISPER_TRACK] : [])];
+  // App học tiếng Đức → chỉ dùng phụ đề tiếng Đức (bỏ các track ngôn ngữ khác)
+  const de = allTracks.filter((t) => isGerman(t.track));
+  const tracks = [...de.map((t) => t.track), ...(canWhisper ? [WHISPER_TRACK] : [])];
 
   // Phụ đề YouTube có sẵn được ưu tiên (miễn phí, nhanh); Whisper chỉ là phương án sau
-  let picked: (typeof ytTracks)[number] | undefined;
+  let picked: (typeof de)[number] | undefined;
   if (lang !== WHISPER) {
-    const de = ytTracks.filter((t) => isGerman(t.track));
     picked =
-      (lang && ytTracks.find((t) => t.track.languageCode === lang)) ||
-      de.find((t) => !t.track.auto) ||
-      de[0] ||
-      (canWhisper ? undefined : ytTracks[0]); // không có tiếng Đức → Whisper nếu được
+      (lang && de.find((t) => t.track.languageCode === lang)) ||
+      de.find((t) => !t.track.auto) || // ưu tiên phụ đề do người làm
+      de[0]; // không có tiếng Đức → Whisper (bên dưới)
   }
   if (picked) {
     let ytError: Error;
@@ -352,7 +357,9 @@ export async function getYouTubeTranscript(
       }
       if (segments.length) {
         const result = { videoId, title, track: picked.track, tracks, segments };
-        setCached(cacheKey, result, YOUTUBE_CACHE_MS);
+        // Lưu vĩnh viễn: người sau mở cùng video có phụ đề ngay (cả theo mã track cụ thể)
+        setCached(cacheKey, result, null);
+        if (!lang) setCached(`ytp:${videoId}:${picked.track.languageCode}`, result, null);
         return result;
       }
       ytError = new Error("Phụ đề rỗng hoặc không đọc được.");

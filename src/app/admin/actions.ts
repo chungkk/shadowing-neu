@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { envAdminEmail, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
-import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
+import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
+import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
 import { parseSubtitleFile, toSrt } from "@/lib/subtitles";
 
 export type FormState = { error?: string };
@@ -102,5 +102,33 @@ export async function removeUser(id: number) {
 export async function toggleLessonPublished(id: number, published: boolean) {
   await requireAdmin();
   setLessonPublished(id, published);
+  refresh();
+}
+
+// ---- Phụ đề video YouTube đã lưu ----
+
+/** Sửa phụ đề đã lưu: cập nhật mọi bản lưu cùng track của video (bản "mặc định" + theo mã track) */
+export async function saveTranscript(videoId: string, key: string, _: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const original = getCached<Transcript>(key);
+  if (!original || original.videoId !== videoId) return { error: "Không tìm thấy phụ đề đã lưu (có thể vừa bị xoá)." };
+  const title = String(formData.get("title") ?? "").trim();
+  const segments = parseSubtitleFile(String(formData.get("srt") ?? ""));
+  if (!title) return { error: "Nhập tiêu đề" };
+  if (!segments.length) return { error: "Phụ đề trống hoặc sai định dạng SRT" };
+
+  for (const k of savedTranscriptKeys(videoId)) {
+    const t = getCached<Transcript>(k);
+    if (!t) continue;
+    const sameTrack = k === key || (!k.endsWith(":whisper") && !key.endsWith(":whisper") && t.track.languageCode === original.track.languageCode);
+    setCached(k, sameTrack ? { ...t, title, segments } : { ...t, title }, null);
+  }
+  redirect("/admin/transcripts");
+}
+
+/** Xoá phụ đề đã lưu của video → lần sau có người mở sẽ lấy lại từ YouTube / Whisper */
+export async function removeTranscripts(videoId: string) {
+  await requireAdmin();
+  deleteSavedTranscripts(videoId);
   refresh();
 }

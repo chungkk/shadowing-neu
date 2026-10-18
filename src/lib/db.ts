@@ -71,6 +71,11 @@ function open() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+  // Phụ đề YouTube trước đây chỉ lưu 7 ngày → giờ lưu vĩnh viễn
+  db.exec("UPDATE transcript_cache SET expires_at = NULL WHERE key LIKE 'ytp:%' AND expires_at IS NOT NULL");
+  // Cột thời điểm lưu (cho trang admin "Phụ đề đã lưu")
+  const cols = db.prepare("PRAGMA table_info(transcript_cache)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "updated_at")) db.exec("ALTER TABLE transcript_cache ADD COLUMN updated_at INTEGER");
   return db;
 }
 
@@ -152,11 +157,49 @@ export function getCached<T>(key: string): T | null {
 }
 
 export function setCached(key: string, data: unknown, ttlMs: number | null) {
-  conn().prepare("INSERT OR REPLACE INTO transcript_cache (key, data, expires_at) VALUES (?, ?, ?)").run(
-    key,
-    JSON.stringify(data),
-    ttlMs === null ? null : Date.now() + ttlMs,
-  );
+  conn()
+    .prepare("INSERT OR REPLACE INTO transcript_cache (key, data, expires_at, updated_at) VALUES (?, ?, ?, ?)")
+    .run(key, JSON.stringify(data), ttlMs === null ? null : Date.now() + ttlMs, Date.now());
+}
+
+// ---- Phụ đề video YouTube đã lưu (trang admin) ----
+// Khoá: "ytp:<videoId>:<default | mã track>" (phụ đề YouTube) và "yt:<videoId>:whisper" (Whisper)
+
+export type SavedTranscript = {
+  key: string;
+  videoId: string;
+  title: string;
+  languageCode: string;
+  trackName: string;
+  auto: boolean;
+  lines: number;
+  updatedAt: number | null;
+};
+
+const SAVED_WHERE = "(key LIKE 'ytp:%' OR key LIKE 'yt:%:whisper')";
+
+export function listSavedTranscripts(): SavedTranscript[] {
+  const rows = conn()
+    .prepare(
+      `SELECT key, json_extract(data, '$.videoId') AS videoId, json_extract(data, '$.title') AS title,
+              json_extract(data, '$.track.languageCode') AS languageCode, json_extract(data, '$.track.name') AS trackName,
+              json_extract(data, '$.track.auto') AS auto, json_array_length(data, '$.segments') AS lines, updated_at AS updatedAt
+       FROM transcript_cache WHERE ${SAVED_WHERE} ORDER BY updated_at DESC NULLS LAST, key`,
+    )
+    .all() as (Omit<SavedTranscript, "auto"> & { auto: number })[];
+  return rows.map((r) => ({ ...r, auto: !!r.auto }));
+}
+
+export function savedTranscriptKeys(videoId: string): string[] {
+  return (
+    conn()
+      .prepare(`SELECT key FROM transcript_cache WHERE ${SAVED_WHERE} AND (key LIKE ? OR key = ?)`)
+      .all(`ytp:${videoId}:%`, `yt:${videoId}:whisper`) as { key: string }[]
+  ).map((r) => r.key);
+}
+
+export function deleteSavedTranscripts(videoId: string) {
+  for (const key of savedTranscriptKeys(videoId)) conn().prepare("DELETE FROM transcript_cache WHERE key = ?").run(key);
 }
 
 export type Role = "user" | "admin";

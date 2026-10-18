@@ -14,6 +14,9 @@ async function Dashboard() {
     <>
       <div className="flex items-center gap-2">
         <h1 className="flex-1 text-2xl font-extrabold">Bài học ({lessons.length})</h1>
+        <Link href="/admin/transcripts" className="btn">
+          Phụ đề đã lưu
+        </Link>
         <Link href="/admin/users" className="btn">
           Người dùng
         </Link>
