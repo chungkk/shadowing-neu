@@ -656,7 +656,9 @@ export default function ShadowPlayer({
                   </div>
                 )}
                 {current && (settings.showTranslation || trShown.has(idx)) && (
-                  <p className="text-base text-muted">{tr[current.text] ?? (trError ? "" : "Đang dịch…")}</p>
+                  <p className="text-base text-muted">
+                    {tr[current.text] || (current.text in tr ? "Chưa dịch được câu này." : trError ? "" : "Đang dịch…")}
+                  </p>
                 )}
                 <div className="mt-auto flex items-center gap-3">
                   {current && !settings.showTranslation && !trShown.has(idx) && (
@@ -670,7 +672,7 @@ export default function ShadowPlayer({
                       <Languages className="size-4" /> Dịch câu này
                     </button>
                   )}
-                  {current && trError && (
+                  {current && (trError || tr[current.text] === "") && (
                     <a
                       className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:underline"
                       target="_blank"
@@ -678,7 +680,7 @@ export default function ShadowPlayer({
                       href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
                       title={trError}
                     >
-                      {trError} Mở Google Dịch ↗
+                      {trError || "Chưa dịch được."} Mở Google Dịch ↗
                     </a>
                   )}
                   <span className="ml-auto text-xs font-bold text-amber">
