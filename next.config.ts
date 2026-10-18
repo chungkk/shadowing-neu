@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Build gọn cho Docker (Coolify): .next/standalone/server.js
+  output: "standalone",
+  outputFileTracingExcludes: { "/*": ["data/**/*"] },
+  experimental: {
+    // Phụ đề SRT của video dài có thể vượt giới hạn mặc định 1MB
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
