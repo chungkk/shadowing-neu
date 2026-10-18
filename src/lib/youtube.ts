@@ -79,8 +79,8 @@ async function getVisitorData(videoId: string): Promise<string | undefined> {
   return data;
 }
 
-/** Lấy danh sách luồng audio tải được trọn file (client VISIONOS). Lỗi → trả về null. */
-async function fetchAudioFormats(videoId: string): Promise<AudioFormat[] | null> {
+/** Gọi player API bằng client VISIONOS (cần visitorData). Lỗi / bị chặn → trả về null. */
+async function fetchVisionPlayer(videoId: string): Promise<PlayerResponse | null> {
   try {
     const visitorData = await getVisitorData(videoId);
     if (!visitorData) return null;
@@ -102,13 +102,19 @@ async function fetchAudioFormats(videoId: string): Promise<AudioFormat[] | null>
       visitor = null; // visitorData có thể đã bị đánh dấu, lần sau lấy mới
       return null;
     }
-    return player.streamingData?.adaptiveFormats ?? null;
+    return player;
   } catch {
     return null;
   }
 }
 
+/** Lấy danh sách luồng audio tải được trọn file (client VISIONOS). Lỗi → trả về null. */
+async function fetchAudioFormats(videoId: string): Promise<AudioFormat[] | null> {
+  return (await fetchVisionPlayer(videoId))?.streamingData?.adaptiveFormats ?? null;
+}
+
 // Client ANDROID của Innertube trả về link phụ đề + link audio dùng được trực tiếp (không cần PO token).
+// IP server (VPS/cloud) hay bị ANDROID đòi đăng nhập ("Sign in to confirm you're not a bot") → thử VISIONOS.
 async function fetchPlayer(videoId: string): Promise<PlayerResponse> {
   const res = await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", {
     method: "POST",
@@ -119,13 +125,14 @@ async function fetchPlayer(videoId: string): Promise<PlayerResponse> {
     }),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`YouTube trả về lỗi ${res.status}`);
-  const player: PlayerResponse = await res.json();
-  const status = player.playabilityStatus?.status;
-  if (status && status !== "OK") {
-    throw new Error(player.playabilityStatus?.reason || `Video không khả dụng (${status})`);
-  }
-  return player;
+  const player: PlayerResponse | null = res.ok ? await res.json() : null;
+  const status = player?.playabilityStatus?.status;
+  if (player && (!status || status === "OK")) return player;
+
+  const vision = await fetchVisionPlayer(videoId);
+  if (vision) return vision;
+  if (!player) throw new Error(`YouTube trả về lỗi ${res.status}`);
+  throw new Error(player.playabilityStatus?.reason || `Video không khả dụng (${status})`);
 }
 
 function pickAudio(formats: AudioFormat[]): AudioFormat | undefined {
