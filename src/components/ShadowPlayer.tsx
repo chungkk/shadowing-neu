@@ -48,6 +48,7 @@ type Settings = {
   hideMedia: boolean; // thu gọn khung video (vẫn phát tiếng)
   practice: "shadow" | "dictation"; // nói theo | nghe chép chính tả
   dictLevel: DictationLevel;
+  showTranslation: boolean; // hiện bản dịch tiếng Việt dưới mỗi câu
   merge: boolean; // gộp dòng thành câu
 };
 
@@ -62,6 +63,7 @@ const DEFAULTS: Settings = {
   hideMedia: false,
   practice: "shadow",
   dictLevel: "normal",
+  showTranslation: false,
   merge: true,
 };
 
@@ -153,6 +155,10 @@ export default function ShadowPlayer({
   const [pick, setPick] = useState<{ idx: number; word: string } | null>(null); // từ đang chọn để lưu / tra
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [dictDone, setDictDone] = useState<Record<number, { correct: number; total: number }>>({}); // câu chính tả đã xong
+  const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch tiếng Việt
+  const [trShown, setTrShown] = useState<Set<number>>(new Set()); // câu bấm "Dịch câu này" khi chưa bật bản dịch
+  const [trError, setTrError] = useState("");
+  const trPending = useRef<Set<string>>(new Set());
   const recorder = useRecorder();
 
   const handleRef = useRef<PlayerHandle | null>(null);
@@ -278,6 +284,40 @@ export default function ShadowPlayer({
 
   useEffect(() => clearGap, [clearGap]);
 
+  /** Dịch câu i và ~20 câu kế tiếp (chỉ những câu chưa có / chưa đang dịch); server có kho bản dịch dùng chung */
+  const translateFrom = useCallback(
+    async (i: number) => {
+      const texts = segments
+        .slice(i, i + 20)
+        .map((s) => s.text)
+        .filter((t) => !(t in tr) && !trPending.current.has(t));
+      if (!texts.length) return;
+      texts.forEach((t) => trPending.current.add(t));
+      try {
+        const res = await fetch("/api/v1/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sentences: texts }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Không dịch được");
+        setTrError("");
+        setTr((prev) => ({ ...prev, ...Object.fromEntries(texts.map((t, k) => [t, data.translations[k]])) }));
+      } catch (e) {
+        setTrError((e as Error).message);
+      } finally {
+        texts.forEach((t) => trPending.current.delete(t));
+      }
+    },
+    [segments, tr],
+  );
+
+  // Bật bản dịch → dịch trước các câu sắp học
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gọi API; setState chỉ chạy sau khi có kết quả
+    if (settings.showTranslation) void translateFrom(idx);
+  }, [settings.showTranslation, idx, translateFrom]);
+
   // Cuộn danh sách tới câu đang học
   useEffect(() => {
     const list = listRef.current;
@@ -370,6 +410,13 @@ export default function ShadowPlayer({
           <button className="btn" onClick={() => update({ hideText: !settings.hideText })}>
             {settings.hideText ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
             {settings.hideText ? "Hiện chữ" : "Ẩn chữ"}
+          </button>
+          <button
+            className={`btn ${settings.showTranslation ? "border-accent text-accent" : ""}`}
+            onClick={() => update({ showTranslation: !settings.showTranslation })}
+            title="Hiện bản dịch tiếng Việt dưới mỗi câu"
+          >
+            <Languages className="size-4" /> Bản dịch
           </button>
           <button className="btn" onClick={() => downloadSrt(title, rawSegments)} title="Tải phụ đề .srt">
             <Download className="size-4" /> .srt
@@ -608,15 +655,30 @@ export default function ShadowPlayer({
                     </button>
                   </div>
                 )}
+                {current && (settings.showTranslation || trShown.has(idx)) && (
+                  <p className="text-base text-muted">{tr[current.text] ?? (trError ? "" : "Đang dịch…")}</p>
+                )}
                 <div className="mt-auto flex items-center gap-3">
-                  {current && (
+                  {current && !settings.showTranslation && !trShown.has(idx) && (
+                    <button
+                      className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
+                      onClick={() => {
+                        setTrShown((s) => new Set(s).add(idx));
+                        void translateFrom(idx);
+                      }}
+                    >
+                      <Languages className="size-4" /> Dịch câu này
+                    </button>
+                  )}
+                  {current && trError && (
                     <a
-                      className="inline-flex items-center gap-1 text-xs font-bold text-link hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:underline"
                       target="_blank"
                       rel="noreferrer"
                       href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
+                      title={trError}
                     >
-                      <Languages className="size-4" /> Dịch câu này
+                      {trError} Mở Google Dịch ↗
                     </a>
                   )}
                   <span className="ml-auto text-xs font-bold text-amber">
@@ -707,6 +769,9 @@ export default function ShadowPlayer({
                       className={`mt-2 text-sm leading-relaxed ${hidden ? "font-mono tracking-wider text-muted" : ""}`}
                     >
                       {hidden ? mask(s.text) : s.text}
+                      {!hidden && settings.showTranslation && tr[s.text] && (
+                        <span className="mt-1 block text-xs text-muted">{tr[s.text]}</span>
+                      )}
                     </p>
                   );
                 })()}

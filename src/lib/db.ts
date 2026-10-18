@@ -62,6 +62,14 @@ function open() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (user_id, word)
     );
+    -- Bản dịch câu (dùng chung mọi bài / người học, dịch 1 lần dùng mãi)
+    CREATE TABLE IF NOT EXISTS translations (
+      key TEXT PRIMARY KEY, -- "<ngôn ngữ>:<sha1 câu gốc>"
+      text TEXT NOT NULL,
+      translation TEXT NOT NULL,
+      provider TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   return db;
 }
@@ -275,4 +283,23 @@ export function deleteVocab(userId: number, id: number) {
 
 export function setLessonPublished(id: number, published: boolean) {
   conn().prepare("UPDATE lessons SET published = ? WHERE id = ?").run(published ? 1 : 0, id);
+}
+
+// ---- Bản dịch câu ----
+
+export function getTranslations(keys: string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  const stmt = conn().prepare("SELECT translation FROM translations WHERE key = ?");
+  for (const k of keys) {
+    const r = stmt.get(k) as { translation: string } | undefined;
+    if (r) out.set(k, r.translation);
+  }
+  return out;
+}
+
+export function saveTranslations(rows: { key: string; text: string; translation: string; provider: string }[]) {
+  const stmt = conn().prepare(
+    "INSERT OR REPLACE INTO translations (key, text, translation, provider) VALUES (?, ?, ?, ?)",
+  );
+  for (const r of rows) stmt.run(r.key, r.text, r.translation, r.provider);
 }
