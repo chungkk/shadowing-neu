@@ -41,3 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 data/
+
+# App iOS (Expo) — chỉ để trên máy, không đưa lên Git
+/mobile/

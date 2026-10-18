@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { authenticate, createSession, destroySession, envAdminEmail, hashPassword } from "@/lib/auth";
-import { createUser, emailTaken } from "@/lib/db";
+import { authenticate, createSession, destroySession } from "@/lib/auth";
+import { authConfigured, registerUser } from "@/lib/account";
 
 export type AuthState = { error?: string; email?: string; name?: string };
 
@@ -12,14 +12,10 @@ const safeNext = (v: FormDataEntryValue | null) => {
   return s.startsWith("/") && !s.startsWith("//") ? s : "/";
 };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export async function login(_: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!process.env.AUTH_SECRET && !process.env.ADMIN_PASSWORD) {
-    return { error: "Server chưa cấu hình AUTH_SECRET", email };
-  }
+  if (!authConfigured()) return { error: "Server chưa cấu hình AUTH_SECRET", email };
   const res = await authenticate(email, password);
   if (typeof res === "string") return { error: res, email };
   await createSession(res);
@@ -29,27 +25,9 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
 export async function register(_: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const name = String(formData.get("name") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const back = { email, name };
-
-  if (!process.env.AUTH_SECRET && !process.env.ADMIN_PASSWORD) {
-    return { error: "Server chưa cấu hình AUTH_SECRET", ...back };
-  }
-  if (!name) return { error: "Nhập tên của bạn", ...back };
-  if (!EMAIL_RE.test(email)) return { error: "Email không hợp lệ", ...back };
-  if (password.length < 8) return { error: "Mật khẩu cần ít nhất 8 ký tự", ...back };
-  // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD, không cho ai đăng ký chiếm trước
-  if (email === envAdminEmail() || emailTaken(email)) {
-    return { error: "Email này đã được đăng ký", ...back };
-  }
-
-  let id: number;
-  try {
-    id = createUser({ email, name, passwordHash: await hashPassword(password), role: "user" });
-  } catch {
-    return { error: "Email này đã được đăng ký", ...back };
-  }
-  await createSession(id);
+  const res = await registerUser({ name, email, password: String(formData.get("password") ?? "") });
+  if (typeof res === "string") return { error: res, email, name };
+  await createSession(res);
   redirect(safeNext(formData.get("next")));
 }
 

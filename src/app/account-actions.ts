@@ -1,29 +1,21 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { changePassword, envAdminEmail, getCurrentUser, requireUser } from "@/lib/auth";
-import { deleteVocab, emailTaken, saveVocab, updateUserProfile, updateVocabMeaning } from "@/lib/db";
+import { changePassword, getCurrentUser, requireUser } from "@/lib/auth";
+import { addWord, editProfile } from "@/lib/account";
+import { deleteVocab, updateVocabMeaning } from "@/lib/db";
 
 export type FormResult = { error?: string; ok?: string };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ---- Cài đặt tài khoản ----
 
 export async function updateProfile(_: FormResult, formData: FormData): Promise<FormResult> {
   const user = await requireUser("/settings");
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const fixedAdmin = user.email === envAdminEmail();
-
-  if (!name) return { error: "Nhập tên của bạn" };
-  if (name.length > 60) return { error: "Tên tối đa 60 ký tự" };
-  if (!fixedAdmin) {
-    if (!EMAIL_RE.test(email)) return { error: "Email không hợp lệ" };
-    if (email === envAdminEmail() || emailTaken(email, user.id)) return { error: "Email này đã được dùng" };
-  }
-  // Admin chính giữ nguyên email (khớp biến ADMIN_EMAIL)
-  updateUserProfile(user.id, { name, email: fixedAdmin ? user.email : email });
+  const error = editProfile(user, {
+    name: String(formData.get("name") ?? ""),
+    email: String(formData.get("email") ?? ""),
+  });
+  if (error) return { error };
   refresh();
   return { ok: "Đã lưu thông tin" };
 }
@@ -48,15 +40,8 @@ export async function saveWord(input: {
 }): Promise<FormResult> {
   const user = await getCurrentUser();
   if (!user) return { error: "login" };
-  const word = input.word.trim().slice(0, 80);
-  if (!word) return { error: "Từ trống" };
-  const sourceUrl = input.sourceUrl && /^\/(lesson|watch)\/[\w-]+$/.test(input.sourceUrl) ? input.sourceUrl : null;
-  saveVocab(user.id, {
-    word,
-    context: input.context.slice(0, 500),
-    sourceUrl,
-    sourceTitle: input.sourceTitle.slice(0, 200),
-  });
+  const error = addWord(user, input);
+  if (error) return { error };
   return { ok: "Đã lưu" };
 }
 

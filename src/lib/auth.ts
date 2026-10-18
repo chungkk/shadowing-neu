@@ -1,7 +1,7 @@
 import "server-only";
 import { createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { getUserWithHash, setUserPassword, upsertEnvAdmin, type User } from "./db";
@@ -89,11 +89,18 @@ export async function authenticate(email: string, password: string): Promise<num
 
 const sessionSig = (payload: string, passwordHash: string) => sign(`${payload}.${passwordHash}`);
 
-export async function createSession(userId: number) {
+/** Token đăng nhập "<userId>.<hết hạn>.<chữ ký>" — dùng làm cookie (web) và Bearer token (app) */
+export function createToken(userId: number): string | null {
   const user = getUserWithHash({ id: userId });
-  if (!user) return;
+  if (!user) return null;
   const payload = `${userId}.${Date.now() + MAX_AGE * 1000}`;
-  (await cookies()).set(COOKIE, `${payload}.${sessionSig(payload, user.passwordHash)}`, {
+  return `${payload}.${sessionSig(payload, user.passwordHash)}`;
+}
+
+export async function createSession(userId: number) {
+  const token = createToken(userId);
+  if (!token) return;
+  (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -106,13 +113,8 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-/** Người dùng đang đăng nhập (đọc lại từ DB để quyền / xoá tài khoản có hiệu lực ngay), hoặc null. */
-export async function getCurrentUser(): Promise<User | null> {
-  await connection(); // chỉ chạy lúc request (dùng Date.now() để kiểm tra hạn)
-  if (!secret()) return null;
-  const value = (await cookies()).get(COOKIE)?.value;
-  if (!value) return null;
-  const [id, exp, sig] = value.split(".");
+function userFromToken(token: string): User | null {
+  const [id, exp, sig] = token.split(".");
   if (!id || !exp || !sig || Number(exp) < Date.now()) return null;
   const user = getUserWithHash({ id: Number(id) });
   if (!user) return null;
@@ -122,6 +124,18 @@ export async function getCurrentUser(): Promise<User | null> {
   const { passwordHash, ...rest } = user;
   void passwordHash;
   return rest;
+}
+
+/**
+ * Người dùng đang đăng nhập (đọc lại từ DB để quyền / xoá tài khoản có hiệu lực ngay), hoặc null.
+ * App gửi "Authorization: Bearer <token>", web dùng cookie.
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  await connection(); // chỉ chạy lúc request (dùng Date.now() để kiểm tra hạn)
+  if (!secret()) return null;
+  const bearer = (await headers()).get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
+  const token = bearer ?? (await cookies()).get(COOKIE)?.value;
+  return token ? userFromToken(token) : null;
 }
 
 /** Đổi mật khẩu (không áp dụng cho admin cố định — mật khẩu lấy từ ADMIN_PASSWORD) */

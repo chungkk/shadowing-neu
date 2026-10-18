@@ -9,6 +9,7 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    "mobile/**", // app Expo có cấu hình lint riêng
     "out/**",
     "build/**",
     "next-env.d.ts",
