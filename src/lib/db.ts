@@ -50,6 +50,18 @@ function open() {
       role TEXT NOT NULL DEFAULT 'user', -- 'user' | 'admin'
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Sổ từ vựng của từng người dùng (mỗi từ 1 dòng / người)
+    CREATE TABLE IF NOT EXISTS vocab (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      word TEXT NOT NULL,
+      meaning TEXT NOT NULL DEFAULT '',
+      context TEXT NOT NULL DEFAULT '', -- câu chứa từ
+      source_url TEXT, -- /lesson/1, /watch/abc… (null = file trên máy)
+      source_title TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (user_id, word)
+    );
   `);
   return db;
 }
@@ -158,10 +170,24 @@ export function getUserById(id: number): User | null {
   return r ? toUser(r) : null;
 }
 
-/** Trả về cả password_hash — chỉ dùng trong lib/auth để kiểm tra đăng nhập */
-export function getUserWithHash(email: string): (User & { passwordHash: string }) | null {
-  const r = conn().prepare("SELECT * FROM users WHERE email = ?").get(email) as UserRow | undefined;
+/** Trả về cả password_hash — chỉ dùng trong lib/auth (kiểm tra đăng nhập / chữ ký phiên) */
+export function getUserWithHash(by: { email: string } | { id: number }): (User & { passwordHash: string }) | null {
+  const r = ("email" in by
+    ? conn().prepare("SELECT * FROM users WHERE email = ?").get(by.email)
+    : conn().prepare("SELECT * FROM users WHERE id = ?").get(by.id)) as UserRow | undefined;
   return r ? { ...toUser(r), passwordHash: r.password_hash } : null;
+}
+
+export function emailTaken(email: string, exceptId?: number): boolean {
+  return !!conn().prepare("SELECT 1 FROM users WHERE email = ? AND id != ?").get(email, exceptId ?? -1);
+}
+
+export function updateUserProfile(id: number, p: { name: string; email: string }) {
+  conn().prepare("UPDATE users SET name = ?, email = ? WHERE id = ?").run(p.name, p.email, id);
+}
+
+export function setUserPassword(id: number, passwordHash: string) {
+  conn().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id);
 }
 
 export function createUser(u: { email: string; name: string; passwordHash: string; role: Role }): number {
@@ -189,5 +215,64 @@ export function setUserRole(id: number, role: Role) {
 }
 
 export function deleteUser(id: number) {
+  conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
+}
+
+// ---- Sổ từ vựng ----
+
+export type VocabItem = {
+  id: number;
+  word: string;
+  meaning: string;
+  context: string;
+  sourceUrl: string | null;
+  sourceTitle: string;
+  createdAt: string;
+};
+
+type VocabRow = {
+  id: number;
+  word: string;
+  meaning: string;
+  context: string;
+  source_url: string | null;
+  source_title: string;
+  created_at: string;
+};
+
+export function listVocab(userId: number): VocabItem[] {
+  const rows = conn().prepare("SELECT * FROM vocab WHERE user_id = ? ORDER BY created_at DESC, id DESC").all(userId) as VocabRow[];
+  return rows.map((r) => ({
+    id: r.id,
+    word: r.word,
+    meaning: r.meaning,
+    context: r.context,
+    sourceUrl: r.source_url,
+    sourceTitle: r.source_title,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Lưu từ; đã có thì cập nhật câu ví dụ + nguồn mới nhất (giữ nghĩa đã ghi) */
+export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }) {
+  conn()
+    .prepare(
+      `INSERT INTO vocab (user_id, word, context, source_url, source_title) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, word) DO UPDATE SET context = excluded.context, source_url = excluded.source_url,
+         source_title = excluded.source_title`,
+    )
+    .run(userId, v.word, v.context, v.sourceUrl, v.sourceTitle);
+}
+
+export function updateVocabMeaning(userId: number, id: number, meaning: string) {
+  conn().prepare("UPDATE vocab SET meaning = ? WHERE id = ? AND user_id = ?").run(meaning, id, userId);
+}
+
+export function deleteVocab(userId: number, id: number) {
+  conn().prepare("DELETE FROM vocab WHERE id = ? AND user_id = ?").run(id, userId);
+}
+
+export function setLessonPublished(id: number, published: boolean) {
+  conn().prepare("UPDATE lessons SET published = ? WHERE id = ?").run(published ? 1 : 0, id);
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileAudio, House, LogIn, LogOut, Settings, Users } from "lucide-react";
+import { BookMarked, FileAudio, House, LogIn, LogOut, Settings, UserCog, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 
@@ -12,6 +12,10 @@ const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/local", label: "File trên máy", icon: FileAudio },
 ];
+const USER_ITEMS: Item[] = [
+  { href: "/vocab", label: "Sổ từ vựng", icon: BookMarked },
+  { href: "/settings", label: "Cài đặt tài khoản", icon: UserCog },
+];
 const ADMIN_ITEMS: Item[] = [
   { href: "/admin", label: "Quản trị bài học", icon: Settings },
   { href: "/admin/users", label: "Người dùng", icon: Users },
@@ -20,7 +24,7 @@ const ADMIN_ITEMS: Item[] = [
 /** Thanh icon bên trái (máy tính) / thanh dưới đáy (điện thoại) */
 export default function Sidebar({ user }: { user: { name: string; role: string } | null }) {
   const pathname = usePathname();
-  const items = user?.role === "admin" ? [...ITEMS, ...ADMIN_ITEMS] : ITEMS;
+  const items = [...ITEMS, ...(user ? USER_ITEMS : []), ...(user?.role === "admin" ? ADMIN_ITEMS : [])];
   // Mục khớp dài nhất là mục đang chọn (/admin/users → "Người dùng", không phải "Quản trị")
   const matches = (href: string) =>
     href === "/" ? pathname === "/" || /^\/(lesson|watch)\//.test(pathname) : pathname === href || pathname.startsWith(href + "/");

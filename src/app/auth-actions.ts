@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { authenticate, createSession, destroySession, envAdminEmail, hashPassword } from "@/lib/auth";
-import { createUser, getUserWithHash } from "@/lib/db";
+import { createUser, emailTaken } from "@/lib/db";
 
 export type AuthState = { error?: string; email?: string; name?: string };
 
@@ -39,7 +39,7 @@ export async function register(_: AuthState, formData: FormData): Promise<AuthSt
   if (!EMAIL_RE.test(email)) return { error: "Email không hợp lệ", ...back };
   if (password.length < 8) return { error: "Mật khẩu cần ít nhất 8 ký tự", ...back };
   // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD, không cho ai đăng ký chiếm trước
-  if (email === envAdminEmail() || getUserWithHash(email)) {
+  if (email === envAdminEmail() || emailTaken(email)) {
     return { error: "Email này đã được đăng ký", ...back };
   }
 

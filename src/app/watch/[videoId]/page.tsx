@@ -39,7 +39,13 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
   return (
     <>
       <RememberVideo videoId={data.videoId} title={data.title} />
-      <ShadowPlayer title={data.title} media={{ kind: "youtube", videoId: data.videoId }} segments={data.segments}>
+      <ShadowPlayer
+        title={data.title}
+        media={{ kind: "youtube", videoId: data.videoId }}
+        segments={data.segments}
+        loggedIn={!!user}
+        sourceUrl={`/watch/${data.videoId}`}
+      >
         <div className="flex flex-wrap items-end gap-3 text-xs text-muted">
           <TrackSelect videoId={data.videoId} tracks={data.tracks} current={data.track.languageCode} />
           {data.track.auto && (

@@ -218,7 +218,8 @@ async function downloadAudio(videoId: string, player: PlayerResponse): Promise<{
 }
 
 async function fetchCaptions(url: string): Promise<Segment[]> {
-  const res = await fetch(url.replace(/&fmt=[^&]*/, ""), { cache: "no-store" });
+  // srv3: phụ đề tự động có thời gian từng từ (để cắt câu chính xác)
+  const res = await fetch(url.replace(/&fmt=[^&]*/, "") + "&fmt=srv3", { cache: "no-store" });
   if (!res.ok) throw new Error(`Không tải được phụ đề (${res.status})`);
   return parseYouTubeXml(await res.text());
 }

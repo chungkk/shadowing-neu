@@ -24,12 +24,12 @@ export default async function UserMenu() {
     );
   }
   return (
-    <div className="flex items-center gap-3">
+    <Link href="/settings" title="Cài đặt tài khoản" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-white/5">
       {user.role === "admin" && <span className="pill bg-amber/15 text-amber">ADMIN</span>}
       <span className="max-w-40 truncate font-bold">{user.name}</span>
       <div className="flex size-10 items-center justify-center rounded-full bg-amber text-lg font-extrabold text-sidebar">
         {user.name.trim()[0]?.toUpperCase() ?? "?"}
       </div>
-    </div>
+    </Link>
   );
 }

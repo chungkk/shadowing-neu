@@ -21,6 +21,7 @@ export default function LocalApp({ canTranscribe }: { canTranscribe: boolean }) 
         title={session.title}
         media={session.media}
         segments={session.segments}
+        loggedIn={canTranscribe}
         onBack={() => {
           URL.revokeObjectURL(session.media.src);
           setSession(null);

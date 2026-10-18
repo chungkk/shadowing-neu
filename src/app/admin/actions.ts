@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { envAdminEmail, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
+import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
 import { parseSubtitleFile, toSrt } from "@/lib/subtitles";
 
@@ -96,5 +96,11 @@ export async function changeUserRole(id: number, role: Role) {
 
 export async function removeUser(id: number) {
   if (await editableUser(id)) deleteUser(id);
+  refresh();
+}
+
+export async function toggleLessonPublished(id: number, published: boolean) {
+  await requireAdmin();
+  setLessonPublished(id, published);
   refresh();
 }

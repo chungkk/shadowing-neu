@@ -2,7 +2,10 @@ export type Segment = {
   start: number; // giây
   end: number; // giây
   text: string;
+  words?: Word[]; // phụ đề tự động YouTube (srv3) có thời gian từng từ → cắt câu chính xác
 };
+
+export type Word = [start: number, text: string];
 
 const decodeEntities = (s: string) =>
   s
@@ -64,36 +67,54 @@ export function parseYouTubeXml(xml: string): Segment[] {
     const start = parseFloat(m[1]);
     segs.push({ start, end: start + parseFloat(m[2] ?? "3"), text: cleanText(m[3]) });
   }
-  // format srv3: <p t="1200" d="3400">...</p> (mili giây)
+  // format srv3: <p t="1200" d="3400">...</p> (mili giây).
+  // Phụ đề tự động có thêm từng từ: <s t="160">kann</s> (t = mili giây tính từ đầu dòng)
   if (!segs.length) {
     for (const m of xml.matchAll(/<p t="(\d+)"(?: d="(\d+)")?[^>]*>([\s\S]*?)<\/p>/g)) {
       const start = Number(m[1]) / 1000;
-      segs.push({ start, end: start + Number(m[2] ?? 3000) / 1000, text: cleanText(m[3]) });
+      const end = start + Number(m[2] ?? 3000) / 1000;
+      const words = [...m[3].matchAll(/<s(?: t="(\d+)")?[^>]*>([\s\S]*?)<\/s>/g)]
+        .map(([, t, w]): Word => [start + Number(t ?? 0) / 1000, cleanText(w)])
+        .filter(([, w]) => w);
+      if (words.length) segs.push({ start: words[0][0], end, text: words.map(([, w]) => w).join(" "), words });
+      else segs.push({ start, end, text: cleanText(m[3]) });
     }
   }
   return normalize(segs);
 }
 
+// Viết tắt tiếng Đức có dấu chấm nhưng không phải hết câu
+const ABBREVIATIONS = new Set(
+  "z.b. d.h. u.a. usw. bzw. ca. dr. nr. str. etc. evtl. ggf. vgl. bspw. inkl. max. min. mio. mrd. prof. hr. fr. z.t. o.ä. u.ä. sog. mr. mrs.".split(" "),
+);
+
+/** Từ này có kết thúc câu không? ("glauben." có, "z.B." / "3." (am 3. Oktober) thì không) */
+function endsSentence(word: string): boolean {
+  const w = word.replace(/["»«“”'’)]+$/, "").toLowerCase();
+  if (/[!?…]$/.test(w)) return true;
+  if (!w.endsWith(".")) return false;
+  return !ABBREVIATIONS.has(w) && !/^\d{1,2}\.$/.test(w);
+}
+
 /**
  * Gộp các dòng ngắn thành câu: kết thúc khi gặp dấu câu (. ! ? …)
- * hoặc khi đoạn đã dài quá maxDuration giây (cho sub tự động không có dấu câu).
+ * hoặc khi đoạn đã dài quá maxDuration giây (cho sub không có dấu câu).
  */
-export function mergeIntoSentences(segs: Segment[], maxDuration = 8): Segment[] {
+export function mergeIntoSentences(segs: Segment[], maxDuration = 15): Segment[] {
   const out: Segment[] = [];
   let cur: Segment | null = null;
   for (const s of segs.flatMap(splitSentences)) {
     // Không gộp qua khoảng im lặng dài
-    if (cur && s.start - cur.end > 1) {
+    if (cur && s.start - cur.end > 2) {
       out.push(cur);
       cur = null;
     }
-    if (!cur) cur = { ...s };
+    if (!cur) cur = { start: s.start, end: s.end, text: s.text };
     else {
       cur.text += " " + s.text;
       cur.end = s.end;
     }
-    const endsSentence = /[.!?…]["»“”']?$/.test(cur.text);
-    if (endsSentence || cur.end - cur.start >= maxDuration) {
+    if (endsSentence(cur.text.split(" ").at(-1) ?? "") || cur.end - cur.start >= maxDuration) {
       out.push(cur);
       cur = null;
     }
@@ -103,16 +124,30 @@ export function mergeIntoSentences(segs: Segment[], maxDuration = 8): Segment[] 
 }
 
 /**
- * Tách 1 đoạn chứa nhiều câu (Whisper hay gộp ~10 giây) thành từng câu,
- * chia thời gian theo tỉ lệ số ký tự.
+ * Tách 1 dòng chứa chỗ hết câu ở giữa ("…nicht glauben. Ich habe") thành từng phần.
+ * Có thời gian từng từ → cắt đúng lúc từ đầu câu sau bắt đầu; không có → chia theo tỉ lệ số ký tự.
  */
 function splitSentences(seg: Segment): Segment[] {
-  const parts = seg.text.match(/[^.!?…]+[.!?…]+["»“”']?|[^.!?…]+$/g)?.map((p) => p.trim()).filter(Boolean);
-  if (!parts || parts.length < 2) return [seg];
-  const total = parts.reduce((n, p) => n + p.length, 0);
+  const words: Word[] = seg.words ?? seg.text.split(/\s+/).filter(Boolean).map((w): Word => [NaN, w]);
+  const parts: Word[][] = [[]];
+  words.forEach((w, i) => {
+    parts.at(-1)!.push(w);
+    if (endsSentence(w[1]) && i < words.length - 1) parts.push([]);
+  });
+  if (parts.length < 2) return [seg];
+
+  const texts = parts.map((p) => p.map(([, w]) => w).join(" "));
+  if (seg.words) {
+    return parts.map((p, i) => ({
+      start: i === 0 ? seg.start : p[0][0],
+      end: i < parts.length - 1 ? parts[i + 1][0][0] : seg.end,
+      text: texts[i],
+    }));
+  }
+  const total = texts.reduce((n, t) => n + t.length, 0);
   const dur = seg.end - seg.start;
   let t = seg.start;
-  return parts.map((text) => {
+  return texts.map((text) => {
     const start = t;
     t += (dur * text.length) / total;
     return { start, end: t, text };

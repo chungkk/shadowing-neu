@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { listLessons } from "@/lib/db";
-import { removeLesson } from "./actions";
+import { removeLesson, toggleLessonPublished } from "./actions";
 import DeleteButton from "./DeleteButton";
 import LevelBadge from "@/components/LevelBadge";
 
@@ -32,9 +32,16 @@ async function Dashboard() {
               <div className="flex gap-2 text-xs text-muted">
                 <LevelBadge level={l.level} className="text-xs" />
                 <span>{l.segmentCount} câu</span>
-                <span>{l.published ? "Đã đăng" : "Bản nháp"}</span>
               </div>
             </div>
+            <form action={toggleLessonPublished.bind(null, l.id, !l.published)}>
+              <button
+                title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
+                className={`btn ${l.published ? "text-accent" : "text-muted"}`}
+              >
+                {l.published ? "● Đã đăng" : "○ Nháp"}
+              </button>
+            </form>
             <Link href={`/lesson/${l.id}`} className="btn">
               Xem
             </Link>

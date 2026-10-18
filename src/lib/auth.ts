@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { getUserById, getUserWithHash, upsertEnvAdmin, type User } from "./db";
+import { getUserWithHash, setUserPassword, upsertEnvAdmin, type User } from "./db";
 
 export type { User };
 
@@ -27,7 +27,7 @@ export async function hashPassword(password: string): Promise<string> {
   return `${salt.toString("hex")}:${hash.toString("hex")}`;
 }
 
-async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [saltHex, hashHex] = stored.split(":");
   if (!saltHex || !hashHex) return false;
   const expected = Buffer.from(hashHex, "hex");
@@ -60,10 +60,15 @@ export async function authenticate(email: string, password: string): Promise<num
   if (email === envAdminEmail()) {
     const expected = process.env.ADMIN_PASSWORD;
     if (expected && safeEqual(password, expected)) {
-      userId = upsertEnvAdmin(email, await hashPassword(password));
+      // Chỉ băm lại khi ADMIN_PASSWORD đổi (băm lại = đổi chữ ký → đăng xuất các thiết bị khác)
+      const u = getUserWithHash({ email });
+      userId =
+        u?.role === "admin" && (await verifyPassword(password, u.passwordHash))
+          ? u.id
+          : upsertEnvAdmin(email, await hashPassword(password));
     }
   } else {
-    const u = getUserWithHash(email);
+    const u = getUserWithHash({ email });
     // Không có user vẫn băm 1 lần để thời gian phản hồi như nhau
     const ok = await verifyPassword(password, u?.passwordHash ?? `${"0".repeat(32)}:${"0".repeat(128)}`);
     if (u && ok) userId = u.id;
@@ -78,11 +83,17 @@ export async function authenticate(email: string, password: string): Promise<num
   return userId;
 }
 
-// ---- Phiên đăng nhập (cookie ký HMAC: "<userId>.<hết hạn>.<chữ ký>") ----
+// ---- Phiên đăng nhập ----
+// Cookie "<userId>.<hết hạn>.<chữ ký>"; chữ ký gồm cả password_hash
+// → đổi mật khẩu thì mọi phiên cũ (thiết bị khác) tự hết hiệu lực.
+
+const sessionSig = (payload: string, passwordHash: string) => sign(`${payload}.${passwordHash}`);
 
 export async function createSession(userId: number) {
+  const user = getUserWithHash({ id: userId });
+  if (!user) return;
   const payload = `${userId}.${Date.now() + MAX_AGE * 1000}`;
-  (await cookies()).set(COOKIE, `${payload}.${sign(payload)}`, {
+  (await cookies()).set(COOKIE, `${payload}.${sessionSig(payload, user.passwordHash)}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -103,10 +114,25 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!value) return null;
   const [id, exp, sig] = value.split(".");
   if (!id || !exp || !sig || Number(exp) < Date.now()) return null;
-  const expected = Buffer.from(sign(`${id}.${exp}`));
+  const user = getUserWithHash({ id: Number(id) });
+  if (!user) return null;
+  const expected = Buffer.from(sessionSig(`${id}.${exp}`, user.passwordHash));
   const actual = Buffer.from(sig);
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-  return getUserById(Number(id));
+  const { passwordHash, ...rest } = user;
+  void passwordHash;
+  return rest;
+}
+
+/** Đổi mật khẩu (không áp dụng cho admin cố định — mật khẩu lấy từ ADMIN_PASSWORD) */
+export async function changePassword(user: User, current: string, next: string): Promise<string | null> {
+  if (user.email === envAdminEmail()) return "Mật khẩu admin chính lấy từ biến ADMIN_PASSWORD trên server.";
+  const u = getUserWithHash({ id: user.id });
+  if (!u || !(await verifyPassword(current, u.passwordHash))) return "Mật khẩu hiện tại không đúng";
+  if (next.length < 8) return "Mật khẩu mới cần ít nhất 8 ký tự";
+  setUserPassword(user.id, await hashPassword(next));
+  await createSession(user.id); // phiên hiện tại ký lại bằng mật khẩu mới, các thiết bị khác bị đăng xuất
+  return null;
 }
 
 export async function isAdmin(): Promise<boolean> {

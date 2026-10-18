@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  BookmarkCheck,
+  BookmarkPlus,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -18,8 +21,10 @@ import {
   Settings2,
   Square,
   Volume2,
+  X,
   Zap,
 } from "lucide-react";
+import { saveWord } from "@/app/account-actions";
 import { formatTime, mergeIntoSentences, toSrt, type Segment } from "@/lib/subtitles";
 import type { PlayerHandle } from "@/lib/player";
 import { useRecorder } from "@/hooks/useRecorder";
@@ -60,6 +65,9 @@ const SETTINGS_KEY = "shadow-settings";
 const NO_SETTINGS: Partial<Settings> = {};
 const RATES = [0.5, 0.75, 0.85, 1, 1.25];
 
+/** "Kamera," → "Kamera" (bỏ dấu câu quanh từ) */
+const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+
 /** "Guten Tag!" → "****** ***!" (chế độ ẩn chữ) */
 const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "*");
 
@@ -70,10 +78,14 @@ export default function ShadowPlayer({
   segments: rawSegments,
   backHref = "/",
   onBack,
+  loggedIn = false,
+  sourceUrl = null,
   children,
 }: {
   title: string;
   level?: string;
+  loggedIn?: boolean; // đã đăng nhập → lưu được từ vựng
+  sourceUrl?: string | null; // trang hiện tại (/lesson/1, /watch/…), lưu kèm từ vựng để mở lại
   media: Media;
   segments: Segment[];
   backHref?: string;
@@ -92,6 +104,8 @@ export default function ShadowPlayer({
   const [time, setTime] = useState(0);
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
   const [panel, setPanel] = useState<"settings" | "keys" | null>(null);
+  const [pick, setPick] = useState<{ idx: number; word: string } | null>(null); // từ đang chọn để lưu / tra
+  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const recorder = useRecorder();
 
   const handleRef = useRef<PlayerHandle | null>(null);
@@ -241,6 +255,12 @@ export default function ShadowPlayer({
   }, []);
 
   const current = segments[idx];
+  const picked = pick && pick.idx === idx ? pick.word : null; // sang câu khác thì ẩn
+  const savePicked = async () => {
+    if (!picked || !current) return;
+    const res = await saveWord({ word: picked, context: current.text, sourceUrl, sourceTitle: title });
+    if (res.ok) setSavedWords((s) => new Set(s).add(picked.toLowerCase()));
+  };
   const isRecording = recorder.recordingKey !== null;
   const progress = segments.length ? Math.round(((idx + 1) / segments.length) * 100) : 0;
   const prev = () => go(Math.max(0, idx - 1));
@@ -450,18 +470,52 @@ export default function ShadowPlayer({
                 }`}
                 title={settings.hideText ? "Di chuột để xem" : undefined}
               >
-                {current.text.split(" ").map((w, k) => (
-                  <a
-                    key={k}
-                    href={`https://www.dict.cc/?s=${encodeURIComponent(w.replace(/[^\p{L}\p{N}-]/gu, ""))}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded px-0.5 hover:bg-accent/20"
-                  >
-                    {w}{" "}
-                  </a>
-                ))}
+                {current.text.split(" ").map((w, k) => {
+                  const cw = cleanWord(w);
+                  return (
+                    <span key={k}>
+                      <button
+                        title="Lưu từ / tra từ điển"
+                        onClick={() => cw && setPick({ idx, word: cw })}
+                        className={`cursor-pointer rounded px-0.5 transition hover:bg-accent/20 ${
+                          picked === cw ? "bg-accent/25" : ""
+                        } ${savedWords.has(cw.toLowerCase()) ? "text-amber" : ""}`}
+                      >
+                        {w}
+                      </button>{" "}
+                    </span>
+                  );
+                })}
               </p>
+            )}
+            {picked && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-card-2 p-2">
+                <span className="px-2 text-lg font-extrabold text-amber">{picked}</span>
+                {!loggedIn ? (
+                  <Link href={`/login?next=${encodeURIComponent(sourceUrl ?? "/")}`} className="btn py-1.5">
+                    <BookmarkPlus className="size-4" /> Đăng nhập để lưu từ
+                  </Link>
+                ) : savedWords.has(picked.toLowerCase()) ? (
+                  <Link href="/vocab" className="btn py-1.5 text-amber">
+                    <BookmarkCheck className="size-4" /> Đã lưu · xem sổ từ
+                  </Link>
+                ) : (
+                  <button className="btn py-1.5" onClick={savePicked}>
+                    <BookmarkPlus className="size-4" /> Lưu từ
+                  </button>
+                )}
+                <a
+                  className="btn py-1.5"
+                  href={`https://www.dict.cc/?s=${encodeURIComponent(picked)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <BookOpen className="size-4" /> dict.cc
+                </a>
+                <button className="btn-icon ml-auto size-8" title="Đóng" onClick={() => setPick(null)}>
+                  <X className="size-4" />
+                </button>
+              </div>
             )}
             <div className="mt-auto flex items-center gap-3">
               {current && (
