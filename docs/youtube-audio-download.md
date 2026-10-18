@@ -167,35 +167,41 @@ Kết quả đúng là JSON có `"track":{"languageCode":"whisper"…}` và kho�
 
 Lúc đó chỉ còn cách tạo PO token. Các lựa chọn, theo thứ tự dễ làm trước:
 
-### A. Gọi yt-dlp + plugin PO token từ server
+### A. Gọi yt-dlp + plugin PO token từ server (ĐÃ LÀM)
 
-1. Cài trên server: `yt-dlp` (bản mới nhất), `deno` hoặc `node` (yt-dlp cần để chạy JS),
-   và plugin [`bgutil-ytdlp-pot-provider`](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
-   (chạy 1 server Docker nhỏ để tạo PO token):
-   ```bash
-   docker run -d --name bgutil -p 4416:4416 brainicism/bgutil-ytdlp-pot-provider
-   pip install -U yt-dlp bgutil-ytdlp-pot-provider
-   ```
-2. Trong `downloadAudio`, thay phần tải bằng `fetch` bằng lời gọi subprocess:
-   ```ts
-   import { execFile } from "node:child_process";
-   import { promisify } from "node:util";
-   import { readFile, rm } from "node:fs/promises";
-   import { tmpdir } from "node:os";
-   import path from "node:path";
+Đã cài sẵn trong [`Dockerfile`](../Dockerfile): `yt-dlp[default]` (venv `/opt/yt-dlp`) + plugin
+[`bgutil-ytdlp-pot-provider`](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) ở **chế độ script**
+(server build sẵn ở `/opt/bgutil/server`, chạy bằng Node, không cần container riêng).
 
-   const out = path.join(tmpdir(), `yt-${videoId}-${Date.now()}.m4a`);
-   await promisify(execFile)("yt-dlp", [
-     "-f", "139/249/worstaudio", "-o", out, "--no-playlist", "--no-progress",
-     `https://www.youtube.com/watch?v=${videoId}`,
-   ], { timeout: 120_000 });
-   const blob = new Blob([await readFile(out)], { type: "audio/mp4" });
-   await rm(out, { force: true });
-   ```
-3. Giữ nhánh `VISIONOS` hiện tại làm đường chạy chính nếu nó vẫn còn dùng được với một số video, và gọi yt-dlp làm phương án dự phòng.
+Code ở [`src/lib/ytdlp.ts`](../src/lib/ytdlp.ts). Trong `getYouTubeTranscript`, Innertube vẫn là đường chính;
+yt-dlp được gọi khi:
 
-Ưu điểm: yt-dlp được cộng đồng cập nhật liên tục, mình chỉ cần `pip install -U yt-dlp`.
-Nhược điểm: server phải có Python, Docker và thêm một tiến trình chạy nền.
+- `fetchPlayer` lỗi (IP bị chặn, `LOGIN_REQUIRED`) → lấy tiêu đề + danh sách phụ đề bằng `yt-dlp -J`
+- tải phụ đề lỗi → `yt-dlp --write-subs/--write-auto-subs`
+- tải audio cho Whisper lỗi → `yt-dlp -f 139/249/worstaudio`
+
+Máy không có yt-dlp (vd. `npm run dev` ở local) → bỏ qua, báo lỗi gốc.
+
+Kiểm tra trong container:
+
+```bash
+docker exec -it <container> yt-dlp -v --js-runtimes node \
+  --extractor-args "youtubepot-bgutilscript:server_home=/opt/bgutil/server" \
+  -f 139 -o /tmp/t.m4a "https://www.youtube.com/watch?v=RbtIMGCizu0"
+```
+
+Phải thấy `PO Token Providers: … bgutil:script-node-2.0.2` và `Generating a … PO Token`. Log lỗi của yt-dlp
+được in ra stdout của app với tiền tố `[yt-dlp]`.
+
+**Nếu vẫn báo "…kein Bot…" / "Sign in to confirm"**: PO token không vượt được chặn theo IP. Thêm một trong hai
+(xem `.env.example`):
+
+- `YTDLP_COOKIES=/app/data/youtube-cookies.txt`: cookies (Netscape) của **tài khoản phụ**, xuất từ trình duyệt
+  ẩn danh theo [hướng dẫn của yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
+- `YTDLP_PROXY=socks5://…`: proxy IP dân dụng.
+
+Cập nhật yt-dlp khi YouTube đổi: build lại image (Coolify: Redeploy, bỏ cache). Muốn đổi bản bgutil: sửa
+`ARG BGUTIL_VERSION` trong Dockerfile.
 
 ### B. Tự tạo PO token bằng JS (không cần Python)
 

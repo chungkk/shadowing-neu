@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { parseYouTubeXml, type Segment } from "./subtitles";
 import { getCached, setCached } from "./db";
 import { transcribeAudio, whisperEnabled, WHISPER_MAX_BYTES } from "./whisper";
+import { YtdlpMissingError, ytdlpAudio, ytdlpCaptions, ytdlpVideo } from "./ytdlp";
 
 export { extractVideoId } from "./youtube-id";
 
@@ -221,6 +222,64 @@ async function fetchCaptions(url: string): Promise<Segment[]> {
   return parseYouTubeXml(await res.text());
 }
 
+/** Thử cách thường (Innertube); lỗi thì dùng yt-dlp. Server không có yt-dlp → báo lỗi gốc. */
+async function orYtdlp<T>(primary: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
+  try {
+    return await primary();
+  } catch (e) {
+    try {
+      return await fallback();
+    } catch (err) {
+      throw err instanceof YtdlpMissingError ? e : err;
+    }
+  }
+}
+
+type Source = {
+  title: string;
+  tracks: { track: Track; load: () => Promise<Segment[]> }[];
+  audio: () => Promise<{ blob: Blob; filename: string }>;
+};
+
+async function fromInnertube(videoId: string): Promise<Source> {
+  const player = await fetchPlayer(videoId);
+  return {
+    title: player.videoDetails?.title ?? videoId,
+    tracks: (player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []).map((t) => {
+      const track: Track = {
+        languageCode: t.languageCode,
+        name: t.name?.simpleText ?? t.name?.runs?.map((r) => r.text).join("") ?? t.languageCode,
+        auto: t.kind === "asr",
+      };
+      return {
+        track,
+        load: () =>
+          orYtdlp(
+            () => fetchCaptions(t.baseUrl),
+            () => ytdlpCaptions(videoId, track),
+          ),
+      };
+    }),
+    audio: () =>
+      orYtdlp(
+        () => downloadAudio(videoId, player),
+        () => ytdlpAudio(videoId, WHISPER_MAX_BYTES),
+      ),
+  };
+}
+
+async function fromYtdlp(videoId: string): Promise<Source> {
+  const { title, tracks } = await ytdlpVideo(videoId);
+  return {
+    title,
+    tracks: tracks.map(({ languageCode, name, auto }) => {
+      const track: Track = { languageCode, name, auto };
+      return { track, load: () => ytdlpCaptions(videoId, track) };
+    }),
+    audio: () => ytdlpAudio(videoId, WHISPER_MAX_BYTES),
+  };
+}
+
 /**
  * Lấy phụ đề cho video:
  * - `lang` = mã ngôn ngữ → track YouTube đó
@@ -247,16 +306,11 @@ export async function getYouTubeTranscript(
     if (w && (lang === WHISPER || w.tracks.length === 1)) return w;
   }
 
-  const player = await fetchPlayer(videoId);
-  const title = player.videoDetails?.title ?? videoId;
-  const ytTracks = (player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []).map((t) => ({
-    track: {
-      languageCode: t.languageCode,
-      name: t.name?.simpleText ?? t.name?.runs?.map((r) => r.text).join("") ?? t.languageCode,
-      auto: t.kind === "asr",
-    },
-    baseUrl: t.baseUrl,
-  }));
+  // IP server (VPS) bị YouTube chặn ("…kein Bot…") → dùng yt-dlp + PO token
+  const { title, tracks: ytTracks, audio } = await orYtdlp(
+    () => fromInnertube(videoId),
+    () => fromYtdlp(videoId),
+  );
   const canWhisper = whisper && whisperEnabled();
   const tracks = [...ytTracks.map((t) => t.track), ...(canWhisper ? [WHISPER_TRACK] : [])];
 
@@ -268,7 +322,7 @@ export async function getYouTubeTranscript(
       de.find((t) => !t.track.auto) ||
       de[0] ||
       ytTracks[0];
-    const segments = await fetchCaptions(picked.baseUrl);
+    const segments = await picked.load();
     if (!segments.length) throw new Error("Phụ đề rỗng hoặc không đọc được.");
     result = { videoId, title, track: picked.track, tracks, segments };
     setCached(cacheKey, result, YOUTUBE_CACHE_MS);
@@ -284,7 +338,7 @@ export async function getYouTubeTranscript(
           " Cấu hình Whisper (TRANSCRIBE_API_KEY hoặc TRANSCRIBE_API_URL) trong .env.local để tự tạo phụ đề.",
       );
     }
-    const { blob, filename } = await downloadAudio(videoId, player);
+    const { blob, filename } = await audio();
     const segments = await transcribeAudio(blob, filename);
     if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
     result = { videoId, title, track: WHISPER_TRACK, tracks, segments };
