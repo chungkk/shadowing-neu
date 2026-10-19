@@ -1,13 +1,13 @@
 import { editProfile } from "@/lib/account";
 import { deleteUser, getUserById, getUserWithHash, setUserLang } from "@/lib/db";
-import { envAdminEmail, verifyPassword } from "@/lib/auth";
+import { createToken, envAdminEmail, verifyPassword } from "@/lib/auth";
 import { apiUser, appLang, body, fail, publicUser, str } from "@/lib/api";
 
-/** GET → thông tin tài khoản */
+/** GET → thông tin tài khoản + token mới (gia hạn 30 ngày mỗi lần mở app → dùng thường xuyên thì không bao giờ bị đăng xuất) */
 export async function GET() {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  return Response.json({ user: publicUser(user) });
+  return Response.json({ user: publicUser(user), token: createToken(user.id) });
 }
 
 /** PATCH { name?, email?, lang? } → sửa thông tin / ngôn ngữ giao diện */

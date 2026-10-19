@@ -33,5 +33,5 @@ export const publicUser = (u: User) => ({
 });
 
 /** Ngôn ngữ giao diện app hỗ trợ */
-export const APP_LANGS = ["vi", "en", "de"] as const;
+export const APP_LANGS = ["vi", "de"] as const;
 export const appLang = (v: unknown) => (APP_LANGS as readonly unknown[]).includes(v) ? (v as string) : null;
