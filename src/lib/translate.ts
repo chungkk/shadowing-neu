@@ -164,8 +164,17 @@ export async function translateSentences(sentences: string[]): Promise<string[]>
  * Gọi AI trả về JSON (dùng chung nhà cung cấp với phần dịch câu), thử lần lượt từng nhà cung cấp.
  * `valid` kiểm tra kết quả; sai định dạng → thử nhà cung cấp kế tiếp.
  */
-export async function chatJson<T>(system: string, user: unknown, valid: (x: unknown) => x is T): Promise<T & { provider: string }> {
-  const list = providers();
+export async function chatJson<T>(
+  system: string,
+  user: unknown,
+  valid: (x: unknown) => x is T,
+  opts: { bestFirst?: boolean } = {},
+): Promise<T & { provider: string }> {
+  const all = providers();
+  // bestFirst: cần nghĩa chuẩn, sát → ChatGPT trước (chậm hơn nhưng tiếng Việt tự nhiên nhất), rồi Groq lớn, Groq nhỏ
+  const small = process.env.TRANSLATE_MODEL ?? "openai/gpt-oss-20b";
+  const rank = (p: Provider) => (p.name === "openai" ? 0 : p.model === small ? 2 : 1);
+  const list = opts.bestFirst ? [...all].sort((a, b) => rank(a) - rank(b)) : all;
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
   for (const p of list) {
     try {

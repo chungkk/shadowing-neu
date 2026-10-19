@@ -5,7 +5,7 @@ import { chatJson } from "./translate";
 
 /**
  * Dịch nghĩa 1 từ tiếng Đức theo ngữ cảnh câu, bằng lời nói hằng ngày (tiếng Việt / Anh / Đức đơn giản — theo giao diện app).
- * Thử lần lượt mọi nhà cung cấp AI đã cấu hình (Groq nhỏ → Groq lớn → ChatGPT).
+ * Cần nghĩa chuẩn, sát → ChatGPT trước, rồi Groq lớn, Groq nhỏ (dự phòng khi cái trước lỗi).
  * Kết quả lưu trong kho bản dịch (bảng translations, khoá "wordm:<lang>:…") → mỗi từ trong mỗi câu chỉ hỏi AI 1 lần.
  */
 
@@ -15,11 +15,17 @@ export type WordInfo = { word: string; meaning: string };
 const prompt = (lang: WordLang) =>
   lang === "de"
     ? 'Du hilfst Deutschlernenden. Du bekommst JSON {"word", "sentence"}. ' +
-      "Erkläre, was das Wort in diesem Satz bedeutet — mit einem alltäglichen, umgangssprachlichen Synonym oder einer ganz kurzen Umschreibung (max. 6 Wörter), " +
-      'NICHT das Wort selbst wiederholen. Antworte NUR mit JSON {"meaning": "…"}.'
+      "Gib die genaue Bedeutung des Wortes in GENAU diesem Satz an. Ist es Teil einer Redewendung, festen Wendung oder eines trennbaren Verbs, " +
+      "erkläre die ganze Wendung (z. B. \"keinen Bock haben\" → \"keine Lust haben\"), nie wörtlich — " +
+      "als treffendes, alltagssprachliches Synonym oder ganz kurze Umschreibung (1–4 Wörter). " +
+      "NUR dieses Wort (bzw. die kürzeste Wendung, zu der es gehört) — keine anderen Wörter des Satzes. " +
+      'Nicht das Wort selbst wiederholen, keine Erklärung. Antworte NUR mit JSON {"meaning": "…"}.'
     : `You help learners of German. Input JSON {"word", "sentence"}. ` +
-      `Translate what the word means in this sentence into ${lang === "vi" ? "Vietnamese" : "English"}, ` +
-      `the way people say it in everyday speech (natural, casual, not dictionary-style), max 6 words, no explanations. ` +
+      `Give the precise meaning of the word in EXACTLY this sentence, in ${lang === "vi" ? "Vietnamese" : "English"}. ` +
+      `If the word is part of an idiom, fixed phrase or separable verb in this sentence, give the meaning of that whole phrase ` +
+      `(e.g. "keinen Bock haben" → "not in the mood", "Bescheid sagen" → "let … know"), never a literal word-by-word meaning. ` +
+      `Must be accurate and faithful, worded the way people naturally say it in everyday speech — not stiff dictionary wording. ` +
+      `Translate ONLY that word (or the shortest idiom it belongs to) — never other words of the sentence. 1–4 words, no explanations. ` +
       `Reply ONLY with JSON {"meaning": "…"}.`;
 
 const isMeaning = (x: unknown): x is { meaning: string } => {
@@ -32,7 +38,7 @@ export async function translateWord(word: string, sentence: string, lang: WordLa
   const cached = getTranslations([key]).get(key);
   if (cached) return { word, meaning: cached };
 
-  const { meaning, provider } = await chatJson(prompt(lang), { word, sentence }, isMeaning);
+  const { meaning, provider } = await chatJson(prompt(lang), { word, sentence }, isMeaning, { bestFirst: true });
   const m = meaning.trim();
   saveTranslations([{ key, text: `${word} | ${sentence}`, translation: m, provider }]);
   return { word, meaning: m };
