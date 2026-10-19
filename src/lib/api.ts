@@ -23,4 +23,15 @@ export async function apiUser(): Promise<User | Response> {
 }
 
 /** Dữ liệu người dùng trả cho app (không bao giờ có mật khẩu) */
-export const publicUser = (u: User) => ({ id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.createdAt });
+export const publicUser = (u: User) => ({
+  id: u.id,
+  name: u.name,
+  email: u.email,
+  role: u.role,
+  lang: u.lang,
+  createdAt: u.createdAt,
+});
+
+/** Ngôn ngữ giao diện app hỗ trợ */
+export const APP_LANGS = ["vi", "en", "de"] as const;
+export const appLang = (v: unknown) => (APP_LANGS as readonly unknown[]).includes(v) ? (v as string) : null;

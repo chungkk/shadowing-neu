@@ -76,6 +76,9 @@ function open() {
   // Cột thời điểm lưu (cho trang admin "Phụ đề đã lưu")
   const cols = db.prepare("PRAGMA table_info(transcript_cache)").all() as { name: string }[];
   if (!cols.some((c) => c.name === "updated_at")) db.exec("ALTER TABLE transcript_cache ADD COLUMN updated_at INTEGER");
+  // Ngôn ngữ giao diện app theo tài khoản (NULL = chưa chọn)
+  const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!userCols.some((c) => c.name === "lang")) db.exec("ALTER TABLE users ADD COLUMN lang TEXT");
   return db;
 }
 
@@ -209,12 +212,28 @@ export type User = {
   email: string;
   name: string;
   role: Role;
+  lang: string | null;
   createdAt: string;
 };
 
-type UserRow = { id: number; email: string; name: string; password_hash: string; role: Role; created_at: string };
+type UserRow = {
+  id: number;
+  email: string;
+  name: string;
+  password_hash: string;
+  role: Role;
+  lang: string | null;
+  created_at: string;
+};
 
-const toUser = (r: UserRow): User => ({ id: r.id, email: r.email, name: r.name, role: r.role, createdAt: r.created_at });
+const toUser = (r: UserRow): User => ({
+  id: r.id,
+  email: r.email,
+  name: r.name,
+  role: r.role,
+  lang: r.lang ?? null,
+  createdAt: r.created_at,
+});
 
 export function getUserById(id: number): User | null {
   const r = conn().prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined;
@@ -237,14 +256,18 @@ export function updateUserProfile(id: number, p: { name: string; email: string }
   conn().prepare("UPDATE users SET name = ?, email = ? WHERE id = ?").run(p.name, p.email, id);
 }
 
+export function setUserLang(id: number, lang: string) {
+  conn().prepare("UPDATE users SET lang = ? WHERE id = ?").run(lang, id);
+}
+
 export function setUserPassword(id: number, passwordHash: string) {
   conn().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id);
 }
 
-export function createUser(u: { email: string; name: string; passwordHash: string; role: Role }): number {
+export function createUser(u: { email: string; name: string; passwordHash: string; role: Role; lang?: string | null }): number {
   const res = conn()
-    .prepare("INSERT INTO users (email, name, password_hash, role) VALUES (?, ?, ?, ?)")
-    .run(u.email, u.name, u.passwordHash, u.role);
+    .prepare("INSERT INTO users (email, name, password_hash, role, lang) VALUES (?, ?, ?, ?, ?)")
+    .run(u.email, u.name, u.passwordHash, u.role, u.lang ?? null);
   return Number(res.lastInsertRowid);
 }
 

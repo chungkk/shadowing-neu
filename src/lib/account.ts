@@ -11,7 +11,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const authConfigured = () => !!(process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD);
 
-export async function registerUser(input: { name: string; email: string; password: string }): Promise<number | string> {
+export async function registerUser(input: {
+  name: string;
+  email: string;
+  password: string;
+  lang?: string | null;
+}): Promise<number | string> {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
   if (!authConfigured()) return "Server chưa cấu hình AUTH_SECRET";
@@ -22,7 +27,7 @@ export async function registerUser(input: { name: string; email: string; passwor
   // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD, không cho ai đăng ký chiếm trước
   if (email === envAdminEmail() || emailTaken(email)) return "Email này đã được đăng ký";
   try {
-    return createUser({ email, name, passwordHash: await hashPassword(input.password), role: "user" });
+    return createUser({ email, name, passwordHash: await hashPassword(input.password), role: "user", lang: input.lang });
   } catch {
     return "Email này đã được đăng ký";
   }
