@@ -62,6 +62,14 @@ function open() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (user_id, word)
     );
+    -- Mã xác nhận email khi đăng ký (lưu dạng băm, mỗi email 1 mã mới nhất)
+    CREATE TABLE IF NOT EXISTS email_codes (
+      email TEXT PRIMARY KEY,
+      code_hash TEXT NOT NULL,
+      expires_at INTEGER NOT NULL, -- ms
+      sent_at INTEGER NOT NULL, -- ms
+      attempts INTEGER NOT NULL DEFAULT 0
+    );
     -- Bản dịch câu (dùng chung mọi bài / người học, dịch 1 lần dùng mãi)
     CREATE TABLE IF NOT EXISTS translations (
       key TEXT PRIMARY KEY, -- "<ngôn ngữ>:<sha1 câu gốc>"
@@ -278,6 +286,37 @@ export function upsertEnvAdmin(email: string, passwordHash: string): number {
      ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash, role = 'admin'`,
   ).run(email, passwordHash);
   return (conn().prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: number }).id;
+}
+
+// ---- Mã xác nhận email ----
+
+export type EmailCode = { codeHash: string; expiresAt: number; sentAt: number; attempts: number };
+
+export function getEmailCode(email: string): EmailCode | null {
+  const r = conn().prepare("SELECT * FROM email_codes WHERE email = ?").get(email) as
+    | { code_hash: string; expires_at: number; sent_at: number; attempts: number }
+    | undefined;
+  return r ? { codeHash: r.code_hash, expiresAt: r.expires_at, sentAt: r.sent_at, attempts: r.attempts } : null;
+}
+
+export function saveEmailCode(email: string, codeHash: string, expiresAt: number) {
+  conn()
+    .prepare(
+      `INSERT INTO email_codes (email, code_hash, expires_at, sent_at, attempts) VALUES (?, ?, ?, ?, 0)
+       ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at,
+         sent_at = excluded.sent_at, attempts = 0`,
+    )
+    .run(email, codeHash, expiresAt, Date.now());
+  // Dọn mã đã hết hạn của người khác
+  conn().prepare("DELETE FROM email_codes WHERE expires_at < ?").run(Date.now() - 24 * 3600 * 1000);
+}
+
+export function bumpEmailCodeAttempts(email: string) {
+  conn().prepare("UPDATE email_codes SET attempts = attempts + 1 WHERE email = ?").run(email);
+}
+
+export function deleteEmailCode(email: string) {
+  conn().prepare("DELETE FROM email_codes WHERE email = ?").run(email);
 }
 
 export function listUsers(): User[] {

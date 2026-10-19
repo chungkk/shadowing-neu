@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { authenticate, createSession, destroySession } from "@/lib/auth";
-import { authConfigured, registerUser } from "@/lib/account";
+import { authConfigured, registerUser, sendSignupCode } from "@/lib/account";
 
 export type AuthState = { error?: string; email?: string; name?: string };
 
@@ -22,10 +22,21 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   redirect(safeNext(formData.get("next")));
 }
 
+/** Bước 1 đăng ký: kiểm tra thông tin rồi gửi mã xác nhận về email. Trả về lỗi hoặc null */
+export async function requestSignupCode(input: { name: string; email: string; password: string }): Promise<string | null> {
+  return sendSignupCode(input);
+}
+
+/** Bước 2 đăng ký: nhập đúng mã → tạo tài khoản */
 export async function register(_: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const name = String(formData.get("name") ?? "").trim();
-  const res = await registerUser({ name, email, password: String(formData.get("password") ?? "") });
+  const res = await registerUser({
+    name,
+    email,
+    password: String(formData.get("password") ?? ""),
+    code: String(formData.get("code") ?? ""),
+  });
   if (typeof res === "string") return { error: res, email, name };
   await createSession(res);
   redirect(safeNext(formData.get("next")));
