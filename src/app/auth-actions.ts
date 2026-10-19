@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { authenticate, createSession, destroySession, resetPassword } from "@/lib/auth";
-import { authConfigured, registerUser, sendPasswordReset, sendSignupCode } from "@/lib/account";
+import { authenticate, createSession, destroySession } from "@/lib/auth";
+import { authConfigured, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
 
 export type AuthState = { error?: string; email?: string; name?: string };
 
@@ -42,25 +42,25 @@ export async function register(_: AuthState, formData: FormData): Promise<AuthSt
   redirect(safeNext(formData.get("next")));
 }
 
-export type ForgotState = { error?: string; sent?: string; email?: string };
-
-/** Quên mật khẩu: gửi link đặt lại về email */
-export async function forgotPassword(_: ForgotState, formData: FormData): Promise<ForgotState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const error = await sendPasswordReset({ email });
-  return error ? { error, email } : { sent: email };
+/** Quên mật khẩu bước 1: gửi mã 6 số về email. Trả về lỗi hoặc null */
+export async function requestPasswordReset(email: string): Promise<string | null> {
+  return sendPasswordReset({ email });
 }
 
-export type ResetState = { error?: string; done?: boolean };
+export type ResetState = { error?: string };
 
-/** Đặt mật khẩu mới từ link trong email → đăng nhập luôn trên web */
+/** Quên mật khẩu bước 2: nhập mã + mật khẩu mới → đăng nhập luôn */
 export async function resetPasswordAction(_: ResetState, formData: FormData): Promise<ResetState> {
   const password = String(formData.get("password") ?? "");
   if (password !== String(formData.get("confirm") ?? "")) return { error: "Hai mật khẩu không khớp" };
-  const res = await resetPassword(String(formData.get("token") ?? ""), password);
+  const res = await resetPasswordWithCode({
+    email: String(formData.get("email") ?? ""),
+    code: String(formData.get("code") ?? ""),
+    password,
+  });
   if (typeof res === "string") return { error: res };
   await createSession(res);
-  return { done: true };
+  redirect("/");
 }
 
 export async function logout() {

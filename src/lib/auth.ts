@@ -97,36 +97,6 @@ export function createToken(userId: number): string | null {
   return `${payload}.${sessionSig(payload, user.passwordHash)}`;
 }
 
-// ---- Đặt lại mật khẩu qua link email ----
-// Token "<userId>.<hết hạn>.<chữ ký>", chữ ký gồm password_hash → đặt mật khẩu xong thì link tự hết hiệu lực (dùng 1 lần).
-// Tiền tố "reset" trong chữ ký: không dùng token này làm token đăng nhập được.
-
-const RESET_MS = 30 * 60 * 1000; // 30 phút
-const resetSig = (payload: string, passwordHash: string) => sign(`reset.${payload}.${passwordHash}`);
-
-export function createResetToken(userId: number): string | null {
-  const user = getUserWithHash({ id: userId });
-  if (!user) return null;
-  const payload = `${userId}.${Date.now() + RESET_MS}`;
-  return `${payload}.${resetSig(payload, user.passwordHash)}`;
-}
-
-/** Đặt mật khẩu mới bằng token trong link. Trả về id người dùng, hoặc chuỗi lỗi */
-export async function resetPassword(token: string, next: string): Promise<number | string> {
-  const [id, exp, sig] = token.split(".");
-  const expired = "Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.";
-  if (!id || !exp || !sig || Number(exp) < Date.now()) return expired;
-  const user = getUserWithHash({ id: Number(id) });
-  if (!user) return expired;
-  const expected = Buffer.from(resetSig(`${id}.${exp}`, user.passwordHash));
-  const actual = Buffer.from(sig);
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return expired;
-  if (user.email === envAdminEmail()) return "Mật khẩu admin chính lấy từ biến ADMIN_PASSWORD trên server.";
-  if (next.length < 8) return "Mật khẩu mới cần ít nhất 8 ký tự";
-  setUserPassword(user.id, await hashPassword(next)); // các phiên cũ trên mọi thiết bị hết hiệu lực
-  return user.id;
-}
-
 export async function createSession(userId: number) {
   const token = createToken(userId);
   if (!token) return;
