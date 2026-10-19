@@ -159,3 +159,38 @@ export async function translateSentences(sentences: string[]): Promise<string[]>
   }
   return keys.map((k) => cached.get(k) ?? "");
 }
+
+/**
+ * Gọi AI trả về JSON (dùng chung nhà cung cấp với phần dịch câu), thử lần lượt từng nhà cung cấp.
+ * `valid` kiểm tra kết quả; sai định dạng → thử nhà cung cấp kế tiếp.
+ */
+export async function chatJson<T>(system: string, user: unknown, valid: (x: unknown) => x is T): Promise<T & { provider: string }> {
+  const list = providers();
+  if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
+  for (const p of list) {
+    try {
+      const res = await fetch(p.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
+        body: JSON.stringify({
+          model: p.model,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: JSON.stringify(user) },
+          ],
+          ...p.extra,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const data: { choices?: { message?: { content?: string } }[] } = await res.json();
+      const parsed: unknown = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+      if (valid(parsed)) return { ...parsed, provider: p.name };
+      throw new Error(`${p.name}: trả về sai định dạng`);
+    } catch (e) {
+      console.error("[chatJson]", (e as Error).message);
+    }
+  }
+  throw new Error("Không dịch được lúc này.");
+}
