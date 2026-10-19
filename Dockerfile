@@ -22,8 +22,13 @@ FROM node:24-slim AS bgutil
 ARG BGUTIL_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-RUN git clone --depth 1 --single-branch --branch ${BGUTIL_VERSION} \
-      https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil \
+# Thử lại tối đa 5 lần: mạng VPS → GitHub đôi khi lỗi tạm thời ("CONNECT tunnel failed, response 503")
+RUN for i in 1 2 3 4 5; do \
+      git clone --depth 1 --single-branch --branch ${BGUTIL_VERSION} \
+        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil && break; \
+      echo "git clone lỗi (lần $i), thử lại sau $((i * 10))s…"; rm -rf /opt/bgutil; sleep $((i * 10)); \
+    done \
+    && test -d /opt/bgutil/server \
     && cd /opt/bgutil/server && npm ci && npx tsc
 
 FROM node:24-slim AS runner
