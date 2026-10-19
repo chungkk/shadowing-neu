@@ -168,13 +168,15 @@ export async function chatJson<T>(
   system: string,
   user: unknown,
   valid: (x: unknown) => x is T,
-  opts: { bestFirst?: boolean } = {},
+  opts: { prefer?: "openai" | "large" } = {},
 ): Promise<T & { provider: string }> {
   const all = providers();
-  // bestFirst: cần nghĩa chuẩn, sát → ChatGPT trước (chậm hơn nhưng tiếng Việt tự nhiên nhất), rồi Groq lớn, Groq nhỏ
+  // prefer "openai": ChatGPT trước (chậm hơn nhưng tiếng Việt tự nhiên nhất) → Groq lớn → Groq nhỏ
+  // prefer "large":  Groq lớn trước (nhanh, đủ chính xác cho nội dung dài) → ChatGPT → Groq nhỏ
   const small = process.env.TRANSLATE_MODEL ?? "openai/gpt-oss-20b";
-  const rank = (p: Provider) => (p.name === "openai" ? 0 : p.model === small ? 2 : 1);
-  const list = opts.bestFirst ? [...all].sort((a, b) => rank(a) - rank(b)) : all;
+  const rank = (p: Provider) =>
+    p.model === small ? 2 : opts.prefer === "openai" ? (p.name === "openai" ? 0 : 1) : p.name === "openai" ? 1 : 0;
+  const list = opts.prefer ? [...all].sort((a, b) => rank(a) - rank(b)) : all;
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
   for (const p of list) {
     try {
