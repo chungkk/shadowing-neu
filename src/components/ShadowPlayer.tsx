@@ -32,7 +32,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
 import LocalPlayer from "./LocalPlayer";
 import LevelBadge from "./LevelBadge";
-import DictationPanel from "./DictationPanel";
+import DictationPanel, { type DictDraft } from "./DictationPanel";
 import type { DictationLevel } from "@/lib/dictation";
 
 export type Media = { kind: "youtube"; videoId: string } | { kind: "local"; src: string; isVideo: boolean };
@@ -155,6 +155,8 @@ export default function ShadowPlayer({
   const [pick, setPick] = useState<{ idx: number; word: string } | null>(null); // từ đang chọn để lưu / tra
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [dictDone, setDictDone] = useState<Record<number, { correct: number; total: number }>>({}); // câu chính tả đã xong
+  const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã xem của từng câu (quay lại vẫn còn)
+  const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả
   const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch tiếng Việt
   const [trShown, setTrShown] = useState<Set<number>>(new Set()); // câu bấm "Dịch câu này" khi chưa bật bản dịch
   const [trError, setTrError] = useState("");
@@ -429,6 +431,8 @@ export default function ShadowPlayer({
     fetch(`/api/v1/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => {});
     setIdx(0);
     setDictDone({});
+    setDictDrafts({});
+    setDictEpoch((e) => e + 1);
     setResumed(null);
   };
 
@@ -646,13 +650,23 @@ export default function ShadowPlayer({
                 </span>
               </div>
               <DictationPanel
-                key={`${idx}-${settings.merge}`}
+                key={`${idx}-${settings.merge}-${dictEpoch}`}
                 text={current.text}
                 level={settings.dictLevel}
                 onReplay={() => go(idx)}
                 onNext={next}
                 onDone={(correct, total) => setDictDone((d) => ({ ...d, [idx]: { correct, total } }))}
                 hasNext={idx < segments.length - 1}
+                draft={dictDrafts[idx]}
+                saved={dictDone[idx]}
+                onDraft={(d) =>
+                  setDictDrafts((prev) => {
+                    const drafts = { ...prev };
+                    if (d) drafts[idx] = d;
+                    else delete drafts[idx];
+                    return drafts;
+                  })
+                }
               />
             </>
           )}

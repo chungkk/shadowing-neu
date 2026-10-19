@@ -13,9 +13,12 @@ const BOX: Record<WordState | "hint", string> = {
   hint: "border-border bg-background/60 text-muted",
 };
 
+/** Bản nháp 1 câu: chữ đã gõ + các từ đã bấm xem — giữ lại khi chuyển sang câu khác rồi quay về */
+export type DictDraft = { input: string; revealed: number[] };
+
 /**
  * Nghe chép chính tả 1 câu. Gõ đúng từ nào hiện từ đó ngay; bấm "Kiểm tra" để xem từ sai / thiếu.
- * Remount theo câu (key) nên state tự reset khi sang câu khác.
+ * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
  */
 export default function DictationPanel({
   text,
@@ -24,6 +27,9 @@ export default function DictationPanel({
   onNext,
   onDone,
   hasNext,
+  draft,
+  saved,
+  onDraft,
 }: {
   text: string;
   level: DictationLevel;
@@ -31,16 +37,21 @@ export default function DictationPanel({
   onNext: () => void;
   onDone: (correct: number, total: number) => void;
   hasNext: boolean;
+  draft?: DictDraft;
+  saved?: { correct: number; total: number };
+  onDraft: (d: DictDraft | null) => void;
 }) {
-  const [input, setInput] = useState("");
-  const [revealed, setRevealed] = useState<Set<number>>(new Set());
-  const [checked, setChecked] = useState(false);
-  const [reported, setReported] = useState(false);
+  const [input, setInput] = useState(() => draft?.input ?? (saved ? text : ""));
+  const [revealed, setRevealed] = useState<Set<number>>(() => new Set(draft?.revealed ?? []));
+  const [checked, setChecked] = useState(() => !!saved || (!!draft && checkDictation(text, draft.input, new Set(draft.revealed)).done));
+  const [reported, setReported] = useState(!!saved);
+  const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
 
   const finish = (r = result) => {
     if (!reported) {
       setReported(true);
+      setScore({ correct: r.correct, total: r.total });
       onDone(r.correct, r.total);
     }
   };
@@ -48,6 +59,7 @@ export default function DictationPanel({
   const change = (nextInput: string, nextRevealed: Set<number>) => {
     setInput(nextInput);
     setRevealed(nextRevealed);
+    onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkDictation(text, nextInput, nextRevealed);
     setChecked(r.done);
     if (r.done) finish(r);
@@ -58,6 +70,15 @@ export default function DictationPanel({
   };
   const submit = () => (result.done ? onNext() : check());
   const revealAll = () => change(input, new Set(result.words.map((_, k) => k)));
+  /** Làm lại câu này từ đầu (kết quả mới ghi đè khi làm xong) */
+  const retry = () => {
+    setInput("");
+    setRevealed(new Set());
+    setChecked(false);
+    setReported(false);
+    setScore(undefined);
+    onDraft(null);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -125,14 +146,20 @@ export default function DictationPanel({
       <p className="text-xs text-muted">
         {checked
           ? result.done
-            ? `🎉 Xong! Đúng ${result.correct}/${result.total} từ${revealed.size ? ` · xem ${revealed.size} từ` : ""}.`
+            ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealed.size ? ` · xem ${revealed.size} từ` : ""}.`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
           : "Từ đã xem sẽ bị tính là lỗi. Enter để kiểm tra."}
       </p>
 
-      <button className="btn btn-amber py-3" onClick={revealAll} disabled={result.done}>
-        Hiện tất cả
-      </button>
+      {result.done ? (
+        <button className="btn py-3" onClick={retry}>
+          <RotateCcw className="size-4" /> Làm lại câu này
+        </button>
+      ) : (
+        <button className="btn btn-amber py-3" onClick={revealAll}>
+          Hiện tất cả
+        </button>
+      )}
       <button className="btn btn-primary py-3.5 text-base" onClick={submit} disabled={result.done && !hasNext}>
         {result.done ? (
           <>
