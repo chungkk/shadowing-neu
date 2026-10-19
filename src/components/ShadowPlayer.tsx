@@ -366,6 +366,72 @@ export default function ShadowPlayer({
     });
     if (res.ok) setSavedWords((s) => new Set(s).add(picked.toLowerCase()));
   };
+  // ---- Tiến độ học: lưu theo tài khoản, đồng bộ với app (chỉ khi gộp câu — app luôn gộp nên số câu mới khớp) ----
+  const syncProgress = loggedIn && !!sourceUrl && settings.merge;
+  const [resumed, setResumed] = useState<number | null>(null);
+  const progressLoaded = useRef(false);
+  const pendingSave = useRef<object | null>(null);
+
+  useEffect(() => {
+    progressLoaded.current = false;
+    if (!syncProgress || !segments.length) return;
+    let alive = true;
+    fetch(`/api/v1/progress?source=${encodeURIComponent(sourceUrl!)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { progress: { idx: number; dictDone: Record<string, { correct: number; total: number }> } | null } | null) => {
+        const p = d?.progress;
+        if (!alive || !p) return;
+        const i = Math.min(p.idx, segments.length - 1);
+        const done = Object.fromEntries(Object.entries(p.dictDone).filter(([k]) => Number(k) < segments.length));
+        setIdx(i);
+        setDictDone(done);
+        if (i > 0 || Object.keys(done).length) setResumed(i);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) progressLoaded.current = true;
+      });
+    return () => {
+      alive = false;
+    };
+  }, [syncProgress, sourceUrl, segments.length]);
+
+  const flushProgress = useCallback(() => {
+    const b = pendingSave.current;
+    pendingSave.current = null;
+    // keepalive: vẫn gửi được khi đang đóng tab / chuyển trang
+    if (b) fetch("/api/v1/progress", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b), keepalive: true }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!syncProgress || !progressLoaded.current || !segments.length) return;
+    pendingSave.current = {
+      source: sourceUrl,
+      title,
+      idx,
+      total: segments.length,
+      mode: settings.practice,
+      dictLevel: settings.dictLevel,
+      dictDone,
+    };
+    const id = setTimeout(flushProgress, 1500);
+    return () => clearTimeout(id);
+  }, [syncProgress, sourceUrl, title, idx, segments.length, settings.practice, settings.dictLevel, dictDone, flushProgress]);
+  useEffect(() => {
+    window.addEventListener("pagehide", flushProgress);
+    return () => {
+      window.removeEventListener("pagehide", flushProgress);
+      flushProgress(); // rời trang trong app (chuyển route)
+    };
+  }, [flushProgress]);
+
+  const restartProgress = () => {
+    pendingSave.current = null;
+    fetch(`/api/v1/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => {});
+    setIdx(0);
+    setDictDone({});
+    setResumed(null);
+  };
+
   const isRecording = recorder.recordingKey !== null;
   const dictation = settings.practice === "dictation";
   const doneCount = Object.keys(dictDone).length;
@@ -732,6 +798,19 @@ export default function ShadowPlayer({
           <div className="h-2 overflow-hidden rounded-full bg-card-2">
             <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
           </div>
+          {resumed !== null && (
+            <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
+              <span className="flex-1">
+                Tiếp tục từ câu {resumed + 1}/{segments.length}
+              </span>
+              <button className="font-bold text-amber hover:underline" onClick={restartProgress}>
+                Học lại từ đầu
+              </button>
+              <button className="text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng">
+                ✕
+              </button>
+            </div>
+          )}
           <div ref={listRef} className="relative -mx-1 flex flex-1 flex-col gap-3 overflow-y-auto px-1 py-1">
             {segments.map((s, i) => (
               <div

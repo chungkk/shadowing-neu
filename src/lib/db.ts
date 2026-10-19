@@ -62,6 +62,19 @@ function open() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (user_id, word)
     );
+    -- Tiến độ học của từng người cho từng bài / video (đồng bộ giữa web và app)
+    CREATE TABLE IF NOT EXISTS progress (
+      user_id INTEGER NOT NULL,
+      source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>"
+      title TEXT NOT NULL DEFAULT '',
+      idx INTEGER NOT NULL DEFAULT 0, -- câu đang học (sau khi gộp câu)
+      total INTEGER NOT NULL DEFAULT 0, -- tổng số câu
+      mode TEXT NOT NULL DEFAULT 'shadow', -- 'shadow' | 'dictation'
+      dict_level TEXT NOT NULL DEFAULT 'normal',
+      dict_done TEXT NOT NULL DEFAULT '{}', -- {"<idx>": {"correct": 7, "total": 8}} câu chính tả đã làm
+      updated_at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, source)
+    );
     -- Mã xác nhận email khi đăng ký (lưu dạng băm, mỗi email 1 mã mới nhất)
     CREATE TABLE IF NOT EXISTS email_codes (
       email TEXT PRIMARY KEY,
@@ -157,6 +170,7 @@ export function updateLesson(id: number, l: LessonInput) {
 
 export function deleteLesson(id: number) {
   conn().prepare("DELETE FROM lessons WHERE id = ?").run(id);
+  conn().prepare("DELETE FROM progress WHERE source = ?").run(`/lesson/${id}`);
 }
 
 export function getCached<T>(key: string): T | null {
@@ -329,6 +343,7 @@ export function setUserRole(id: number, role: Role) {
 
 export function deleteUser(id: number) {
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
 }
 
@@ -407,4 +422,65 @@ export function saveTranslations(rows: { key: string; text: string; translation:
     "INSERT OR REPLACE INTO translations (key, text, translation, provider) VALUES (?, ?, ?, ?)",
   );
   for (const r of rows) stmt.run(r.key, r.text, r.translation, r.provider);
+}
+
+// ---- Tiến độ học ----
+
+export type DictResult = { correct: number; total: number };
+export type Progress = {
+  source: string;
+  title: string;
+  idx: number;
+  total: number;
+  mode: "shadow" | "dictation";
+  dictLevel: string;
+  dictDone: Record<string, DictResult>;
+  updatedAt: number;
+};
+
+type ProgressRow = {
+  source: string;
+  title: string;
+  idx: number;
+  total: number;
+  mode: Progress["mode"];
+  dict_level: string;
+  dict_done: string;
+  updated_at: number;
+};
+
+const toProgress = (r: ProgressRow): Progress => ({
+  source: r.source,
+  title: r.title,
+  idx: r.idx,
+  total: r.total,
+  mode: r.mode,
+  dictLevel: r.dict_level,
+  dictDone: JSON.parse(r.dict_done),
+  updatedAt: r.updated_at,
+});
+
+export function getProgress(userId: number, source: string): Progress | null {
+  const r = conn().prepare("SELECT * FROM progress WHERE user_id = ? AND source = ?").get(userId, source) as ProgressRow | undefined;
+  return r ? toProgress(r) : null;
+}
+
+/** Mọi bài người này đã học, mới nhất trước */
+export function listProgress(userId: number): Progress[] {
+  return (conn().prepare("SELECT * FROM progress WHERE user_id = ? ORDER BY updated_at DESC").all(userId) as ProgressRow[]).map(toProgress);
+}
+
+export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
+  conn()
+    .prepare(
+      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, source) DO UPDATE SET title = excluded.title, idx = excluded.idx, total = excluded.total,
+         mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, updated_at = excluded.updated_at`,
+    )
+    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), Date.now());
+}
+
+export function deleteProgress(userId: number, source: string) {
+  conn().prepare("DELETE FROM progress WHERE user_id = ? AND source = ?").run(userId, source);
 }

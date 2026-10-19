@@ -22,6 +22,13 @@ export async function apiUser(): Promise<User | Response> {
   return (await getCurrentUser()) ?? fail("Chưa đăng nhập", 401);
 }
 
+/** Bắt buộc là admin (401 chưa đăng nhập · 403 không phải admin) */
+export async function apiAdmin(): Promise<User | Response> {
+  const user = await apiUser();
+  if (user instanceof Response) return user;
+  return user.role === "admin" ? user : fail("Chỉ admin mới làm được việc này", 403);
+}
+
 /** Dữ liệu người dùng trả cho app (không bao giờ có mật khẩu) */
 export const publicUser = (u: User) => ({
   id: u.id,
