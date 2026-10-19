@@ -22,14 +22,17 @@ FROM node:24-slim AS bgutil
 ARG BGUTIL_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-# Thử lại tối đa 5 lần: mạng VPS → GitHub đôi khi lỗi tạm thời ("CONNECT tunnel failed, response 503")
-RUN for i in 1 2 3 4 5; do \
+# Không bắt buộc: VPS có lúc không vào được GitHub ("CONNECT tunnel failed, response 503"; npm ci của bgutil cũng
+# tải bản dựng sẵn của "canvas" từ GitHub). Thử 3 lần; vẫn lỗi → image chạy KHÔNG có PO token (app tự bỏ qua),
+# build lại khi GitHub vào được để có lại.
+RUN ok=0; \
+    for i in 1 2 3; do \
       git clone --depth 1 --single-branch --branch ${BGUTIL_VERSION} \
-        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil && break; \
-      echo "git clone lỗi (lần $i), thử lại sau $((i * 10))s…"; rm -rf /opt/bgutil; sleep $((i * 10)); \
-    done \
-    && test -d /opt/bgutil/server \
-    && cd /opt/bgutil/server && npm ci && npx tsc
+        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil \
+        && (cd /opt/bgutil/server && npm ci && npx tsc) && ok=1 && break; \
+      echo "bgutil lỗi (lần $i), thử lại sau $((i * 10))s…"; rm -rf /opt/bgutil; sleep $((i * 10)); \
+    done; \
+    if [ "$ok" != 1 ]; then echo "⚠ Bỏ qua bgutil (không tải được từ GitHub)"; rm -rf /opt/bgutil; mkdir -p /opt/bgutil/server; fi
 
 FROM node:24-slim AS runner
 ARG BGUTIL_VERSION

@@ -1,5 +1,6 @@
 import "server-only";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -28,7 +29,9 @@ function commonArgs(): string[] {
   const args = ["--no-playlist", "--no-progress", "--no-warnings"];
   const runtimes = env.YTDLP_JS_RUNTIMES ?? "node";
   if (runtimes) args.push("--js-runtimes", runtimes);
-  if (env.BGUTIL_SERVER_HOME) args.push("--extractor-args", `youtubepot-bgutilscript:server_home=${env.BGUTIL_SERVER_HOME}`);
+  // Chỉ dùng khi bgutil đã được build (image Docker có thể bỏ qua bgutil nếu lúc build không vào được GitHub)
+  if (env.BGUTIL_SERVER_HOME && existsSync(path.join(env.BGUTIL_SERVER_HOME, "build")))
+    args.push("--extractor-args", `youtubepot-bgutilscript:server_home=${env.BGUTIL_SERVER_HOME}`);
   if (env.BGUTIL_BASE_URL) args.push("--extractor-args", `youtubepot-bgutilhttp:base_url=${env.BGUTIL_BASE_URL}`);
   if (env.YTDLP_COOKIES) args.push("--cookies", env.YTDLP_COOKIES);
   if (env.YTDLP_PROXY) args.push("--proxy", env.YTDLP_PROXY);
