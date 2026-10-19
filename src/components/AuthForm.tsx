@@ -147,6 +147,9 @@ export default function AuthForm({ mode, next }: { mode: "login" | "register"; n
                 required
               />
               <input name="password" type="password" placeholder="Mật khẩu" className="input" autoComplete="current-password" required />
+              <Link href="/forgot-password" className="-mt-1 self-end text-sm font-bold text-link">
+                Quên mật khẩu?
+              </Link>
               {state.error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
               <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending}>
                 {pending ? "Đang xử lý…" : "Đăng nhập"}
