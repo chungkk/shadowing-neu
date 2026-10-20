@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { BookOpen, Download, ExternalLink, Search, Trash2 } from "lucide-react";
-import { removeWord, setWordMeaning } from "@/app/account-actions";
+import { BookOpen, Download, ExternalLink, Search, Sparkles, Trash2 } from "lucide-react";
+import { aiMeaning, removeWord, setWordMeaning } from "@/app/account-actions";
 import type { VocabItem } from "@/lib/db";
 
 /** Tô đậm từ trong câu ví dụ */
@@ -31,6 +31,8 @@ function VocabCard({ v }: { v: VocabItem }) {
   const [meaning, setMeaning] = useState(v.meaning);
   const [saved, setSaved] = useState(v.meaning);
   const [pending, start] = useTransition();
+  const [aiPending, startAi] = useTransition();
+  const [aiError, setAiError] = useState("");
   const save = () => {
     if (meaning.trim() === saved) return;
     start(async () => {
@@ -38,6 +40,20 @@ function VocabCard({ v }: { v: VocabItem }) {
       setSaved(meaning.trim());
     });
   };
+  // Tự lưu khi ngừng gõ (không chỉ lúc rời ô — trên điện thoại có thể chuyển trang mà ô không kịp blur)
+  useEffect(() => {
+    if (meaning.trim() === saved) return;
+    const t = setTimeout(save, 800);
+    return () => clearTimeout(t);
+  });
+  const ai = () =>
+    startAi(async () => {
+      setAiError("");
+      const res = await aiMeaning(v.id);
+      if ("error" in res) return setAiError(res.error);
+      setMeaning(res.meaning);
+      setSaved(res.meaning);
+    });
 
   return (
     <div className="card flex flex-col gap-3">
@@ -58,16 +74,22 @@ function VocabCard({ v }: { v: VocabItem }) {
           </button>
         </form>
       </div>
-      <input
-        className="input py-2"
-        placeholder="Ghi nghĩa tiếng Việt…"
-        value={meaning}
-        onChange={(e) => setMeaning(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-        maxLength={500}
-      />
-      {pending && <span className="-mt-2 text-xs text-muted">Đang lưu…</span>}
+      <div className="flex gap-2">
+        <input
+          className="input min-w-0 flex-1 py-2"
+          placeholder="Ghi nghĩa tiếng Việt…"
+          value={meaning}
+          onChange={(e) => setMeaning(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+          maxLength={500}
+        />
+        <button title="Dịch nghĩa bằng AI" className="btn-icon size-10 shrink-0 text-amber" onClick={ai} disabled={aiPending}>
+          <Sparkles className={`size-4 ${aiPending ? "animate-pulse" : ""}`} />
+        </button>
+      </div>
+      {(pending || aiPending) && <span className="-mt-2 text-xs text-muted">{aiPending ? "AI đang dịch…" : "Đang lưu…"}</span>}
+      {aiError && <span className="-mt-2 text-xs text-red-400">{aiError}</span>}
       {v.context && (
         <p className="rounded-xl bg-background/60 p-3 text-sm leading-relaxed text-muted">
           <Highlight text={v.context} word={v.word} />

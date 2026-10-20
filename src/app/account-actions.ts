@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { changePassword, getCurrentUser, requireUser } from "@/lib/auth";
-import { addWord, editProfile } from "@/lib/account";
+import { addWord, aiWordMeaning, editProfile } from "@/lib/account";
 import { deleteVocab, updateVocabMeaning } from "@/lib/db";
 
 export type FormResult = { error?: string; ok?: string };
@@ -48,6 +48,16 @@ export async function saveWord(input: {
 export async function setWordMeaning(id: number, meaning: string) {
   const user = await requireUser("/vocab");
   updateVocabMeaning(user.id, id, meaning.trim().slice(0, 500));
+}
+
+/** AI ghi nghĩa cho từ (lưu luôn) */
+export async function aiMeaning(id: number): Promise<{ meaning: string } | { error: string }> {
+  const user = await requireUser("/vocab");
+  try {
+    return await aiWordMeaning(user, id);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
 }
 
 export async function removeWord(id: number) {

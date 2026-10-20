@@ -8,12 +8,16 @@ import {
   emailTaken,
   getEmailCode,
   getUserWithHash,
+  getVocab,
   saveEmailCode,
   saveVocab,
   setUserPassword,
   updateUserProfile,
+  updateVocabMeaning,
 } from "./db";
 import { mailConfigured, sendMail } from "./mail";
+import { translateSentences } from "./translate";
+import { translateWord } from "./word";
 
 /**
  * Nghiệp vụ tài khoản dùng chung cho form web (server actions) và API của app.
@@ -214,4 +218,19 @@ export function addWord(
     sourceTitle: (input.sourceTitle ?? "").slice(0, 200),
   });
   return null;
+}
+
+/**
+ * Nhờ AI ghi nghĩa cho 1 mục trong sổ từ vựng rồi lưu luôn.
+ * Từ → nghĩa theo câu ví dụ (theo ngôn ngữ giao diện); câu (có khoảng trắng) → bản dịch tiếng Việt.
+ */
+export async function aiWordMeaning(user: User, id: number): Promise<{ meaning: string } | { error: string }> {
+  const v = getVocab(user.id, id);
+  if (!v) return { error: "Không tìm thấy từ" };
+  const meaning = v.word.includes(" ")
+    ? (await translateSentences([v.word]))[0]
+    : (await translateWord(v.word, v.context || v.word, user.lang === "de" ? "de" : "vi")).meaning;
+  if (!meaning) return { error: "Không dịch được lúc này." };
+  updateVocabMeaning(user.id, id, meaning.slice(0, 500));
+  return { meaning };
 }

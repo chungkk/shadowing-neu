@@ -399,6 +399,12 @@ export function saveVocab(userId: number, v: { word: string; context: string; so
     .run(userId, v.word, v.context, v.sourceUrl, v.sourceTitle);
 }
 
+export function getVocab(userId: number, id: number): { word: string; context: string } | undefined {
+  return conn().prepare("SELECT word, context FROM vocab WHERE id = ? AND user_id = ?").get(id, userId) as
+    | { word: string; context: string }
+    | undefined;
+}
+
 export function updateVocabMeaning(userId: number, id: number, meaning: string) {
   conn().prepare("UPDATE vocab SET meaning = ? WHERE id = ? AND user_id = ?").run(meaning, id, userId);
 }
