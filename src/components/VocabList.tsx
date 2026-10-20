@@ -1,10 +1,36 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
-import { BookOpen, Download, ExternalLink, Search, Sparkles, Trash2 } from "lucide-react";
+import { BookOpen, Brain, Download, ExternalLink, Search, Sparkles, Trash2 } from "lucide-react";
 import { aiMeaning, removeWord, setWordMeaning } from "@/app/account-actions";
 import type { VocabItem } from "@/lib/db";
+import VocabReview from "./VocabReview";
+
+const noop = () => () => {};
+/** true sau khi chạy trên trình duyệt (server render dùng ngày UTC để khỏi lệch hydrate) */
+const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/** created_at là UTC "YYYY-MM-DD HH:MM:SS" → ngày theo giờ máy người dùng */
+function dayKey(createdAt: string, local: boolean) {
+  const d = new Date(createdAt.replace(" ", "T") + "Z");
+  return local && !isNaN(d.getTime()) ? ymd(d) : createdAt.slice(0, 10);
+}
+
+function dayLabel(key: string, local: boolean) {
+  const [y, m, d] = key.split("-").map(Number);
+  if (local) {
+    const today = new Date();
+    if (key === ymd(today)) return "Hôm nay";
+    today.setDate(today.getDate() - 1);
+    if (key === ymd(today)) return "Hôm qua";
+  }
+  const wd = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"][new Date(y, m - 1, d).getDay()];
+  return `${wd}, ${pad(d)}/${pad(m)}/${y}`;
+}
 
 /** Tô đậm từ trong câu ví dụ */
 function Highlight({ text, word }: { text: string; word: string }) {
@@ -103,7 +129,6 @@ function VocabCard({ v }: { v: VocabItem }) {
         ) : (
           <span className="truncate">{v.sourceTitle}</span>
         )}
-        <span className="ml-auto shrink-0">{v.createdAt.slice(0, 10)}</span>
       </div>
     </div>
   );
@@ -111,10 +136,18 @@ function VocabCard({ v }: { v: VocabItem }) {
 
 export default function VocabList({ items }: { items: VocabItem[] }) {
   const [q, setQ] = useState("");
+  const [review, setReview] = useState<{ title: string; items: VocabItem[] } | null>(null);
+  const local = useMounted();
   const query = q.trim().toLowerCase();
   const shown = query
     ? items.filter((v) => v.word.toLowerCase().includes(query) || v.meaning.toLowerCase().includes(query))
     : items;
+  // items đã sắp mới → cũ nên các nhóm ngày cũng theo thứ tự đó
+  const days = new Map<string, VocabItem[]>();
+  for (const v of shown) {
+    const k = dayKey(v.createdAt, local);
+    days.set(k, [...(days.get(k) ?? []), v]);
+  }
 
   if (!items.length) {
     return (
@@ -133,16 +166,31 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
           <Search className="size-4 text-muted" />
           <input className="flex-1 bg-transparent outline-none" placeholder="Tìm từ hoặc nghĩa…" value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
+        <button className="btn btn-amber" onClick={() => setReview({ title: "Tất cả", items })}>
+          <Brain className="size-4" /> Ôn tất cả
+        </button>
         <button className="btn" onClick={() => downloadCsv(items)}>
           <Download className="size-4" /> Tải CSV (Anki)
         </button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {shown.map((v) => (
-          <VocabCard key={v.id} v={v} />
-        ))}
-      </div>
+      {[...days].map(([day, list]) => (
+        <section key={day} className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
+            <span className="text-sm text-muted">{list.length} từ</span>
+            <button className="btn ml-auto px-3 py-1.5 text-xs" onClick={() => setReview({ title: dayLabel(day, local), items: list })}>
+              <Brain className="size-3.5 text-amber" /> Ôn tập
+            </button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {list.map((v) => (
+              <VocabCard key={v.id} v={v} />
+            ))}
+          </div>
+        </section>
+      ))}
       {!shown.length && <p className="text-sm text-muted">Không tìm thấy “{q}”.</p>}
+      {review && <VocabReview title={review.title} items={review.items} onClose={() => setReview(null)} />}
     </div>
   );
 }
