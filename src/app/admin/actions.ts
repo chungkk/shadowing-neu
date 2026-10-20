@@ -6,6 +6,7 @@ import { envAdminEmail, requireAdmin } from "@/lib/auth";
 import { createLesson, deleteLesson, deleteUser, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
 import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
+import { prewarmPhrases } from "@/lib/phrases";
 
 export type FormState = { error?: string };
 
@@ -72,6 +73,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   const lesson = { title, videoId, description, level, published, dictation, segments };
   if (id) updateLesson(id, lesson);
   else createLesson(lesson);
+  prewarmPhrases(segments);
   redirect("/admin");
 }
 
@@ -124,6 +126,7 @@ export async function saveTranscript(videoId: string, key: string, _: FormState,
     const sameTrack = k === key || (!k.endsWith(":whisper") && !key.endsWith(":whisper") && t.track.languageCode === original.track.languageCode);
     setCached(k, sameTrack ? { ...t, title, segments } : { ...t, title }, null);
   }
+  prewarmPhrases(segments);
   redirect("/admin/transcripts");
 }
 

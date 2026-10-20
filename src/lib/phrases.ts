@@ -1,7 +1,9 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { after } from "next/server";
 import { getTranslations, saveTranslations } from "./db";
 import { locatePhrase, type Phrase } from "./phrase-match";
+import { mergeIntoSentences, type Segment } from "./subtitles";
 import { chatJson } from "./translate";
 import type { WordLang } from "./word";
 
@@ -79,4 +81,36 @@ export async function findPhrases(sentences: string[], lang: WordLang): Promise<
     saveTranslations(rows);
   }
   return keys.map((k) => found.get(k) ?? []);
+}
+
+const PREWARM_LANGS: WordLang[] = ["vi", "de"]; // ngôn ngữ giao diện của app
+const prewarming = new Set<string>();
+
+/**
+ * Phân tích sẵn cụm từ cho cả bài ngay khi bài / phụ đề được lưu (chạy nền sau khi trả response) →
+ * người học mở bài là có cụm từ tô sáng ngay. Câu gộp giống app (mergeIntoSentences) để trùng khoá cache.
+ */
+export function prewarmPhrases(segments: Segment[]) {
+  const sentences = [...new Set(mergeIntoSentences(segments).map((s) => s.text.trim()))].filter(Boolean);
+  if (!sentences.length) return;
+  const id = createHash("sha1").update(sentences.join("\n")).digest("hex");
+  if (prewarming.has(id)) return;
+  prewarming.add(id);
+  const run = async () => {
+    try {
+      for (const lang of PREWARM_LANGS) {
+        for (let i = 0; i < sentences.length; i += BATCH * 2) {
+          // 1 lô lỗi (AI quá tải…) thì bỏ qua lô đó — app sẽ hỏi lại khi người học tới câu đó
+          await findPhrases(sentences.slice(i, i + BATCH * 2), lang).catch((e) => console.error("[phrases] prewarm:", (e as Error).message));
+        }
+      }
+    } finally {
+      prewarming.delete(id);
+    }
+  };
+  try {
+    after(run);
+  } catch {
+    void run(); // ngoài request (không có after) → chạy nền luôn
+  }
 }

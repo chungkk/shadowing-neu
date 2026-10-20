@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createLesson, LEVELS, listLessons, type Level } from "@/lib/db";
 import { extractVideoId, getSavedTranscript, getYouTubeTranscript } from "@/lib/youtube";
 import { apiAdmin, body, fail, str } from "@/lib/api";
+import { prewarmPhrases } from "@/lib/phrases";
 
 /** GET → danh sách bài đã đăng (admin thấy cả bản nháp), không kèm phụ đề */
 export async function GET() {
@@ -48,5 +49,6 @@ export async function POST(req: Request) {
     dictation: b.dictation === true,
     segments,
   });
+  prewarmPhrases(segments); // phân tích sẵn cụm từ → mở bài là có tô sáng ngay
   return Response.json({ id }, { status: 201 });
 }

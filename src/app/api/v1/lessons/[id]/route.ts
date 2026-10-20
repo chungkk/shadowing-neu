@@ -2,12 +2,14 @@ import type { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteLesson, getLesson, LEVELS, updateLesson, type Level } from "@/lib/db";
 import { apiAdmin, body, fail, str } from "@/lib/api";
+import { prewarmPhrases } from "@/lib/phrases";
 
 /** GET → 1 bài kèm phụ đề (segments thô; app tự gộp câu như web) */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/v1/lessons/[id]">) {
   const user = await getCurrentUser();
   const lesson = getLesson(Number((await ctx.params).id));
   if (!lesson || (!lesson.published && user?.role !== "admin")) return fail("Không tìm thấy bài học", 404);
+  prewarmPhrases(lesson.segments); // bài tạo trước khi có tính năng này: phân tích nốt (câu đã có trong kho thì bỏ qua)
   return Response.json({ lesson });
 }
 
