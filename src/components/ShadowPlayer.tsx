@@ -128,12 +128,14 @@ export default function ShadowPlayer({
   onBack,
   loggedIn = false,
   sourceUrl = null,
+  allowDictation = false,
   children,
 }: {
   title: string;
   level?: string;
   loggedIn?: boolean; // đã đăng nhập → lưu được từ vựng
   sourceUrl?: string | null; // trang hiện tại (/lesson/1, /watch/…), lưu kèm từ vựng để mở lại
+  allowDictation?: boolean; // bài admin bật Chính tả; video tự dán / file trên máy chỉ Shadowing
   media: Media;
   segments: Segment[];
   backHref?: string;
@@ -142,7 +144,10 @@ export default function ShadowPlayer({
 }) {
   // Đọc cài đặt qua useSyncExternalStore: server và lần hydrate đầu dùng DEFAULTS, không lệch HTML
   const [stored, setStored] = useLocalStorage(SETTINGS_KEY, NO_SETTINGS);
-  const settings = useMemo<Settings>(() => ({ ...DEFAULTS, ...stored }), [stored]);
+  const settings = useMemo<Settings>(
+    () => ({ ...DEFAULTS, ...stored, ...(allowDictation ? {} : { practice: "shadow" as const }) }),
+    [stored, allowDictation],
+  );
   const segments = useMemo(
     () => (settings.merge ? mergeIntoSentences(rawSegments) : rawSegments),
     [rawSegments, settings.merge],
@@ -170,13 +175,14 @@ export default function ShadowPlayer({
   const listRef = useRef<HTMLDivElement>(null);
 
   // Ref luôn giữ giá trị mới nhất để dùng trong interval/timer
-  const live = useRef({ settings, segments, idx, recorder });
+  const live = useRef({ settings, stored, segments, idx, recorder });
   useEffect(() => {
-    live.current = { settings, segments, idx, recorder };
+    live.current = { settings, stored, segments, idx, recorder };
   });
 
   const update = useCallback(
-    (patch: Partial<Settings>) => setStored({ ...live.current.settings, ...patch }),
+    // Ghi lên cài đặt đã lưu (không phải bản đã ép Shadowing) → video không có Chính tả không làm mất lựa chọn ở bài khác
+    (patch: Partial<Settings>) => setStored({ ...live.current.stored, ...patch }),
     [setStored],
   );
 
@@ -464,14 +470,16 @@ export default function ShadowPlayer({
         )}
         <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-link">{title}</h1>
         {level && <LevelBadge level={level} />}
-        <Segmented
-          options={PRACTICES}
-          value={settings.practice}
-          onChange={(p) => {
-            pause();
-            update({ practice: p });
-          }}
-        />
+        {allowDictation && (
+          <Segmented
+            options={PRACTICES}
+            value={settings.practice}
+            onChange={(p) => {
+              pause();
+              update({ practice: p });
+            }}
+          />
+        )}
         <div className="flex gap-2">
           <button className="btn" onClick={() => update({ hideMedia: !settings.hideMedia })}>
             {settings.hideMedia ? <Eye className="size-4" /> : <EyeOff className="size-4" />}

@@ -13,6 +13,7 @@ export type LessonFormValues = {
   description: string;
   level: string;
   published: boolean;
+  dictation: boolean;
   srt: string;
 };
 
@@ -108,6 +109,10 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         <label className="check text-sm">
           <input type="checkbox" name="published" defaultChecked={initial?.published ?? true} />
           Đăng công khai (bỏ chọn = bản nháp)
+        </label>
+        <label className="check text-sm">
+          <input type="checkbox" name="dictation" defaultChecked={initial?.dictation ?? false} />
+          Cho luyện Chính tả (bỏ chọn = chỉ Shadowing)
         </label>
       </div>
 

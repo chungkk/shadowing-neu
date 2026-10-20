@@ -19,6 +19,7 @@ async function Edit({ params }: PageProps<"/admin/[id]">) {
         description: lesson.description,
         level: lesson.level,
         published: lesson.published,
+        dictation: lesson.dictation,
         srt: toSrt(mergeIntoSentences(lesson.segments)),
       }}
     />

@@ -19,6 +19,7 @@ async function LessonView({ params }: PageProps<"/lesson/[id]">) {
       segments={lesson.segments}
       loggedIn={!!user}
       sourceUrl={`/lesson/${lesson.id}`}
+      allowDictation={lesson.dictation}
     >
       {(!lesson.published || lesson.description) && (
         <div className="flex flex-col gap-1 rounded-xl bg-card-2/60 p-3 text-sm">

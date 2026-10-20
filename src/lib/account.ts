@@ -203,7 +203,8 @@ export function addWord(
   user: User,
   input: { word: string; context?: string; sourceUrl?: string | null; sourceTitle?: string },
 ): string | null {
-  const word = input.word.trim().slice(0, 80);
+  // Có khoảng trắng = lưu nguyên câu (đánh dấu sao trong app) → cho dài hơn 1 từ
+  const word = input.word.trim().slice(0, input.word.trim().includes(" ") ? 500 : 80);
   if (!word) return "Từ trống";
   const sourceUrl = input.sourceUrl && /^\/(lesson|watch)\/[\w-]+$/.test(input.sourceUrl) ? input.sourceUrl : null;
   saveVocab(user.id, {

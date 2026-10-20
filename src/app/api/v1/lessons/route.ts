@@ -10,7 +10,7 @@ export async function GET() {
 }
 
 /**
- * POST { videoId, title, level, description?, published? } — admin thêm bài từ app.
+ * POST { videoId, title, level, description?, published?, dictation? } — admin thêm bài từ app.
  * Phụ đề lấy ở server: bản đã lưu (app lưu khi mở video) → không có thì tự lấy / tạo bằng Whisper.
  * → 201 { id } · 409 { error, id } nếu video đã có bài.
  */
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const admin = await apiAdmin();
   if (admin instanceof Response) return admin;
 
-  const b = await body<{ videoId: string; title: string; level: string; description: string; published: boolean }>(req);
+  const b = await body<{ videoId: string; title: string; level: string; description: string; published: boolean; dictation: boolean }>(req);
   const videoId = extractVideoId(str(b.videoId));
   const title = str(b.title).trim().slice(0, 200);
   const level = str(b.level) as Level;
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
     description: str(b.description).trim().slice(0, 2000),
     level,
     published: b.published !== false,
+    dictation: b.dictation === true,
     segments,
   });
   return Response.json({ id }, { status: 201 });

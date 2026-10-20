@@ -48,6 +48,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   const description = String(formData.get("description") ?? "").trim();
   const level = String(formData.get("level")) as Level;
   const published = formData.get("published") === "on";
+  const dictation = formData.get("dictation") === "on";
   const srt = String(formData.get("srt") ?? "");
 
   const videoId = extractVideoId(url);
@@ -68,7 +69,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   if (!segments.length) return { error: "Phụ đề trống hoặc sai định dạng SRT" };
   if (!title) return { error: "Nhập tiêu đề bài học" };
 
-  const lesson = { title, videoId, description, level, published, segments };
+  const lesson = { title, videoId, description, level, published, dictation, segments };
   if (id) updateLesson(id, lesson);
   else createLesson(lesson);
   redirect("/admin");

@@ -15,6 +15,7 @@ export type Lesson = {
   level: Level;
   segments: Segment[];
   published: boolean;
+  dictation: boolean; // admin bật luyện Chính tả cho bài này (mặc định chỉ Shadowing)
   createdAt: string;
 };
 
@@ -100,6 +101,9 @@ function open() {
   // Ngôn ngữ giao diện app theo tài khoản (NULL = chưa chọn)
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "lang")) db.exec("ALTER TABLE users ADD COLUMN lang TEXT");
+  // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
+  const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
+  if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
   return db;
 }
 
@@ -117,6 +121,7 @@ type Row = {
   segments?: string;
   segment_count?: number;
   published: number;
+  dictation: number;
   created_at: string;
 };
 
@@ -127,6 +132,7 @@ const toSummary = (r: Row): LessonSummary => ({
   description: r.description,
   level: r.level,
   published: !!r.published,
+  dictation: !!r.dictation,
   createdAt: r.created_at,
   segmentCount: r.segment_count ?? 0,
 });
@@ -134,7 +140,7 @@ const toSummary = (r: Row): LessonSummary => ({
 export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
   const rows = conn()
     .prepare(
-      `SELECT id, title, video_id, description, level, published, created_at,
+      `SELECT id, title, video_id, description, level, published, dictation, created_at,
               json_array_length(segments) AS segment_count
        FROM lessons ${includeDrafts ? "" : "WHERE published = 1"}
        ORDER BY created_at DESC, id DESC`,
@@ -156,16 +162,16 @@ export type LessonInput = Omit<Lesson, "id" | "createdAt">;
 export function createLesson(l: LessonInput): number {
   const res = conn()
     .prepare(
-      "INSERT INTO lessons (title, video_id, description, level, segments, published) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO lessons (title, video_id, description, level, segments, published, dictation) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
-    .run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0);
+    .run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0);
   return Number(res.lastInsertRowid);
 }
 
 export function updateLesson(id: number, l: LessonInput) {
   conn().prepare(
-    "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ? WHERE id = ?",
-  ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, id);
+    "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ?, dictation = ? WHERE id = ?",
+  ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0, id);
 }
 
 export function deleteLesson(id: number) {
