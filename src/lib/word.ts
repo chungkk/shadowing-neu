@@ -48,7 +48,7 @@ export async function translateWord(word: string, sentence: string, lang: WordLa
 export type WordDetail = {
   lemma: string; // "die Aussprache", "sich verabschieden"
   pos: string; // loại từ (theo ngôn ngữ giao diện)
-  grammar: string; // "Plural: die Aussprachen" / "Partizip II: verabschiedet"
+  grammar: string; // "Plural: die Aussprachen" / "Infinitiv: verabschieden, Partizip II: verabschiedet"
   explanation: string; // 1–2 câu
   examples: { de: string; tr: string }[]; // từ cần học được bọc **…**; tr = "" khi giao diện tiếng Đức
 };
@@ -61,7 +61,7 @@ const detailPrompt = (lang: WordLang) => {
     `OUTPUT LANGUAGE for "pos", "explanation" and every "translation": ${L}. Never use any other language there.\n` +
     `- lemma: German dictionary form (nouns with article, e.g. "die Aussprache"; reflexive/separable verbs as used here, e.g. "sich verabschieden", "anfangen").\n` +
     `- pos: part of speech (in ${L}).\n` +
-    `- grammar: one short line of key German forms (nouns: plural; verbs: Präteritum, Partizip II, auxiliary; adjectives: comparative), or "".\n` +
+    `- grammar: one short line of key German forms (nouns: plural; verbs: ALWAYS start with the infinitive, then Präteritum, Partizip II, auxiliary — e.g. "Infinitiv: betrachten, Präteritum: betrachtete, Partizip II: betrachtet, Hilfsverb: haben"; adjectives: comparative), or "".\n` +
     `- explanation: 1–2 short sentences written in ${L}: what the word means in this sentence and how it is typically used. Accurate, plain everyday language.\n` +
     `- examples: 4 short, natural everyday German sentences using the word with the same meaning as in the sentence (vary the forms). ` +
     `Wrap the target word form in **double asterisks**. ` +
@@ -89,7 +89,7 @@ export async function wordDetail(word: string, sentence: string, lang: WordLang)
   const cached = getTranslations([key]).get(key);
   if (cached) {
     try {
-      return JSON.parse(cached) as WordDetail;
+      return withInfinitive(JSON.parse(cached) as WordDetail);
     } catch {}
   }
   const { provider, ...r } = await chatJson(detailPrompt(lang), { word, sentence }, isDetail, { prefer: "large" });
@@ -104,5 +104,11 @@ export async function wordDetail(word: string, sentence: string, lang: WordLang)
     }),
   };
   saveTranslations([{ key, text: `${word} | ${sentence}`, translation: JSON.stringify(d), provider }]);
-  return d;
+  return withInfinitive(d);
+}
+
+/** Động từ luôn có "Infinitiv: …" đầu dòng ngữ pháp — kể cả bản đã lưu trước khi prompt yêu cầu (AI quên thì lấy lemma) */
+function withInfinitive(d: WordDetail): WordDetail {
+  if (!/Partizip|Präteritum/i.test(d.grammar) || /Infinitiv/i.test(d.grammar)) return d;
+  return { ...d, grammar: `Infinitiv: ${d.lemma}, ${d.grammar}` };
 }
