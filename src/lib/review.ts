@@ -1,5 +1,7 @@
-/** Logic buổi ôn từ vựng (chọn dạng bài, hàng đợi, chấm câu gõ) — chạy trên trình duyệt */
-import type { VocabItem } from "./db";
+/** Logic buổi ôn từ vựng (chọn dạng bài, hàng đợi, chấm câu gõ) — dùng chung cho web và app */
+
+/** Phần của 1 mục sổ từ mà buổi ôn cần (ReviewWord của web / app đều khớp) */
+export type ReviewWord = { id: number; word: string; meaning: string; context: string; stage: number };
 
 export function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -21,7 +23,7 @@ export const norm = (s: string) =>
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
     .replace(/ß/g, "ss")
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^(der|die|das|sich) /, "");
@@ -69,21 +71,21 @@ export type Step = {
    * practice: nhận diện thêm 1 lần (từ mới) · reinforce: tự viết ra · match: ghép cặp nhiều từ
    */
   role: "intro" | "graded" | "retry" | "practice" | "reinforce" | "match";
-  item: VocabItem;
-  pairs?: VocabItem[]; // match
+  item: ReviewWord;
+  pairs?: ReviewWord[]; // match
   kind?: Kind; // chọn lúc tới lượt (lúc đó mới biết trình duyệt có giọng Đức chưa)
   options?: string[]; // trắc nghiệm; match: nghĩa cột phải đã xáo
   tiles?: string[]; // xếp chữ
 };
 
-export const isPhrase = (v: VocabItem) => v.word.trim().includes(" ");
-export const canCloze = (v: VocabItem) =>
+export const isPhrase = (v: ReviewWord) => v.word.trim().includes(" ");
+export const canCloze = (v: ReviewWord) =>
   !isPhrase(v) && v.context.toLowerCase().includes(v.word.toLowerCase()) && v.context.trim().toLowerCase() !== v.word.toLowerCase();
-const canTiles = (v: VocabItem, tts: boolean) =>
+const canTiles = (v: ReviewWord, tts: boolean) =>
   !isPhrase(v) && [...v.word].length >= 2 && [...v.word].length <= 14 && (!!v.meaning || canCloze(v) || tts);
 
 /** 3 phương án nhiễu khác nhau, ưu tiên cùng loại (từ / cụm từ) với đáp án */
-function distractors(item: VocabItem, pool: VocabItem[], field: "word" | "meaning"): string[] {
+function distractors(item: ReviewWord, pool: ReviewWord[], field: "word" | "meaning"): string[] {
   const right = item[field].trim().toLowerCase();
   const seen = new Set([right]);
   const same: string[] = [];
@@ -98,7 +100,7 @@ function distractors(item: VocabItem, pool: VocabItem[], field: "word" | "meanin
   return [...same, ...other].slice(0, 3);
 }
 
-function available(v: VocabItem, pool: VocabItem[], tts: boolean): Set<Kind> {
+function available(v: ReviewWord, pool: ReviewWord[], tts: boolean): Set<Kind> {
   const out = new Set<Kind>(["flash"]);
   const words = distractors(v, pool, "word").length === 3;
   if (v.meaning && distractors(v, pool, "meaning").length === 3) out.add("choose-meaning");
@@ -115,7 +117,7 @@ function available(v: VocabItem, pool: VocabItem[], tts: boolean): Set<Kind> {
 const FALLBACK: Kind[] = ["choose-meaning", "cloze-bank", "listen-choose", "choose-word", "tiles", "cloze-type", "type", "listen-type", "flash"];
 
 /** Dạng bài theo mức nhớ: nhận diện (chọn) → nhớ lại có gợi ý (xếp chữ, điền câu) → tự viết ra (gõ, nghe viết) */
-function pickKind(step: Step, pool: VocabItem[], tts: boolean): Kind {
+function pickKind(step: Step, pool: ReviewWord[], tts: boolean): Kind {
   if (step.role === "intro" || step.role === "match") return step.role;
   const v = step.item;
   const ok = available(v, pool, tts);
@@ -142,7 +144,7 @@ function pickKind(step: Step, pool: VocabItem[], tts: boolean): Kind {
 
 const EXTRA_LETTERS = [..."aeinrstlhdgumkbo"];
 
-export function resolveStep(step: Step, pool: VocabItem[], tts: boolean): Step {
+export function resolveStep(step: Step, pool: ReviewWord[], tts: boolean): Step {
   if (step.kind) return step;
   const kind = pickKind(step, pool, tts);
   const v = step.item;
@@ -163,9 +165,9 @@ let nextId = 0;
 export const newStep = (s: Omit<Step, "id">): Step => ({ ...s, id: nextId++ });
 
 /** Các từ có nghĩa khác nhau (để ghép cặp không bị mơ hồ) */
-function matchPairs(list: VocabItem[]): VocabItem[] {
+function matchPairs(list: ReviewWord[]): ReviewWord[] {
   const seen = new Set<string>();
-  const out: VocabItem[] = [];
+  const out: ReviewWord[] = [];
   for (const v of shuffle(list)) {
     const m = v.meaning.trim().toLowerCase();
     const w = v.word.trim().toLowerCase();
@@ -182,11 +184,11 @@ function matchPairs(list: VocabItem[]): VocabItem[] {
  * Từ đã ôn xen kẽ với nhóm 3 từ mới (làm quen cả 3 rồi mới hỏi, để không chỉ nhớ tức thời);
  * cứ khoảng 6 từ thì có 1 bài ghép cặp các từ vừa gặp.
  */
-export function buildQueue(items: VocabItem[]): Step[] {
+export function buildQueue(items: ReviewWord[]): Step[] {
   const reviews = shuffle(items.filter((v) => v.stage > 0));
   const fresh = shuffle(items.filter((v) => v.stage === 0));
   const out: Step[] = [];
-  let block: VocabItem[] = [];
+  let block: ReviewWord[] = [];
   const flush = (force = false) => {
     if (block.length < (force ? 4 : 6)) return;
     const pairs = matchPairs(block);

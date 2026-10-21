@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X, Zap } from "lucide-react";
 import { gradeWord } from "@/app/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { buildQueue, canCloze, checkTyped, insertLater, isPhrase, newStep, resolveStep, shuffle, type Kind, type Step } from "@/lib/review";
+import { buildQueue, canCloze, checkTyped, insertLater, isPhrase, newStep, resolveStep, shuffle, type Kind, type ReviewWord, type Step } from "@/lib/review";
 import { stageInfo } from "@/lib/srs";
 import type { VocabItem } from "@/lib/db";
 
@@ -136,7 +136,7 @@ function ListenButtons({ word }: { word: string }) {
 }
 
 type Feedback = { ok: boolean; note?: string; combo: number };
-type Graded = { item: VocabItem; correct: boolean; stage?: number };
+type Graded = { item: ReviewWord; correct: boolean; stage?: number };
 type Streak = { day: string; count: number };
 
 const ymd = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -191,7 +191,7 @@ export default function VocabReview({
   const step = queue[pos] as Step | undefined;
   const done = !step;
   const kind = step?.kind;
-  const v = step?.item as VocabItem;
+  const v = step?.item as ReviewWord;
   const typing = kind === "type" || kind === "cloze-type" || kind === "listen-type";
   const choosing = kind === "choose-meaning" || kind === "choose-word" || kind === "listen-choose" || kind === "cloze-bank";
   const right = kind === "choose-meaning" ? v?.meaning.trim() : v?.word.trim();
@@ -282,7 +282,7 @@ export default function VocabReview({
     reset();
   };
 
-  const restart = (list: VocabItem[]) => {
+  const restart = (list: ReviewWord[]) => {
     const q = buildQueue(list);
     setQueue(q.length ? [resolveStep(q[0], pool, tts), ...q.slice(1)] : q);
     setPos(0);
