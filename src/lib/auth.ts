@@ -142,7 +142,8 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function changePassword(user: User, current: string, next: string): Promise<string | null> {
   if (user.email === envAdminEmail()) return "Mật khẩu admin chính lấy từ biến ADMIN_PASSWORD trên server.";
   const u = getUserWithHash({ id: user.id });
-  if (!u || !(await verifyPassword(current, u.passwordHash))) return "Mật khẩu hiện tại không đúng";
+  // Tài khoản Google / Apple chưa có mật khẩu → đặt mật khẩu lần đầu, không cần mật khẩu cũ
+  if (!u || (u.hasPassword && !(await verifyPassword(current, u.passwordHash)))) return "Mật khẩu hiện tại không đúng";
   if (next.length < 8) return "Mật khẩu mới cần ít nhất 8 ký tự";
   setUserPassword(user.id, await hashPassword(next));
   await createSession(user.id); // phiên hiện tại ký lại bằng mật khẩu mới, các thiết bị khác bị đăng xuất

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { envAdminEmail } from "@/lib/auth";
-import { deleteUser, getUserById, setUserRole } from "@/lib/db";
+import { getUserById, setUserRole } from "@/lib/db";
+import { removeAccount } from "@/lib/account";
 import { apiAdmin, body, fail, publicUser } from "@/lib/api";
 
 /** Người dùng admin được sửa: không phải chính mình, không phải admin cố định (ADMIN_EMAIL) — giống trang web */
@@ -28,6 +29,6 @@ export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/v1/admin/u
 export async function DELETE(_req: NextRequest, ctx: RouteContext<"/api/v1/admin/users/[id]">) {
   const target = await editable(ctx);
   if (target instanceof Response) return target;
-  deleteUser(target.id);
+  await removeAccount(target.id);
   return Response.json({ ok: true });
 }

@@ -1,5 +1,5 @@
-import { editProfile } from "@/lib/account";
-import { deleteUser, getUserById, getUserWithHash, setUserLang } from "@/lib/db";
+import { editProfile, removeAccount } from "@/lib/account";
+import { getUserById, getUserWithHash, setUserLang } from "@/lib/db";
 import { createToken, envAdminEmail, verifyPassword } from "@/lib/auth";
 import { apiUser, appLang, body, fail, publicUser, str } from "@/lib/api";
 
@@ -27,14 +27,17 @@ export async function PATCH(req: Request) {
   return Response.json({ user: publicUser(getUserById(user.id)!) });
 }
 
-/** DELETE { password } → xoá tài khoản và toàn bộ sổ từ vựng (App Store bắt buộc có) */
+/**
+ * DELETE { password } → xoá tài khoản và toàn bộ sổ từ vựng (App Store bắt buộc có).
+ * Tài khoản Google / Apple chưa đặt mật khẩu: không cần mật khẩu. Có Sign in with Apple → thu hồi quyền phía Apple.
+ */
 export async function DELETE(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   if (user.email === envAdminEmail()) return fail("Không thể xoá tài khoản admin chính.");
   const b = await body<{ password: string }>(req);
   const u = getUserWithHash({ id: user.id });
-  if (!u || !(await verifyPassword(str(b.password), u.passwordHash))) return fail("Mật khẩu không đúng");
-  deleteUser(user.id);
+  if (!u || (u.hasPassword && !(await verifyPassword(str(b.password), u.passwordHash)))) return fail("Mật khẩu không đúng");
+  await removeAccount(user.id);
   return Response.json({ ok: true });
 }

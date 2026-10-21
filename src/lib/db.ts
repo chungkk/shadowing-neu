@@ -92,6 +92,17 @@ function open() {
       provider TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Đăng nhập bằng Google / Apple: mỗi tài khoản Google / Apple gắn với 1 người dùng
+    CREATE TABLE IF NOT EXISTS oauth_accounts (
+      provider TEXT NOT NULL, -- 'google' | 'apple'
+      subject TEXT NOT NULL, -- id cố định của người dùng phía Google / Apple ("sub" trong ID token)
+      user_id INTEGER NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
+      refresh_token TEXT, -- Apple: dùng để thu hồi quyền khi xoá tài khoản (App Store bắt buộc)
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (provider, subject)
+    );
+    CREATE INDEX IF NOT EXISTS oauth_accounts_user ON oauth_accounts (user_id);
   `);
   // Phụ đề YouTube trước đây chỉ lưu 7 ngày → giờ lưu vĩnh viễn
   db.exec("UPDATE transcript_cache SET expires_at = NULL WHERE key LIKE 'ytp:%' AND expires_at IS NOT NULL");
@@ -241,6 +252,7 @@ export type User = {
   name: string;
   role: Role;
   lang: string | null;
+  hasPassword: boolean; // false = tài khoản tạo bằng Google / Apple, chưa đặt mật khẩu
   createdAt: string;
 };
 
@@ -260,8 +272,12 @@ const toUser = (r: UserRow): User => ({
   name: r.name,
   role: r.role,
   lang: r.lang ?? null,
+  hasPassword: !r.password_hash.startsWith(NO_PASSWORD),
   createdAt: r.created_at,
 });
+
+/** Mở đầu password_hash của tài khoản chưa có mật khẩu (Google / Apple) — không khớp với mật khẩu nào */
+export const NO_PASSWORD = "!";
 
 export function getUserById(id: number): User | null {
   const r = conn().prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined;
@@ -348,9 +364,40 @@ export function setUserRole(id: number, role: Role) {
 }
 
 export function deleteUser(id: number) {
+  conn().prepare("DELETE FROM oauth_accounts WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
+}
+
+// ---- Tài khoản Google / Apple ----
+
+export type OAuthProvider = "google" | "apple";
+
+export function getOAuthUserId(provider: OAuthProvider, subject: string): number | null {
+  const r = conn().prepare("SELECT user_id FROM oauth_accounts WHERE provider = ? AND subject = ?").get(provider, subject) as
+    | { user_id: number }
+    | undefined;
+  return r?.user_id ?? null;
+}
+
+export function linkOAuth(provider: OAuthProvider, subject: string, userId: number, email: string) {
+  conn()
+    .prepare("INSERT OR IGNORE INTO oauth_accounts (provider, subject, user_id, email) VALUES (?, ?, ?, ?)")
+    .run(provider, subject, userId, email);
+}
+
+export function setOAuthRefreshToken(provider: OAuthProvider, subject: string, token: string) {
+  conn().prepare("UPDATE oauth_accounts SET refresh_token = ? WHERE provider = ? AND subject = ?").run(token, provider, subject);
+}
+
+/** Refresh token Apple của người dùng (để thu hồi khi xoá tài khoản) */
+export function appleRefreshTokens(userId: number): string[] {
+  return (
+    conn().prepare("SELECT refresh_token FROM oauth_accounts WHERE user_id = ? AND provider = 'apple' AND refresh_token IS NOT NULL").all(userId) as {
+      refresh_token: string;
+    }[]
+  ).map((r) => r.refresh_token);
 }
 
 // ---- Sổ từ vựng ----

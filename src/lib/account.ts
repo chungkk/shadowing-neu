@@ -3,11 +3,18 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto
 import { envAdminEmail, hashPassword, type User } from "./auth";
 import {
   bumpEmailCodeAttempts,
+  appleRefreshTokens,
   createUser,
   deleteEmailCode,
+  deleteUser,
   emailTaken,
   getEmailCode,
+  getOAuthUserId,
   getUserWithHash,
+  linkOAuth,
+  NO_PASSWORD,
+  setOAuthRefreshToken,
+  type OAuthProvider,
   getVocab,
   saveEmailCode,
   saveVocab,
@@ -18,6 +25,7 @@ import {
 } from "./db";
 import { mailConfigured, sendMail } from "./mail";
 import { allow, clientIp } from "./rate-limit";
+import { appleRefreshToken, oauthEnabled, revokeApple, verifyIdToken } from "./oauth";
 import { translateSentences } from "./translate";
 import { translateWord } from "./word";
 
@@ -196,6 +204,66 @@ export async function resetPasswordWithCode(input: { email: string; code: string
   setUserPassword(user.id, await hashPassword(input.password)); // mọi phiên cũ trên các thiết bị hết hiệu lực
   deleteEmailCode(key);
   return user.id;
+}
+
+// ---- Đăng nhập bằng Google / Apple ----
+
+/**
+ * Đăng nhập (tự tạo tài khoản lần đầu) bằng ID token của Google / Apple. Trả về id người dùng hoặc lỗi.
+ * Chưa liên kết mà email đã có tài khoản → gắn vào tài khoản đó (chỉ khi Google / Apple xác nhận email).
+ * Apple chỉ gửi tên ở lần đầu, qua app (không nằm trong token) → `name` do app gửi kèm.
+ */
+export async function oauthSignIn(input: {
+  provider: OAuthProvider;
+  idToken: string;
+  name?: string;
+  authorizationCode?: string;
+  lang?: string | null;
+}): Promise<number | string> {
+  const { provider } = input;
+  if (!oauthEnabled(provider)) return `Server chưa cấu hình đăng nhập bằng ${provider === "google" ? "Google" : "Apple"}`;
+  const profile = await verifyIdToken(provider, input.idToken);
+  if (typeof profile === "string") return profile;
+
+  let userId = getOAuthUserId(provider, profile.subject);
+  if (userId === null) {
+    if (!profile.emailVerified) return "Tài khoản này không có email đã xác minh.";
+    const email = profile.email;
+    // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD
+    if (email === envAdminEmail()) return "Tài khoản admin chính chỉ đăng nhập bằng mật khẩu.";
+    const existing = getUserWithHash({ email });
+    if (existing) userId = existing.id;
+    else {
+      const name = (input.name?.trim() || profile.name || email.split("@")[0]).slice(0, 60);
+      try {
+        userId = createUser({
+          email,
+          name,
+          passwordHash: NO_PASSWORD + randomBytes(32).toString("hex"),
+          role: "user",
+          lang: input.lang,
+        });
+      } catch {
+        // Cùng lúc vừa tạo bằng request khác (bấm 2 lần) → dùng tài khoản đó
+        const again = getUserWithHash({ email });
+        if (!again) return "Không tạo được tài khoản, thử lại.";
+        userId = again.id;
+      }
+    }
+    linkOAuth(provider, profile.subject, userId, email);
+  }
+  if (provider === "apple" && input.authorizationCode) {
+    const refresh = await appleRefreshToken(input.authorizationCode);
+    if (refresh) setOAuthRefreshToken("apple", profile.subject, refresh);
+  }
+  return userId;
+}
+
+/** Xoá tài khoản + toàn bộ dữ liệu; có Sign in with Apple → thu hồi quyền phía Apple (App Store bắt buộc) */
+export async function removeAccount(userId: number) {
+  const apple = appleRefreshTokens(userId);
+  deleteUser(userId);
+  await Promise.all(apple.map(revokeApple));
 }
 
 export function editProfile(user: User, input: { name: string; email?: string }): string | null {

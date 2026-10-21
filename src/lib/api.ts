@@ -36,6 +36,7 @@ export const publicUser = (u: User) => ({
   email: u.email,
   role: u.role,
   lang: u.lang,
+  hasPassword: u.hasPassword, // false → app hiện "Đặt mật khẩu" thay cho "Đổi mật khẩu"
   createdAt: u.createdAt,
 });
 
