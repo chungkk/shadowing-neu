@@ -84,7 +84,7 @@ function VocabCard({ v }: { v: VocabItem }) {
   return (
     <div className="card flex flex-col gap-3">
       <div className="flex items-start gap-2">
-        <h3 className="flex-1 text-xl font-extrabold break-words">{v.word}</h3>
+        <h3 className="min-w-0 flex-1 text-xl font-extrabold wrap-anywhere">{v.word}</h3>
         <a
           href={`https://www.dict.cc/?s=${encodeURIComponent(v.word)}`}
           target="_blank"
@@ -117,7 +117,7 @@ function VocabCard({ v }: { v: VocabItem }) {
       {(pending || aiPending) && <span className="-mt-2 text-xs text-muted">{aiPending ? "AI đang dịch…" : "Đang lưu…"}</span>}
       {aiError && <span className="-mt-2 text-xs text-red-400">{aiError}</span>}
       {v.context && (
-        <p className="rounded-xl bg-background/60 p-3 text-sm leading-relaxed text-muted">
+        <p className="rounded-xl bg-background/60 p-3 text-sm leading-relaxed text-muted wrap-anywhere">
           <Highlight text={v.context} word={v.word} />
         </p>
       )}

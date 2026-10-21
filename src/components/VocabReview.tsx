@@ -165,16 +165,16 @@ export default function VocabReview({ title, items, onClose }: { title: string; 
               onClick={() => setFlipped(true)}
               disabled={flipped}
             >
-              <p className="text-3xl font-extrabold break-words">{front}</p>
+              <p className="text-3xl font-extrabold wrap-anywhere">{front}</p>
               {flipped ? (
-                <p className={`text-xl font-bold break-words ${back ? "text-amber" : "text-sm text-muted italic"}`}>
+                <p className={`wrap-anywhere ${back ? "text-xl font-bold text-amber" : "text-sm text-muted italic"}`}>
                   {back || "Chưa ghi nghĩa"}
                 </p>
               ) : (
                 <p className="text-xs text-muted">Bấm thẻ hoặc phím Space để lật</p>
               )}
               {card.context && (
-                <p className="text-sm leading-relaxed text-muted">
+                <p className="text-sm leading-relaxed text-muted wrap-anywhere">
                   <Context text={card.context} word={card.word} hide={reverse && !flipped} />
                 </p>
               )}
