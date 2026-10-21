@@ -40,8 +40,8 @@ export async function saveWord(input: {
 }): Promise<FormResult> {
   const user = await getCurrentUser();
   if (!user) return { error: "login" };
-  const error = addWord(user, input);
-  if (error) return { error };
+  const res = addWord(user, input);
+  if (typeof res === "string") return { error: res };
   return { ok: "Đã lưu" };
 }
 

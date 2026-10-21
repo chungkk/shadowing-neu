@@ -51,10 +51,14 @@ const LOCK_MS = 10 * 60 * 1000;
  * Email trùng ADMIN_EMAIL → so với ADMIN_PASSWORD và tự tạo / cập nhật tài khoản admin.
  */
 export async function authenticate(email: string, password: string): Promise<number | string> {
+  if (email.length > 254) return "Sai email hoặc mật khẩu"; // email thật không dài hơn → không giữ khoá rác trong RAM
+  const now = Date.now();
   const f = failures.get(email);
-  if (f && f.count >= MAX_FAILS && f.until > Date.now()) {
-    return "Đăng nhập sai quá nhiều lần. Thử lại sau 10 phút.";
-  }
+  const prev = f && f.until > now ? f.count : 0;
+  if (prev >= MAX_FAILS) return "Đăng nhập sai quá nhiều lần. Thử lại sau 10 phút.";
+  // Tính lần thử TRƯỚC khi băm (await): gửi song song nhiều request cũng không vượt quá MAX_FAILS
+  failures.set(email, { count: prev + 1, until: now + LOCK_MS });
+  if (failures.size > 10_000) for (const [k, v] of failures) if (v.until < now) failures.delete(k);
 
   let userId: number | null = null;
   if (email === envAdminEmail()) {
@@ -74,11 +78,7 @@ export async function authenticate(email: string, password: string): Promise<num
     if (u && ok) userId = u.id;
   }
 
-  if (userId === null) {
-    const prev = f && f.until > Date.now() ? f.count : 0;
-    failures.set(email, { count: prev + 1, until: Date.now() + LOCK_MS });
-    return "Sai email hoặc mật khẩu";
-  }
+  if (userId === null) return "Sai email hoặc mật khẩu";
   failures.delete(email);
   return userId;
 }

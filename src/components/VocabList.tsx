@@ -134,8 +134,12 @@ function VocabCard({ v }: { v: VocabItem }) {
   );
 }
 
+// Sổ lớn (hàng nghìn từ) vẽ hết 1 lần thì trang rất nặng → hiện dần
+const PAGE = 60;
+
 export default function VocabList({ items }: { items: VocabItem[] }) {
   const [q, setQ] = useState("");
+  const [limit, setLimit] = useState(PAGE);
   const [review, setReview] = useState<{ title: string; items: VocabItem[] } | null>(null);
   const local = useMounted();
   const query = q.trim().toLowerCase();
@@ -146,8 +150,12 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
   const days = new Map<string, VocabItem[]>();
   for (const v of shown) {
     const k = dayKey(v.createdAt, local);
-    days.set(k, [...(days.get(k) ?? []), v]);
+    const list = days.get(k);
+    if (list) list.push(v);
+    else days.set(k, [v]);
   }
+
+  let drawn = 0; // số thẻ đã vẽ (tối đa `limit`), cả nhóm ngày vẫn ôn tập / đếm đủ từ
 
   if (!items.length) {
     return (
@@ -164,7 +172,15 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
       <div className="flex flex-col gap-3 sm:flex-row">
         <label className="input flex flex-1 items-center gap-2 py-2.5">
           <Search className="size-4 text-muted" />
-          <input className="flex-1 bg-transparent outline-none" placeholder="Tìm từ hoặc nghĩa…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input
+            className="flex-1 bg-transparent outline-none"
+            placeholder="Tìm từ hoặc nghĩa…"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setLimit(PAGE);
+            }}
+          />
         </label>
         <button className="btn btn-amber" onClick={() => setReview({ title: "Tất cả", items })}>
           <Brain className="size-4" /> Ôn tất cả
@@ -173,22 +189,32 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
           <Download className="size-4" /> Tải CSV (Anki)
         </button>
       </div>
-      {[...days].map(([day, list]) => (
-        <section key={day} className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
-            <span className="text-sm text-muted">{list.length} từ</span>
-            <button className="btn ml-auto px-3 py-1.5 text-xs" onClick={() => setReview({ title: dayLabel(day, local), items: list })}>
-              <Brain className="size-3.5 text-amber" /> Ôn tập
-            </button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {list.map((v) => (
-              <VocabCard key={v.id} v={v} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {[...days].map(([day, list]) => {
+        const room = limit - drawn;
+        if (room <= 0) return null;
+        drawn += list.length;
+        return (
+          <section key={day} className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
+              <span className="text-sm text-muted">{list.length} từ</span>
+              <button className="btn ml-auto px-3 py-1.5 text-xs" onClick={() => setReview({ title: dayLabel(day, local), items: list })}>
+                <Brain className="size-3.5 text-amber" /> Ôn tập
+              </button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {list.slice(0, room).map((v) => (
+                <VocabCard key={v.id} v={v} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      {shown.length > limit && (
+        <button className="btn self-center" onClick={() => setLimit((n) => n + PAGE * 5)}>
+          Xem thêm ({shown.length - limit} từ)
+        </button>
+      )}
       {!shown.length && <p className="text-sm text-muted">Không tìm thấy “{q}”.</p>}
       {review && <VocabReview title={review.title} items={review.items} onClose={() => setReview(null)} />}
     </div>

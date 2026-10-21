@@ -9,17 +9,21 @@ export async function GET() {
   return Response.json({ vocab: listVocab(user.id) });
 }
 
-/** POST { word, context?, sourceUrl?, sourceTitle? } → lưu từ (đã có thì cập nhật câu ví dụ) */
+/**
+ * POST { word, context?, sourceUrl?, sourceTitle? } → lưu từ (đã có thì cập nhật câu ví dụ)
+ * → { item, vocab: [item] } — chỉ mục vừa lưu (sổ lớn trả cả danh sách thì rất chậm);
+ * giữ dạng mảng `vocab` để app bản cũ (tìm từ vừa lưu trong `vocab`) vẫn chạy.
+ */
 export async function POST(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   const b = await body<{ word: string; context: string; sourceUrl: string; sourceTitle: string }>(req);
-  const error = addWord(user, {
+  const item = addWord(user, {
     word: str(b.word),
     context: str(b.context),
     sourceUrl: str(b.sourceUrl) || null,
     sourceTitle: str(b.sourceTitle),
   });
-  if (error) return fail(error);
-  return Response.json({ vocab: listVocab(user.id) }, { status: 201 });
+  if (typeof item === "string") return fail(item);
+  return Response.json({ item, vocab: [item] }, { status: 201 });
 }

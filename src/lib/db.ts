@@ -375,28 +375,32 @@ type VocabRow = {
   created_at: string;
 };
 
+const toVocab = (r: VocabRow): VocabItem => ({
+  id: r.id,
+  word: r.word,
+  meaning: r.meaning,
+  context: r.context,
+  sourceUrl: r.source_url,
+  sourceTitle: r.source_title,
+  createdAt: r.created_at,
+});
+
 export function listVocab(userId: number): VocabItem[] {
   const rows = conn().prepare("SELECT * FROM vocab WHERE user_id = ? ORDER BY created_at DESC, id DESC").all(userId) as VocabRow[];
-  return rows.map((r) => ({
-    id: r.id,
-    word: r.word,
-    meaning: r.meaning,
-    context: r.context,
-    sourceUrl: r.source_url,
-    sourceTitle: r.source_title,
-    createdAt: r.created_at,
-  }));
+  return rows.map(toVocab);
 }
 
-/** Lưu từ; đã có thì cập nhật câu ví dụ + nguồn mới nhất (giữ nghĩa đã ghi) */
-export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }) {
-  conn()
+/** Lưu từ; đã có thì cập nhật câu ví dụ + nguồn mới nhất (giữ nghĩa đã ghi). Trả về mục vừa lưu */
+export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }): VocabItem {
+  const r = conn()
     .prepare(
       `INSERT INTO vocab (user_id, word, context, source_url, source_title) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(user_id, word) DO UPDATE SET context = excluded.context, source_url = excluded.source_url,
-         source_title = excluded.source_title`,
+         source_title = excluded.source_title
+       RETURNING *`,
     )
-    .run(userId, v.word, v.context, v.sourceUrl, v.sourceTitle);
+    .get(userId, v.word, v.context, v.sourceUrl, v.sourceTitle) as VocabRow;
+  return toVocab(r);
 }
 
 export function getVocab(userId: number, id: number): { word: string; context: string } | undefined {
@@ -405,12 +409,14 @@ export function getVocab(userId: number, id: number): { word: string; context: s
     | undefined;
 }
 
-export function updateVocabMeaning(userId: number, id: number, meaning: string) {
-  conn().prepare("UPDATE vocab SET meaning = ? WHERE id = ? AND user_id = ?").run(meaning, id, userId);
+/** false = không có từ này (của người này) */
+export function updateVocabMeaning(userId: number, id: number, meaning: string): boolean {
+  return conn().prepare("UPDATE vocab SET meaning = ? WHERE id = ? AND user_id = ?").run(meaning, id, userId).changes > 0;
 }
 
-export function deleteVocab(userId: number, id: number) {
-  conn().prepare("DELETE FROM vocab WHERE id = ? AND user_id = ?").run(id, userId);
+/** false = không có từ này (của người này) */
+export function deleteVocab(userId: number, id: number): boolean {
+  return conn().prepare("DELETE FROM vocab WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
 }
 
 export function setLessonPublished(id: number, published: boolean) {
@@ -482,6 +488,8 @@ export function listProgress(userId: number): Progress[] {
   return (conn().prepare("SELECT * FROM progress WHERE user_id = ? ORDER BY updated_at DESC").all(userId) as ProgressRow[]).map(toProgress);
 }
 
+const MAX_PROGRESS = 300;
+
 export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
   conn()
     .prepare(
@@ -491,6 +499,13 @@ export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
          mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, updated_at = excluded.updated_at`,
     )
     .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), Date.now());
+  // Chỉ giữ MAX_PROGRESS bài học gần nhất / người (source /watch/<id> là tuỳ ý → không giới hạn thì DB phình mãi)
+  conn()
+    .prepare(
+      `DELETE FROM progress WHERE user_id = ? AND source NOT IN
+         (SELECT source FROM progress WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?)`,
+    )
+    .run(userId, userId, MAX_PROGRESS);
 }
 
 export function deleteProgress(userId: number, source: string) {

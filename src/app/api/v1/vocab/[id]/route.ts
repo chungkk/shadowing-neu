@@ -4,12 +4,14 @@ import { aiWordMeaning } from "@/lib/account";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { translationEnabled } from "@/lib/translate";
 
+const NOT_FOUND = "Không tìm thấy từ";
+
 /** PATCH { meaning } → ghi nghĩa */
 export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[id]">) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   const b = await body<{ meaning: string }>(req);
-  updateVocabMeaning(user.id, Number((await ctx.params).id), str(b.meaning).trim().slice(0, 500));
+  if (!updateVocabMeaning(user.id, Number((await ctx.params).id), str(b.meaning).trim().slice(0, 500))) return fail(NOT_FOUND, 404);
   return Response.json({ ok: true });
 }
 
@@ -30,6 +32,6 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[
 export async function DELETE(_req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[id]">) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  deleteVocab(user.id, Number((await ctx.params).id));
+  if (!deleteVocab(user.id, Number((await ctx.params).id))) return fail(NOT_FOUND, 404);
   return Response.json({ ok: true });
 }

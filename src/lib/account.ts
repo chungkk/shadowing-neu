@@ -14,8 +14,10 @@ import {
   setUserPassword,
   updateUserProfile,
   updateVocabMeaning,
+  type VocabItem,
 } from "./db";
 import { mailConfigured, sendMail } from "./mail";
+import { allow, clientIp } from "./rate-limit";
 import { translateSentences } from "./translate";
 import { translateWord } from "./word";
 
@@ -66,6 +68,12 @@ const MAILS = {
     de: { subject: "{code} ist dein Code zum Zurücksetzen", hi: "Hallo {name},", body: "dein Code zum Festlegen eines neuen Passworts für Deutsch Shadowing lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail – dein Passwort bleibt unverändert." },
   },
 } satisfies Record<string, Record<"vi" | "de", CodeMail>>;
+
+// Chống spam gửi mã tới hàng loạt email khác nhau (mỗi email đã có chờ 60 giây):
+// mỗi IP 10 mã / giờ, cả server 300 mã / giờ (giữ hạn mức gửi mail của Gmail / Workspace cho người thật)
+const HOUR = 60 * 60 * 1000;
+const TOO_MANY = "Gửi mã quá nhiều lần. Thử lại sau ít phút.";
+const mailQuota = async () => allow(`mail:ip:${await clientIp()}`, 10, HOUR) && allow("mail:all", 300, HOUR);
 
 /** Còn phải chờ bao nhiêu giây mới được gửi mã mới cho khoá này (0 = gửi được) */
 function resendWait(key: string): number {
@@ -131,6 +139,7 @@ export async function sendSignupCode(input: SignupInput): Promise<string | null>
   const email = input.email.trim().toLowerCase();
   const wait = resendWait(email);
   if (wait > 0) return `Chờ ${wait} giây rồi gửi lại mã`;
+  if (!(await mailQuota())) return TOO_MANY;
   return issueCode(email, email, "signup", input.lang);
 }
 
@@ -164,6 +173,7 @@ export async function sendPasswordReset(input: { email: string; lang?: string | 
   const key = resetKey(email);
   const wait = resendWait(key);
   if (wait > 0) return `Chờ ${wait} giây rồi gửi lại mã`;
+  if (!(await mailQuota())) return TOO_MANY; // tính cả email lạ → không lộ email nào có tài khoản
 
   const user = getUserWithHash({ email });
   if (!user || email === envAdminEmail()) {
@@ -202,22 +212,21 @@ export function editProfile(user: User, input: { name: string; email?: string })
   return null;
 }
 
-/** Lưu từ vựng; chỉ nhận link nguồn nội bộ (/lesson/…, /watch/…) */
+/** Lưu từ vựng; chỉ nhận link nguồn nội bộ (/lesson/…, /watch/…). Trả về mục vừa lưu hoặc lỗi */
 export function addWord(
   user: User,
   input: { word: string; context?: string; sourceUrl?: string | null; sourceTitle?: string },
-): string | null {
+): VocabItem | string {
   // Có khoảng trắng = lưu nguyên câu (đánh dấu sao trong app) → cho dài hơn 1 từ
   const word = input.word.trim().slice(0, input.word.trim().includes(" ") ? 500 : 80);
   if (!word) return "Từ trống";
   const sourceUrl = input.sourceUrl && /^\/(lesson|watch)\/[\w-]+$/.test(input.sourceUrl) ? input.sourceUrl : null;
-  saveVocab(user.id, {
+  return saveVocab(user.id, {
     word,
     context: (input.context ?? "").slice(0, 500),
     sourceUrl,
     sourceTitle: (input.sourceTitle ?? "").slice(0, 200),
   });
-  return null;
 }
 
 /**
