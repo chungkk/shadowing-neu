@@ -1,7 +1,8 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { Alert, KeyboardAvoidingView, LayoutAnimation, Pressable, ScrollView, Text, View } from "react-native";
+import { VoiceQuality, type Voice } from "expo-speech";
+import { Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
@@ -10,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
+import { chosenVoice, germanVoices, setChosenVoice, speakGerman, stopSpeaking } from "@/lib/speak";
 
 /** Nhóm kiểu Cài đặt iOS: tiêu đề nhỏ · khung bo góc chứa các dòng · chú thích bên dưới */
 function Section({ title, footer, children }: { title?: string; footer?: string; children: ReactNode }) {
@@ -184,6 +186,49 @@ function LanguageSection() {
   );
 }
 
+/** Giọng đọc tiếng Đức — chọn trong các giọng có sẵn của máy, lưu trên máy. Chạm vào giọng là nghe thử luôn */
+function VoiceSection() {
+  const { t } = useI18n();
+  const [voices, setVoices] = useState<Voice[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+
+  // Tải lại mỗi lần mở tab: người dùng có thể vừa tải thêm giọng trong Cài đặt
+  useFocusEffect(
+    useCallback(() => {
+      germanVoices(true).then(setVoices);
+      chosenVoice().then(setChosen);
+      return () => void stopSpeaking();
+    }, []),
+  );
+
+  const pick = (id: string | null) => {
+    setChosen(id);
+    setChosenVoice(id);
+    speakGerman(t("voice.sample"), { voice: id ?? voices?.[0]?.identifier }).catch(() => {});
+  };
+  const check = (on: boolean) => on && <SymbolView name="checkmark" size={16} tintColor={C.accent} weight="bold" />;
+  const current = voices?.some((v) => v.identifier === chosen) ? chosen : null;
+
+  if (!voices) return null;
+  return (
+    <Section title={t("voice.title")} footer={voices.length ? t(Platform.OS === "ios" ? "voice.note" : "voice.noteAndroid") : t("voice.none")}>
+      <Row first icon="wand.and.stars" iconBg={current === null ? C.accent : C.card2} title={t("voice.auto")} value={t("voice.autoSub")} chevron={false} trailing={check(current === null)} onPress={() => pick(null)} />
+      {voices.map((v, i) => (
+        <Row
+          key={v.identifier}
+          icon="speaker.wave.2.fill"
+          iconBg={current === v.identifier ? C.accent : C.card2}
+          title={v.name === v.identifier ? t("voice.n", { n: i + 1 }) : v.name}
+          value={[v.language, v.quality === VoiceQuality.Enhanced && t("voice.enhanced")].filter(Boolean).join(" · ")}
+          chevron={false}
+          trailing={check(current === v.identifier)}
+          onPress={() => pick(v.identifier)}
+        />
+      ))}
+    </Section>
+  );
+}
+
 type Panel = "profile" | "password" | "delete" | null;
 
 function Signed({ user }: { user: User }) {
@@ -282,6 +327,8 @@ function Signed({ user }: { user: User }) {
 
       <LanguageSection />
 
+      <VoiceSection />
+
       {user.role === "admin" && (
         <Section title={t("admin.section")} footer={t("admin.hint")}>
           <Row first icon="person.2.fill" iconBg="#b45309" title={t("admin.users")} onPress={() => router.push("/admin/users")} />
@@ -356,6 +403,7 @@ export default function AccountScreen() {
         >
           {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
           {ready && !user && <LanguageSection />}
+          {ready && !user && <VoiceSection />}
           {__DEV__ && <Text style={[styles.muted, { fontSize: 12, textAlign: "center" }]}>Server: {API_URL}</Text>}
         </ScrollView>
       </KeyboardAvoidingView>
