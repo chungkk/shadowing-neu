@@ -5,7 +5,22 @@ import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { buildQueue, canCloze, checkTyped, insertLater, isPhrase, newStep, resolveStep, shuffle, type Kind, type Step } from "@shared/review";
+import {
+  buildQueue,
+  canCloze,
+  checkOrder,
+  checkTyped,
+  findWord,
+  insertLater,
+  isPhrase,
+  isRecall,
+  isSentence,
+  newStep,
+  resolveStep,
+  shuffle,
+  type Kind,
+  type Step,
+} from "@shared/review";
 import { isDue } from "@shared/srs";
 import { Button, ErrorText, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
@@ -115,20 +130,21 @@ const tileText = (tone: Tone, size = 18) => ({ color: TONES[tone].fg, fontSize: 
 
 /** Câu ví dụ: che từ (khi hỏi), điền từ đang chọn, hoặc tô đậm */
 function Context({ text, word, blank, fill, size = 15, color = C.muted }: { text: string; word: string; blank?: boolean; fill?: string | null; size?: number; color?: string }) {
-  const i = text.toLowerCase().indexOf(word.toLowerCase());
+  const at = findWord(text, word.trim());
   const base = { color, fontSize: size, lineHeight: size * 1.6 };
-  if (i === -1) return <Text style={base}>{text}</Text>;
+  if (!at) return <Text style={base}>{text}</Text>;
+  const [i, end] = at;
   return (
     <Text style={base}>
       {text.slice(0, i)}
       {blank ? (
         <Text style={{ color: fill ? BLUE : C.muted, fontWeight: "800", textDecorationLine: "underline" }}>
-          {fill ? ` ${fill} ` : " " + "_".repeat(Math.min(Math.max(word.length, 5), 12)) + " "}
+          {fill ? ` ${fill} ` : " " + "_".repeat(Math.min(Math.max(end - i, 5), 12)) + " "}
         </Text>
       ) : (
-        <Text style={{ color: C.amber, fontWeight: "700" }}>{text.slice(i, i + word.length)}</Text>
+        <Text style={{ color: C.amber, fontWeight: "700" }}>{text.slice(i, end)}</Text>
       )}
-      {text.slice(i + word.length)}
+      {text.slice(end)}
     </Text>
   );
 }
@@ -175,8 +191,8 @@ function ListenButtons({ word }: { word: string }) {
   );
 }
 
-const Big = ({ children, color = C.text }: { children: ReactNode; color?: string }) => (
-  <Text style={{ color, fontSize: 32, fontWeight: "800", textAlign: "center" }}>{children}</Text>
+const Big = ({ children, color = C.text, size = 32 }: { children: ReactNode; color?: string; size?: number }) => (
+  <Text style={{ color, fontSize: size, fontWeight: "800", textAlign: "center" }}>{children}</Text>
 );
 
 type Feedback = { ok: boolean; note?: string; combo: number };
@@ -197,7 +213,18 @@ const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
   "cloze-type": "review.k.clozeType",
   "listen-type": "review.k.listenType",
   match: "review.k.match",
+  order: "review.k.order",
+  "listen-order": "review.k.listenOrder",
   flash: "review.k.flash",
+};
+
+/** Đề bài riêng khi mục cần ôn là câu đánh dấu sao */
+const PROMPT_SENTENCE: Partial<Record<Kind, Parameters<TFn>[0]>> = {
+  intro: "review.s.intro",
+  "choose-meaning": "review.s.chooseMeaning",
+  "listen-choose": "review.s.listenChoose",
+  "choose-word": "review.s.chooseWord",
+  flash: "review.s.flash",
 };
 
 /**
@@ -243,8 +270,12 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const v = step?.item as Word;
   const typing = kind === "type" || kind === "cloze-type" || kind === "listen-type";
   const choosing = kind === "choose-meaning" || kind === "choose-word" || kind === "listen-choose" || kind === "cloze-bank";
+  const ordering = kind === "order" || kind === "listen-order";
   const right = kind === "choose-meaning" ? v?.meaning.trim() : v?.word.trim();
   const builtWord = built.map((i) => step?.tiles?.[i]).join("");
+  const sentence = !!v && isSentence(v);
+  // Câu dài → chữ nhỏ hơn từ lẻ
+  const headSize = sentence ? 22 : 32;
 
   useEffect(() => {
     SecureStore.getItemAsync(SOUND_KEY)
@@ -258,7 +289,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
   useEffect(() => {
-    if (kind === "listen-choose" || kind === "listen-type") say(v.word);
+    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") say(v.word);
     else if (kind === "intro" && sound) say(v.word);
   }, [step?.id, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -297,7 +328,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     if (kind === "match") return;
     let q = queue;
     if (!ok) q = insertLater(q, pos, 3, newStep({ role: "retry", item: v }));
-    else if (s.role === "graded" && v.stage <= 2 && !isPhrase(v) && kind !== "tiles" && !typing) {
+    else if (s.role === "graded" && v.stage <= 2 && (!isPhrase(v) || isSentence(v)) && !isRecall(kind)) {
       // Từ còn non mà mới đúng ở dạng nhận diện → thêm lượt nhận diện khác (từ mới) và lượt tự viết ra
       if (v.stage === 0) q = insertLater(q, pos, 2, newStep({ role: "practice", item: v }));
       q = insertLater(q, pos, 5, newStep({ role: "reinforce", item: v }));
@@ -311,6 +342,10 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     if (kind === "tiles" && built.length) {
       const exact = builtWord === v.word.trim();
       return answer(exact || builtWord.toLowerCase() === v.word.trim().toLowerCase(), exact ? undefined : t("review.spelling", { w: v.word }));
+    }
+    if (ordering && built.length) {
+      const c = checkOrder(built.map((i) => step.tiles![i]), v.word);
+      return answer(c !== "wrong", c === "ok" ? t("review.orderOk", { w: v.word }) : undefined);
     }
     if (typing && typed.trim()) {
       const c = checkTyped(typed, v.word);
@@ -384,7 +419,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     }
   };
 
-  const canCheck = (choosing && !!sel) || (kind === "tiles" && built.length > 0) || (typing && !!typed.trim());
+  const canCheck = (choosing && !!sel) || ((kind === "tiles" || ordering) && built.length > 0) || (typing && !!typed.trim());
   const firstTry = graded.filter((g) => g.correct).length;
   const wrong = graded.filter((g) => !g.correct);
   const seconds = finishedAt ? Math.round((finishedAt - startedAt) / 1000) : 0;
@@ -392,7 +427,11 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   // ---- Đề bài theo từng dạng ----
   const renderExercise = () => {
     if (!step || !kind) return null;
-    const meaningBig = <Big color={C.amber}>{v.meaning}</Big>;
+    const meaningBig = (
+      <Big color={C.amber} size={sentence ? 22 : 32}>
+        {v.meaning}
+      </Big>
+    );
     const clozeBox = (fill?: string | null) => (
       <View style={{ borderWidth: 2, borderColor: C.border, borderRadius: 18, padding: 16, gap: 8 }}>
         <Context text={v.context} word={v.word} blank={!feedback} fill={fill} size={19} color={C.text} />
@@ -403,14 +442,14 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       case "intro":
         return (
           <View style={{ alignItems: "center", gap: 18 }}>
-            <Text style={{ color: C.amber, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>{t("review.newWord")}</Text>
+            <Text style={{ color: C.amber, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>{t(sentence ? "review.newSentence" : "review.newWord")}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <SpeakButton text={v.word} big />
               <View style={{ flexShrink: 1 }}>
-                <Big>{v.word}</Big>
+                <Big size={headSize}>{v.word}</Big>
               </View>
             </View>
-            <Text style={{ color: v.meaning ? C.amber : C.muted, fontSize: 22, fontWeight: "700", textAlign: "center", fontStyle: v.meaning ? "normal" : "italic" }}>
+            <Text style={{ color: v.meaning ? C.amber : C.muted, fontSize: sentence ? 18 : 22, fontWeight: "700", textAlign: "center", fontStyle: v.meaning ? "normal" : "italic" }}>
               {v.meaning || t("vocab.noMeaning")}
             </Text>
             {!!v.context && (
@@ -434,7 +473,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                   <SpeakButton text={v.word} big />
                   <View style={{ flexShrink: 1 }}>
-                    <Big>{v.word}</Big>
+                    <Big size={headSize}>{v.word}</Big>
                   </View>
                 </View>
                 {!!v.context && <Context text={v.context} word={v.word} />}
@@ -595,13 +634,57 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           </View>
         );
       }
+      case "order":
+      case "listen-order": {
+        const lineTone: Tone = feedback ? (feedback.ok ? "right" : "wrong") : "idle";
+        const cell = { height: 46, paddingHorizontal: 12 };
+        return (
+          <View style={{ gap: 22 }}>
+            {kind === "order" ? meaningBig : <ListenButtons word={v.word} />}
+            {/* Hàng từ đã xếp */}
+            <View
+              style={{
+                minHeight: 70,
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 6,
+                paddingBottom: 10,
+                borderBottomWidth: 2,
+                borderColor: feedback ? TONES[lineTone].border : C.border,
+              }}
+            >
+              {built.map((i) => (
+                <Tile key={i} tone={lineTone} disabled={!!feedback} onPress={() => setBuilt((b) => b.filter((x) => x !== i))} style={cell}>
+                  <Text style={tileText(lineTone, 18)}>{step.tiles![i]}</Text>
+                </Tile>
+              ))}
+              {!built.length && <Text style={[styles.muted, { textAlign: "center" }]}>{t("review.orderHint")}</Text>}
+            </View>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
+              {step.tiles!.map((w, i) =>
+                built.includes(i) ? (
+                  <View key={i} style={[cell, { borderRadius: 16, backgroundColor: C.card2 }]}>
+                    <Text style={[tileText("idle", 18), { opacity: 0 }]}>{w}</Text>
+                  </View>
+                ) : (
+                  <Tile key={i} disabled={!!feedback} onPress={() => setBuilt((b) => [...b, i])} style={cell}>
+                    <Text style={tileText("idle", 18)}>{w}</Text>
+                  </Tile>
+                ),
+              )}
+            </View>
+          </View>
+        );
+      }
       case "flash":
         return (
           <View style={{ alignItems: "center", gap: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <SpeakButton text={v.word} big />
               <View style={{ flexShrink: 1 }}>
-                <Big>{v.word}</Big>
+                <Big size={headSize}>{v.word}</Big>
               </View>
             </View>
             {flipped || feedback ? (
@@ -758,7 +841,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           <>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 20 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ flex: 1, color: C.text, fontSize: 22, fontWeight: "800" }}>{t(PROMPT_KEY[kind ?? "flash"])}</Text>
+                <Text style={{ flex: 1, color: C.text, fontSize: 22, fontWeight: "800" }}>{t((sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT_KEY[kind ?? "flash"])}</Text>
                 {step.role === "retry" && <Text style={{ color: C.redText, fontSize: 12, fontWeight: "800" }}>{t("review.retry")}</Text>}
                 {step.role === "graded" && kind !== "intro" && (
                   <Text style={{ color: stageMeta(v.stage, t).color, fontSize: 12, fontWeight: "700" }}>{stageMeta(v.stage, t).label}</Text>

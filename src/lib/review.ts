@@ -1,5 +1,7 @@
 /** Logic buổi ôn từ vựng (chọn dạng bài, hàng đợi, chấm câu gõ) — dùng chung cho web và app */
 
+import { locatePhrase } from "./phrase-match";
+
 /** Phần của 1 mục sổ từ mà buổi ôn cần (ReviewWord của web / app đều khớp) */
 export type ReviewWord = { id: number; word: string; meaning: string; context: string; stage: number };
 
@@ -49,6 +51,14 @@ export function checkTyped(given: string, word: string): "exact" | "ok" | "almos
   return (b.length >= 5 && d <= 1) || (b.length >= 10 && d <= 2) ? "almost" : "wrong";
 }
 
+/** Đúng thứ tự từ (bỏ qua hoa/thường, dấu câu) — xếp từ thành câu */
+export function checkOrder(built: string[], sentence: string): "exact" | "ok" | "wrong" {
+  const want = sentence.trim().split(/\s+/);
+  if (built.join(" ") === want.join(" ")) return "exact";
+  const bare = (list: string[]) => list.map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "")).join(" ");
+  return bare(built) === bare(want) ? "ok" : "wrong";
+}
+
 // ---- Dạng bài ----
 
 export type Kind =
@@ -62,6 +72,8 @@ export type Kind =
   | "cloze-type" // gõ từ còn thiếu trong câu
   | "listen-type" // nghe, gõ từ
   | "match" // ghép cặp từ – nghĩa
+  | "order" // nhìn nghĩa, xếp từ thành câu (câu đánh dấu sao)
+  | "listen-order" // nghe, xếp từ thành câu
   | "flash"; // thẻ lật tự chấm (khi không đủ dữ liệu cho dạng khác)
 
 export type Step = {
@@ -75,18 +87,31 @@ export type Step = {
   pairs?: ReviewWord[]; // match
   kind?: Kind; // chọn lúc tới lượt (lúc đó mới biết trình duyệt có giọng Đức chưa)
   options?: string[]; // trắc nghiệm; match: nghĩa cột phải đã xáo
-  tiles?: string[]; // xếp chữ
+  tiles?: string[]; // xếp chữ; order: các từ của câu
 };
 
 export const isPhrase = (v: ReviewWord) => v.word.trim().includes(" ");
+/** Câu đánh dấu sao ở màn học: lưu nguyên câu, không có câu ví dụ */
+export const isSentence = (v: ReviewWord) => isPhrase(v) && !v.context.trim();
+/** Dạng bài tự viết / tự xếp ra (không phải nhận diện) */
+export const isRecall = (k: Kind | undefined) =>
+  k === "tiles" || k === "type" || k === "cloze-type" || k === "listen-type" || k === "order" || k === "listen-order";
+
+/** Vị trí [đầu, cuối) của từ trong câu ví dụ — phải trọn từ ("Haus" không khớp trong "Rathaus") */
+export const findWord = (text: string, word: string) => locatePhrase(text, [word])?.[0] ?? null;
 export const canCloze = (v: ReviewWord) =>
-  !isPhrase(v) && v.context.toLowerCase().includes(v.word.toLowerCase()) && v.context.trim().toLowerCase() !== v.word.toLowerCase();
+  !isPhrase(v) && !!findWord(v.context, v.word.trim()) && v.context.trim().toLowerCase() !== v.word.trim().toLowerCase();
 const canTiles = (v: ReviewWord, tts: boolean) =>
   !isPhrase(v) && [...v.word].length >= 2 && [...v.word].length <= 14 && (!!v.meaning || canCloze(v) || tts);
+const tokens = (v: ReviewWord) => v.word.trim().split(/\s+/);
+const canOrder = (v: ReviewWord) => isSentence(v) && tokens(v).length >= 3 && tokens(v).length <= 18;
 
-/** 3 phương án nhiễu khác nhau, ưu tiên cùng loại (từ / cụm từ) với đáp án */
+const category = (v: ReviewWord) => (isSentence(v) ? "sentence" : isPhrase(v) ? "phrase" : "word");
+
+/** 3 phương án nhiễu khác nhau, ưu tiên cùng loại (từ / cụm từ) với đáp án; câu thì chỉ lấy câu khác */
 function distractors(item: ReviewWord, pool: ReviewWord[], field: "word" | "meaning"): string[] {
   const right = item[field].trim().toLowerCase();
+  const kind = category(item);
   const seen = new Set([right]);
   const same: string[] = [];
   const other: string[] = [];
@@ -94,7 +119,9 @@ function distractors(item: ReviewWord, pool: ReviewWord[], field: "word" | "mean
     const val = v[field].trim();
     if (!val || seen.has(val.toLowerCase())) continue;
     seen.add(val.toLowerCase());
-    (isPhrase(v) === isPhrase(item) ? same : other).push(val);
+    const k = category(v);
+    if (k === kind) same.push(val);
+    else if (kind !== "sentence" && k !== "sentence") other.push(val);
     if (same.length >= 3) break;
   }
   return [...same, ...other].slice(0, 3);
@@ -103,6 +130,8 @@ function distractors(item: ReviewWord, pool: ReviewWord[], field: "word" | "mean
 function available(v: ReviewWord, pool: ReviewWord[], tts: boolean): Set<Kind> {
   const out = new Set<Kind>(["flash"]);
   const words = distractors(v, pool, "word").length === 3;
+  if (canOrder(v) && (v.meaning || tts)) out.add("order");
+  if (canOrder(v) && tts) out.add("listen-order");
   if (v.meaning && distractors(v, pool, "meaning").length === 3) out.add("choose-meaning");
   if (v.meaning && words) out.add("choose-word");
   if (tts && words) out.add("listen-choose");
@@ -114,7 +143,7 @@ function available(v: ReviewWord, pool: ReviewWord[], tts: boolean): Set<Kind> {
   return out;
 }
 
-const FALLBACK: Kind[] = ["choose-meaning", "cloze-bank", "listen-choose", "choose-word", "tiles", "cloze-type", "type", "listen-type", "flash"];
+const FALLBACK: Kind[] = ["choose-meaning", "cloze-bank", "listen-choose", "choose-word", "tiles", "cloze-type", "type", "listen-type", "order", "listen-order", "flash"];
 
 /** Dạng bài theo mức nhớ: nhận diện (chọn) → nhớ lại có gợi ý (xếp chữ, điền câu) → tự viết ra (gõ, nghe viết) */
 function pickKind(step: Step, pool: ReviewWord[], tts: boolean): Kind {
@@ -122,7 +151,22 @@ function pickKind(step: Step, pool: ReviewWord[], tts: boolean): Kind {
   const v = step.item;
   const ok = available(v, pool, tts);
   let want: Kind[];
-  if (step.role === "practice") want = ["cloze-bank", "listen-choose", "choose-word"];
+  if (isSentence(v)) {
+    // Câu: hiểu nghĩa → nghe nhận ra → tự xếp lại câu (nhìn nghĩa, rồi chỉ nghe)
+    const s = step.role === "retry" ? Math.max(0, v.stage - 2) : v.stage;
+    want =
+      step.role === "practice"
+        ? ["listen-choose", "choose-word"]
+        : step.role === "reinforce"
+          ? ["order", "listen-order"]
+          : s <= 1
+            ? ["choose-meaning", "listen-choose"]
+            : s === 2
+              ? ["order", "listen-choose"]
+              : s === 3
+                ? ["order"]
+                : ["listen-order", "order"];
+  } else if (step.role === "practice") want = ["cloze-bank", "listen-choose", "choose-word"];
   else if (step.role === "reinforce") want = ["tiles", "cloze-type", "type"];
   else {
     // Sai rồi hỏi lại thì dễ hơn một bậc
@@ -153,6 +197,13 @@ export function resolveStep(step: Step, pool: ReviewWord[], tts: boolean): Step 
   if (kind === "choose-word" || kind === "listen-choose" || kind === "cloze-bank")
     s.options = shuffle([v.word.trim(), ...distractors(v, pool, "word")]);
   if (kind === "match") s.options = shuffle(step.pairs!.map((p) => p.meaning.trim()));
+  if (kind === "order" || kind === "listen-order") {
+    const list = tokens(v);
+    // Xáo tới khi khác thứ tự gốc
+    let t = shuffle(list);
+    for (let i = 0; i < 5 && t.join(" ") === list.join(" "); i++) t = shuffle(list);
+    s.tiles = t;
+  }
   if (kind === "tiles") {
     const letters = [...v.word.trim()];
     const extra = shuffle(EXTRA_LETTERS.filter((c) => !letters.some((l) => l.toLowerCase() === c))).slice(0, letters.length > 8 ? 3 : 2);
@@ -171,7 +222,7 @@ function matchPairs(list: ReviewWord[]): ReviewWord[] {
   for (const v of shuffle(list)) {
     const m = v.meaning.trim().toLowerCase();
     const w = v.word.trim().toLowerCase();
-    if (!m || seen.has(m) || seen.has("w:" + w)) continue;
+    if (!m || isSentence(v) || seen.has(m) || seen.has("w:" + w)) continue;
     seen.add(m);
     seen.add("w:" + w);
     out.push(v);

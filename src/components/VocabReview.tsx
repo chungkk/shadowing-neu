@@ -4,7 +4,23 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X, Zap } from "lucide-react";
 import { gradeWord } from "@/app/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { buildQueue, canCloze, checkTyped, insertLater, isPhrase, newStep, resolveStep, shuffle, type Kind, type ReviewWord, type Step } from "@/lib/review";
+import {
+  buildQueue,
+  canCloze,
+  checkOrder,
+  checkTyped,
+  findWord,
+  insertLater,
+  isPhrase,
+  isRecall,
+  isSentence,
+  newStep,
+  resolveStep,
+  shuffle,
+  type Kind,
+  type ReviewWord,
+  type Step,
+} from "@/lib/review";
 import { stageInfo } from "@/lib/srs";
 import type { VocabItem } from "@/lib/db";
 
@@ -67,7 +83,18 @@ const PROMPT: Record<Kind, string> = {
   "cloze-type": "Gõ từ còn thiếu",
   "listen-type": "Nghe và viết lại",
   match: "Ghép các cặp từ",
+  order: "Xếp từ thành câu",
+  "listen-order": "Nghe rồi xếp lại câu",
   flash: "Bạn còn nhớ từ này không?",
+};
+
+/** Đề bài riêng khi mục cần ôn là câu đánh dấu sao */
+const PROMPT_SENTENCE: Partial<Record<Kind, string>> = {
+  intro: "Câu mới",
+  "choose-meaning": "Câu này nghĩa là gì?",
+  "listen-choose": "Bạn nghe thấy câu nào?",
+  "choose-word": "Chọn câu đúng",
+  flash: "Bạn còn nhớ câu này không?",
 };
 
 const PRAISE = ["Tuyệt vời!", "Chính xác!", "Giỏi lắm!", "Xuất sắc!", "Quá chuẩn!"];
@@ -85,8 +112,9 @@ const tone = (state: "idle" | "sel" | "right" | "wrong" | "dim") =>
 
 /** Câu ví dụ: che từ (khi hỏi), điền từ đang chọn, hoặc tô đậm */
 function Context({ text, word, blank, fill }: { text: string; word: string; blank?: boolean; fill?: string | null }) {
-  const i = text.toLowerCase().indexOf(word.toLowerCase());
-  if (i === -1) return <>{text}</>;
+  const at = findWord(text, word.trim());
+  if (!at) return <>{text}</>;
+  const [i, end] = at;
   return (
     <>
       {text.slice(0, i)}
@@ -94,12 +122,12 @@ function Context({ text, word, blank, fill }: { text: string; word: string; blan
         fill ? (
           <span className="rounded-lg border-b-2 border-link px-1 font-bold text-link">{fill}</span>
         ) : (
-          <span className="inline-block min-w-16 rounded border-b-2 border-muted px-1">{" ".repeat(Math.min(word.length, 12))}</span>
+          <span className="inline-block min-w-16 rounded border-b-2 border-muted px-1">{" ".repeat(Math.min(end - i, 12))}</span>
         )
       ) : (
-        <mark className="rounded bg-amber/20 px-0.5 text-amber">{text.slice(i, i + word.length)}</mark>
+        <mark className="rounded bg-amber/20 px-0.5 text-amber">{text.slice(i, end)}</mark>
       )}
-      {text.slice(i + word.length)}
+      {text.slice(end)}
     </>
   );
 }
@@ -194,12 +222,16 @@ export default function VocabReview({
   const v = step?.item as ReviewWord;
   const typing = kind === "type" || kind === "cloze-type" || kind === "listen-type";
   const choosing = kind === "choose-meaning" || kind === "choose-word" || kind === "listen-choose" || kind === "cloze-bank";
+  const ordering = kind === "order" || kind === "listen-order";
   const right = kind === "choose-meaning" ? v?.meaning.trim() : v?.word.trim();
   const builtWord = built.map((i) => step?.tiles?.[i]).join("");
+  const sentence = !!v && isSentence(v);
+  // Câu dài → chữ nhỏ hơn từ lẻ
+  const headline = sentence ? "text-2xl leading-snug" : "text-4xl";
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
   useEffect(() => {
-    if (kind === "listen-choose" || kind === "listen-type") speak(v.word, 0.85);
+    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") speak(v.word, 0.85);
     else if (kind === "intro" && sound) speak(v.word);
   }, [step?.id, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -231,7 +263,7 @@ export default function VocabReview({
     if (kind === "match") return;
     let q = queue;
     if (!ok) q = insertLater(q, pos, 3, newStep({ role: "retry", item: v }));
-    else if (s.role === "graded" && v.stage <= 2 && !isPhrase(v) && kind !== "tiles" && !typing) {
+    else if (s.role === "graded" && v.stage <= 2 && (!isPhrase(v) || isSentence(v)) && !isRecall(kind)) {
       // Từ còn non mà mới đúng ở dạng nhận diện → thêm lượt nhận diện khác (từ mới) và lượt tự viết ra
       if (v.stage === 0) q = insertLater(q, pos, 2, newStep({ role: "practice", item: v }));
       if (v.meaning || canCloze(v) || tts) q = insertLater(q, pos, 5, newStep({ role: "reinforce", item: v }));
@@ -245,6 +277,10 @@ export default function VocabReview({
     if (kind === "tiles" && built.length) {
       const exact = builtWord === v.word.trim();
       return answer(exact || builtWord.toLowerCase() === v.word.trim().toLowerCase(), exact ? undefined : `Đúng — viết chuẩn là “${v.word}”`);
+    }
+    if (ordering && built.length) {
+      const c = checkOrder(built.map((i) => step.tiles![i]), v.word);
+      return answer(c !== "wrong", c === "ok" ? `Đúng — câu gốc: “${v.word}”` : undefined);
     }
     if (typing && typed.trim()) {
       const c = checkTyped(typed, v.word);
@@ -334,9 +370,9 @@ export default function VocabReview({
       if (choosing) {
         const opt = step.options?.[Number(e.key) - 1];
         if (opt) setSel(opt);
-      } else if (kind === "tiles") {
+      } else if (kind === "tiles" || ordering) {
         if (e.key === "Backspace") setBuilt((b) => b.slice(0, -1));
-        else if (e.key.length === 1) {
+        else if (kind === "tiles" && e.key.length === 1) {
           const i = step.tiles!.findIndex((c, j) => !built.includes(j) && c.toLowerCase() === e.key.toLowerCase());
           if (i >= 0) addTile(i);
         }
@@ -362,7 +398,7 @@ export default function VocabReview({
     };
   }, []);
 
-  const canCheck = (choosing && !!sel) || (kind === "tiles" && built.length > 0) || (typing && !!typed.trim());
+  const canCheck = (choosing && !!sel) || ((kind === "tiles" || ordering) && built.length > 0) || (typing && !!typed.trim());
   const firstTry = graded.filter((g) => g.correct).length;
   const wrong = graded.filter((g) => !g.correct);
   const seconds = finishedAt ? Math.round((finishedAt - startedAt) / 1000) : 0;
@@ -374,12 +410,16 @@ export default function VocabReview({
       case "intro":
         return (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="rounded-full bg-amber/15 px-3 py-1 text-xs font-extrabold tracking-wider text-amber uppercase">Từ mới — ghi nhớ nhé</span>
+            <span className="rounded-full bg-amber/15 px-3 py-1 text-xs font-extrabold tracking-wider text-amber uppercase">
+              {sentence ? "Câu mới" : "Từ mới"} — ghi nhớ nhé
+            </span>
             <div className="flex items-center gap-3">
               <SpeakButton text={v.word} tts={tts} big />
-              <p className="text-4xl font-extrabold wrap-anywhere">{v.word}</p>
+              <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
             </div>
-            <p className={`wrap-anywhere ${v.meaning ? "text-2xl font-bold text-amber" : "text-muted italic"}`}>{v.meaning || "Chưa ghi nghĩa"}</p>
+            <p className={`wrap-anywhere ${v.meaning ? `${sentence ? "text-lg" : "text-2xl"} font-bold text-amber` : "text-muted italic"}`}>
+              {v.meaning || "Chưa ghi nghĩa"}
+            </p>
             {v.context && (
               <div className="flex items-start gap-1 rounded-2xl border-2 border-border p-4 text-left">
                 <p className="leading-relaxed wrap-anywhere">
@@ -400,7 +440,7 @@ export default function VocabReview({
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="flex items-center gap-3">
                   <SpeakButton text={v.word} tts={tts} big />
-                  <p className="text-4xl font-extrabold wrap-anywhere">{v.word}</p>
+                  <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
                 </div>
                 {v.context && (
                   <p className="text-sm leading-relaxed text-muted wrap-anywhere">
@@ -410,14 +450,14 @@ export default function VocabReview({
               </div>
             )}
             {kind === "listen-choose" && <ListenButtons word={v.word} />}
-            {kind === "choose-word" && <p className="text-center text-3xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p>}
+            {kind === "choose-word" && <p className={`text-center ${sentence ? "text-xl" : "text-3xl"} font-extrabold text-amber wrap-anywhere`}>{v.meaning}</p>}
             {kind === "cloze-bank" && (
               <div className="rounded-2xl border-2 border-border p-4 text-lg leading-loose wrap-anywhere">
                 <Context text={v.context} word={v.word} blank={!feedback} fill={sel} />
                 {v.meaning && <p className="mt-2 text-sm text-amber">Nghĩa: {v.meaning}</p>}
               </div>
             )}
-            <div className={`grid gap-3 ${kind === "choose-meaning" ? "" : "sm:grid-cols-2"}`}>
+            <div className={`grid gap-3 ${kind === "choose-meaning" || sentence ? "" : "sm:grid-cols-2"}`}>
               {step.options?.map((opt, i) => {
                 const state = !feedback ? (sel === opt ? "sel" : "idle") : opt === right ? "right" : sel === opt ? "wrong" : "dim";
                 return (
@@ -583,12 +623,53 @@ export default function VocabReview({
           </div>
         );
       }
+      case "order":
+      case "listen-order":
+        return (
+          <div className="flex flex-col gap-6">
+            {kind === "order" ? <p className="text-center text-xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p> : <ListenButtons word={v.word} />}
+            {/* Hàng từ đã xếp */}
+            <div
+              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-border"}`}
+            >
+              {built.map((i) => (
+                <button
+                  key={i}
+                  className={`${tile} ${tone(feedback ? (feedback.ok ? "right" : "wrong") : "idle")} px-3 py-2 text-lg`}
+                  onClick={() => setBuilt((b) => b.filter((x) => x !== i))}
+                  disabled={!!feedback}
+                >
+                  {step.tiles![i]}
+                </button>
+              ))}
+              {!built.length && <span className="text-sm text-muted">Bấm các từ bên dưới theo đúng thứ tự</span>}
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {step.tiles!.map((w, i) =>
+                built.includes(i) ? (
+                  <span key={i} className="rounded-2xl bg-white/5 px-3 py-2 text-lg text-transparent">
+                    {w}
+                  </span>
+                ) : (
+                  <button key={i} className={`${tile} ${tone("idle")} px-3 py-2 text-lg`} onClick={() => addTile(i)} disabled={!!feedback}>
+                    {w}
+                  </button>
+                ),
+              )}
+              {!feedback && built.length > 0 && (
+                <button title="Bỏ từ cuối (Backspace)" className="btn-icon size-12 text-muted" onClick={() => setBuilt((b) => b.slice(0, -1))}>
+                  <Delete className="size-5" />
+                </button>
+              )}
+            </div>
+          </div>
+        );
       case "flash":
         return (
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-3">
               <SpeakButton text={v.word} tts={tts} big />
-              <p className="text-4xl font-extrabold wrap-anywhere">{v.word}</p>
+              <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
             </div>
             {flipped || feedback ? (
               <>
@@ -781,7 +862,7 @@ export default function VocabReview({
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-6 px-4 py-4 sm:py-8">
               <div className="flex items-center gap-2">
-                <h2 className="flex-1 text-2xl font-extrabold">{PROMPT[kind ?? "flash"]}</h2>
+                <h2 className="flex-1 text-2xl font-extrabold">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
                 {step.role === "retry" && <span className="pill text-xs text-red-400">Hỏi lại</span>}
                 {step.role === "graded" && kind !== "intro" && (
                   <span className={`text-xs font-bold ${stageInfo(v.stage).color}`}>{stageInfo(v.stage).label}</span>
@@ -792,6 +873,7 @@ export default function VocabReview({
                 {title} · Enter: kiểm tra / tiếp tục
                 {choosing && " · 1–4: chọn"}
                 {kind === "tiles" && " · gõ phím để xếp chữ, Backspace để xoá"}
+                {ordering && " · Backspace: bỏ từ cuối"}
                 {kind === "flash" && " · 1: chưa nhớ · 2: đã nhớ"} · Esc: thoát
               </p>
             </div>
