@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { changePassword, getCurrentUser, requireUser } from "@/lib/auth";
 import { addWord, aiWordMeaning, editProfile } from "@/lib/account";
-import { deleteVocab, updateVocabMeaning } from "@/lib/db";
+import { deleteVocab, reviewVocab, updateVocabMeaning } from "@/lib/db";
 
 export type FormResult = { error?: string; ok?: string };
 
@@ -58,6 +58,12 @@ export async function aiMeaning(id: number): Promise<{ meaning: string } | { err
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+/** Chấm 1 lần ôn từ (lặp lại ngắt quãng) → mức nhớ + hạn ôn mới */
+export async function gradeWord(id: number, correct: boolean) {
+  const user = await requireUser("/vocab");
+  return reviewVocab(user.id, id, correct);
 }
 
 export async function removeWord(id: number) {

@@ -2,14 +2,19 @@
 
 import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
-import { BookOpen, Brain, Download, ExternalLink, Search, Sparkles, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BookOpen, Brain, CalendarCheck, Download, ExternalLink, Search, Sparkles, Trash2 } from "lucide-react";
 import { aiMeaning, removeWord, setWordMeaning } from "@/app/account-actions";
 import type { VocabItem } from "@/lib/db";
+import { isDue, stageInfo } from "@/lib/srs";
 import VocabReview from "./VocabReview";
 
 const noop = () => () => {};
 /** true sau khi chạy trên trình duyệt (server render dùng ngày UTC để khỏi lệch hydrate) */
 const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
+
+/** Giờ hiện tại (làm tròn phút để giá trị ổn định giữa các lần vẽ); server → null */
+const useNow = () => useSyncExternalStore(noop, () => Math.floor(Date.now() / 60_000) * 60_000, () => null);
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -53,7 +58,23 @@ function downloadCsv(items: VocabItem[]) {
   URL.revokeObjectURL(url);
 }
 
-function VocabCard({ v }: { v: VocabItem }) {
+/** Mức nhớ + lần ôn tới ("ôn lại sau 3 ngày" / "đến hạn ôn") */
+function Stage({ v, now }: { v: VocabItem; now: number | null }) {
+  const { label, color } = stageInfo(v.stage);
+  let when = "";
+  if (now != null && v.stage > 0 && v.dueAt != null) {
+    const days = Math.ceil((v.dueAt - now) / 86_400_000);
+    when = days <= 0 ? "đến hạn ôn" : days === 1 ? "ôn lại ngày mai" : `ôn lại sau ${days} ngày`;
+  }
+  return (
+    <span className="ml-auto inline-flex shrink-0 items-center gap-1.5">
+      <span className={`font-bold ${color}`}>● {label}</span>
+      {when && <span>· {when}</span>}
+    </span>
+  );
+}
+
+function VocabCard({ v, now }: { v: VocabItem; now: number | null }) {
   const [meaning, setMeaning] = useState(v.meaning);
   const [saved, setSaved] = useState(v.meaning);
   const [pending, start] = useTransition();
@@ -129,6 +150,7 @@ function VocabCard({ v }: { v: VocabItem }) {
         ) : (
           <span className="truncate">{v.sourceTitle}</span>
         )}
+        <Stage v={v} now={now} />
       </div>
     </div>
   );
@@ -142,6 +164,13 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
   const [limit, setLimit] = useState(PAGE);
   const [review, setReview] = useState<{ title: string; items: VocabItem[] } | null>(null);
   const local = useMounted();
+  const router = useRouter();
+  // Giờ hiện tại chỉ lấy trên trình duyệt (server render không biết → khỏi lệch hydrate)
+  const now = useNow();
+  const due = now == null ? [] : items.filter((v) => isDue(v, now)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0));
+  const fresh = items.filter((v) => v.stage === 0);
+  // Mỗi buổi: tối đa 30 từ đến hạn (quá hạn lâu nhất trước) + 10 từ mới (mới lưu nhất trước)
+  const today = [...due.slice(0, 30), ...fresh.slice(0, 10)];
   const query = q.trim().toLowerCase();
   const shown = query
     ? items.filter((v) => v.word.toLowerCase().includes(query) || v.meaning.toLowerCase().includes(query))
@@ -182,6 +211,14 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
             }}
           />
         </label>
+        <button
+          className="btn btn-primary"
+          title={`${due.length} từ đến hạn ôn · ${fresh.length} từ mới`}
+          onClick={() => setReview({ title: "Hôm nay", items: today })}
+          disabled={now == null}
+        >
+          <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
+        </button>
         <button className="btn btn-amber" onClick={() => setReview({ title: "Tất cả", items })}>
           <Brain className="size-4" /> Ôn tất cả
         </button>
@@ -204,7 +241,7 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {list.slice(0, room).map((v) => (
-                <VocabCard key={v.id} v={v} />
+                <VocabCard key={v.id} v={v} now={now} />
               ))}
             </div>
           </section>
@@ -216,7 +253,17 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
         </button>
       )}
       {!shown.length && <p className="text-sm text-muted">Không tìm thấy “{q}”.</p>}
-      {review && <VocabReview title={review.title} items={review.items} onClose={() => setReview(null)} />}
+      {review && (
+        <VocabReview
+          title={review.title}
+          items={review.items}
+          pool={items}
+          onClose={(changed) => {
+            setReview(null);
+            if (changed) router.refresh(); // cập nhật mức nhớ / lịch ôn trên các thẻ
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import "server-only";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { SRS_INTERVALS, SRS_MAX_STAGE } from "./srs";
 import type { Segment } from "./subtitles";
 
 export const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -115,6 +116,15 @@ function open() {
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
+  // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
+  const vocabCols = db.prepare("PRAGMA table_info(vocab)").all() as { name: string }[];
+  if (!vocabCols.some((c) => c.name === "srs_stage")) {
+    db.exec(`
+      ALTER TABLE vocab ADD COLUMN srs_stage INTEGER NOT NULL DEFAULT 0; -- 0 = chưa ôn lần nào
+      ALTER TABLE vocab ADD COLUMN due_at INTEGER; -- ms, NULL = từ mới
+      ALTER TABLE vocab ADD COLUMN lapses INTEGER NOT NULL DEFAULT 0;
+    `);
+  }
   return db;
 }
 
@@ -410,6 +420,9 @@ export type VocabItem = {
   sourceUrl: string | null;
   sourceTitle: string;
   createdAt: string;
+  stage: number; // mức nhớ 0 (mới) … SRS_MAX_STAGE
+  dueAt: number | null; // ms, null = từ mới
+  lapses: number; // số lần ôn sai
 };
 
 type VocabRow = {
@@ -420,6 +433,9 @@ type VocabRow = {
   source_url: string | null;
   source_title: string;
   created_at: string;
+  srs_stage: number;
+  due_at: number | null;
+  lapses: number;
 };
 
 const toVocab = (r: VocabRow): VocabItem => ({
@@ -430,6 +446,9 @@ const toVocab = (r: VocabRow): VocabItem => ({
   sourceUrl: r.source_url,
   sourceTitle: r.source_title,
   createdAt: r.created_at,
+  stage: r.srs_stage,
+  dueAt: r.due_at,
+  lapses: r.lapses,
 });
 
 export function listVocab(userId: number): VocabItem[] {
@@ -459,6 +478,27 @@ export function getVocab(userId: number, id: number): { word: string; context: s
 /** false = không có từ này (của người này) */
 export function updateVocabMeaning(userId: number, id: number, meaning: string): boolean {
   return conn().prepare("UPDATE vocab SET meaning = ? WHERE id = ? AND user_id = ?").run(meaning, id, userId).changes > 0;
+}
+
+const DAY = 86_400_000;
+
+/**
+ * Chấm 1 lần ôn. Đúng → lên 1 mức, hẹn xa hơn (ôn sớm khi chưa tới hạn thì giữ nguyên lịch);
+ * sai → tụt về nửa mức cũ, ôn lại ngày mai. null = không có từ này (của người này)
+ */
+export function reviewVocab(userId: number, id: number, correct: boolean, now = Date.now()): { stage: number; dueAt: number } | null {
+  const r = conn().prepare("SELECT srs_stage, due_at FROM vocab WHERE id = ? AND user_id = ?").get(id, userId) as
+    | { srs_stage: number; due_at: number | null }
+    | undefined;
+  if (!r) return null;
+  if (correct && r.due_at != null && r.due_at > now) return { stage: r.srs_stage, dueAt: r.due_at };
+  const stage = correct ? Math.min(r.srs_stage + 1, SRS_MAX_STAGE) : Math.max(1, Math.floor(r.srs_stage / 2));
+  // Trừ vài giờ để hôm sau ôn sớm hơn giờ hôm nay một chút vẫn tính là tới hạn
+  const dueAt = now + SRS_INTERVALS[stage] * DAY - 4 * 3_600_000;
+  conn()
+    .prepare("UPDATE vocab SET srs_stage = ?, due_at = ?, lapses = lapses + ? WHERE id = ? AND user_id = ?")
+    .run(stage, dueAt, correct ? 0 : 1, id, userId);
+  return { stage, dueAt };
 }
 
 /** false = không có từ này (của người này) */
