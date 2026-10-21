@@ -1,0 +1,103 @@
+import type { Segment } from "@shared/subtitles";
+import { t } from "./i18n";
+
+/** Gọi API /api/v1 của server web (Next.js). Lỗi → ném Error với thông báo tiếng Việt của server. */
+
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  role: "user" | "admin";
+  lang: string | null; // ngôn ngữ giao diện lưu theo tài khoản
+  hasPassword?: boolean; // false = tài khoản Google / Apple chưa đặt mật khẩu (server cũ không gửi → coi như có)
+  createdAt: string;
+};
+
+export type LessonSummary = {
+  id: number;
+  title: string;
+  videoId: string;
+  description: string;
+  level: string;
+  published: boolean;
+  dictation: boolean; // admin bật luyện Chính tả cho bài (tắt = chỉ Shadowing)
+  createdAt: string;
+  segmentCount: number;
+};
+export type Lesson = Omit<LessonSummary, "segmentCount"> & { segments: Segment[] };
+
+/** Tiến độ học 1 bài (GET/PUT /progress) — source: "/lesson/3" | "/watch/<videoId>" */
+export type DictResult = { correct: number; total: number };
+export type Progress = {
+  source: string;
+  title: string;
+  idx: number;
+  total: number;
+  mode: "shadow" | "dictation";
+  dictLevel: string;
+  dictDone: Record<string, DictResult>;
+  updatedAt: number;
+};
+/** Mục trong danh sách tiến độ (GET /progress không có source) */
+export type ProgressSummary = Omit<Progress, "dictDone"> & { dictCount: number };
+
+export type Track = { languageCode: string; name: string; auto: boolean };
+export type Transcript = { videoId: string; title: string; track: Track; tracks: Track[]; segments: Segment[] };
+
+/** Nghĩa 1 từ theo ngữ cảnh câu, kiểu nói hằng ngày (POST /word) */
+export type WordInfo = { word: string; meaning: string };
+/** Chi tiết cho tab Ví dụ / Giải thích (POST /word { detail: true }); từ cần học trong ví dụ được bọc **…** */
+export type WordDetail = { lemma: string; pos: string; grammar: string; explanation: string; examples: { de: string; tr: string }[] };
+
+export type VocabItem = {
+  id: number;
+  word: string;
+  meaning: string;
+  context: string;
+  sourceUrl: string | null;
+  sourceTitle: string;
+  createdAt: string;
+  // Lịch ôn (lặp lại ngắt quãng) — server cũ không gửi → coi như từ mới
+  stage?: number; // mức nhớ 0 (mới) … 8
+  dueAt?: number | null; // ms, null = từ mới
+  lapses?: number;
+};
+
+let token: string | null = null;
+export const setApiToken = (t: string | null) => {
+  token = t;
+};
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public data: Record<string, unknown> = {}, // toàn bộ JSON lỗi server trả (vd. { error, id })
+  ) {
+    super(message);
+  }
+}
+
+export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(API_URL + "/api/v1" + path, {
+      method: init.method ?? "GET",
+      headers: {
+        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    });
+  } catch {
+    if (__DEV__) console.warn(`[api] không kết nối được ${API_URL}${path}`); // địa chỉ server chỉ hiện khi dev
+    throw new ApiError(t("api.noConnection"), 0);
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error ?? t("api.serverError", { status: res.status }), res.status, data);
+  return data as T;
+}
+
+export const thumb = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;

@@ -1,0 +1,23 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"],
+      "@shared/*": ["../src/lib/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "../src/lib/subtitles.ts",
+    "../src/lib/dictation.ts",
+    "../src/lib/youtube-id.ts",
+    "../src/lib/phrase-match.ts",
+    "../src/lib/review.ts",
+    "../src/lib/srs.ts"
+  ]
+}
