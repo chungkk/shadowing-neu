@@ -32,66 +32,68 @@ function ProgressText({ p }: { p?: ProgressSummary }) {
   return <Text style={{ color: n >= 100 ? C.accent : C.amber, fontSize: 13, fontWeight: "800" }}>{n >= 100 ? `✓ ${t("lessons.finished")}` : `${n}%`}</Text>;
 }
 
-/** "Tiếp tục học": các bài / video đang học dở, mới nhất trước */
-function ContinueCard({ p, videoId, onPress }: { p: ProgressSummary; videoId: string; onPress: () => void }) {
+/** 1 bài đang học dở: ảnh nhỏ (có thanh tiến độ) · tên · "Câu 3/74" · % */
+function ContinueRow({ p, videoId, onPress, last }: { p: ProgressSummary; videoId: string; onPress: () => void; last: boolean }) {
   const { t } = useI18n();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ width: 200, gap: 8, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-      <View style={{ borderRadius: 12, overflow: "hidden" }}>
-        <Image source={thumb(videoId)} alt="" style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: C.card2 }} contentFit="cover" transition={150} />
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        padding: 12,
+        backgroundColor: pressed ? C.card2 : "transparent",
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: C.border,
+      })}
+    >
+      <View style={{ borderRadius: 8, overflow: "hidden" }}>
+        <Image source={thumb(videoId)} alt="" style={{ width: 96, aspectRatio: 16 / 9, backgroundColor: C.card2 }} contentFit="cover" transition={150} />
         <ProgressBar p={p} />
       </View>
-      <Text style={{ color: C.text, fontWeight: "700", fontSize: 14, lineHeight: 19 }} numberOfLines={2}>
-        {p.title}
-      </Text>
-      <Text style={{ color: C.muted, fontSize: 12 }}>
-        {p.mode === "dictation"
-          ? t("lessons.progressDict", { d: p.dictCount, n: p.total })
-          : t("lessons.progressAt", { i: p.idx + 1, n: p.total })}
-      </Text>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={{ color: C.text, fontWeight: "600", fontSize: 15, lineHeight: 20 }} numberOfLines={2}>
+          {p.title}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ color: C.muted, fontSize: 13 }}>
+            {p.mode === "dictation"
+              ? t("lessons.progressDict", { d: p.dictCount, n: p.total })
+              : t("lessons.progressAt", { i: p.idx + 1, n: p.total })}
+          </Text>
+          <Text style={{ color: C.accent, fontSize: 13, fontWeight: "700" }}>{percent(p)}%</Text>
+        </View>
+      </View>
+      <SymbolView name="play.circle.fill" size={28} tintColor={C.accent} />
     </Pressable>
   );
 }
 
-/** Thẻ lớn cho bài mới nhất (chỉ hiện khi không lọc) */
-function FeaturedCard({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
-  const { t } = useI18n();
-  const { tablet } = useLayout();
+/** Tiêu đề mục: chữ thường, đậm; số lượng nhạt bên cạnh */
+function SectionTitle({ title, count }: { title: string; count?: number }) {
   return (
-    <Pressable
-      onPress={() => router.push(`/lesson/${l.id}`)}
-      style={({ pressed }) => ({
-        flexDirection: tablet ? "row" : "column",
-        borderRadius: 20,
-        overflow: "hidden",
-        backgroundColor: C.card,
-        transform: [{ scale: pressed ? 0.98 : 1 }],
-      })}
-    >
-      {/* iPad: ảnh bên trái, chữ bên phải để thẻ không cao quá màn hình */}
-      <View style={{ width: tablet ? "55%" : "100%" }}>
-        <Image source={thumb(l.videoId)} alt="" style={{ width: "100%", aspectRatio: 16 / 9 }} contentFit="cover" />
-        <ProgressBar p={p} />
-      </View>
-      <View style={{ flex: tablet ? 1 : undefined, padding: tablet ? 24 : 14, gap: tablet ? 12 : 8, justifyContent: "center" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ backgroundColor: "rgba(250,204,21,0.15)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
-            <Text style={{ color: C.amber, fontWeight: "800", fontSize: 11, letterSpacing: 0.5 }}>{t("lessons.newest")}</Text>
-          </View>
-          <LevelBadge level={l.level} style={{ paddingHorizontal: 6, paddingVertical: 1 }} />
-          <Text style={{ color: C.muted, fontSize: 13 }}>{t("sentences", { n: l.segmentCount })}</Text>
-        </View>
-        <Text style={{ color: C.text, fontWeight: "800", fontSize: tablet ? 24 : 18, lineHeight: tablet ? 31 : 24 }} numberOfLines={tablet ? 3 : 2}>
-          {l.title}
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-          <SymbolView name="play.circle.fill" size={18} tintColor={C.accent} />
-          <Text style={{ color: C.accent, fontWeight: "800", fontSize: 14 }}>
-            {p ? `${t("lessons.continue")} · ${percent(p)}%` : t("lessons.start")}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
+    <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: 8 }}>
+      <Text style={{ color: C.text, fontSize: 20, fontWeight: "700" }} accessibilityRole="header">
+        {title}
+      </Text>
+      {count !== undefined && <Text style={{ color: C.muted, fontSize: 15 }}>{count}</Text>}
+    </View>
+  );
+}
+
+/** Bài đăng trong 14 ngày gần đây → nhãn "Mới" */
+const isNew = (l: LessonSummary) => {
+  const d = new Date(l.createdAt.replace(" ", "T") + "Z");
+  return !isNaN(+d) && Date.now() - +d < 14 * 86_400_000;
+};
+function NewBadge() {
+  const { t } = useI18n();
+  return (
+    <View style={{ backgroundColor: "rgba(250,204,21,0.15)", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+      <Text style={{ color: C.amber, fontWeight: "700", fontSize: 11 }}>{t("lessons.newest")}</Text>
+    </View>
   );
 }
 
@@ -105,9 +107,10 @@ function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-        padding: 8,
-        borderRadius: 14,
+        gap: 14,
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        borderRadius: 12,
         backgroundColor: pressed ? C.card2 : "transparent",
       })}
     >
@@ -115,7 +118,7 @@ function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
         <Image
           source={thumb(l.videoId)}
           alt=""
-          style={{ width: 128, aspectRatio: 16 / 9, borderRadius: 10, backgroundColor: C.card2 }}
+          style={{ width: 120, aspectRatio: 16 / 9, borderRadius: 10, backgroundColor: C.card2 }}
           contentFit="cover"
           transition={150}
         />
@@ -129,16 +132,16 @@ function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
         )}
       </View>
       <View style={{ flex: 1, gap: 6 }}>
-        <Text style={{ color: C.text, fontWeight: "700", fontSize: 15, lineHeight: 20 }} numberOfLines={2}>
+        <Text style={{ color: C.text, fontWeight: "600", fontSize: 15, lineHeight: 20 }} numberOfLines={2}>
           {l.title}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <LevelBadge level={l.level} style={{ paddingHorizontal: 6, paddingVertical: 1 }} />
           <Text style={{ color: C.muted, fontSize: 13 }}>{t("sentences", { n: l.segmentCount })}</Text>
+          {isNew(l) && !p && <NewBadge />}
           <ProgressText p={p} />
         </View>
       </View>
-      <SymbolView name="chevron.right" size={13} tintColor="#4a5a50" weight="semibold" />
     </Pressable>
   );
 }
@@ -175,6 +178,7 @@ function LessonCard({ l, width, p }: { l: LessonSummary; width: number; p?: Prog
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <LevelBadge level={l.level} style={{ paddingHorizontal: 6, paddingVertical: 1 }} />
           <Text style={{ color: C.muted, fontSize: 13 }}>{t("sentences", { n: l.segmentCount })}</Text>
+          {isNew(l) && !p && <NewBadge />}
           <ProgressText p={p} />
         </View>
       </View>
@@ -186,7 +190,7 @@ function LessonCard({ l, width, p }: { l: LessonSummary; width: number; p?: Prog
 function SkeletonRow() {
   return (
     <View style={{ flexDirection: "row", gap: 12, padding: 8, alignItems: "center" }}>
-      <View style={{ width: 128, aspectRatio: 16 / 9, borderRadius: 10, backgroundColor: C.card2 }} />
+      <View style={{ width: 120, aspectRatio: 16 / 9, borderRadius: 10, backgroundColor: C.card2 }} />
       <View style={{ flex: 1, gap: 8 }}>
         <View style={{ height: 14, borderRadius: 4, backgroundColor: C.card2, width: "90%" }} />
         <View style={{ height: 14, borderRadius: 4, backgroundColor: C.card2, width: "60%" }} />
@@ -288,16 +292,15 @@ export default function LessonsScreen() {
     () => LEVELS.map((g) => ({ level: g.level, count: all.filter((l) => l.level === g.level).length })).filter((g) => g.count > 0),
     [all],
   );
-  const shown = all.filter((l) => !level || l.level === level);
-  const featured = !level ? shown[0] : undefined; // API trả bài mới nhất trước
-  const list = featured ? shown.slice(1) : shown;
+  const shown = all.filter((l) => !level || l.level === level); // API trả bài mới nhất trước
 
   const header = (
-    <View style={{ gap: 14, paddingHorizontal: tablet ? 0 : 8, paddingTop: tablet ? 20 : 12, paddingBottom: tablet ? 14 : 6 }}>
+    <View style={{ gap: 16, paddingHorizontal: tablet ? 0 : 8, paddingTop: tablet ? 20 : 8, paddingBottom: 4 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: C.accent, fontWeight: "800", fontSize: 13, letterSpacing: 1 }}>DEUTSCH SHADOWING</Text>
-        <Text style={{ color: C.text, fontWeight: "800", fontSize: tablet ? 40 : 32 }}>{t("lessons.title")}</Text>
-        <Text style={styles.muted}>{t("lessons.subtitle")}</Text>
+        <Text style={{ color: C.text, fontWeight: "800", fontSize: tablet ? 40 : 34 }} accessibilityRole="header">
+          {t("lessons.title")}
+        </Text>
+        <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lessons.subtitle")}</Text>
       </View>
 
       {/* Lọc cấp độ */}
@@ -312,27 +315,25 @@ export default function LessonsScreen() {
         </ScrollView>
       )}
 
-      {/* Tiếp tục học */}
+      {/* Tiếp tục học: tối đa 3 bài, dọc trong 1 khung */}
       {!level && continuing.length > 0 && (
         <View style={{ gap: 10 }}>
-          <Text style={{ color: C.muted, fontWeight: "800", fontSize: 13, letterSpacing: 1 }}>{t("lessons.continueHeading")}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} style={{ marginHorizontal: -PAD }}>
-            <View style={{ width: PAD - 12 }} />
-            {continuing.map(({ p, kind, id, videoId }) => (
-              <ContinueCard key={p.source} p={p} videoId={videoId} onPress={() => router.push(kind === "lesson" ? `/lesson/${id}` : `/watch/${id}`)} />
+          <SectionTitle title={t("lessons.continueHeading")} />
+          <View style={{ backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" }}>
+            {continuing.slice(0, 3).map(({ p, kind, id, videoId }, i, arr) => (
+              <ContinueRow
+                key={p.source}
+                p={p}
+                videoId={videoId}
+                last={i === arr.length - 1}
+                onPress={() => router.push(kind === "lesson" ? `/lesson/${id}` : `/watch/${id}`)}
+              />
             ))}
-            <View style={{ width: PAD - 12 }} />
-          </ScrollView>
+          </View>
         </View>
       )}
 
-      {featured && <FeaturedCard l={featured} p={progressOf.get(`/lesson/${featured.id}`)} />}
-
-      {lessons && list.length > 0 && (
-        <Text style={{ color: C.muted, fontWeight: "800", fontSize: 13, letterSpacing: 1, marginTop: 6 }}>
-          {featured ? t("lessons.allHeading") : t("lessons.count", { n: shown.length })}
-        </Text>
-      )}
+      {lessons && shown.length > 0 && <SectionTitle title={level ? level : t("lessons.allHeading")} count={shown.length} />}
     </View>
   );
 
@@ -340,12 +341,13 @@ export default function LessonsScreen() {
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <FlatList
         key={columns}
-        data={list}
+        data={shown}
         numColumns={columns}
         keyExtractor={(l) => String(l.id)}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 32, gap: tablet ? GAP : 0 }}
+        contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 120, gap: tablet ? GAP : 0 }} // chừa chỗ cho thanh tab nổi
+        ItemSeparatorComponent={tablet ? undefined : () => <View style={{ height: 1, backgroundColor: C.border, marginLeft: 142, marginRight: 8 }} />}
         columnWrapperStyle={columns > 1 ? { gap: GAP } : undefined}
         refreshControl={
           <RefreshControl
@@ -374,7 +376,7 @@ export default function LessonsScreen() {
                 ))}
               </View>
             )
-          ) : featured ? undefined : level ? (
+          ) : level ? (
             <EmptyState icon="magnifyingglass" title={t("lessons.noResults")} text={t("lessons.noResultsHint")} />
           ) : (
             <EmptyState icon="books.vertical" title={t("lessons.empty")} text={t("lessons.emptyHint")} />
