@@ -196,6 +196,7 @@ const vi = {
 
   // Ôn tập (thẻ lật)
   "review.title": "Ôn tập từ vựng",
+  "review.sentences": "Luyện câu ⭐ · {n} câu",
   "review.blockLabel": "Mỗi câu nói",
   "crazyReview.recall": "Nói bằng tiếng Đức",
   "crazyReview.rate": "Bạn nhớ thế nào?",
@@ -212,7 +213,7 @@ const vi = {
   "crazyReview.skip": "Bỏ qua",
   "crazyReview.finished": "Xong buổi ôn!",
   "crazyReview.forgotList": "Cần ôn thêm",
-  "review.subtitle": "Từ: ôn bằng bài tập theo mức nhớ. Câu: luyện nói kiểu Crazy — nhớ lại rồi lặp nói theo.",
+  "review.subtitle": "Từ ôn bằng bài tập theo mức nhớ. Câu đánh dấu ⭐ luyện nói kiểu Crazy.",
   "review.all": "Tất cả",
   "review.allCount": "Ôn tất cả · {n} từ",
   "review.today": "Ôn hôm nay · {n} từ",
@@ -542,6 +543,7 @@ const de: Dict = {
   "vocab.review": "Wiederholen",
 
   "review.title": "Vokabeln wiederholen",
+  "review.sentences": "Sätze ⭐ üben · {n}",
   "review.blockLabel": "Runden pro Satz",
   "crazyReview.recall": "Auf Deutsch sagen",
   "crazyReview.rate": "Wie gut erinnert?",
@@ -558,7 +560,7 @@ const de: Dict = {
   "crazyReview.skip": "Überspringen",
   "crazyReview.finished": "Runde geschafft!",
   "crazyReview.forgotList": "Noch üben",
-  "review.subtitle": "Wörter: Übungen passend dazu, wie gut du sie kannst. Sätze: Sprechtraining im Crazy-Stil — erinnern, dann wiederholt nachsprechen.",
+  "review.subtitle": "Wörter mit Übungen passend zu deinem Stand. Mit ⭐ markierte Sätze im Crazy-Stil sprechen.",
   "review.all": "Alle",
   "review.allCount": "Alle wiederholen · {n} Wörter",
   "review.allCount_one": "Alle wiederholen · {n} Wort",

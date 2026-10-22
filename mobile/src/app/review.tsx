@@ -232,17 +232,7 @@ const PROMPT_SENTENCE: Partial<Record<Kind, Parameters<TFn>[0]>> = {
  * - Từ đã học: dạng bài khó dần theo mức nhớ; xen bài ghép cặp các từ vừa gặp.
  * - Lần hỏi đầu tiên của mỗi từ được chấm vào lịch ôn; từ sai được hỏi lại vài thẻ sau cho tới khi đúng.
  */
-function Session({
-  items,
-  pool,
-  onClose,
-  onDone = onClose,
-}: {
-  items: Word[];
-  pool: Word[];
-  onClose: (changed: boolean) => void; // thoát giữa chừng (✕)
-  onDone?: (changed: boolean) => void; // làm xong, bấm "Tiếp tục" ở màn tổng kết
-}) {
+function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClose: (changed: boolean) => void }) {
   const { t } = useI18n();
   const okSound = useAudioPlayer(require("@/assets/sounds/correct.wav"));
   const badSound = useAudioPlayer(require("@/assets/sounds/wrong.wav"));
@@ -850,7 +840,7 @@ function Session({
               </View>
             )}
             <View style={{ alignSelf: "stretch", gap: 10 }}>
-              <Button title={t("review.continue")} variant="primary" onPress={() => onDone(changed)} />
+              <Button title={t("review.continue")} variant="primary" onPress={() => onClose(changed)} />
               {wrong.length > 0 && <Button title={t("review.practiceWrong")} onPress={() => restart(shuffle(wrong.map((g) => ({ ...g.item, stage: g.stage ?? 1 }))))} />}
             </View>
           </ScrollView>
@@ -875,8 +865,9 @@ function Session({
 }
 
 /**
- * Ôn tập mục đã lưu: hôm nay (đến hạn + mới), 1 ngày đã lưu, hoặc tất cả.
- * Từ / cụm từ → bài tập kiểu Duolingo; câu (đánh sao ở màn học) → luyện nói Crazy Deutsch. 1 buổi chạy liền: từ trước, câu sau.
+ * Ôn tập mục đã lưu — 2 lối riêng:
+ * - Từ / cụm từ → bài tập kiểu Duolingo: hôm nay (đến hạn + mới), tất cả, hoặc 1 ngày đã lưu.
+ * - Câu đánh dấu ⭐ ở màn học → luyện nói Crazy Deutsch.
  */
 export default function ReviewScreen() {
   const { user } = useAuth();
@@ -888,8 +879,6 @@ export default function ReviewScreen() {
   const { tablet } = useLayout();
   const items = data?.items ?? null;
   const [block, setBlock] = useState<Block>("20");
-  const [stage, setStage] = useState<"words" | "sentences">("words"); // phần đang ôn trong buổi
-  const [stale, setStale] = useState(false); // phần từ đã chấm lịch ôn → tải lại sổ khi hết buổi (tải giữa buổi sẽ làm đổi danh sách câu)
   useEffect(() => {
     SecureStore.getItemAsync(BLOCK_KEY)
       .then((b) => BLOCKS.includes(b as Block) && setBlock(b as Block))
@@ -917,44 +906,52 @@ export default function ReviewScreen() {
 
   const days = useMemo(() => byDay(items ?? [], t, lang), [items, t, lang]);
   const today = useMemo(() => {
-    if (!data) return { due: 0, fresh: 0, list: [] as Word[] };
+    if (!data) return { due: 0, fresh: 0, words: [] as Word[], sentences: [] as Word[] };
     const due = data.items.filter((v) => isDue(v, data.at)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0));
     const fresh = data.items.filter((v) => v.stage === 0);
-    // Mỗi buổi: tối đa 30 từ đến hạn (quá hạn lâu nhất trước) + 10 từ mới (mới lưu nhất trước)
-    return { due: due.length, fresh: fresh.length, list: [...due.slice(0, 30), ...fresh.slice(0, 10)] };
+    const isWord = (v: Word) => !isSentence(v);
+    // Mỗi buổi: tối đa 30 mục đến hạn (quá hạn lâu nhất trước) + 10 mục mới (mới lưu nhất trước)
+    const pick = (f: (v: Word) => boolean) => [...due.filter(f).slice(0, 30), ...fresh.filter(f).slice(0, 10)];
+    const sentences = pick(isSentence);
+    return {
+      due: due.filter(isWord).length,
+      fresh: fresh.filter(isWord).length,
+      words: pick(isWord),
+      // Không câu nào đến hạn → vẫn cho luyện tất cả câu ⭐
+      sentences: sentences.length ? sentences : data.items.filter(isSentence),
+    };
   }, [data]);
 
-  const session =
-    picked === "today" ? today.list : picked === "all" ? (items ?? []) : (days.find((d) => d.key === picked)?.data ?? null);
+  // "today" | "all" (từ) · "sentences" (câu ⭐) · "YYYY-MM-DD" (từ của ngày đó; ngày chỉ có câu → luyện câu)
+  const dayItems = days.find((d) => d.key === picked)?.data ?? [];
+  const dayWords = dayItems.filter((v) => !isSentence(v));
+  const session: { crazy: boolean; list: Word[] } | null =
+    picked === "today"
+      ? { crazy: false, list: today.words }
+      : picked === "all"
+        ? { crazy: false, list: (items ?? []).filter((v) => !isSentence(v)) }
+        : picked === "sentences"
+          ? { crazy: true, list: today.sentences }
+          : dayItems.length
+            ? dayWords.length
+              ? { crazy: false, list: dayWords }
+              : { crazy: true, list: dayItems }
+            : null;
 
   if (items && session) {
-    const words = session.filter((v) => !isSentence(v));
-    const sentences = session.filter(isSentence);
-    const exit = (changed: boolean) => {
+    const onClose = (changed: boolean) => {
       setPicked(null);
-      setStage("words");
-      setStale(false);
-      if (changed || stale) load(); // cập nhật mức nhớ / lịch ôn
+      if (changed) load(); // cập nhật mức nhớ / lịch ôn
       if (day) router.back();
     };
-    if (stage === "words" && (words.length || !sentences.length)) {
-      return (
-        <Session
-          key={picked}
-          items={words}
-          pool={items}
-          onClose={exit}
-          onDone={(changed) => {
-            if (!sentences.length) return exit(changed);
-            setStale(changed);
-            setStage("sentences");
-          }}
-        />
-      );
-    }
-    return <CrazyReview key={`${picked}-s`} items={sentences} block={Number(block)} onClose={exit} />;
+    return session.crazy ? (
+      <CrazyReview key={picked} items={session.list} block={Number(block)} onClose={onClose} />
+    ) : (
+      <Session key={picked} items={session.list} pool={items} onClose={onClose} />
+    );
   }
 
+  const sentenceCount = items?.filter(isSentence).length ?? 0;
   const mastered = items?.filter((v) => masteryOfItem(v) === "mastered").length ?? 0;
 
   return (
@@ -969,19 +966,12 @@ export default function ReviewScreen() {
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 6 }}>
             <Text style={styles.muted}>{t("review.subtitle")}</Text>
-            {/* Câu luyện Crazy: lặp mỗi câu bao nhiêu lượt trong 1 buổi (cộng dồn tới mục tiêu 500 lượt / câu) */}
-            {!!items?.some(isSentence) && (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                <Text style={styles.muted}>{t("review.blockLabel")}</Text>
-                <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
-              </View>
-            )}
             <ErrorText>{error}</ErrorText>
             {!items && !error && <ActivityIndicator color={C.accent} />}
             {!!items?.length && (
               <>
                 <Button
-                  title={t("review.today", { n: today.list.length })}
+                  title={t("review.today", { n: today.words.length })}
                   variant="primary"
                   icon={<SymbolView name="flame.fill" size={16} tintColor="#fff" />}
                   onPress={() => setPicked("today")}
@@ -990,11 +980,27 @@ export default function ReviewScreen() {
                   {t("review.todayInfo", { due: today.due, fresh: today.fresh })} · {masteryMeta("mastered", t).label} {mastered}
                 </Text>
                 <Button
-                  title={t("review.allCount", { n: items.length })}
+                  title={t("review.allCount", { n: items.length - sentenceCount })}
                   variant="amber"
                   icon={<SymbolView name="shuffle" size={16} tintColor={C.amber} />}
                   onPress={() => setPicked("all")}
                 />
+                {/* Câu đánh dấu ⭐ → luyện nói Crazy; chọn số lượt mỗi câu (cộng dồn tới 500 lượt / câu) */}
+                {sentenceCount > 0 && (
+                  <>
+                    <Button
+                      title={t("review.sentences", { n: today.sentences.length })}
+                      variant="red"
+                      icon={<SymbolView name="star.fill" size={16} tintColor={C.redText} />}
+                      onPress={() => setPicked("sentences")}
+                      style={{ marginTop: 6 }}
+                    />
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                      <Text style={styles.muted}>{t("review.blockLabel")}</Text>
+                      <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
+                    </View>
+                  </>
+                )}
               </>
             )}
           </View>
