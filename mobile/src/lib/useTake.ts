@@ -47,6 +47,7 @@ export function useTake({
   onListen,
   onBeforeRecord,
   onAttempt,
+  onCaptured,
   onSilent,
   onFail,
   autoLoop = false,
@@ -59,6 +60,7 @@ export function useTake({
   onListen: () => void;
   onBeforeRecord: () => void; // dừng phát mẫu trước khi thu
   onAttempt: (passed: boolean, clear?: number) => void; // clear: tỉ lệ từ máy nhận ra 0–1 (undefined = không nhận dạng)
+  onCaptured?: () => void; // vừa thu xong 1 lượt có tiếng nói (trước khi nhận dạng) — vd. phát tiếng "ting"
   onSilent?: () => void; // lượt không nghe thấy tiếng (không tính lượt)
   onFail?: () => void; // không thu được (quyền micro / lỗi thiết bị)
   autoLoop?: boolean;
@@ -141,6 +143,7 @@ export function useTake({
       return setTake({ speed: 0, status: "silent" });
     }
     setUri(file);
+    onCaptured?.(); // âm thanh đã trả về loa ngoài ở trên
     const spoken = (voiced[voiced.length - 1].t - voiced[0].t) / 1000 + 0.1;
     const speed = duration / Math.max(spoken, 0.3);
     if (!user) return report(id, { speed, status: "login" });
@@ -235,5 +238,5 @@ export function useTake({
         ? "checking"
         : "idle";
 
-  return { state, take, uri, level: rec.metering ?? -160, record, stop, cancel, reset, listenThenRecord };
+  return { state, take, uri, level: rec.metering ?? -160, elapsed: rec.durationMillis, record, stop, cancel, reset, listenThenRecord };
 }

@@ -430,7 +430,7 @@ export default function VocabScreen() {
                 <Button
                   title={t("vocab.review")}
                   variant="amber"
-                  icon={<SymbolView name="rectangle.on.rectangle.angled" size={16} tintColor={C.amber} />}
+                  icon={<SymbolView name="mic.fill" size={16} tintColor={C.amber} />}
                   onPress={() => router.push("/review")}
                   style={{ paddingVertical: 9 }}
                 />

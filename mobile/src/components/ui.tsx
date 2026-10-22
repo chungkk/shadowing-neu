@@ -1,3 +1,4 @@
+import { SymbolView, type SFSymbol } from "expo-symbols";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
 import { C, LEVEL_COLORS } from "@/lib/theme";
@@ -51,6 +52,55 @@ export function Button({
       <Text style={[styles.btnText, { color: v.fg, textTransform: variant === "plain" ? "none" : "uppercase" }]}>
         {title}
       </Text>
+    </Pressable>
+  );
+}
+
+/** Nút chính ở đáy màn (cao 56, chữ thường — không viết hoa toàn bộ) */
+export function Cta({
+  title,
+  icon,
+  onPress,
+  tone = "primary",
+  loading,
+  style,
+}: {
+  title: string;
+  icon?: SFSymbol;
+  onPress: () => void;
+  tone?: "primary" | "danger" | "neutral";
+  loading?: boolean;
+  style?: ViewStyle;
+}) {
+  const bg = tone === "primary" ? C.accent : tone === "danger" ? C.red : C.card2;
+  const fg = tone === "neutral" ? C.text : "#fff";
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={loading}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ busy: !!loading }}
+      style={({ pressed }) => [
+        {
+          minHeight: 56,
+          borderRadius: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          paddingHorizontal: 20,
+          backgroundColor: bg,
+          borderWidth: tone === "neutral" ? 1 : 0,
+          borderColor: C.border,
+          opacity: loading ? 0.7 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+        style,
+      ]}
+    >
+      {loading ? <ActivityIndicator color={fg} /> : icon && <SymbolView name={icon} size={18} tintColor={fg} />}
+      <Text style={{ color: fg, fontSize: 17, fontWeight: "700" }}>{title}</Text>
     </Pressable>
   );
 }

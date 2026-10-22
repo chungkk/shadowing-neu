@@ -1,9 +1,9 @@
 import { useAudioPlayer } from "expo-audio";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { SymbolView } from "expo-symbols";
+import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   buildQueue,
@@ -23,7 +23,7 @@ import {
 } from "@shared/review";
 import { isDue } from "@shared/srs";
 import { CrazyReview } from "@/components/CrazyReview";
-import { Button, ErrorText, Segmented, styles } from "@/components/ui";
+import { Button, Cta, ErrorText, Segmented, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n, type TFn } from "@/lib/i18n";
@@ -35,39 +35,9 @@ import { C } from "@/lib/theme";
 
 /** Mục sổ từ kèm lịch ôn (server cũ không gửi → từ mới) */
 type Word = VocabItem & { stage: number; dueAt: number | null };
-type Day = { key: string; title: string; data: Word[] };
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-/** "2026-10-19 08:00:00" (UTC) → "2026-10-19" theo giờ máy */
-const dayOf = (s: string) => {
-  const d = new Date(s.replace(" ", "T") + "Z");
-  return isNaN(+d) ? s.slice(0, 10) : ymd(d);
-};
-
-/** Nhóm từ theo từng ngày lưu (mới → cũ, giữ thứ tự server trả về) */
-function byDay(items: Word[], t: TFn, lang: string): Day[] {
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  const groups = new Map<string, Word[]>();
-  for (const v of items) {
-    const k = dayOf(v.createdAt);
-    (groups.get(k) ?? groups.set(k, []).get(k)!).push(v);
-  }
-  return [...groups].map(([key, data]) => {
-    const [y, m, d] = key.split("-").map(Number);
-    const title =
-      key === ymd(today)
-        ? t("vocab.today")
-        : key === ymd(yesterday)
-          ? t("vocab.yesterday")
-          : new Date(y, m - 1, d).toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    return { key, title, data };
-  });
-}
-
 
 const say = (text: string, slow?: boolean) => speakGerman(text, { slow }).catch(() => {});
 
@@ -865,17 +835,17 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 }
 
 /**
- * Ôn tập mục đã lưu — 2 lối riêng:
- * - Từ / cụm từ → bài tập kiểu Duolingo: hôm nay (đến hạn + mới), tất cả, hoặc 1 ngày đã lưu.
- * - Câu đánh dấu ⭐ ở màn học → luyện nói Crazy Deutsch.
+ * Ôn tập — 2 nhiệm vụ hôm nay, mỗi thẻ đúng 1 nút:
+ * - Từ vựng → bài tập kiểu Duolingo: mục đến hạn + mục mới (không có gì → ôn tất cả).
+ * - Câu ⭐ (đánh dấu ở màn học) → luyện nói Crazy Deutsch.
+ * Xem theo ngày lưu ở tab Từ vựng (đã nhóm theo ngày), không lặp lại ở đây.
  */
 export default function ReviewScreen() {
   const { user } = useAuth();
-  const { t, lang } = useI18n();
-  const { day } = useLocalSearchParams<{ day?: string }>();
+  const { t } = useI18n();
   const [data, setData] = useState<{ items: Word[]; at: number } | null>(null);
   const [error, setError] = useState("");
-  const [picked, setPicked] = useState<string | null>(day ?? null); // "today" | "all" | "YYYY-MM-DD"
+  const [picked, setPicked] = useState<"words" | "sentences" | null>(null);
   const { tablet } = useLayout();
   const items = data?.items ?? null;
   const [block, setBlock] = useState<Block>("20");
@@ -904,158 +874,130 @@ export default function ReviewScreen() {
     if (user) load();
   }, [user, load]);
 
-  const days = useMemo(() => byDay(items ?? [], t, lang), [items, t, lang]);
-  const today = useMemo(() => {
-    if (!data) return { due: 0, fresh: 0, words: [] as Word[], sentences: [] as Word[] };
-    const due = data.items.filter((v) => isDue(v, data.at)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0));
-    const fresh = data.items.filter((v) => v.stage === 0);
-    const isWord = (v: Word) => !isSentence(v);
+  const plan = useMemo(() => {
+    const all = data?.items ?? [];
+    const due = all.filter((v) => isDue(v, data?.at ?? 0)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0));
+    const fresh = all.filter((v) => v.stage === 0);
     // Mỗi buổi: tối đa 30 mục đến hạn (quá hạn lâu nhất trước) + 10 mục mới (mới lưu nhất trước)
     const pick = (f: (v: Word) => boolean) => [...due.filter(f).slice(0, 30), ...fresh.filter(f).slice(0, 10)];
-    const sentences = pick(isSentence);
-    return {
-      due: due.filter(isWord).length,
-      fresh: fresh.filter(isWord).length,
-      words: pick(isWord),
-      // Không câu nào đến hạn → vẫn cho luyện tất cả câu ⭐
-      sentences: sentences.length ? sentences : data.items.filter(isSentence),
+    const part = (f: (v: Word) => boolean) => {
+      const list = pick(f);
+      const total = all.filter(f);
+      // Không có gì đến hạn / mới → ôn lại tất cả
+      return { due: due.filter(f).length, fresh: fresh.filter(f).length, total: total.length, list: list.length ? list : total };
     };
+    return { words: part((v) => !isSentence(v)), sentences: part(isSentence) };
   }, [data]);
 
-  // "today" | "all" (từ) · "sentences" (câu ⭐) · "YYYY-MM-DD" (từ của ngày đó; ngày chỉ có câu → luyện câu)
-  const dayItems = days.find((d) => d.key === picked)?.data ?? [];
-  const dayWords = dayItems.filter((v) => !isSentence(v));
-  const session: { crazy: boolean; list: Word[] } | null =
-    picked === "today"
-      ? { crazy: false, list: today.words }
-      : picked === "all"
-        ? { crazy: false, list: (items ?? []).filter((v) => !isSentence(v)) }
-        : picked === "sentences"
-          ? { crazy: true, list: today.sentences }
-          : dayItems.length
-            ? dayWords.length
-              ? { crazy: false, list: dayWords }
-              : { crazy: true, list: dayItems }
-            : null;
-
-  if (items && session) {
+  if (items && picked) {
     const onClose = (changed: boolean) => {
       setPicked(null);
       if (changed) load(); // cập nhật mức nhớ / lịch ôn
-      if (day) router.back();
     };
-    return session.crazy ? (
-      <CrazyReview key={picked} items={session.list} block={Number(block)} onClose={onClose} />
+    return picked === "sentences" ? (
+      <CrazyReview items={plan.sentences.list} block={Number(block)} onClose={onClose} />
     ) : (
-      <Session key={picked} items={session.list} pool={items} onClose={onClose} />
+      <Session items={plan.words.list} pool={items} onClose={onClose} />
     );
   }
 
-  const sentenceCount = items?.filter(isSentence).length ?? 0;
-  const mastered = items?.filter((v) => masteryOfItem(v) === "mastered").length ?? 0;
+  const mastery = { learning: 0, active: 0, mastered: 0 };
+  for (const v of items ?? []) {
+    const m = masteryOfItem(v);
+    if (m !== "saved") mastery[m]++;
+  }
+  const w = plan.words;
+  const sn = plan.sentences;
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ title: t("review.title"), headerShown: true }} />
-      <FlatList
-        data={days}
-        keyExtractor={(d) => d.key}
-        style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: tablet ? 24 : 16, gap: 10, paddingBottom: 60 }}
-        ListHeaderComponent={
-          <View style={{ gap: 12, marginBottom: 6 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Text style={[styles.muted, { flex: 1 }]}>{t("review.subtitle")}</Text>
-              <Pressable onPress={() => router.push("/stats")} hitSlop={8} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <SymbolView name="chart.bar.fill" size={15} tintColor={C.amber} />
-                <Text style={{ color: C.amber, fontWeight: "700" }}>{t("stats.title")}</Text>
-              </Pressable>
-            </View>
-            <ErrorText>{error}</ErrorText>
-            {!items && !error && <ActivityIndicator color={C.accent} />}
-            {!!items?.length && (
-              <>
-                <Button
-                  title={t("review.today", { n: today.words.length })}
-                  variant="primary"
-                  icon={<SymbolView name="flame.fill" size={16} tintColor="#fff" />}
-                  onPress={() => setPicked("today")}
-                />
-                <Text style={[styles.muted, { textAlign: "center", fontSize: 13 }]}>
-                  {t("review.todayInfo", { due: today.due, fresh: today.fresh })} · {masteryMeta("mastered", t).label} {mastered}
-                </Text>
-                <Button
-                  title={t("review.allCount", { n: items.length - sentenceCount })}
-                  variant="amber"
-                  icon={<SymbolView name="shuffle" size={16} tintColor={C.amber} />}
-                  onPress={() => setPicked("all")}
-                />
-                {/* Câu đánh dấu ⭐ → luyện nói Crazy; chọn số lượt mỗi câu (cộng dồn tới 500 lượt / câu) */}
-                {sentenceCount > 0 && (
-                  <>
-                    <Button
-                      title={t("review.sentences", { n: today.sentences.length })}
-                      variant="red"
-                      icon={<SymbolView name="star.fill" size={16} tintColor={C.redText} />}
-                      onPress={() => setPicked("sentences")}
-                      style={{ marginTop: 6 }}
-                    />
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                      <Text style={styles.muted}>{t("review.blockLabel")}</Text>
-                      <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
-                    </View>
-                  </>
-                )}
-              </>
-            )}
-          </View>
-        }
-        renderItem={({ item }) => {
-          const empty = item.data.filter((v) => !v.meaning).length;
-          const due = data ? item.data.filter((v) => isDue(v, data.at)).length : 0;
-          return (
-            <Pressable
-              onPress={() => setPicked(item.key)}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                padding: 14,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: C.border,
-                backgroundColor: pressed ? C.card2 : C.card,
-              })}
-            >
-              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.card2, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: C.amber, fontSize: 18, fontWeight: "800" }}>{item.data.length}</Text>
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: C.text, fontSize: 16, fontWeight: "700", textTransform: "capitalize" }} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={1}>
-                  {item.data
-                    .slice(0, 4)
-                    .map((v) => v.word)
-                    .join(", ")}
-                  {item.data.length > 4 ? "…" : ""}
-                  {empty ? ` · ${t("vocab.noMeaning")} ${empty}` : ""}
-                </Text>
-              </View>
-              {due > 0 && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                  <SymbolView name="flame.fill" size={13} tintColor={C.amber} />
-                  <Text style={{ color: C.amber, fontWeight: "800", fontSize: 13 }}>{due}</Text>
-                </View>
-              )}
-              <SymbolView name="chevron.right" size={14} tintColor={C.muted} />
+      <Stack.Screen
+        options={{
+          title: t("review.title"),
+          headerShown: true,
+          headerRight: () => (
+            <Pressable onPress={() => router.push("/stats")} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("stats.title")}>
+              <SymbolView name="chart.bar.xaxis" size={20} tintColor={C.text} />
             </Pressable>
-          );
+          ),
         }}
-        ListEmptyComponent={items ? <Text style={[styles.muted, { textAlign: "center", marginTop: 40 }]}>{t("vocab.empty")}</Text> : undefined}
       />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", padding: tablet ? 24 : 16, gap: 12, paddingBottom: 60 }}
+      >
+        <ErrorText>{error}</ErrorText>
+        {!items && !error && <ActivityIndicator color={C.accent} style={{ marginTop: 24 }} />}
+        {items && !items.length && <Text style={[styles.muted, { textAlign: "center", marginTop: 40 }]}>{t("vocab.empty")}</Text>}
+        {!!items?.length && (
+          <>
+            {/* Từ vựng: 1 nút — ôn mục cần ôn, không có thì ôn tất cả */}
+            {w.total > 0 && (
+              <TaskCard
+                icon="text.book.closed.fill"
+                title={t("review.wordsCard")}
+                info={w.due + w.fresh ? t("review.dueInfo", { due: w.due, fresh: w.fresh }) : t("review.wordsNone", { n: w.total })}
+              >
+                <Cta
+                  title={w.due + w.fresh ? t("review.startWords", { n: w.list.length }) : t("review.allWords", { n: w.total })}
+                  onPress={() => setPicked("words")}
+                />
+              </TaskCard>
+            )}
+
+            {/* Câu ⭐: luyện nói kiểu Crazy — số lượt mỗi câu là cài đặt, nút duy nhất là Luyện */}
+            {sn.total > 0 && (
+              <TaskCard
+                icon="mic.fill"
+                title={t("review.sentencesCard")}
+                info={sn.due + sn.fresh ? t("review.dueInfo", { due: sn.due, fresh: sn.fresh }) : t("review.sentencesNone", { n: sn.total })}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <Text style={{ color: C.muted, fontSize: 14 }}>{t("review.blockLabel")}</Text>
+                  <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
+                </View>
+                <Cta title={t("review.startSentences", { n: sn.list.length })} icon="mic.fill" onPress={() => setPicked("sentences")} />
+              </TaskCard>
+            )}
+
+            {/* Mức thành thạo — chạm để xem thống kê */}
+            <Pressable
+              onPress={() => router.push("/stats")}
+              accessibilityRole="button"
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, paddingHorizontal: 4, opacity: pressed ? 0.6 : 1 })}
+            >
+              {(["learning", "active", "mastered"] as const).map((m) => (
+                <View key={m} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: masteryMeta(m, t).color }} />
+                  <Text style={{ color: C.muted, fontSize: 13 }}>
+                    {masteryMeta(m, t).label} <Text style={{ color: C.text, fontWeight: "700" }}>{mastery[m]}</Text>
+                  </Text>
+                </View>
+              ))}
+              <View style={{ flex: 1 }} />
+              <SymbolView name="chevron.right" size={12} tintColor={C.muted} />
+            </Pressable>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Thẻ nhiệm vụ hôm nay: icon · tên · tình trạng · nút hành động */
+function TaskCard({ icon, title, info, children }: { icon: SFSymbol; title: string; info: string; children: ReactNode }) {
+  return (
+    <View style={{ backgroundColor: C.card, borderRadius: 20, borderWidth: 1, borderColor: C.border, padding: 16, gap: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(22,163,74,0.15)", alignItems: "center", justifyContent: "center" }}>
+          <SymbolView name={icon} size={18} tintColor={C.accent} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ color: C.text, fontSize: 17, fontWeight: "700" }}>{title}</Text>
+          <Text style={{ color: C.muted, fontSize: 14 }}>{info}</Text>
+        </View>
+      </View>
+      {children}
     </View>
   );
 }
