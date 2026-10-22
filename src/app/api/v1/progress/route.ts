@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { crazySummary, deleteProgress, getProgress, listProgress, saveProgress, type DictResult } from "@/lib/db";
+import { deleteProgress, getProgress, listProgress, saveProgress, type DictResult } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
 
 /**
@@ -17,15 +17,9 @@ export async function GET(req: NextRequest) {
   if (user instanceof Response) return user;
   const source = req.nextUrl.searchParams.get("source");
   if (source) return Response.json({ progress: SOURCE_RE.test(source) ? getProgress(user.id, source) : null });
-  // Danh sách: bỏ chi tiết từng câu chính tả, chỉ trả số câu đã làm; kèm tổng lượt / số câu đạt chế độ Crazy
-  const crazy = crazySummary(user.id);
+  // Danh sách: bỏ chi tiết từng câu chính tả, chỉ trả số câu đã làm
   return Response.json({
-    progress: listProgress(user.id).map(({ dictDone, ...p }) => ({
-      ...p,
-      dictCount: Object.keys(dictDone).length,
-      crazyReps: crazy.get(p.source)?.reps ?? 0,
-      crazyPassed: crazy.get(p.source)?.passed ?? 0,
-    })),
+    progress: listProgress(user.id).map(({ dictDone, ...p }) => ({ ...p, dictCount: Object.keys(dictDone).length })),
   });
 }
 

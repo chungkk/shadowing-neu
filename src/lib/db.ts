@@ -714,11 +714,3 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
     .all(userId) as { source: string; reps: number; passed: number }[];
   return Object.fromEntries(rows.map((r) => [r.source.slice("/vocab/".length), { reps: r.reps, passed: !!r.passed }]));
 }
-
-/** Tổng theo bài: source → { reps: tổng số lượt, passed: số câu đã đạt } */
-export function crazySummary(userId: number): Map<string, { reps: number; passed: number }> {
-  const rows = conn()
-    .prepare("SELECT source, SUM(reps) AS reps, SUM(passed) AS passed FROM crazy_reps WHERE user_id = ? GROUP BY source")
-    .all(userId) as { source: string; reps: number; passed: number }[];
-  return new Map(rows.map((r) => [r.source, { reps: r.reps, passed: r.passed }]));
-}

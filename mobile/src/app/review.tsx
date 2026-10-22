@@ -198,6 +198,9 @@ type Streak = { day: string; count: number };
 const STREAK_KEY = "vocab-streak";
 const SOUND_KEY = "review-sound";
 const STYLE_KEY = "review-style"; // kiểu ôn đã chọn lần trước (lưu trên máy)
+const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
+const BLOCKS = ["10", "20", "50"] as const;
+type Block = (typeof BLOCKS)[number];
 type ReviewStyle = "duolingo" | "crazy";
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
@@ -874,11 +877,19 @@ export default function ReviewScreen() {
   const { tablet } = useLayout();
   const items = data?.items ?? null;
   const [style, setStyle] = useState<ReviewStyle>("duolingo");
+  const [block, setBlock] = useState<Block>("20");
   useEffect(() => {
     SecureStore.getItemAsync(STYLE_KEY)
       .then((s) => s === "crazy" && setStyle("crazy"))
       .catch(() => {});
+    SecureStore.getItemAsync(BLOCK_KEY)
+      .then((b) => BLOCKS.includes(b as Block) && setBlock(b as Block))
+      .catch(() => {});
   }, []);
+  const pickBlock = (b: Block) => {
+    setBlock(b);
+    SecureStore.setItemAsync(BLOCK_KEY, b).catch(() => {});
+  };
   const pickStyle = (s: ReviewStyle) => {
     setStyle(s);
     SecureStore.setItemAsync(STYLE_KEY, s).catch(() => {});
@@ -918,7 +929,7 @@ export default function ReviewScreen() {
       if (day) router.back();
     };
     return style === "crazy" ? (
-      <CrazyReview key={picked} items={session} onClose={onClose} />
+      <CrazyReview key={picked} items={session} block={Number(block)} onClose={onClose} />
     ) : (
       <Session key={picked} items={session} pool={items} onClose={onClose} />
     );
@@ -947,6 +958,13 @@ export default function ReviewScreen() {
               onChange={pickStyle}
             />
             <Text style={styles.muted}>{style === "crazy" ? t("review.style.crazyHint") : t("review.subtitle")}</Text>
+            {/* Crazy: lặp mỗi câu bao nhiêu lượt trong 1 buổi (cộng dồn tới mục tiêu 500 lượt / câu) */}
+            {style === "crazy" && (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <Text style={styles.muted}>{t("review.blockLabel")}</Text>
+                <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
+              </View>
+            )}
             <ErrorText>{error}</ErrorText>
             {!items && !error && <ActivityIndicator color={C.accent} />}
             {!!items?.length && (

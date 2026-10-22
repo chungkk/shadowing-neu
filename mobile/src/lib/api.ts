@@ -42,12 +42,8 @@ export type Progress = {
   updatedAt: number;
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */
-export type ProgressSummary = Omit<Progress, "dictDone"> & {
-  dictCount: number;
-  crazyReps?: number; // chế độ Crazy: tổng số lượt hét cả bài (server cũ không gửi)
-  crazyPassed?: number; // số câu đã đạt
-};
-/** Chế độ Crazy: số lượt hét 1 câu (GET/POST /crazy) */
+export type ProgressSummary = Omit<Progress, "dictDone"> & { dictCount: number };
+/** Ôn tập Crazy Deutsch: số lượt luyện 1 mục trong sổ từ vựng (GET/POST /crazy) */
 export type CrazyRep = { reps: number; passed: boolean };
 
 export type Track = { languageCode: string; name: string; auto: boolean };
