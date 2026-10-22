@@ -45,14 +45,17 @@ async function germanVoice(): Promise<string | undefined> {
   return (de.find((v) => v.identifier === id) ?? de[0])?.identifier;
 }
 
-export async function speakGerman(text: string, opts: { slow?: boolean; voice?: string; onEnd?: () => void } = {}) {
+/** Tốc độ đọc thường (1×); `speed` nhân với mức này (0,75× … 1,1×) */
+const NORMAL_RATE = 0.95;
+
+export async function speakGerman(text: string, opts: { slow?: boolean; speed?: number; voice?: string; onEnd?: () => void } = {}) {
   await Speech.stop();
   // Vẫn có tiếng khi gạt công tắc im lặng
   await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
   Speech.speak(text, {
     language: "de-DE",
     voice: opts.voice ?? (await germanVoice()),
-    rate: opts.slow ? 0.6 : 0.95,
+    rate: opts.slow ? 0.6 : NORMAL_RATE * (opts.speed ?? 1),
     onDone: opts.onEnd,
     onStopped: opts.onEnd,
     onError: opts.onEnd,

@@ -198,7 +198,7 @@ type Streak = { day: string; count: number };
 const STREAK_KEY = "vocab-streak";
 const SOUND_KEY = "review-sound";
 const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
-const BLOCKS = ["10", "20", "50"] as const;
+const BLOCKS = ["5", "10", "20", "50"] as const;
 type Block = (typeof BLOCKS)[number];
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
@@ -965,7 +965,13 @@ export default function ReviewScreen() {
         contentContainerStyle={{ padding: tablet ? 24 : 16, gap: 10, paddingBottom: 60 }}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 6 }}>
-            <Text style={styles.muted}>{t("review.subtitle")}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={[styles.muted, { flex: 1 }]}>{t("review.subtitle")}</Text>
+              <Pressable onPress={() => router.push("/stats")} hitSlop={8} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <SymbolView name="chart.bar.fill" size={15} tintColor={C.amber} />
+                <Text style={{ color: C.amber, fontWeight: "700" }}>{t("stats.title")}</Text>
+              </Pressable>
+            </View>
             <ErrorText>{error}</ErrorText>
             {!items && !error && <ActivityIndicator color={C.accent} />}
             {!!items?.length && (

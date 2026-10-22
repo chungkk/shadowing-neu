@@ -2,7 +2,8 @@ import "server-only";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
+import { isSentence } from "./review";
+import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import type { Segment } from "./subtitles";
 
 export const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -713,4 +714,63 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
     .prepare("SELECT source, reps, passed FROM crazy_reps WHERE user_id = ? AND source LIKE '/vocab/%'")
     .all(userId) as { source: string; reps: number; passed: number }[];
   return Object.fromEntries(rows.map((r) => [r.source.slice("/vocab/".length), { reps: r.reps, passed: !!r.passed }]));
+}
+
+// ---- Thống kê học tập (màn Thống kê trên app) ----
+
+export type Rate = { n: number; ok: number }; // ok = nhớ được (good / easy) trên n lần ôn
+export type Stats = {
+  dueToday: number; // mục tới hạn ôn
+  streak: number; // số ngày liên tiếp có ôn (tính tới hôm nay, hoặc hôm qua nếu hôm nay chưa ôn)
+  recall30: Rate & { duolingo: Rate; crazy: Rate }; // nhớ lại trong 30 ngày qua
+  retention7: Rate; // lần ôn cách lần trước ≥ 7 ngày — còn nhớ không
+  retention30: Rate; // … ≥ 30 ngày
+  days: { day: string; reviews: number }[]; // 14 ngày gần nhất (theo giờ máy người học), cũ → mới
+  mastery: Record<Mastery, number>;
+  speaking: { reps: number; sentences: number; totalSentences: number }; // lượt nói (Luyện câu ⭐) · số câu đã luyện / có
+  forgotten: { id: number; word: string; meaning: string; lapses: number }[]; // hay quên nhất
+};
+
+const rate = (rows: { grade: string }[]): Rate => ({ n: rows.length, ok: rows.filter((r) => r.grade === "good" || r.grade === "easy").length });
+
+/** tzOffset: phút, như Date.getTimezoneOffset() của máy người học (VN = -420) — để chia ngày đúng giờ địa phương */
+export function getStats(userId: number, tzOffset: number, now = Date.now()): Stats {
+  const dayOf = (ms: number) => new Date(ms - tzOffset * 60_000).toISOString().slice(0, 10);
+  const events = conn()
+    .prepare("SELECT at, grade, mode, gap_days FROM review_events WHERE user_id = ? AND at >= ?")
+    .all(userId, now - 90 * DAY) as { at: number; grade: Grade; mode: string; gap_days: number | null }[];
+
+  const last30 = events.filter((e) => e.at >= now - 30 * DAY);
+  const counts = new Map<string, number>();
+  for (const e of events) counts.set(dayOf(e.at), (counts.get(dayOf(e.at)) ?? 0) + 1);
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const day = dayOf(now - (13 - i) * DAY);
+    return { day, reviews: counts.get(day) ?? 0 };
+  });
+  // Chuỗi ngày: hôm nay chưa ôn thì vẫn giữ chuỗi tới hôm qua
+  let streak = 0;
+  for (let i = counts.has(dayOf(now)) ? 0 : 1; counts.has(dayOf(now - i * DAY)); i++) streak++;
+
+  const vocab = listVocab(userId);
+  const mastery: Record<Mastery, number> = { saved: 0, learning: 0, active: 0, mastered: 0 };
+  for (const v of vocab) mastery[v.mastery]++;
+  const sp = conn()
+    .prepare("SELECT COALESCE(SUM(reps), 0) AS reps, COUNT(*) AS n FROM crazy_reps WHERE user_id = ? AND source LIKE '/vocab/%'")
+    .get(userId) as { reps: number; n: number };
+
+  return {
+    dueToday: vocab.filter((v) => isDue(v, now)).length,
+    streak,
+    recall30: { ...rate(last30), duolingo: rate(last30.filter((e) => e.mode === "duolingo")), crazy: rate(last30.filter((e) => e.mode === "crazy")) },
+    retention7: rate(events.filter((e) => (e.gap_days ?? 0) >= 7)),
+    retention30: rate(events.filter((e) => (e.gap_days ?? 0) >= 30)),
+    days,
+    mastery,
+    speaking: { reps: sp.reps, sentences: sp.n, totalSentences: vocab.filter(isSentence).length },
+    forgotten: vocab
+      .filter((v) => v.lapses > 0)
+      .sort((a, b) => b.lapses - a.lapses)
+      .slice(0, 5)
+      .map((v) => ({ id: v.id, word: v.word, meaning: v.meaning, lapses: v.lapses })),
+  };
 }

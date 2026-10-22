@@ -21,6 +21,7 @@ export default function RootLayout() {
             <Stack.Screen name="watch/[videoId]" options={{ title: "" }} />
             <Stack.Screen name="admin/users" options={{ title: "" }} />
             <Stack.Screen name="review" options={{ title: "" }} />
+            <Stack.Screen name="stats" options={{ title: "" }} />
           </Stack>
         </ThemeProvider>
       </AuthProvider>

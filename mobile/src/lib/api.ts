@@ -43,6 +43,19 @@ export type Progress = {
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */
 export type ProgressSummary = Omit<Progress, "dictDone"> & { dictCount: number };
+/** Thống kê học tập (GET /stats?tz=…) — ok = số lần nhớ được trên n lần ôn */
+export type Rate = { n: number; ok: number };
+export type Stats = {
+  dueToday: number;
+  streak: number;
+  recall30: Rate & { duolingo: Rate; crazy: Rate };
+  retention7: Rate;
+  retention30: Rate;
+  days: { day: string; reviews: number }[]; // 14 ngày, cũ → mới, "YYYY-MM-DD" theo giờ máy
+  mastery: Record<Mastery, number>;
+  speaking: { reps: number; sentences: number; totalSentences: number };
+  forgotten: { id: number; word: string; meaning: string; lapses: number }[];
+};
 /** Ôn tập Crazy Deutsch: số lượt luyện 1 mục trong sổ từ vựng (GET/POST /crazy) */
 export type CrazyRep = { reps: number; passed: boolean };
 
