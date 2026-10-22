@@ -66,7 +66,19 @@ export type Transcript = { videoId: string; title: string; track: Track; tracks:
 /** Nghĩa 1 từ theo ngữ cảnh câu, kiểu nói hằng ngày (POST /word) */
 export type WordInfo = { word: string; meaning: string };
 /** Chi tiết cho tab Ví dụ / Giải thích (POST /word { detail: true }); từ cần học trong ví dụ được bọc **…** */
-export type WordDetail = { lemma: string; pos: string; grammar: string; explanation: string; examples: { de: string; tr: string }[] };
+export type WordDetail = {
+  lemma: string;
+  pos: string;
+  grammar: string;
+  explanation: string;
+  examples: { de: string; tr: string }[];
+  // Các nghĩa phổ biến (nghĩa trong câu đứng đầu, current = true) — server cũ không gửi
+  senses?: { meaning: string; use: string; de: string; tr: string; current: boolean }[];
+  forms?: { form: string; note: string }[]; // các dạng quan trọng
+  tip?: string; // mẹo nhớ
+  cues?: { cue: string; meaning: string }[]; // từ đi kèm → nghĩa
+  idiom?: { de: string; note: string } | null; // câu nói hay gặp
+};
 
 export type VocabItem = {
   id: number;

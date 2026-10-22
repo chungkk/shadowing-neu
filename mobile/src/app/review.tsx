@@ -2,7 +2,7 @@ import { useAudioPlayer } from "expo-audio";
 import { Stack, router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -23,10 +23,12 @@ import {
 } from "@shared/review";
 import { isDue } from "@shared/srs";
 import { CrazyReview } from "@/components/CrazyReview";
+import { WordSheet } from "@/components/WordSheet";
 import { Button, Cta, ErrorText, Segmented, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n, type TFn } from "@/lib/i18n";
+import { showError } from "@/lib/dialogs";
 import { masteryMeta, masteryOfItem } from "@/lib/mastery";
 import type { Mastery } from "@shared/srs";
 import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
@@ -95,22 +97,54 @@ function Tile({
 const tileText = (tone: Tone, size = 18) => ({ color: TONES[tone].fg, fontSize: size, fontWeight: "700" as const });
 
 /** Câu ví dụ: che từ (khi hỏi), điền từ đang chọn, hoặc tô đậm */
+/** Tra từ trong buổi ôn: null = đang hỏi (không cho tra kẻo lộ đáp án) */
+const LookupCtx = createContext<((word: string, context: string) => void) | null>(null);
+const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+
+/** Đoạn chữ mà mỗi từ chạm được để tra (khi đang cho tra) */
+function Words({ text, context }: { text: string; context: string }) {
+  const look = use(LookupCtx);
+  if (!look) return text;
+  return text.split(/(\s+)/).map((p, k) =>
+    cleanWord(p) ? (
+      <Text key={k} onPress={() => look(cleanWord(p), context)} suppressHighlighting={false}>
+        {p}
+      </Text>
+    ) : (
+      p
+    ),
+  );
+}
+
+/** Từ chính (chữ to) — chạm để mở bảng giải thích khi đang cho tra */
+function HeadWord({ word, context, children }: { word: string; context: string; children: ReactNode }) {
+  const look = use(LookupCtx);
+  return (
+    <Pressable disabled={!look} onPress={() => look?.(word, context || word)} accessibilityRole={look ? "button" : undefined}>
+      {children}
+    </Pressable>
+  );
+}
+
 function Context({ text, word, blank, fill, size = 15, color = C.muted }: { text: string; word: string; blank?: boolean; fill?: string | null; size?: number; color?: string }) {
+  const look = use(LookupCtx);
   const at = findWord(text, word.trim());
   const base = { color, fontSize: size, lineHeight: size * 1.6 };
-  if (!at) return <Text style={base}>{text}</Text>;
+  if (!at) return <Text style={base}><Words text={text} context={text} /></Text>;
   const [i, end] = at;
   return (
     <Text style={base}>
-      {text.slice(0, i)}
+      <Words text={text.slice(0, i)} context={text} />
       {blank ? (
         <Text style={{ color: fill ? BLUE : C.muted, fontWeight: "800", textDecorationLine: "underline" }}>
           {fill ? ` ${fill} ` : " " + "_".repeat(Math.min(Math.max(end - i, 5), 12)) + " "}
         </Text>
       ) : (
-        <Text style={{ color: C.amber, fontWeight: "700" }}>{text.slice(i, end)}</Text>
+        <Text style={{ color: C.amber, fontWeight: "700" }} onPress={look ? () => look(word.trim(), text) : undefined}>
+          {text.slice(i, end)}
+        </Text>
       )}
-      {text.slice(end)}
+      <Words text={text.slice(end)} context={text} />
     </Text>
   );
 }
@@ -232,6 +266,37 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const [xp, setXp] = useState(0);
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
+
+  // Tra từ: chạm từ chính / từ trong câu (sau khi trả lời, ở thẻ làm quen, hoặc thẻ đã lật) → bảng giải thích
+  const [lookup, setLookup] = useState<{ word: string; context: string } | null>(null);
+  const [savedIds, setSavedIds] = useState(() => new Map(pool.map((p) => [p.word.toLowerCase(), p.id])));
+  const lookUp = (word: string, context: string) => {
+    stopSpeaking();
+    setLookup({ word, context });
+  };
+  const saveLooked = async (word: string, context: string, meaning: string) => {
+    try {
+      const r = await api<{ vocab: VocabItem[] }>("/vocab", {
+        method: "POST",
+        body: { word, context, sourceUrl: v?.sourceUrl ?? null, sourceTitle: v?.sourceTitle ?? "" },
+      });
+      const item = r.vocab.find((x) => x.word.toLowerCase() === word.toLowerCase());
+      if (item) setSavedIds((m) => new Map(m).set(word.toLowerCase(), item.id));
+      if (item && !item.meaning && meaning) await api(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
+    } catch (e) {
+      showError(e, t("player.saveFailed"));
+    }
+  };
+  const unsaveLooked = async (word: string) => {
+    const id = savedIds.get(word.toLowerCase());
+    if (id === undefined) return;
+    setSavedIds((m) => {
+      const n = new Map(m);
+      n.delete(word.toLowerCase());
+      return n;
+    });
+    await api(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
+  };
 
   const step = queue[pos] as Step | undefined;
   const done = !step;
@@ -392,6 +457,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     }
   };
 
+  const canLook = !!feedback || kind === "intro" || (kind === "flash" && flipped); // đang hỏi thì không cho tra
   const canCheck = (choosing && !!sel) || ((kind === "tiles" || ordering) && built.length > 0) || (typing && !!typed.trim());
   const firstTry = graded.filter((g) => g.correct).length;
   const wrong = graded.filter((g) => !g.correct);
@@ -419,7 +485,9 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <SpeakButton text={v.word} big />
               <View style={{ flexShrink: 1 }}>
-                <Big size={headSize}>{v.word}</Big>
+                <HeadWord word={v.word} context={v.context}>
+                  <Big size={headSize}>{v.word}</Big>
+                </HeadWord>
               </View>
             </View>
             <Text style={{ color: v.meaning ? C.amber : C.muted, fontSize: sentence ? 18 : 22, fontWeight: "700", textAlign: "center", fontStyle: v.meaning ? "normal" : "italic" }}>
@@ -446,7 +514,9 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                   <SpeakButton text={v.word} big />
                   <View style={{ flexShrink: 1 }}>
-                    <Big size={headSize}>{v.word}</Big>
+                    <HeadWord word={v.word} context={v.context}>
+                  <Big size={headSize}>{v.word}</Big>
+                </HeadWord>
                   </View>
                 </View>
                 {!!v.context && <Context text={v.context} word={v.word} />}
@@ -657,7 +727,9 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <SpeakButton text={v.word} big />
               <View style={{ flexShrink: 1 }}>
-                <Big size={headSize}>{v.word}</Big>
+                <HeadWord word={v.word} context={v.context}>
+                  <Big size={headSize}>{v.word}</Big>
+                </HeadWord>
               </View>
             </View>
             {flipped || feedback ? (
@@ -696,7 +768,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           {kind !== "match" && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Text style={{ flex: 1, color: tone.fg, fontSize: 17, fontWeight: "800" }}>
-                {v.word}
+                <Text onPress={() => setLookup({ word: v.word, context: v.context || v.word })}>{v.word}</Text>
                 {!!v.meaning && <Text style={{ fontWeight: "400" }}> — {v.meaning}</Text>}
               </Text>
               <SpeakButton text={v.word} />
@@ -741,6 +813,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   ];
 
   return (
+    <LookupCtx value={canLook ? lookUp : null}>
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView style={{ flex: 1, width: "100%", maxWidth: FORM_MAX, alignSelf: "center" }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -830,7 +903,18 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           </>
         )}
       </KeyboardAvoidingView>
+
+      {/* Bảng giải thích từ (giống màn học video): nghĩa theo câu · ví dụ · các nghĩa thường gặp · lưu / bỏ lưu */}
+      <WordSheet
+        word={lookup?.word ?? null}
+        context={lookup?.context ?? ""}
+        saved={!!lookup && savedIds.has(lookup.word.toLowerCase())}
+        onSave={(meaning) => (lookup ? saveLooked(lookup.word, lookup.context, meaning) : Promise.resolve())}
+        onRemove={() => (lookup ? unsaveLooked(lookup.word) : Promise.resolve())}
+        onClose={() => setLookup(null)}
+      />
     </SafeAreaView>
+    </LookupCtx>
   );
 }
 

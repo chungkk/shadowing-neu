@@ -293,6 +293,78 @@ export function WordSheet({
                         {detail.data.grammar}
                       </Text>
                     )}
+                    {/* Các nghĩa phổ biến của từ gốc (kiểu từ điển): nghĩa · cấu trúc dùng · ví dụ */}
+                    {!!detail.data.senses?.length && (
+                      <View style={{ gap: 10 }}>
+                        <Text style={sectionLabel}>{t("word.senses")}</Text>
+                        {detail.data.senses.map((s, i) => (
+                          <View
+                            key={i}
+                            style={{
+                              gap: 4,
+                              padding: 12,
+                              borderRadius: 12,
+                              backgroundColor: s.current ? "rgba(22,163,74,0.1)" : C.background,
+                              borderWidth: 1,
+                              borderColor: s.current ? "rgba(22,163,74,0.4)" : C.border,
+                            }}
+                          >
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                              <Text style={{ flex: 1, color: C.text, fontSize: 16, fontWeight: "700" }}>
+                                {i + 1}. {s.meaning}
+                              </Text>
+                              {s.current && <Text style={{ color: C.accent, fontSize: 11, fontWeight: "700" }}>{t("word.inThisSentence")}</Text>}
+                            </View>
+                            {!!s.use && <Text style={{ color: C.amber, fontSize: 14, fontWeight: "600" }}>{s.use}</Text>}
+                            <Pressable onPress={() => speak(plain(s.de))} onLongPress={() => speak(plain(s.de), true)} accessibilityRole="button">
+                              <Rich text={s.de} style={{ color: C.text, fontSize: 15, lineHeight: 22 }} />
+                              {!!s.tr && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>{s.tr}</Text>}
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    {/* Phân biệt các dạng quan trọng */}
+                    {!!detail.data.forms?.length && (
+                      <View style={{ gap: 8 }}>
+                        <Text style={sectionLabel}>{t("word.forms")}</Text>
+                        {detail.data.forms.map((f, i) => (
+                          <View key={i} style={{ flexDirection: "row", gap: 8 }}>
+                            <Text style={{ color: C.muted, fontSize: 15, lineHeight: 22 }}>•</Text>
+                            <Text style={{ flex: 1, color: C.text, fontSize: 15, lineHeight: 22 }}>
+                              <Text style={{ fontWeight: "700" }}>{f.form}</Text>
+                              {!!f.note && <Text style={{ color: C.muted }}>: {f.note}</Text>}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    {/* 💡 Mẹo nhớ + từ đi kèm → nghĩa */}
+                    {(!!detail.data.tip || !!detail.data.cues?.length) && (
+                      <View style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(250,204,21,0.08)", borderWidth: 1, borderColor: "rgba(250,204,21,0.3)" }}>
+                        <Text style={{ color: C.amber, fontSize: 14, fontWeight: "700" }}>💡 {t("word.tip")}</Text>
+                        {!!detail.data.tip && <Text style={{ color: C.text, fontSize: 15, lineHeight: 22 }}>{detail.data.tip}</Text>}
+                        {detail.data.cues?.map((c, i) => (
+                          <Text key={i} style={{ color: C.text, fontSize: 15, lineHeight: 22 }}>
+                            <Text style={{ fontStyle: "italic", fontWeight: "600" }}>{c.cue}</Text>
+                            <Text style={{ color: C.muted }}> → {c.meaning}</Text>
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+                    {/* Câu hay gặp với từ này (chạm để nghe) */}
+                    {!!detail.data.idiom && (
+                      <Pressable
+                        onPress={() => speak(detail.data!.idiom!.de)}
+                        onLongPress={() => speak(detail.data!.idiom!.de, true)}
+                        accessibilityRole="button"
+                        style={{ gap: 4, padding: 12, borderRadius: 12, backgroundColor: C.background, borderWidth: 1, borderColor: C.border }}
+                      >
+                        <Text style={sectionLabel}>{t("word.idiom")}</Text>
+                        <Text style={{ color: C.text, fontSize: 16, fontWeight: "700" }}>„{detail.data.idiom.de}“</Text>
+                        {!!detail.data.idiom.note && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>{detail.data.idiom.note}</Text>}
+                      </Pressable>
+                    )}
                     <Rich text={detail.data.explanation} style={{ color: C.text, fontSize: 15, lineHeight: 23 }} />
                   </View>
                 ) : detail.error ? (
@@ -358,6 +430,9 @@ function markWord(sentence: string, word: string, parts?: string[]) {
 }
 
 /** Hiện chữ, phần **…** tô vàng đậm */
+/** Tiêu đề nhỏ của từng phần trong tab Giải thích */
+const sectionLabel = { color: C.muted, fontSize: 12, fontWeight: "700" as const, letterSpacing: 1, textTransform: "uppercase" as const };
+
 function Rich({ text, style }: { text: string; style: object }) {
   return (
     <Text style={style}>
