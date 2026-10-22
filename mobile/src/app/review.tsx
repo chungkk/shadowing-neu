@@ -197,11 +197,9 @@ type Streak = { day: string; count: number };
 
 const STREAK_KEY = "vocab-streak";
 const SOUND_KEY = "review-sound";
-const STYLE_KEY = "review-style"; // kiểu ôn đã chọn lần trước (lưu trên máy)
 const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
 const BLOCKS = ["10", "20", "50"] as const;
 type Block = (typeof BLOCKS)[number];
-type ReviewStyle = "duolingo" | "crazy";
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
   intro: "review.k.intro",
@@ -234,7 +232,17 @@ const PROMPT_SENTENCE: Partial<Record<Kind, Parameters<TFn>[0]>> = {
  * - Từ đã học: dạng bài khó dần theo mức nhớ; xen bài ghép cặp các từ vừa gặp.
  * - Lần hỏi đầu tiên của mỗi từ được chấm vào lịch ôn; từ sai được hỏi lại vài thẻ sau cho tới khi đúng.
  */
-function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClose: (changed: boolean) => void }) {
+function Session({
+  items,
+  pool,
+  onClose,
+  onDone = onClose,
+}: {
+  items: Word[];
+  pool: Word[];
+  onClose: (changed: boolean) => void; // thoát giữa chừng (✕)
+  onDone?: (changed: boolean) => void; // làm xong, bấm "Tiếp tục" ở màn tổng kết
+}) {
   const { t } = useI18n();
   const okSound = useAudioPlayer(require("@/assets/sounds/correct.wav"));
   const badSound = useAudioPlayer(require("@/assets/sounds/wrong.wav"));
@@ -842,7 +850,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               </View>
             )}
             <View style={{ alignSelf: "stretch", gap: 10 }}>
-              <Button title={t("review.continue")} variant="primary" onPress={() => onClose(changed)} />
+              <Button title={t("review.continue")} variant="primary" onPress={() => onDone(changed)} />
               {wrong.length > 0 && <Button title={t("review.practiceWrong")} onPress={() => restart(shuffle(wrong.map((g) => ({ ...g.item, stage: g.stage ?? 1 }))))} />}
             </View>
           </ScrollView>
@@ -866,7 +874,10 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   );
 }
 
-/** Ôn tập từ đã lưu: hôm nay (đến hạn + từ mới), 1 ngày đã lưu, hoặc tất cả — kiểu Duolingo hoặc Crazy Deutsch */
+/**
+ * Ôn tập mục đã lưu: hôm nay (đến hạn + mới), 1 ngày đã lưu, hoặc tất cả.
+ * Từ / cụm từ → bài tập kiểu Duolingo; câu (đánh sao ở màn học) → luyện nói Crazy Deutsch. 1 buổi chạy liền: từ trước, câu sau.
+ */
 export default function ReviewScreen() {
   const { user } = useAuth();
   const { t, lang } = useI18n();
@@ -876,12 +887,10 @@ export default function ReviewScreen() {
   const [picked, setPicked] = useState<string | null>(day ?? null); // "today" | "all" | "YYYY-MM-DD"
   const { tablet } = useLayout();
   const items = data?.items ?? null;
-  const [style, setStyle] = useState<ReviewStyle>("duolingo");
   const [block, setBlock] = useState<Block>("20");
+  const [stage, setStage] = useState<"words" | "sentences">("words"); // phần đang ôn trong buổi
+  const [stale, setStale] = useState(false); // phần từ đã chấm lịch ôn → tải lại sổ khi hết buổi (tải giữa buổi sẽ làm đổi danh sách câu)
   useEffect(() => {
-    SecureStore.getItemAsync(STYLE_KEY)
-      .then((s) => s === "crazy" && setStyle("crazy"))
-      .catch(() => {});
     SecureStore.getItemAsync(BLOCK_KEY)
       .then((b) => BLOCKS.includes(b as Block) && setBlock(b as Block))
       .catch(() => {});
@@ -889,10 +898,6 @@ export default function ReviewScreen() {
   const pickBlock = (b: Block) => {
     setBlock(b);
     SecureStore.setItemAsync(BLOCK_KEY, b).catch(() => {});
-  };
-  const pickStyle = (s: ReviewStyle) => {
-    setStyle(s);
-    SecureStore.setItemAsync(STYLE_KEY, s).catch(() => {});
   };
 
   const load = useCallback(async () => {
@@ -923,16 +928,31 @@ export default function ReviewScreen() {
     picked === "today" ? today.list : picked === "all" ? (items ?? []) : (days.find((d) => d.key === picked)?.data ?? null);
 
   if (items && session) {
-    const onClose = (changed: boolean) => {
+    const words = session.filter((v) => !isSentence(v));
+    const sentences = session.filter(isSentence);
+    const exit = (changed: boolean) => {
       setPicked(null);
-      if (changed) load(); // cập nhật mức nhớ / lịch ôn
+      setStage("words");
+      setStale(false);
+      if (changed || stale) load(); // cập nhật mức nhớ / lịch ôn
       if (day) router.back();
     };
-    return style === "crazy" ? (
-      <CrazyReview key={picked} items={session} block={Number(block)} onClose={onClose} />
-    ) : (
-      <Session key={picked} items={session} pool={items} onClose={onClose} />
-    );
+    if (stage === "words" && (words.length || !sentences.length)) {
+      return (
+        <Session
+          key={picked}
+          items={words}
+          pool={items}
+          onClose={exit}
+          onDone={(changed) => {
+            if (!sentences.length) return exit(changed);
+            setStale(changed);
+            setStage("sentences");
+          }}
+        />
+      );
+    }
+    return <CrazyReview key={`${picked}-s`} items={sentences} block={Number(block)} onClose={exit} />;
   }
 
   const mastered = items?.filter((v) => masteryOfItem(v) === "mastered").length ?? 0;
@@ -948,18 +968,9 @@ export default function ReviewScreen() {
         contentContainerStyle={{ padding: tablet ? 24 : 16, gap: 10, paddingBottom: 60 }}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 6 }}>
-            {/* Kiểu ôn: bài tập kiểu Duolingo · hét to kiểu Crazy Deutsch */}
-            <Segmented
-              options={[
-                ["duolingo", t("review.style.duolingo")],
-                ["crazy", t("review.style.crazy")],
-              ]}
-              value={style}
-              onChange={pickStyle}
-            />
-            <Text style={styles.muted}>{style === "crazy" ? t("review.style.crazyHint") : t("review.subtitle")}</Text>
-            {/* Crazy: lặp mỗi câu bao nhiêu lượt trong 1 buổi (cộng dồn tới mục tiêu 500 lượt / câu) */}
-            {style === "crazy" && (
+            <Text style={styles.muted}>{t("review.subtitle")}</Text>
+            {/* Câu luyện Crazy: lặp mỗi câu bao nhiêu lượt trong 1 buổi (cộng dồn tới mục tiêu 500 lượt / câu) */}
+            {!!items?.some(isSentence) && (
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
                 <Text style={styles.muted}>{t("review.blockLabel")}</Text>
                 <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
