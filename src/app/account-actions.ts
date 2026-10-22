@@ -63,7 +63,14 @@ export async function aiMeaning(id: number): Promise<{ meaning: string } | { err
 /** Chấm 1 lần ôn từ (lặp lại ngắt quãng) → mức nhớ + hạn ôn mới */
 export async function gradeWord(id: number, correct: boolean) {
   const user = await requireUser("/vocab");
-  return reviewVocab(user.id, id, correct);
+  return reviewVocab(user.id, id, {
+    grade: correct ? "good" : "again",
+    mode: "duolingo",
+    exercise: "web",
+    recall: null,
+    speaking: null,
+    autoClear: null,
+  });
 }
 
 export async function removeWord(id: number) {

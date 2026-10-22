@@ -2,7 +2,7 @@ import "server-only";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { SRS_INTERVALS, SRS_MAX_STAGE } from "./srs";
+import { MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import type { Segment } from "./subtitles";
 
 export const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -80,13 +80,30 @@ function open() {
     -- Chế độ Crazy: số lượt hét từng câu của từng người — giữ vĩnh viễn (không bị xoá theo progress)
     CREATE TABLE IF NOT EXISTS crazy_reps (
       user_id INTEGER NOT NULL,
-      source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>"
-      idx INTEGER NOT NULL, -- câu (sau khi gộp câu)
+      source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>" | "/vocab/<id>" (ôn tập Crazy Deutsch)
+      idx INTEGER NOT NULL, -- câu (sau khi gộp câu); mục sổ từ vựng luôn là 0
       reps INTEGER NOT NULL DEFAULT 0,
       passed INTEGER NOT NULL DEFAULT 0, -- từng đạt đủ To · Rõ · Nhanh
       updated_at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, source, idx)
     );
+    -- Lịch sử ôn: mỗi lần ôn 1 dòng (không ghi đè) → đo độ chính xác nhớ lại, còn nhớ sau 7/30 ngày, hiệu quả từng dạng bài
+    CREATE TABLE IF NOT EXISTS review_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      vocab_id INTEGER NOT NULL,
+      at INTEGER NOT NULL, -- ms
+      mode TEXT NOT NULL DEFAULT 'duolingo', -- 'duolingo' | 'crazy'
+      exercise TEXT NOT NULL DEFAULT '', -- dạng bài: choose-meaning, flash, recall…
+      grade TEXT NOT NULL, -- 'again' | 'hard' | 'good' | 'easy'
+      recall INTEGER, -- tự đánh giá nhớ 0–3 (Crazy)
+      speaking INTEGER, -- tự đánh giá nói 0–2 (Crazy)
+      auto_clear REAL, -- tỉ lệ từ máy nghe ra 0–1 (Crazy, null = không chấm được)
+      stage_before INTEGER NOT NULL,
+      stage_after INTEGER NOT NULL,
+      gap_days REAL -- số ngày kể từ lần ôn trước của mục này (null = lần đầu)
+    );
+    CREATE INDEX IF NOT EXISTS review_events_user ON review_events (user_id, vocab_id, at);
     -- Mã xác nhận email khi đăng ký (lưu dạng băm, mỗi email 1 mã mới nhất)
     CREATE TABLE IF NOT EXISTS email_codes (
       email TEXT PRIMARY KEY,
@@ -389,6 +406,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
 }
 
@@ -435,6 +453,7 @@ export type VocabItem = {
   stage: number; // mức nhớ 0 (mới) … SRS_MAX_STAGE
   dueAt: number | null; // ms, null = từ mới
   lapses: number; // số lần ôn sai
+  mastery: Mastery; // suy ra từ mức nhớ + lịch sử ôn (review_events)
 };
 
 type VocabRow = {
@@ -450,7 +469,7 @@ type VocabRow = {
   lapses: number;
 };
 
-const toVocab = (r: VocabRow): VocabItem => ({
+const toVocab = (r: VocabRow, proven = false): VocabItem => ({
   id: r.id,
   word: r.word,
   meaning: r.meaning,
@@ -461,11 +480,27 @@ const toVocab = (r: VocabRow): VocabItem => ({
   stage: r.srs_stage,
   dueAt: r.due_at,
   lapses: r.lapses,
+  mastery: masteryOf(r.srs_stage, proven),
 });
+
+/**
+ * Các mục đã "chứng minh" nhớ lâu: từng nhớ lại đúng sau khoảng cách ≥ MASTERY_GAP_DAYS ngày,
+ * ở dạng bài không tự khai báo (thẻ lật "Tôi biết" không tính)
+ */
+function provenIds(userId: number): Set<number> {
+  const rows = conn()
+    .prepare(
+      `SELECT DISTINCT vocab_id FROM review_events
+       WHERE user_id = ? AND grade IN ('good', 'easy') AND exercise != 'flash' AND gap_days >= ?`,
+    )
+    .all(userId, MASTERY_GAP_DAYS) as { vocab_id: number }[];
+  return new Set(rows.map((r) => r.vocab_id));
+}
 
 export function listVocab(userId: number): VocabItem[] {
   const rows = conn().prepare("SELECT * FROM vocab WHERE user_id = ? ORDER BY created_at DESC, id DESC").all(userId) as VocabRow[];
-  return rows.map(toVocab);
+  const proven = provenIds(userId);
+  return rows.map((r) => toVocab(r, proven.has(r.id)));
 }
 
 /** Lưu từ; đã có thì cập nhật câu ví dụ + nguồn mới nhất (giữ nghĩa đã ghi). Trả về mục vừa lưu */
@@ -478,7 +513,7 @@ export function saveVocab(userId: number, v: { word: string; context: string; so
        RETURNING *`,
     )
     .get(userId, v.word, v.context, v.sourceUrl, v.sourceTitle) as VocabRow;
-  return toVocab(r);
+  return toVocab(r, provenIds(userId).has(r.id));
 }
 
 export function getVocab(userId: number, id: number): { word: string; context: string } | undefined {
@@ -494,27 +529,62 @@ export function updateVocabMeaning(userId: number, id: number, meaning: string):
 
 const DAY = 86_400_000;
 
+export type ReviewInput = {
+  grade: Grade;
+  mode: "duolingo" | "crazy";
+  exercise: string;
+  recall: number | null;
+  speaking: number | null;
+  autoClear: number | null;
+};
+
 /**
- * Chấm 1 lần ôn. Đúng → lên 1 mức, hẹn xa hơn (ôn sớm khi chưa tới hạn thì giữ nguyên lịch);
- * sai → tụt về nửa mức cũ, ôn lại ngày mai. null = không có từ này (của người này)
+ * Chấm 1 lần ôn (lịch: nextSchedule trong srs.ts) và ghi lại thành 1 sự kiện trong review_events.
+ * null = không có từ này (của người này)
  */
-export function reviewVocab(userId: number, id: number, correct: boolean, now = Date.now()): { stage: number; dueAt: number } | null {
+export function reviewVocab(
+  userId: number,
+  id: number,
+  ev: ReviewInput,
+  now = Date.now(),
+): { stage: number; dueAt: number; mastery: Mastery } | null {
   const r = conn().prepare("SELECT srs_stage, due_at FROM vocab WHERE id = ? AND user_id = ?").get(id, userId) as
     | { srs_stage: number; due_at: number | null }
     | undefined;
   if (!r) return null;
-  if (correct && r.due_at != null && r.due_at > now) return { stage: r.srs_stage, dueAt: r.due_at };
-  const stage = correct ? Math.min(r.srs_stage + 1, SRS_MAX_STAGE) : Math.max(1, Math.floor(r.srs_stage / 2));
-  // Trừ vài giờ để hôm sau ôn sớm hơn giờ hôm nay một chút vẫn tính là tới hạn
-  const dueAt = now + SRS_INTERVALS[stage] * DAY - 4 * 3_600_000;
+  const next = nextSchedule({ stage: r.srs_stage, dueAt: r.due_at }, ev.grade, now);
+  const last = conn().prepare("SELECT MAX(at) AS at FROM review_events WHERE user_id = ? AND vocab_id = ?").get(userId, id) as {
+    at: number | null;
+  };
   conn()
     .prepare("UPDATE vocab SET srs_stage = ?, due_at = ?, lapses = lapses + ? WHERE id = ? AND user_id = ?")
-    .run(stage, dueAt, correct ? 0 : 1, id, userId);
-  return { stage, dueAt };
+    .run(next.stage, next.dueAt, next.lapse ? 1 : 0, id, userId);
+  conn()
+    .prepare(
+      `INSERT INTO review_events (user_id, vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after, gap_days)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      userId,
+      id,
+      now,
+      ev.mode,
+      ev.exercise,
+      ev.grade,
+      ev.recall,
+      ev.speaking,
+      ev.autoClear,
+      r.srs_stage,
+      next.stage,
+      last.at == null ? null : (now - last.at) / DAY,
+    );
+  return { stage: next.stage, dueAt: next.dueAt, mastery: masteryOf(next.stage, provenIds(userId).has(id)) };
 }
 
 /** false = không có từ này (của người này) */
 export function deleteVocab(userId: number, id: number): boolean {
+  conn().prepare("DELETE FROM crazy_reps WHERE user_id = ? AND source = ?").run(userId, `/vocab/${id}`);
+  conn().prepare("DELETE FROM review_events WHERE user_id = ? AND vocab_id = ?").run(userId, id);
   return conn().prepare("DELETE FROM vocab WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
 }
 
@@ -635,6 +705,14 @@ export function addCrazyRep(userId: number, source: string, idx: number, passed:
     )
     .get(userId, source, idx, passed ? 1 : 0, Date.now()) as { reps: number; passed: number };
   return { reps: r.reps, passed: !!r.passed };
+}
+
+/** Ôn tập Crazy Deutsch: số lượt hét mọi mục trong sổ từ vựng → {"<id vocab>": {reps, passed}} */
+export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
+  const rows = conn()
+    .prepare("SELECT source, reps, passed FROM crazy_reps WHERE user_id = ? AND source LIKE '/vocab/%'")
+    .all(userId) as { source: string; reps: number; passed: number }[];
+  return Object.fromEntries(rows.map((r) => [r.source.slice("/vocab/".length), { reps: r.reps, passed: !!r.passed }]));
 }
 
 /** Tổng theo bài: source → { reps: tổng số lượt, passed: số câu đã đạt } */

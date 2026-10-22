@@ -1,3 +1,4 @@
+import type { Mastery } from "@shared/srs";
 import type { Segment } from "@shared/subtitles";
 import { t } from "./i18n";
 
@@ -69,6 +70,7 @@ export type VocabItem = {
   stage?: number; // mức nhớ 0 (mới) … 8
   dueAt?: number | null; // ms, null = từ mới
   lapses?: number;
+  mastery?: Mastery; // thành thạo suy ra từ lịch sử ôn (server cũ không gửi)
 };
 
 let token: string | null = null;

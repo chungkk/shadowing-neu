@@ -18,17 +18,12 @@ import { C } from "@/lib/theme";
 
 /** Ngưỡng chấm. Âm lượng micro tính bằng dBFS: im lặng ≈ -160, nói thường ≈ -30, hét ≈ -10 */
 const VOICE_DB = -45; // trên mức này coi là đang có tiếng nói
-const LOUD_DB = -20; // "To": trung bình phần có tiếng phải từ mức này trở lên
+const LOUD_DB = -20; // "To": chỉ là gợi ý (giọng to, tự tin), không bắt buộc để đạt
 const FAST = 0.9; // "Nhanh": tốc độ ≥ 90% bản gốc
 const CLEAR = 0.8; // "Rõ": máy nghe ra ≥ 80% số từ
 const SILENCE_MS = 1300; // đã nói rồi im lặng chừng này → tự dừng ghi (rảnh tay để vung tay theo ngữ điệu)
 const level = (db: number) => Math.min(1, Math.max(0, (db + 60) / 60)); // thanh âm lượng: -60…0 dB → 0…1
-
-/** Mốc lặp: đủ 10 lượt → "Thuộc", đủ 30 lượt → "Phản xạ" (câu bật ra không cần nghĩ) */
-const LEARNED = 10;
-const REFLEX = 30;
-/** Màu số lượt trên transcript: vàng (đang luyện) · xanh lá (thuộc) · xanh dương (phản xạ) */
-export const crazyColor = (reps: number) => (reps >= REFLEX ? C.phrase : reps >= LEARNED ? C.accent : C.amber);
+// Số lượt chỉ là số lần luyện, không phải bằng chứng thành thạo (thành thạo suy từ lịch sử ôn cách quãng)
 
 type Attempt = {
   loud: number; // dB trung bình phần có tiếng
@@ -43,9 +38,8 @@ const clearRatio = (a: Attempt) =>
 const loudOk = (a: Attempt) => a.loud >= LOUD_DB;
 const fastOk = (a: Attempt) => a.speed >= FAST;
 const clearOk = (a: Attempt) => a.status === "done" && clearRatio(a) >= CLEAR;
-/** Đạt khi đủ To + Nhanh, và Rõ nếu chấm được (khách / lỗi mạng chỉ xét To + Nhanh) */
-const passed = (a: Attempt) =>
-  loudOk(a) && fastOk(a) && (a.status === "done" ? clearOk(a) : a.status === "login" || a.status === "error");
+/** Đạt khi đủ Rõ + Nhanh (khách / lỗi mạng: không chấm được Rõ → chỉ xét Nhanh). To chỉ là gợi ý */
+const passed = (a: Attempt) => fastOk(a) && (a.status === "done" ? clearOk(a) : a.status === "login" || a.status === "error");
 
 function Badge({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
   const color = ok === undefined ? C.muted : ok ? C.accent : C.redText;
@@ -69,9 +63,11 @@ function Badge({ label, value, ok }: { label: string; value: string; ok?: boolea
 }
 
 /**
- * Chế độ Crazy (theo Crazy English của Lý Dương): nghe câu gốc rồi hét lại ngay — To nhất · Rõ nhất · Nhanh nhất.
- * Mỗi lượt chấm 3 tiêu chí: To (âm lượng micro), Nhanh (so thời lượng với bản gốc), Rõ (Whisper nghe ra bao nhiêu từ).
+ * Chế độ Crazy (theo Crazy English của Lý Dương): nghe câu gốc rồi nói lại ngay, chủ động và dứt khoát.
+ * Mỗi lượt chấm Rõ (Whisper nghe ra bao nhiêu từ) + Nhanh (so thời lượng với bản gốc); To (âm lượng micro) chỉ là gợi ý —
+ * nói to không tự nó giúp học giỏi, điều cần là luyện chủ động, cường độ cao và lặp có mục tiêu.
  * Lặp lại nhiều lượt mỗi câu để câu thành phản xạ.
+ * Dùng cho câu trong video (Player) và ôn tập Crazy Deutsch (CrazyReview: "nghe" là giọng đọc của máy).
  */
 export function CrazyPanel({
   text,
@@ -86,6 +82,8 @@ export function CrazyPanel({
   onAttempt,
   onNext,
   hasNext,
+  canListen = true,
+  showTip = true,
 }: {
   text: string;
   duration: number; // giây — thời lượng câu gốc ở tốc độ 1×
@@ -96,9 +94,11 @@ export function CrazyPanel({
   onRecorded: (uri: string) => void;
   onPlayback: () => void;
   hasRecording: boolean;
-  onAttempt: (passed: boolean) => void;
-  onNext: () => void;
-  hasNext: boolean;
+  onAttempt: (passed: boolean, clear?: number) => void; // clear: tỉ lệ từ máy nghe ra 0–1 (undefined = không chấm được)
+  onNext?: () => void;
+  hasNext?: boolean;
+  canListen?: boolean; // false → ẩn "Nghe rồi hét" (ôn tập: đang nhớ lại thì không cho nghe đáp án)
+  showTip?: boolean;
 }) {
   const { user } = useAuth();
   const { t } = useI18n();
@@ -136,7 +136,7 @@ export function CrazyPanel({
   const report = (id: number, a: Attempt) => {
     if (id !== attemptId.current) return;
     setAttempt(a);
-    onAttempt(passed(a));
+    onAttempt(passed(a), a.status === "done" ? clearRatio(a) : undefined);
   };
 
   const finish = async () => {
@@ -220,16 +220,18 @@ export function CrazyPanel({
   const meterDb = rec.isRecording ? (rec.metering ?? -160) : (attempt?.loud ?? -160);
   const meterOk = meterDb >= LOUD_DB;
   const a = attempt && attempt.status !== "silent" ? attempt : null;
-  const firstMiss = a && (!loudOk(a) ? "loud" : a.status === "done" && !clearOk(a) ? "clear" : !fastOk(a) ? "fast" : null);
+  const firstMiss = a && (a.status === "done" && !clearOk(a) ? "clear" : !fastOk(a) ? "fast" : null);
 
   return (
     <View style={{ gap: 12 }}>
-      <View style={{ gap: 4 }}>
-        <Text style={{ color: C.amber, fontWeight: "800", fontSize: fs(15) }}>🔥 {t("crazy.motto")}</Text>
-        <Text style={{ color: C.muted, fontSize: fs(13), lineHeight: fs(18) }}>{t("crazy.tip")}</Text>
-      </View>
+      {showTip && (
+        <View style={{ gap: 4 }}>
+          <Text style={{ color: C.amber, fontWeight: "800", fontSize: fs(15) }}>🔥 {t("crazy.motto")}</Text>
+          <Text style={{ color: C.muted, fontSize: fs(13), lineHeight: fs(18) }}>{t("crazy.tip")}</Text>
+        </View>
+      )}
 
-      {/* Thanh âm lượng: phải vượt vạch vàng mới tính là "To" */}
+      {/* Thanh âm lượng: vượt vạch vàng = giọng to, tự tin (gợi ý, không bắt buộc) */}
       <View style={{ height: 12, borderRadius: 6, backgroundColor: C.card2, overflow: "hidden" }}>
         <View
           style={{
@@ -258,13 +260,15 @@ export function CrazyPanel({
         />
       ) : (
         <View style={{ flexDirection: "row", gap: 10 }}>
-          <Button
-            title={t("crazy.listenShout")}
-            variant="primary"
-            onPress={listen}
-            style={{ flex: 1 }}
-            icon={<SymbolView name="ear" size={18} tintColor="#fff" />}
-          />
+          {canListen && (
+            <Button
+              title={t("crazy.listenShout")}
+              variant="primary"
+              onPress={listen}
+              style={{ flex: 1 }}
+              icon={<SymbolView name="ear" size={18} tintColor="#fff" />}
+            />
+          )}
           <Button
             title={t("crazy.shout")}
             variant="red"
@@ -280,7 +284,7 @@ export function CrazyPanel({
       {a && (
         <View style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Badge label={t("crazy.loud")} value={`${Math.round(level(a.loud) * 100)}%`} ok={loudOk(a)} />
+            <Badge label={t("crazy.loud")} value={`${Math.round(level(a.loud) * 100)}%`} ok={loudOk(a) || undefined} />
             <Badge
               label={t("crazy.clear")}
               value={
@@ -315,26 +319,17 @@ export function CrazyPanel({
 
           {a.status !== "checking" && (
             <Text style={{ color: passed(a) ? C.accent : C.amber, fontSize: fs(14), fontWeight: "700", lineHeight: fs(20) }}>
-              {passed(a)
-                ? t("crazy.passed")
-                : firstMiss === "loud"
-                  ? t("crazy.hintLoud")
-                  : firstMiss === "clear"
-                    ? t("crazy.hintClear")
-                    : t("crazy.hintFast", { s: duration.toFixed(1) })}
+              {passed(a) ? t("crazy.passed") : firstMiss === "clear" ? t("crazy.hintClear") : t("crazy.hintFast", { s: duration.toFixed(1) })}
             </Text>
           )}
+          {a.status !== "checking" && !loudOk(a) && <Text style={{ color: C.muted, fontSize: fs(13) }}>{t("crazy.hintLoud")}</Text>}
           {a.status === "login" && <Text style={{ color: C.muted, fontSize: fs(13) }}>{t("crazy.loginHint")}</Text>}
         </View>
       )}
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Text style={{ flex: 1, color: reps ? crazyColor(reps) : C.muted, fontWeight: "800", fontSize: 13, lineHeight: 18 }}>
-          {reps >= REFLEX
-            ? t("crazy.reflex", { n: reps })
-            : reps >= LEARNED
-              ? t("crazy.toReflex", { n: reps, r: REFLEX - reps })
-              : t("crazy.toLearned", { n: reps, r: LEARNED - reps })}
+        <Text style={{ flex: 1, color: reps ? C.amber : C.muted, fontWeight: "800", fontSize: 13, lineHeight: 18 }}>
+          {t("crazy.reps", { n: reps })}
         </Text>
         <Button
           title={t("crazy.myVoice")}
@@ -342,7 +337,7 @@ export function CrazyPanel({
           disabled={!hasRecording || rec.isRecording}
           icon={<SymbolView name="speaker.wave.2.fill" size={16} tintColor={C.text} />}
         />
-        {hasNext && <Button title={t("crazy.next")} onPress={onNext} disabled={rec.isRecording} />}
+        {onNext && hasNext && <Button title={t("crazy.next")} onPress={onNext} disabled={rec.isRecording} />}
       </View>
     </View>
   );

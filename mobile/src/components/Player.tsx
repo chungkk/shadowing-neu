@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
 import { tokenize, type Phrase } from "@shared/phrase-match";
-import { CrazyPanel, crazyColor } from "./CrazyPanel";
+import { CrazyPanel } from "./CrazyPanel";
 import { DictationPanel, type DictDraft } from "./DictationPanel";
 import { WordSheet } from "./WordSheet";
 import { Label, Segmented } from "./ui";
@@ -653,7 +653,7 @@ export default function Player({
               <Text style={{ color: C.text, fontWeight: "800" }}>#{index + 1}</Text>
               <Text style={{ color: C.muted, fontSize: 12 }}>{formatTime(item.start)}</Text>
               {crazy && crazyStats[index] && (
-                <Text style={{ color: crazyColor(crazyStats[index].reps), fontWeight: "800" }}>
+                <Text style={{ color: crazyStats[index].passed ? C.accent : C.amber, fontWeight: "800" }}>
                   {crazyStats[index].passed ? "✓ " : ""}🔥{crazyStats[index].reps}
                 </Text>
               )}

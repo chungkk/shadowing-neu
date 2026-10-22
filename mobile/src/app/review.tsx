@@ -22,10 +22,13 @@ import {
   type Step,
 } from "@shared/review";
 import { isDue } from "@shared/srs";
-import { Button, ErrorText, styles } from "@/components/ui";
+import { CrazyReview } from "@/components/CrazyReview";
+import { Button, ErrorText, Segmented, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n, type TFn } from "@/lib/i18n";
+import { masteryMeta, masteryOfItem } from "@/lib/mastery";
+import type { Mastery } from "@shared/srs";
 import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { C } from "@/lib/theme";
@@ -65,13 +68,6 @@ function byDay(items: Word[], t: TFn, lang: string): Day[] {
   });
 }
 
-/** Mức nhớ → nhãn + màu */
-function stageMeta(stage: number, t: TFn) {
-  if (stage === 0) return { label: t("review.stage.new"), color: C.muted };
-  if (stage <= 2) return { label: t("review.stage.learning"), color: C.redText };
-  if (stage <= 4) return { label: t("review.stage.good"), color: C.amber };
-  return { label: t("review.stage.mastered"), color: C.accent };
-}
 
 const say = (text: string, slow?: boolean) => speakGerman(text, { slow }).catch(() => {});
 
@@ -196,11 +192,13 @@ const Big = ({ children, color = C.text, size = 32 }: { children: ReactNode; col
 );
 
 type Feedback = { ok: boolean; note?: string; combo: number };
-type Graded = { item: Word; correct: boolean; stage?: number };
+type Graded = { item: Word; correct: boolean; stage?: number; mastery?: Mastery };
 type Streak = { day: string; count: number };
 
 const STREAK_KEY = "vocab-streak";
 const SOUND_KEY = "review-sound";
+const STYLE_KEY = "review-style"; // kiểu ôn đã chọn lần trước (lưu trên máy)
+type ReviewStyle = "duolingo" | "crazy";
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
   intro: "review.k.intro",
@@ -320,8 +318,12 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       setGraded((g) => [...g, entry]);
       if (!practice) {
         setChanged(true);
-        api<{ stage: number; dueAt: number }>(`/vocab/${v.id}/review`, { method: "POST", body: { correct: ok } })
-          .then((res) => setGraded((g) => g.map((x) => (x === entry ? { ...x, stage: res.stage } : x))))
+        // Ghi kèm dạng bài: thẻ lật "Tôi biết" là tự khai báo → không tính làm bằng chứng thành thạo
+        api<{ stage: number; dueAt: number; mastery?: Mastery }>(`/vocab/${v.id}/review`, {
+          method: "POST",
+          body: { correct: ok, mode: "duolingo", exercise: s.kind },
+        })
+          .then((res) => setGraded((g) => g.map((x) => (x === entry ? { ...x, stage: res.stage, mastery: res.mastery } : x))))
           .catch(() => {});
       }
     }
@@ -826,7 +828,11 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                       <Text style={{ fontWeight: "800" }}>{g.item.word}</Text>
                       <Text style={{ color: C.muted }}> — {g.item.meaning || t("vocab.noMeaning")}</Text>
                     </Text>
-                    {g.stage != null && <Text style={{ color: stageMeta(g.stage, t).color, fontSize: 12, fontWeight: "700" }}>{stageMeta(g.stage, t).label}</Text>}
+                    {g.stage != null && (
+                      <Text style={{ color: masteryMeta(masteryOfItem({ stage: g.stage, mastery: g.mastery }), t).color, fontSize: 12, fontWeight: "700" }}>
+                        {masteryMeta(masteryOfItem({ stage: g.stage, mastery: g.mastery }), t).label}
+                      </Text>
+                    )}
                     <SpeakButton text={g.item.word} />
                   </View>
                 ))}
@@ -844,7 +850,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                 <Text style={{ flex: 1, color: C.text, fontSize: 22, fontWeight: "800" }}>{t((sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT_KEY[kind ?? "flash"])}</Text>
                 {step.role === "retry" && <Text style={{ color: C.redText, fontSize: 12, fontWeight: "800" }}>{t("review.retry")}</Text>}
                 {step.role === "graded" && kind !== "intro" && (
-                  <Text style={{ color: stageMeta(v.stage, t).color, fontSize: 12, fontWeight: "700" }}>{stageMeta(v.stage, t).label}</Text>
+                  <Text style={{ color: masteryMeta(masteryOfItem(v), t).color, fontSize: 12, fontWeight: "700" }}>{masteryMeta(masteryOfItem(v), t).label}</Text>
                 )}
               </View>
               <View style={{ flex: 1, justifyContent: "center", paddingBottom: 12 }}>{renderExercise()}</View>
@@ -857,7 +863,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   );
 }
 
-/** Ôn tập từ đã lưu: hôm nay (đến hạn + từ mới), 1 ngày đã lưu, hoặc tất cả */
+/** Ôn tập từ đã lưu: hôm nay (đến hạn + từ mới), 1 ngày đã lưu, hoặc tất cả — kiểu Duolingo hoặc Crazy Deutsch */
 export default function ReviewScreen() {
   const { user } = useAuth();
   const { t, lang } = useI18n();
@@ -867,6 +873,16 @@ export default function ReviewScreen() {
   const [picked, setPicked] = useState<string | null>(day ?? null); // "today" | "all" | "YYYY-MM-DD"
   const { tablet } = useLayout();
   const items = data?.items ?? null;
+  const [style, setStyle] = useState<ReviewStyle>("duolingo");
+  useEffect(() => {
+    SecureStore.getItemAsync(STYLE_KEY)
+      .then((s) => s === "crazy" && setStyle("crazy"))
+      .catch(() => {});
+  }, []);
+  const pickStyle = (s: ReviewStyle) => {
+    setStyle(s);
+    SecureStore.setItemAsync(STYLE_KEY, s).catch(() => {});
+  };
 
   const load = useCallback(async () => {
     try {
@@ -896,21 +912,19 @@ export default function ReviewScreen() {
     picked === "today" ? today.list : picked === "all" ? (items ?? []) : (days.find((d) => d.key === picked)?.data ?? null);
 
   if (items && session) {
-    return (
-      <Session
-        key={picked}
-        items={session}
-        pool={items}
-        onClose={(changed) => {
-          setPicked(null);
-          if (changed) load(); // cập nhật mức nhớ / lịch ôn
-          if (day) router.back();
-        }}
-      />
+    const onClose = (changed: boolean) => {
+      setPicked(null);
+      if (changed) load(); // cập nhật mức nhớ / lịch ôn
+      if (day) router.back();
+    };
+    return style === "crazy" ? (
+      <CrazyReview key={picked} items={session} onClose={onClose} />
+    ) : (
+      <Session key={picked} items={session} pool={items} onClose={onClose} />
     );
   }
 
-  const mastered = items?.filter((v) => v.stage >= 5).length ?? 0;
+  const mastered = items?.filter((v) => masteryOfItem(v) === "mastered").length ?? 0;
 
   return (
     <View style={styles.screen}>
@@ -923,7 +937,16 @@ export default function ReviewScreen() {
         contentContainerStyle={{ padding: tablet ? 24 : 16, gap: 10, paddingBottom: 60 }}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 6 }}>
-            <Text style={styles.muted}>{t("review.subtitle")}</Text>
+            {/* Kiểu ôn: bài tập kiểu Duolingo · hét to kiểu Crazy Deutsch */}
+            <Segmented
+              options={[
+                ["duolingo", t("review.style.duolingo")],
+                ["crazy", t("review.style.crazy")],
+              ]}
+              value={style}
+              onChange={pickStyle}
+            />
+            <Text style={styles.muted}>{style === "crazy" ? t("review.style.crazyHint") : t("review.subtitle")}</Text>
             <ErrorText>{error}</ErrorText>
             {!items && !error && <ActivityIndicator color={C.accent} />}
             {!!items?.length && (
@@ -935,7 +958,7 @@ export default function ReviewScreen() {
                   onPress={() => setPicked("today")}
                 />
                 <Text style={[styles.muted, { textAlign: "center", fontSize: 13 }]}>
-                  {t("review.todayInfo", { due: today.due, fresh: today.fresh })} · {stageMeta(5, t).label} {mastered}
+                  {t("review.todayInfo", { due: today.due, fresh: today.fresh })} · {masteryMeta("mastered", t).label} {mastered}
                 </Text>
                 <Button
                   title={t("review.allCount", { n: items.length })}
