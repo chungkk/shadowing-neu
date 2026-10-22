@@ -1,4 +1,5 @@
 import type { Mastery } from "@shared/srs";
+import { File } from "expo-file-system";
 import type { Segment } from "@shared/subtitles";
 import { t } from "./i18n";
 
@@ -123,13 +124,25 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
       },
       body: form ? (init.body as FormData) : init.body !== undefined ? JSON.stringify(init.body) : undefined,
     });
-  } catch {
-    if (__DEV__) console.warn(`[api] không kết nối được ${API_URL}${path}`); // địa chỉ server chỉ hiện khi dev
+  } catch (e) {
+    // Lỗi gốc chỉ in khi dev (vd. FormData sai kiểu cũng bị fetch ném ra như lỗi mạng)
+    if (__DEV__) console.warn(`[api] không kết nối được ${API_URL}${path}`, e); // địa chỉ server chỉ hiện khi dev
     throw new ApiError(t("api.noConnection"), 0);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error ?? t("api.serverError", { status: res.status }), res.status, data);
   return data as T;
+}
+
+/**
+ * FormData chỉ có 1 file (trường "file") từ file trên máy, để gửi lên server.
+ * fetch của Expo (expo/fetch) KHÔNG nhận kiểu cũ của React Native { uri, name, type } → dùng File của expo-file-system
+ * (đọc được bytes, tên file giữ đuôi .m4a / .jpg để server / Whisper nhận đúng định dạng).
+ */
+export function fileForm(uri: string): FormData {
+  const body = new FormData();
+  body.append("file", new File(uri) as unknown as Blob);
+  return body;
 }
 
 /** Nguồn ảnh đại diện cho expo-image (kèm token — server chỉ cho chính chủ / admin xem) */

@@ -7,7 +7,7 @@ import {
 } from "expo-audio";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { checkDictation, type CheckedWord } from "@shared/dictation";
-import { api } from "./api";
+import { api, fileForm } from "./api";
 import { useAuth } from "./auth";
 import { micDenied, notice } from "./dialogs";
 import { useI18n } from "./i18n";
@@ -150,10 +150,7 @@ export function useTake({
     if (!score) return report(id, { speed, status: "unscored" });
     setTake({ speed, status: "checking" });
     try {
-      const body = new FormData();
-      // React Native: file gửi lên dạng { uri, name, type }
-      body.append("file", { uri: file, name: file.split("/").pop() || "speech.m4a", type: "audio/mp4" } as unknown as Blob);
-      const { text: heard } = await api<{ text: string }>("/speak", { method: "POST", body });
+      const { text: heard } = await api<{ text: string }>("/speak", { method: "POST", body: fileForm(file) });
       report(id, { speed, status: "done", words: checkDictation(text, heard).words });
     } catch {
       report(id, { speed, status: "error" });

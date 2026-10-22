@@ -8,7 +8,7 @@ import { ActionSheetIOS, ActivityIndicator, KeyboardAvoidingView, LayoutAnimatio
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
-import { api, API_URL, avatarSource, type User } from "@/lib/api";
+import { api, API_URL, avatarSource, fileForm, type User } from "@/lib/api";
 import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
@@ -122,9 +122,7 @@ function Avatar({ user }: { user: User }) {
       // Cắt vuông (đã chọn khung ở bước trên) → thu nhỏ → JPEG trước khi gửi
       const img = await ImageManipulator.manipulate(picked.assets[0].uri).resize({ width: AVATAR_SIZE, height: AVATAR_SIZE }).renderAsync();
       const out = await img.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
-      const body = new FormData();
-      body.append("file", { uri: out.uri, name: "avatar.jpg", type: "image/jpeg" } as unknown as Blob);
-      const r = await api<{ user: User }>("/me/avatar", { method: "POST", body });
+      const r = await api<{ user: User }>("/me/avatar", { method: "POST", body: fileForm(out.uri) });
       setUser(r.user);
     } catch (e) {
       showError(e, t("acc.avatarFailed"));
