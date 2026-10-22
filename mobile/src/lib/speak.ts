@@ -1,20 +1,15 @@
 import { setAudioModeAsync } from "expo-audio";
-import * as SecureStore from "expo-secure-store";
 import * as Speech from "expo-speech";
 
 /**
  * Đọc tiếng Đức bằng giọng có sẵn của máy (expo-speech, offline, miễn phí).
- * Người dùng chọn giọng ở tab Tài khoản (lưu trên máy). Chưa chọn, hoặc giọng đã chọn không còn trong máy →
- * tự chọn: ưu tiên giọng chất lượng cao (Enhanced) nếu đã tải trong Cài đặt → Trợ năng → Nội dung được đọc.
+ * Luôn tự chọn giọng tốt nhất: de-DE trước, chất lượng cao (Enhanced — tải trong Cài đặt → Trợ năng → Nội dung được đọc) trước.
+ * (Trước đây cho chọn giọng ở tab Tài khoản — lựa chọn cũ còn lưu trên máy được bỏ qua.)
  */
 
-const STORE_KEY = "tts-voice";
-
 let voices: Speech.Voice[] | null = null;
-/** Giọng người dùng đã chọn; null = tự động, undefined = chưa đọc từ máy */
-let chosen: string | null | undefined;
 
-/** Các giọng tiếng Đức trong máy: de-DE trước, chất lượng cao trước, rồi theo tên. `fresh` → đọc lại (vừa tải thêm giọng) */
+/** Các giọng tiếng Đức trong máy, tốt nhất trước. `fresh` → đọc lại (vừa tải thêm giọng) */
 export async function germanVoices(fresh = false): Promise<Speech.Voice[]> {
   if (voices?.length && !fresh) return voices;
   try {
@@ -28,23 +23,6 @@ export async function germanVoices(fresh = false): Promise<Speech.Voice[]> {
   return voices;
 }
 
-export async function chosenVoice(): Promise<string | null> {
-  if (chosen === undefined) chosen = await SecureStore.getItemAsync(STORE_KEY).catch(() => null);
-  return chosen;
-}
-
-/** null → quay về tự động */
-export function setChosenVoice(id: string | null) {
-  chosen = id;
-  (id ? SecureStore.setItemAsync(STORE_KEY, id) : SecureStore.deleteItemAsync(STORE_KEY)).catch(() => {});
-}
-
-async function germanVoice(): Promise<string | undefined> {
-  const de = await germanVoices();
-  const id = await chosenVoice();
-  return (de.find((v) => v.identifier === id) ?? de[0])?.identifier;
-}
-
 /** Tốc độ đọc thường (1×); `speed` nhân với mức này (0,75× … 1,1×) */
 const NORMAL_RATE = 0.95;
 
@@ -54,7 +32,7 @@ export async function speakGerman(text: string, opts: { slow?: boolean; speed?: 
   await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
   Speech.speak(text, {
     language: "de-DE",
-    voice: opts.voice ?? (await germanVoice()),
+    voice: opts.voice ?? (await germanVoices())[0]?.identifier,
     rate: opts.slow ? 0.6 : NORMAL_RATE * (opts.speed ?? 1),
     onDone: opts.onEnd,
     onStopped: opts.onEnd,

@@ -285,16 +285,18 @@ export default function Player({
     }
   };
   // Sao trên mỗi câu: lưu nguyên câu (kèm bản dịch nếu có) vào sổ từ vựng; bấm lại để bỏ
-  const toggleStar = (text: string) => {
+  /** Bỏ từ / câu khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
+  const unsave = async (text: string) => {
     const id = saved.get(text.toLowerCase());
-    if (id === undefined) return saveWord(text, "", tr[text] ?? "");
+    if (id === undefined) return;
     setSaved((s) => {
       const m = new Map(s);
       m.delete(text.toLowerCase());
       return m;
     });
-    api(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
+    await api(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
   };
+  const toggleStar = (text: string) => (saved.has(text.toLowerCase()) ? unsave(text) : saveWord(text, "", tr[text] ?? ""));
   // Mở bài → tải sổ từ vựng để tô màu từ đã lưu và hiện sao cho câu đã đánh dấu
   useEffect(() => {
     if (!user) return;
@@ -807,6 +809,7 @@ export default function Player({
         marks={picked?.marks}
         saved={!!picked && saved.has(picked.word.toLowerCase())}
         onSave={(meaning) => (picked ? saveWord(picked.word, picked.context, meaning) : Promise.resolve())}
+        onRemove={() => (picked ? unsave(picked.word) : Promise.resolve())}
         onClose={() => setPicked(null)}
       />
     </View>

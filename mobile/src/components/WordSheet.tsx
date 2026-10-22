@@ -63,6 +63,7 @@ export function WordSheet({
   marks,
   saved,
   onSave,
+  onRemove,
   onClose,
 }: {
   word: string | null;
@@ -71,6 +72,7 @@ export function WordSheet({
 
   saved: boolean;
   onSave: (meaning: string) => Promise<void>;
+  onRemove: () => Promise<void>; // bỏ khỏi sổ từ vựng
   onClose: () => void;
 }) {
   const { user } = useAuth();
@@ -113,10 +115,12 @@ export function WordSheet({
     Animated.timing(slide, { toValue: 1, duration: 180, useNativeDriver: true }).start(() => onClose());
   };
 
+  /** Nút đáy: chưa lưu → lưu; đã lưu → bỏ lưu */
   const save = async () => {
     setSaving(true);
     try {
-      await onSave(meaning.data?.meaning ?? "");
+      if (saved) await onRemove();
+      else await onSave(meaning.data?.meaning ?? "");
     } finally {
       setSaving(false);
     }
@@ -168,6 +172,11 @@ export function WordSheet({
               >
                 {shown.word}
               </Text>
+              {saved && (
+                <View style={{ backgroundColor: "rgba(250,204,21,0.15)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ color: C.amber, fontSize: 12, fontWeight: "700" }}>{t("word.saved")}</Text>
+                </View>
+              )}
               <SpeakButton
                 active={speaking === shown.word}
                 onPress={() => speak(shown.word)}
@@ -295,9 +304,12 @@ export function WordSheet({
 
               {/* Lưu từ */}
               <View style={{ paddingHorizontal: 20, paddingTop: 6 }}>
+                {/* Chưa lưu → Lưu (nút chính); đã lưu → Bỏ lưu (nút trung tính) */}
                 <Pressable
                   onPress={save}
-                  disabled={saved || saving}
+                  disabled={saving}
+                  accessibilityRole="button"
+                  accessibilityLabel={saved ? t("word.unsave") : t("word.saveToVocab")}
                   style={({ pressed }) => ({
                     height: 50,
                     borderRadius: 16,
@@ -305,20 +317,20 @@ export function WordSheet({
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
-                    backgroundColor: saved ? "transparent" : C.accent,
-                    borderWidth: saved ? 1.5 : 0,
-                    borderColor: "rgba(250,204,21,0.5)",
+                    backgroundColor: saved ? C.card2 : C.accent,
+                    borderWidth: saved ? 1 : 0,
+                    borderColor: C.border,
                     opacity: pressed ? 0.85 : 1,
                     transform: [{ scale: pressed ? 0.98 : 1 }],
                   })}
                 >
                   {saving ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={saved ? C.text : "#fff"} />
                   ) : (
-                    <SymbolView name={saved ? "checkmark.circle.fill" : "bookmark.fill"} size={17} tintColor={saved ? C.amber : "#fff"} />
+                    <SymbolView name={saved ? "bookmark.slash" : "bookmark.fill"} size={17} tintColor={saved ? C.text : "#fff"} />
                   )}
-                  <Text style={{ color: saved ? C.amber : "#fff", fontWeight: "800", fontSize: 16 }}>
-                    {saved ? t("word.saved") : t("word.saveToVocab")}
+                  <Text style={{ color: saved ? C.text : "#fff", fontWeight: "700", fontSize: 16 }}>
+                    {saved ? t("word.unsave") : t("word.saveToVocab")}
                   </Text>
                 </Pressable>
               </View>
