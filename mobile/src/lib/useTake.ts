@@ -6,10 +6,10 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { Alert } from "react-native";
 import { checkDictation, type CheckedWord } from "@shared/dictation";
 import { api } from "./api";
 import { useAuth } from "./auth";
+import { micDenied, notice } from "./dialogs";
 import { useI18n } from "./i18n";
 
 /** Ngưỡng. Âm lượng micro tính bằng dBFS: im lặng ≈ -160, nói thường ≈ -30, nói to ≈ -10 */
@@ -89,11 +89,11 @@ export function useTake({
     setUri(null);
   }
 
-  const fail = (msg: string) => {
+  const fail = () => {
     busy.current = false;
     setArmed(false);
     onFail?.();
-    Alert.alert(msg);
+    notice(t("crazy.recordFailed"), t("crazy.recordFailedBody"));
   };
 
   const record = async () => {
@@ -102,7 +102,7 @@ export function useTake({
       busy.current = false;
       setArmed(false);
       onFail?.();
-      return Alert.alert(t("player.micDenied"), t("player.micDeniedBody"));
+      return micDenied();
     }
     busy.current = true;
     onBeforeRecord();
@@ -116,7 +116,7 @@ export function useTake({
       recorder.record();
     } catch {
       setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
-      fail(t("crazy.recordFailed"));
+      fail();
     }
   };
 

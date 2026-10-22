@@ -56,7 +56,8 @@ export function LessonSheet({
       }
       const r = await api<{ id: number }>("/lessons", { method: "POST", body: { videoId, title, level, description, published, dictation } });
       onClose();
-      Alert.alert(t("addLesson.added"), published ? undefined : t("addLesson.draftNote"), [
+      // Giữ Alert riêng: cần nút "Mở bài" (các hộp thoại khác dùng @/lib/dialogs)
+      Alert.alert(t("addLesson.added"), published ? t("addLesson.publishedNote") : t("addLesson.draftNote"), [
         { text: t("close"), style: "cancel" },
         { text: t("addLesson.open"), onPress: () => openLesson(r.id) },
       ]);
@@ -64,7 +65,7 @@ export function LessonSheet({
       // Video đã có bài → cho mở bài đó
       if (e instanceof ApiError && e.status === 409 && e.data.id) {
         onClose();
-        Alert.alert(e.message, undefined, [
+        Alert.alert(t("addLesson.existsTitle"), e.message, [
           { text: t("close"), style: "cancel" },
           { text: t("addLesson.open"), onPress: () => openLesson(e.data.id) },
         ]);
@@ -91,7 +92,7 @@ export function LessonSheet({
           <Pressable onPress={onClose} hitSlop={10} style={{ flex: 1 }}>
             <Text style={{ color: C.muted, fontSize: 16 }}>{t("cancel")}</Text>
           </Pressable>
-          <Text style={{ color: C.text, fontSize: 17, fontWeight: "800" }}>{editing ? t("addLesson.editTitle") : t("addLesson.title")}</Text>
+          <Text style={{ color: C.text, fontSize: 17, fontWeight: "700" }}>{editing ? t("addLesson.editTitle") : t("addLesson.title")}</Text>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
             {busy ? (
               <ActivityIndicator color={C.accent} />

@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Pressable, Text, View } from "react-native";
 import { LessonSheet } from "@/components/LessonSheet";
 import Player from "@/components/Player";
 import { api, type Lesson } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useI18n } from "@/lib/i18n";
 import { C } from "@/lib/theme";
 
@@ -35,28 +36,23 @@ export default function LessonScreen() {
   const togglePublished = () =>
     api(`/lessons/${lesson.id}`, { method: "PATCH", body: { published: !lesson.published } }).then(
       () => setLesson({ ...lesson, published: !lesson.published }),
-      (e: Error) => Alert.alert(e.message),
+      (e: Error) => showError(e),
     );
 
   const remove = () =>
-    Alert.alert(t("admin.deleteLessonConfirm"), lesson.title, [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: () =>
-          api(`/lessons/${lesson.id}`, { method: "DELETE" }).then(
-            () => router.back(),
-            (e: Error) => Alert.alert(e.message),
-          ),
-      },
-    ]);
+    confirmDestructive(t("admin.deleteLessonConfirm"), t("admin.deleteLessonBody", { title: lesson.title }), t("delete"), () =>
+      api(`/lessons/${lesson.id}`, { method: "DELETE" }).then(
+        () => router.back(),
+        (e: Error) => showError(e),
+      ),
+    );
 
   /** Menu admin: Sửa · Đăng / Ẩn · Xoá */
   const menu = () =>
     ActionSheetIOS.showActionSheetWithOptions(
       {
-        title: lesson.published ? undefined : t("admin.isDraft"),
+        title: lesson.title,
+        message: lesson.published ? t("admin.isPublished") : t("admin.isDraft"),
         options: [t("admin.edit"), lesson.published ? t("admin.unpublish") : t("admin.publish"), t("admin.deleteLesson"), t("cancel")],
         destructiveButtonIndex: 2,
         cancelButtonIndex: 3,

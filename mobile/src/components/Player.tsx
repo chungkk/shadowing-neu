@@ -6,11 +6,11 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from "react-native";
+import { FlatList, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
@@ -20,6 +20,7 @@ import { WordSheet } from "./WordSheet";
 import { Label, Segmented } from "./ui";
 import { api, type DictResult, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { askLogin, micDenied, showError } from "@/lib/dialogs";
 import { C } from "@/lib/theme";
 import type { DictationLevel } from "@shared/dictation";
 import { useI18n } from "@/lib/i18n";
@@ -178,17 +179,11 @@ export default function Player({
   };
   const toggleTranslation = () => {
     if (user) return setTrOn((v) => !v);
-    Alert.alert(t("player.trNeedAccount"), t("player.trNeedAccountBody"), [
-      { text: t("later"), style: "cancel" },
-      { text: t("loginOrRegister"), onPress: () => router.push("/account") },
-    ]);
+    askLogin(t("player.trNeedAccount"), t("player.trNeedAccountBody"));
   };
   const togglePhrases = () => {
     if (user) return setPhrOn((v) => !v);
-    Alert.alert(t("player.phrNeedAccount"), t("player.phrNeedAccountBody"), [
-      { text: t("later"), style: "cancel" },
-      { text: t("loginOrRegister"), onPress: () => router.push("/account") },
-    ]);
+    askLogin(t("player.phrNeedAccount"), t("player.phrNeedAccountBody"));
   };
   const toggleAutoStop = () => {
     const on = !autoStop;
@@ -250,7 +245,7 @@ export default function Player({
       return;
     }
     const { granted } = await requestRecordingPermissionsAsync();
-    if (!granted) return Alert.alert(t("player.micDenied"), t("player.micDeniedBody"));
+    if (!granted) return micDenied();
     pause();
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await recorder.prepareToRecordAsync();
@@ -278,11 +273,7 @@ export default function Player({
     setPicked({ word: p.base, context, marks: p.parts });
   };
   const saveWord = async (word: string, context: string, meaning: string) => {
-    if (!user)
-      return Alert.alert(t("player.needLogin"), t("player.needLoginBody"), [
-        { text: t("later"), style: "cancel" },
-        { text: t("login"), onPress: () => router.push("/account") },
-      ]);
+    if (!user) return askLogin(t("player.needLogin"), t("player.needLoginBody"));
     try {
       const r = await api<{ vocab: VocabItem[] }>("/vocab", { method: "POST", body: { word, context, sourceUrl, sourceTitle: title } });
       // Điền sẵn nghĩa AI vừa giải thích nếu từ chưa có nghĩa
@@ -290,7 +281,7 @@ export default function Player({
       if (item) setSaved((s) => new Map(s).set(word.toLowerCase(), item.id));
       if (item && !item.meaning && meaning) await api(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
     } catch (e) {
-      Alert.alert(t("player.saveFailed"), (e as Error).message);
+      showError(e, t("player.saveFailed"));
     }
   };
   // Sao trên mỗi câu: lưu nguyên câu (kèm bản dịch nếu có) vào sổ từ vựng; bấm lại để bỏ

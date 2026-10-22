@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, LayoutAnimation, Pressable, RefreshControl, SectionList, Text, TextInput, View, type TextStyle } from "react-native";
+import { ActivityIndicator, LayoutAnimation, Pressable, RefreshControl, SectionList, Text, TextInput, View, type TextStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { Button, Card, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
+import { confirmDestructive } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
@@ -306,12 +307,7 @@ function VocabRow({
             <Pressable
               hitSlop={10}
               style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              onPress={() =>
-                Alert.alert(t("vocab.deleteConfirm", { w: v.word }), undefined, [
-                  { text: t("cancel"), style: "cancel" },
-                  { text: t("delete"), style: "destructive", onPress: onDelete },
-                ])
-              }
+              onPress={() => confirmDestructive(t("vocab.deleteConfirm", { w: v.word }), t("vocab.deleteBody"), t("delete"), onDelete)}
             >
               <SymbolView name="trash" size={14} tintColor={C.redText} />
               <Text style={{ color: C.redText, fontWeight: "700" }}>{t("delete")}</Text>

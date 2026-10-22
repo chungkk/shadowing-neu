@@ -1,9 +1,10 @@
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { ErrorText, Segmented, styles } from "@/components/ui";
 import { api, type User } from "@/lib/api";
+import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX } from "@/lib/layout";
@@ -55,25 +56,19 @@ export default function UsersScreen() {
   const setRole = (u: AdminUser, role: User["role"]) =>
     api<{ user: AdminUser }>(`/admin/users/${u.id}`, { method: "PATCH", body: { role } }).then(
       (r) => setUsers((list) => list?.map((x) => (x.id === u.id ? r.user : x)) ?? null),
-      (e: Error) => Alert.alert(e.message),
+      (e: Error) => showError(e),
     );
 
   const remove = (u: AdminUser) =>
-    Alert.alert(t("admin.deleteUserConfirm", { email: u.email }), t("admin.deleteUserSub"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: () =>
-          api(`/admin/users/${u.id}`, { method: "DELETE" }).then(
-            () => setUsers((list) => list?.filter((x) => x.id !== u.id) ?? null),
-            (e: Error) => Alert.alert(e.message),
-          ),
-      },
-    ]);
+    confirmDestructive(t("admin.deleteUserConfirm", { email: u.email }), t("admin.deleteUserSub"), t("delete"), () =>
+      api(`/admin/users/${u.id}`, { method: "DELETE" }).then(
+        () => setUsers((list) => list?.filter((x) => x.id !== u.id) ?? null),
+        (e: Error) => showError(e),
+      ),
+    );
 
   const menu = (u: AdminUser) => {
-    if (u.locked) return Alert.alert(u.id === me.id ? t("admin.isYou") : t("admin.isMainAdmin"));
+    if (u.locked) return notice(t("admin.lockedTitle"), u.id === me.id ? t("admin.isYou") : t("admin.isMainAdmin"));
     const makeAdmin = u.role !== "admin";
     ActionSheetIOS.showActionSheetWithOptions(
       {

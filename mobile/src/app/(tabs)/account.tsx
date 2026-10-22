@@ -2,11 +2,12 @@ import { useCallback, useState, type ReactNode } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { VoiceQuality, type Voice } from "expo-speech";
-import { Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
 import { api, API_URL, type User } from "@/lib/api";
+import { confirmDestructive } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
@@ -293,25 +294,15 @@ function Signed({ user }: { user: User }) {
       setUser({ ...user, hasPassword: true });
     });
 
-  const confirmLogout = () =>
-    Alert.alert(t("acc.logoutConfirm"), undefined, [
-      { text: t("cancel"), style: "cancel" },
-      { text: t("acc.logout"), style: "destructive", onPress: logout },
-    ]);
+  const confirmLogout = () => confirmDestructive(t("acc.logoutConfirm"), t("acc.logoutBody"), t("acc.logout"), logout);
 
   const deleteAccount = () =>
-    Alert.alert(t("acc.deleteConfirm"), t("acc.deleteConfirmSub"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: () =>
-          run(async () => {
-            await api("/me", { method: "DELETE", body: { password: delPw } });
-            await logout();
-          }),
-      },
-    ]);
+    confirmDestructive(t("acc.deleteConfirm"), t("acc.deleteConfirmSub"), t("acc.deleteAction"), () =>
+      run(async () => {
+        await api("/me", { method: "DELETE", body: { password: delPw } });
+        await logout();
+      }),
+    );
 
   const feedback = (
     <>
