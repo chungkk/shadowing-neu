@@ -49,6 +49,12 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ứng dụng cần truy cập ảnh để bạn chọn ảnh đại diện."
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "Ứng dụng cần micro để bạn ghi âm giọng nói khi luyện shadowing.",

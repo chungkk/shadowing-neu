@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isSentence } from "./review";
@@ -24,6 +24,8 @@ export type Lesson = {
 export type LessonSummary = Omit<Lesson, "segments"> & { segmentCount: number };
 
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
+/** Ảnh đại diện lưu thành file cạnh DB (cùng volume dữ liệu trên VPS) */
+export const AVATAR_DIR = path.join(path.dirname(DB_PATH), "avatars");
 
 function open() {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -141,6 +143,8 @@ function open() {
   // Ngôn ngữ giao diện app theo tài khoản (NULL = chưa chọn)
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "lang")) db.exec("ALTER TABLE users ADD COLUMN lang TEXT");
+  // Ảnh đại diện: thời điểm đổi ảnh (ms) — làm phiên bản cho URL ảnh; NULL = chưa có ảnh (file ở AVATAR_DIR)
+  if (!userCols.some((c) => c.name === "avatar_at")) db.exec("ALTER TABLE users ADD COLUMN avatar_at INTEGER");
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
@@ -293,6 +297,7 @@ export type User = {
   lang: string | null;
   hasPassword: boolean; // false = tài khoản tạo bằng Google / Apple, chưa đặt mật khẩu
   createdAt: string;
+  avatarAt: number | null; // ms lúc đổi ảnh đại diện, null = chưa có
 };
 
 type UserRow = {
@@ -303,6 +308,7 @@ type UserRow = {
   role: Role;
   lang: string | null;
   created_at: string;
+  avatar_at: number | null;
 };
 
 const toUser = (r: UserRow): User => ({
@@ -313,7 +319,13 @@ const toUser = (r: UserRow): User => ({
   lang: r.lang ?? null,
   hasPassword: !r.password_hash.startsWith(NO_PASSWORD),
   createdAt: r.created_at,
+  avatarAt: r.avatar_at ?? null,
 });
+
+/** Ghi / xoá (null) mốc ảnh đại diện */
+export function setUserAvatar(id: number, at: number | null) {
+  conn().prepare("UPDATE users SET avatar_at = ? WHERE id = ?").run(at, id);
+}
 
 /** Mở đầu password_hash của tài khoản chưa có mật khẩu (Google / Apple) — không khớp với mật khẩu nào */
 export const NO_PASSWORD = "!";
@@ -409,6 +421,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
+  rmSync(path.join(AVATAR_DIR, String(id)), { force: true }); // ảnh đại diện
 }
 
 // ---- Tài khoản Google / Apple ----

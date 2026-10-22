@@ -136,8 +136,7 @@ export default function Player({
   const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch
   const [trError, setTrError] = useState("");
   const trPending = useRef<Set<string>>(new Set());
-  const [phrOn, setPhrOn] = useState(true); // tô sáng cụm từ cố định (AI phân tích) — bật sẵn, bấm ✨ để tắt
-  const showPhr = phrOn && !!user;
+  const showPhr = !!user; // luôn tô sáng cụm từ cố định (AI phân tích, cần tài khoản)
   const [phr, setPhr] = useState<Record<string, Phrase[]>>({}); // "<ngôn ngữ>|<câu>" → cụm từ trong câu
   const [phrError, setPhrError] = useState("");
   const phrPending = useRef<Set<string>>(new Set());
@@ -180,10 +179,6 @@ export default function Player({
   const toggleTranslation = () => {
     if (user) return setTrOn((v) => !v);
     askLogin(t("player.trNeedAccount"), t("player.trNeedAccountBody"));
-  };
-  const togglePhrases = () => {
-    if (user) return setPhrOn((v) => !v);
-    askLogin(t("player.phrNeedAccount"), t("player.phrNeedAccountBody"));
   };
   const toggleAutoStop = () => {
     const on = !autoStop;
@@ -498,8 +493,6 @@ export default function Player({
       )}
       {/* Bản dịch tiếng Việt dưới mỗi câu */}
       <ToggleIcon icon="translate" on={showTr} label={t("player.translation")} onPress={toggleTranslation} />
-      {/* Tô sáng thành ngữ / cụm từ cố định trong câu */}
-      <ToggleIcon icon="sparkles" on={showPhr} label={t("player.phrases")} onPress={togglePhrases} />
       {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video */}
       <ToggleIcon icon="pause.circle" on={autoStop} label={t("player.autoStop")} onPress={toggleAutoStop} />
     </View>

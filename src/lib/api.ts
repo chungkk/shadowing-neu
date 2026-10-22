@@ -38,6 +38,8 @@ export const publicUser = (u: User) => ({
   lang: u.lang,
   hasPassword: u.hasPassword, // false → app hiện "Đặt mật khẩu" thay cho "Đổi mật khẩu"
   createdAt: u.createdAt,
+  // Ảnh đại diện (cần đăng nhập để xem); ?v= đổi khi đổi ảnh → app không dùng ảnh cũ trong cache
+  avatarUrl: u.avatarAt ? `/api/v1/avatar/${u.id}?v=${u.avatarAt}` : null,
 });
 
 /** Ngôn ngữ giao diện app hỗ trợ */

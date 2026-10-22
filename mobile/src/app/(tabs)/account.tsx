@@ -1,12 +1,15 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
+import { ActionSheetIOS, ActivityIndicator, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
-import { api, API_URL, type User } from "@/lib/api";
-import { confirmDestructive } from "@/lib/dialogs";
+import { api, API_URL, avatarSource, type User } from "@/lib/api";
+import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
@@ -103,25 +106,105 @@ const monthYear = (createdAt: string, lang: string) => {
 };
 
 /** Thẻ đầu trang: ảnh đại diện chữ cái · tên · email · số từ đã lưu */
-function ProfileHeader({ user, words }: { user: User; words: number | null }) {
-  const { t, lang } = useI18n();
+const AVATAR_SIZE = 400; // cạnh ảnh đại diện gửi lên server (px) — đủ nét cho màn Retina, chỉ ~50 KB
+
+/** Ảnh đại diện (chữ cái đầu tên khi chưa có ảnh) — chạm để chọn ảnh từ thư viện / xoá ảnh */
+function Avatar({ user }: { user: User }) {
+  const { t } = useI18n();
+  const { setUser } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  const upload = async () => {
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 1 });
+    if (picked.canceled || !picked.assets[0]) return;
+    setBusy(true);
+    try {
+      // Cắt vuông (đã chọn khung ở bước trên) → thu nhỏ → JPEG trước khi gửi
+      const img = await ImageManipulator.manipulate(picked.assets[0].uri).resize({ width: AVATAR_SIZE, height: AVATAR_SIZE }).renderAsync();
+      const out = await img.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+      const body = new FormData();
+      body.append("file", { uri: out.uri, name: "avatar.jpg", type: "image/jpeg" } as unknown as Blob);
+      const r = await api<{ user: User }>("/me/avatar", { method: "POST", body });
+      setUser(r.user);
+    } catch (e) {
+      showError(e, t("acc.avatarFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = () =>
+    confirmDestructive(t("acc.avatarRemoveConfirm"), t("acc.avatarRemoveBody"), t("acc.avatarRemove"), async () => {
+      setBusy(true);
+      try {
+        setUser((await api<{ user: User }>("/me/avatar", { method: "DELETE" })).user);
+      } catch (e) {
+        showError(e);
+      } finally {
+        setBusy(false);
+      }
+    });
+  const menu = () => {
+    if (busy) return;
+    if (!user.avatarUrl || Platform.OS !== "ios") return upload();
+    ActionSheetIOS.showActionSheetWithOptions(
+      { options: [t("acc.avatarPick"), t("acc.avatarRemove"), t("cancel")], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
+      (i) => (i === 0 ? upload() : i === 1 ? remove() : undefined),
+    );
+  };
+
   return (
-    <View style={{ alignItems: "center", gap: 6, paddingTop: 8 }}>
+    <Pressable onPress={menu} accessibilityRole="button" accessibilityLabel={t("acc.avatarChange")} style={{ marginBottom: 6 }}>
       <View
         style={{
-          width: 84,
-          height: 84,
-          borderRadius: 42,
+          width: 88,
+          height: 88,
+          borderRadius: 44,
           backgroundColor: C.accent,
           borderWidth: 3,
           borderColor: C.accentDark,
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 6,
+          overflow: "hidden",
         }}
       >
-        <Text style={{ color: "#fff", fontSize: 32, fontWeight: "800" }}>{initials(user.name)}</Text>
+        {user.avatarUrl ? (
+          <Image source={avatarSource(user.avatarUrl)} alt="" style={{ width: "100%", height: "100%" }} contentFit="cover" transition={150} />
+        ) : (
+          <Text style={{ color: "#fff", fontSize: 32, fontWeight: "800" }}>{initials(user.name)}</Text>
+        )}
+        {busy && (
+          <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator color="#fff" />
+          </View>
+        )}
       </View>
+      {/* Huy hiệu máy ảnh: báo ảnh đại diện đổi được */}
+      <View
+        style={{
+          position: "absolute",
+          right: -2,
+          bottom: -2,
+          width: 30,
+          height: 30,
+          borderRadius: 15,
+          backgroundColor: C.card2,
+          borderWidth: 2,
+          borderColor: C.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <SymbolView name="camera.fill" size={13} tintColor={C.text} />
+      </View>
+    </Pressable>
+  );
+}
+
+function ProfileHeader({ user, words }: { user: User; words: number | null }) {
+  const { t, lang } = useI18n();
+  return (
+    <View style={{ alignItems: "center", gap: 6, paddingTop: 8 }}>
+      <Avatar user={user} />
       <Text style={{ color: C.text, fontSize: 24, fontWeight: "800" }} numberOfLines={1}>
         {user.name}
       </Text>

@@ -13,6 +13,7 @@ export type User = {
   role: "user" | "admin";
   lang: string | null; // ngôn ngữ giao diện lưu theo tài khoản
   hasPassword?: boolean; // false = tài khoản Google / Apple chưa đặt mật khẩu (server cũ không gửi → coi như có)
+  avatarUrl?: string | null; // "/api/v1/avatar/<id>?v=…" — xem cần token (dùng avatarSource)
   createdAt: string;
 };
 
@@ -118,5 +119,8 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   if (!res.ok) throw new ApiError(data.error ?? t("api.serverError", { status: res.status }), res.status, data);
   return data as T;
 }
+
+/** Nguồn ảnh đại diện cho expo-image (kèm token — server chỉ cho chính chủ / admin xem) */
+export const avatarSource = (url: string) => ({ uri: API_URL + url, headers: token ? { Authorization: `Bearer ${token}` } : undefined });
 
 export const thumb = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
