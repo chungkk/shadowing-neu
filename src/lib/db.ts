@@ -77,6 +77,16 @@ function open() {
       updated_at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, source)
     );
+    -- Chế độ Crazy: số lượt hét từng câu của từng người — giữ vĩnh viễn (không bị xoá theo progress)
+    CREATE TABLE IF NOT EXISTS crazy_reps (
+      user_id INTEGER NOT NULL,
+      source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>"
+      idx INTEGER NOT NULL, -- câu (sau khi gộp câu)
+      reps INTEGER NOT NULL DEFAULT 0,
+      passed INTEGER NOT NULL DEFAULT 0, -- từng đạt đủ To · Rõ · Nhanh
+      updated_at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, source, idx)
+    );
     -- Mã xác nhận email khi đăng ký (lưu dạng băm, mỗi email 1 mã mới nhất)
     CREATE TABLE IF NOT EXISTS email_codes (
       email TEXT PRIMARY KEY,
@@ -198,6 +208,7 @@ export function updateLesson(id: number, l: LessonInput) {
 export function deleteLesson(id: number) {
   conn().prepare("DELETE FROM lessons WHERE id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE source = ?").run(`/lesson/${id}`);
+  conn().prepare("DELETE FROM crazy_reps WHERE source = ?").run(`/lesson/${id}`);
 }
 
 export function getCached<T>(key: string): T | null {
@@ -377,6 +388,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM oauth_accounts WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
 }
 
@@ -597,4 +609,38 @@ export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
 
 export function deleteProgress(userId: number, source: string) {
   conn().prepare("DELETE FROM progress WHERE user_id = ? AND source = ?").run(userId, source);
+}
+
+// ---- Chế độ Crazy: số lượt hét từng câu ----
+
+export type CrazyRep = { reps: number; passed: boolean };
+
+/** Số lượt từng câu của 1 bài: {"<idx>": {reps, passed}} */
+export function getCrazyReps(userId: number, source: string): Record<string, CrazyRep> {
+  const rows = conn().prepare("SELECT idx, reps, passed FROM crazy_reps WHERE user_id = ? AND source = ?").all(userId, source) as {
+    idx: number;
+    reps: number;
+    passed: number;
+  }[];
+  return Object.fromEntries(rows.map((r) => [r.idx, { reps: r.reps, passed: !!r.passed }]));
+}
+
+/** +1 lượt cho 1 câu (cộng trên server → học trên 2 máy cùng lúc không lệch số); đã đạt thì giữ đạt */
+export function addCrazyRep(userId: number, source: string, idx: number, passed: boolean): CrazyRep {
+  const r = conn()
+    .prepare(
+      `INSERT INTO crazy_reps (user_id, source, idx, reps, passed, updated_at) VALUES (?, ?, ?, 1, ?, ?)
+       ON CONFLICT(user_id, source, idx) DO UPDATE SET reps = reps + 1, passed = MAX(passed, excluded.passed), updated_at = excluded.updated_at
+       RETURNING reps, passed`,
+    )
+    .get(userId, source, idx, passed ? 1 : 0, Date.now()) as { reps: number; passed: number };
+  return { reps: r.reps, passed: !!r.passed };
+}
+
+/** Tổng theo bài: source → { reps: tổng số lượt, passed: số câu đã đạt } */
+export function crazySummary(userId: number): Map<string, { reps: number; passed: number }> {
+  const rows = conn()
+    .prepare("SELECT source, SUM(reps) AS reps, SUM(passed) AS passed FROM crazy_reps WHERE user_id = ? GROUP BY source")
+    .all(userId) as { source: string; reps: number; passed: number }[];
+  return new Map(rows.map((r) => [r.source, { reps: r.reps, passed: r.passed }]));
 }

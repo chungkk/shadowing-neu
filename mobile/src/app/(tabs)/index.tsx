@@ -29,7 +29,13 @@ function ProgressText({ p }: { p?: ProgressSummary }) {
   const { t } = useI18n();
   if (!p) return null;
   const n = percent(p);
-  return <Text style={{ color: n >= 100 ? C.accent : C.amber, fontSize: 13, fontWeight: "800" }}>{n >= 100 ? `✓ ${t("lessons.finished")}` : `${n}%`}</Text>;
+  return (
+    <Text style={{ color: n >= 100 ? C.accent : C.amber, fontSize: 13, fontWeight: "800" }}>
+      {n >= 100 ? `✓ ${t("lessons.finished")}` : `${n}%`}
+      {/* Chế độ Crazy: số câu đã đạt / tổng */}
+      {!!p.crazyReps && <Text style={{ color: C.amber }}> · 🔥 {p.crazyPassed ?? 0}/{p.total}</Text>}
+    </Text>
+  );
 }
 
 /** "Tiếp tục học": các bài / video đang học dở, mới nhất trước */
@@ -48,6 +54,7 @@ function ContinueCard({ p, videoId, onPress }: { p: ProgressSummary; videoId: st
         {p.mode === "dictation"
           ? t("lessons.progressDict", { d: p.dictCount, n: p.total })
           : t("lessons.progressAt", { i: p.idx + 1, n: p.total })}
+        {!!p.crazyReps && ` · 🔥 ${p.crazyPassed ?? 0}/${p.total}`}
       </Text>
     </Pressable>
   );

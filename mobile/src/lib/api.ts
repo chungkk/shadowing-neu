@@ -41,7 +41,13 @@ export type Progress = {
   updatedAt: number;
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */
-export type ProgressSummary = Omit<Progress, "dictDone"> & { dictCount: number };
+export type ProgressSummary = Omit<Progress, "dictDone"> & {
+  dictCount: number;
+  crazyReps?: number; // chế độ Crazy: tổng số lượt hét cả bài (server cũ không gửi)
+  crazyPassed?: number; // số câu đã đạt
+};
+/** Chế độ Crazy: số lượt hét 1 câu (GET/POST /crazy) */
+export type CrazyRep = { reps: number; passed: boolean };
 
 export type Track = { languageCode: string; name: string; auto: boolean };
 export type Transcript = { videoId: string; title: string; track: Track; tracks: Track[]; segments: Segment[] };
@@ -82,14 +88,16 @@ export class ApiError extends Error {
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   let res: Response;
+  // FormData (gửi file ghi âm) → fetch tự đặt Content-Type multipart
+  const form = init.body instanceof FormData;
   try {
     res = await fetch(API_URL + "/api/v1" + path, {
       method: init.method ?? "GET",
       headers: {
-        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(init.body !== undefined && !form ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      body: form ? (init.body as FormData) : init.body !== undefined ? JSON.stringify(init.body) : undefined,
     });
   } catch {
     if (__DEV__) console.warn(`[api] không kết nối được ${API_URL}${path}`); // địa chỉ server chỉ hiện khi dev

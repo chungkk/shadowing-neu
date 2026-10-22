@@ -15,10 +15,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
 import { tokenize, type Phrase } from "@shared/phrase-match";
+import { CrazyPanel, crazyColor } from "./CrazyPanel";
 import { DictationPanel, type DictDraft } from "./DictationPanel";
 import { WordSheet } from "./WordSheet";
 import { Label, Segmented } from "./ui";
-import { api, type DictResult, type Progress, type VocabItem } from "@/lib/api";
+import { api, type CrazyRep, type DictResult, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import type { DictationLevel } from "@shared/dictation";
@@ -89,7 +90,7 @@ const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "*");
 const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 
 /**
- * Màn hình học 1 video: phát từng câu, Shadowing (ghi âm & nghe lại) hoặc nghe chép chính tả.
+ * Màn hình học 1 video: phát từng câu, Shadowing (ghi âm & nghe lại), Crazy (hét to · rõ · nhanh, có chấm) hoặc nghe chép chính tả.
  * Logic giống bản web (ShadowPlayer); gộp câu + chấm chính tả dùng chung code trong ../src/lib.
  */
 export default function Player({
@@ -120,12 +121,13 @@ export default function Player({
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
-  const [practice, setPractice] = useState<"shadow" | "dictation">("shadow");
+  const [practice, setPractice] = useState<"shadow" | "crazy" | "dictation">("shadow");
   const [dictLevel, setDictLevel] = useState<DictationLevel>("normal");
   const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã làm: idx → 7/8 từ đúng
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả kể cả khi đang ở câu 1
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã hiện của từng câu (sang câu khác rồi quay lại vẫn còn)
   const [recordings, setRecordings] = useState<Record<number, string>>({});
+  const [crazyStats, setCrazyStats] = useState<Record<number, CrazyRep>>({}); // Crazy: số lượt hét / đã đạt từng câu (tài khoản: lưu vĩnh viễn trên server)
   const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ / câu đã lưu (chữ thường) → id trong sổ từ vựng
   const [trOn, setTrOn] = useState(false); // hiện bản dịch dưới mỗi câu
   const showTr = trOn && !!user; // dịch chỉ dành cho tài khoản (đăng xuất → tự tắt)
@@ -150,18 +152,19 @@ export default function Player({
 
   const current = segments[idx];
   const dictation = allowDictation && practice === "dictation";
+  const crazy = practice === "crazy";
   const live = useRef({ dictation, split });
   useEffect(() => {
     live.current = { dictation, split };
   });
 
   const playSegment = useCallback(
-    (i: number) => {
+    (i: number, stop = autoStop) => {
       const s = segments[i];
       if (!s) return;
       setIdx(i);
       ytRef.current?.seekTo(s.start, true);
-      stopAt.current = autoStop ? s.end : null;
+      stopAt.current = stop ? s.end : null;
       setPlaying(true);
     },
     [segments, autoStop],
@@ -212,12 +215,12 @@ export default function Player({
   }, []);
   const typing = kbOpen && dictation && !split;
 
-  // Câu đang phát luôn nằm trong tầm nhìn (Chính tả thì không cuộn để khỏi che ô nhập —
-  // trừ khi chia cột: ô nhập nằm ở cột trái, transcript cuộn riêng)
+  // Câu đang phát luôn nằm trong tầm nhìn (Chính tả / Crazy thì không cuộn để khỏi che bảng luyện ở đầu danh sách —
+  // trừ khi chia cột: bảng luyện nằm ở cột trái, transcript cuộn riêng)
   useEffect(() => {
-    if ((dictation && !split) || !segments.length) return;
+    if (((dictation || crazy) && !split) || !segments.length) return;
     listRef.current?.scrollToIndex({ index: idx, viewPosition: 0.3, animated: true });
-  }, [idx, dictation, split, segments.length]);
+  }, [idx, dictation, crazy, split, segments.length]);
 
   // Theo dõi thời gian: tới cuối câu thì dừng; phát tự do (bấm thẳng vào video) thì câu hiện tại chạy theo video
   useEffect(() => {
@@ -347,6 +350,26 @@ export default function Player({
     };
   }, [user, sourceUrl, segments.length, allowDictation]);
 
+  // Số lượt Crazy từng câu (đếm qua mọi lần học)
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    api<{ reps: Record<string, CrazyRep> }>(`/crazy?source=${encodeURIComponent(sourceUrl)}`)
+      .then(({ reps }) => alive && setCrazyStats(Object.fromEntries(Object.entries(reps).map(([k, v]) => [Number(k), v]))))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [user, sourceUrl]);
+  /** Xong 1 lượt hét: +1 ngay trên máy, tài khoản thì cộng trên server rồi lấy số chuẩn về */
+  const addCrazyRep = (i: number, ok: boolean) => {
+    setCrazyStats((s) => ({ ...s, [i]: { reps: (s[i]?.reps ?? 0) + 1, passed: ok || !!s[i]?.passed } }));
+    if (!user) return;
+    api<{ rep: CrazyRep }>("/crazy", { method: "POST", body: { source: sourceUrl, idx: i, passed: ok } })
+      .then(({ rep }) => setCrazyStats((s) => ({ ...s, [i]: rep })))
+      .catch(() => {});
+  };
+
   const flushProgress = useCallback(() => {
     const b = pendingSave.current;
     pendingSave.current = null;
@@ -377,7 +400,7 @@ export default function Player({
     setDictDone({});
     setDictDrafts({});
     setDictEpoch((e) => e + 1);
-    setResumed(null);
+    setResumed(null); // số lượt Crazy giữ nguyên — đó là tổng lượt đã luyện, không phải tiến độ
   };
 
   /** Dịch câu i và ~20 câu kế tiếp (server có kho bản dịch dùng chung với web) */
@@ -467,6 +490,8 @@ export default function Player({
         alignItems: "center",
         justifyContent: "center",
         gap: 10,
+        flexWrap: "wrap", // điện thoại + bài có Chính tả: 3 chế độ không vừa 1 hàng → icon xuống hàng dưới
+        rowGap: 8,
         paddingHorizontal: 16,
         paddingVertical: 10,
         backgroundColor: C.background,
@@ -474,19 +499,19 @@ export default function Player({
         borderBottomColor: C.border,
       }}
     >
-      {allowDictation && (
-        <Segmented
-          options={[
-            ["shadow", t("player.shadowing")],
-            ["dictation", t("player.dictation")],
-          ]}
-          value={practice}
-          onChange={(p) => {
-            pause();
-            setPractice(p);
-          }}
-        />
-      )}
+      <Segmented
+        options={[
+          ["shadow", t("player.shadowing")],
+          ["crazy", t("player.crazy")],
+          ...(allowDictation ? ([["dictation", t("player.dictation")]] as const) : []),
+        ]}
+        value={practice}
+        onChange={(p) => {
+          pause();
+          setPractice(p);
+          if (p === "crazy" && !split) listRef.current?.scrollToOffset({ offset: 0, animated: true }); // bảng Crazy ở đầu danh sách
+        }}
+      />
       {/* Bản dịch tiếng Việt dưới mỗi câu */}
       <ToggleIcon icon="translate" on={showTr} label={t("player.translation")} onPress={toggleTranslation} />
       {/* Tô sáng thành ngữ / cụm từ cố định trong câu */}
@@ -535,6 +560,30 @@ export default function Player({
               }
             />
           </View>
+        </>
+      )}
+      {current && crazy && (
+        <>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Label color={C.amber}>{t("player.sentenceOf", { i: idx + 1, n: segments.length })}</Label>
+            <Text style={{ color: C.muted, fontSize: 12 }}>
+              {t("crazy.passedOf", { d: Object.values(crazyStats).filter((c) => c.passed).length, n: segments.length })}
+            </Text>
+          </View>
+          <CrazyPanel
+            text={current.text}
+            duration={current.end - current.start}
+            playing={playing}
+            reps={crazyStats[idx]?.reps ?? 0}
+            onListen={() => playSegment(idx, true)}
+            onPause={pause}
+            onRecorded={(uri) => setRecordings((r) => ({ ...r, [idx]: uri }))}
+            onPlayback={() => playRecording(idx)}
+            hasRecording={!!recordings[idx]}
+            onAttempt={(ok) => addCrazyRep(idx, ok)}
+            onNext={next}
+            hasNext={idx < segments.length - 1}
+          />
         </>
       )}
       {!split && <Label>{t("player.transcript")}</Label>}
@@ -603,6 +652,11 @@ export default function Player({
             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
               <Text style={{ color: C.text, fontWeight: "800" }}>#{index + 1}</Text>
               <Text style={{ color: C.muted, fontSize: 12 }}>{formatTime(item.start)}</Text>
+              {crazy && crazyStats[index] && (
+                <Text style={{ color: crazyColor(crazyStats[index].reps), fontWeight: "800" }}>
+                  {crazyStats[index].passed ? "✓ " : ""}🔥{crazyStats[index].reps}
+                </Text>
+              )}
               {dictation && dictDone[index] && (
                 <Text style={{ color: C.accent, fontWeight: "800" }}>
                   ✓ {dictDone[index].correct}/{dictDone[index].total}
@@ -722,7 +776,7 @@ export default function Player({
           <SymbolView name={playing ? "pause.fill" : "play.fill"} size={tablet ? 24 : 20} tintColor="#fff" />
         </Pressable>
         <IconButton icon="forward.end.fill" onPress={next} disabled={idx >= segments.length - 1} />
-        {!dictation && (
+        {!dictation && !crazy && (
           <>
             <Pressable
               onPress={toggleRecord}
