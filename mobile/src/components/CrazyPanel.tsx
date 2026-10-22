@@ -63,7 +63,8 @@ function RoundIcon({ icon, onPress, label }: { icon: SFSymbol; onPress: () => vo
  * Mỗi lượt chấm Rõ (Whisper nghe ra bao nhiêu từ) + Nhanh (so thời lượng với bản gốc). Giao diện tối giản:
  * câu tô màu theo từ máy nghe ra · 1 dòng kết quả · 1 nút chính (+ ghi âm luôn, nghe lại giọng mình).
  * Dùng cho ôn tập Crazy Deutsch (CrazyReview: "nghe" là giọng đọc của máy).
- * autoLoop: rảnh tay — xong 1 lượt thì tự nghe mẫu và ghi lượt tiếp, tới khi tắt.
+ * autoLoop: rảnh tay — xong 1 lượt thì tự ghi lượt tiếp (loopListen: nghe mẫu trước khi ghi), tới khi tắt.
+ *   Đang phát mẫu (người học bấm nghe lại) thì chờ phát xong rồi mới ghi.
  * score = false: không gửi Whisper (lượt giữa khối lặp — chỉ đếm + chấm Nhanh, đỡ chờ và đỡ tốn API).
  */
 export function CrazyPanel({
@@ -80,6 +81,7 @@ export function CrazyPanel({
   onSilent,
   canListen = true,
   autoLoop = false,
+  loopListen = true,
   score = true,
 }: {
   text: string;
@@ -95,6 +97,7 @@ export function CrazyPanel({
   onSilent?: () => void; // lượt không nghe thấy tiếng (không tính lượt)
   canListen?: boolean; // false → chỉ nút "Nói" (ôn tập: đang nhớ lại thì không cho nghe đáp án)
   autoLoop?: boolean;
+  loopListen?: boolean;
   score?: boolean;
 }) {
   const { user } = useAuth();
@@ -221,15 +224,17 @@ export function CrazyPanel({
     onListen();
   };
 
-  // Rảnh tay: xong lượt (đã chấm) → nghỉ một nhịp rồi tự nghe mẫu + ghi lượt tiếp
+  // Rảnh tay: xong lượt (đã chấm) → nghỉ một nhịp rồi ghi lượt tiếp (có / không nghe mẫu trước)
   const loopNext = useEffectEvent(() => {
-    if (autoLoop && !busy.current && !rec.isRecording) listen();
+    if (!autoLoop || busy.current || rec.isRecording || playing) return;
+    if (loopListen) listen();
+    else start();
   });
   useEffect(() => {
-    if (!autoLoop) return;
+    if (!autoLoop || playing) return;
     const id = setTimeout(loopNext, 700);
     return () => clearTimeout(id);
-  }, [autoLoop, attempt]);
+  }, [autoLoop, attempt, playing]);
 
   const a = attempt;
   // 1 dòng kết quả: đang chấm · không nghe thấy · đạt · chưa rõ · chậm

@@ -83,7 +83,8 @@ function DrillBar({ done, looping, left, onNext, onToggle }: { done: boolean; lo
  * 1. Nhớ lại: chỉ thấy nghĩa → tự nói tiếng Đức (hoặc "Không nhớ").
  * 2. Tự chấm Quên · Khó · Được · Dễ (máy tô sẵn gợi ý) → vào lịch ôn, ghi thành 1 sự kiện trên server.
  *    Quên / Khó → cuối buổi ôn thêm 1 lượt có gợi ý chữ cái đầu.
- * 3. Luyện nói: lặp rảnh tay `block` lượt (nghe mẫu → nói → nghe mẫu → …), cộng dồn tới REP_TARGET lượt / mục qua
+ * 3. Luyện nói: lặp rảnh tay `block` lượt — máy đọc mẫu 1 lần ở lượt đầu, sau đó chỉ ghi liên tục; chạm vào câu để
+ *    nghe lại (đọc xong vòng lặp tự ghi tiếp). Cộng dồn tới REP_TARGET lượt / mục qua
  *    nhiều buổi. Chỉ lượt đầu và lượt cuối khối được Whisper chấm độ rõ; lượt giữa chỉ đếm (đỡ chờ, đỡ tốn API).
  * Mục chưa có nghĩa thì chỉ luyện nói. Số lượt luyện mỗi mục lưu vĩnh viễn (source "/vocab/<id>").
  * Số lượt không phải bằng chứng thành thạo — thành thạo suy từ kết quả nhớ lại qua các lần ôn cách quãng.
@@ -285,6 +286,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
                   onSilent={onSilent}
                   canListen={phase === "drill"}
                   autoLoop={phase === "drill" && looping}
+                  loopListen={done === 0} // chỉ đọc mẫu ở lượt đầu khối; cần nghe lại thì chạm vào câu
                   score={phase !== "drill" || done === 0 || done === block - 1} // chỉ chấm Whisper lượt đầu + lượt cuối khối
                 />
               )}
