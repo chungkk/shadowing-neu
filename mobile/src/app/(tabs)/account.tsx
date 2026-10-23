@@ -4,11 +4,12 @@ import { SymbolView, type SFSymbol } from "expo-symbols";
 import { Image } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import Constants from "expo-constants";
 import { ActionSheetIOS, ActivityIndicator, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, ErrorText, Input, styles } from "@/components/ui";
+import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
-import { api, API_URL, avatarSource, fileForm, type User } from "@/lib/api";
+import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
 import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
@@ -105,7 +106,6 @@ const monthYear = (createdAt: string, lang: string) => {
   return isNaN(+d) ? createdAt.slice(0, 10) : d.toLocaleDateString(lang, { month: "long", year: "numeric" });
 };
 
-/** Thẻ đầu trang: ảnh đại diện chữ cái · tên · email · số từ đã lưu */
 const AVATAR_SIZE = 400; // cạnh ảnh đại diện gửi lên server (px) — đủ nét cho màn Retina, chỉ ~50 KB
 
 /** Ảnh đại diện (chữ cái đầu tên khi chưa có ảnh) — chạm để chọn ảnh từ thư viện / xoá ảnh */
@@ -151,14 +151,14 @@ function Avatar({ user }: { user: User }) {
   };
 
   return (
-    <Pressable onPress={menu} accessibilityRole="button" accessibilityLabel={t("acc.avatarChange")} style={{ marginBottom: 6 }}>
+    <Pressable onPress={menu} accessibilityRole="button" accessibilityLabel={t("acc.avatarChange")}>
       <View
         style={{
-          width: 88,
-          height: 88,
-          borderRadius: 44,
+          width: 72,
+          height: 72,
+          borderRadius: 36,
           backgroundColor: C.accent,
-          borderWidth: 3,
+          borderWidth: 2,
           borderColor: C.accentDark,
           alignItems: "center",
           justifyContent: "center",
@@ -168,7 +168,7 @@ function Avatar({ user }: { user: User }) {
         {user.avatarUrl ? (
           <Image source={avatarSource(user.avatarUrl)} alt="" style={{ width: "100%", height: "100%" }} contentFit="cover" transition={150} />
         ) : (
-          <Text style={{ color: "#fff", fontSize: 32, fontWeight: "800" }}>{initials(user.name)}</Text>
+          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "800" }}>{initials(user.name)}</Text>
         )}
         {busy && (
           <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
@@ -182,117 +182,140 @@ function Avatar({ user }: { user: User }) {
           position: "absolute",
           right: -2,
           bottom: -2,
-          width: 30,
-          height: 30,
-          borderRadius: 15,
+          width: 26,
+          height: 26,
+          borderRadius: 13,
           backgroundColor: C.card2,
           borderWidth: 2,
-          borderColor: C.background,
+          borderColor: C.card,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <SymbolView name="camera.fill" size={13} tintColor={C.text} />
+        <SymbolView name="camera.fill" size={11} tintColor={C.text} />
       </View>
     </Pressable>
   );
 }
 
-function ProfileHeader({ user, words }: { user: User; words: number | null }) {
-  const { t, lang } = useI18n();
+/** Một ô số liệu trong thẻ hồ sơ */
+function Tile({ value, label, first }: { value: string; label: string; first?: boolean }) {
   return (
-    <View style={{ alignItems: "center", gap: 6, paddingTop: 8 }}>
-      <Avatar user={user} />
-      <Text style={{ color: C.text, fontSize: 24, fontWeight: "800" }} numberOfLines={1}>
-        {user.name}
+    <View style={{ flex: 1, alignItems: "center", gap: 2, paddingVertical: 12, borderLeftWidth: first ? 0 : 1, borderLeftColor: C.border }}>
+      <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>{value}</Text>
+      <Text style={{ color: C.muted, fontSize: 12, textAlign: "center" }} numberOfLines={1}>
+        {label}
       </Text>
-      <Text style={styles.muted} numberOfLines={1}>
-        {user.email}
-      </Text>
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
-        <Pill color={user.role === "admin" ? C.amber : C.accent}>{user.role === "admin" ? t("acc.admin") : t("acc.student")}</Pill>
-        <Pill color={C.muted}>{t("acc.memberSince", { date: monthYear(user.createdAt, lang) })}</Pill>
-        {words !== null && (
-          <Pressable onPress={() => router.navigate("/vocab")}>
-            <Pill color={C.amber} icon="bookmark.fill">
-              {t("acc.savedWords", { n: words })}
-            </Pill>
-          </Pressable>
-        )}
-      </View>
     </View>
   );
 }
 
-function Pill({ color, icon, children }: { color: string; icon?: SFSymbol; children: ReactNode }) {
+/** Thẻ đầu trang: ảnh · tên · email · vai trò — bên dưới là số liệu học tập (chạm → màn Thống kê) */
+function ProfileCard({ user, words, stats }: { user: User; words: number | null; stats: Pick<Stats, "streak" | "dueToday"> | null }) {
+  const { t, lang } = useI18n();
+  const num = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 99,
-        borderWidth: 1,
-        borderColor: C.border,
-        backgroundColor: C.card2,
-      }}
-    >
-      {icon && <SymbolView name={icon} size={11} tintColor={color} />}
+    <View style={{ backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 20, overflow: "hidden" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+        <Avatar user={user} />
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ color: C.text, fontSize: 20, fontWeight: "800" }} numberOfLines={1}>
+            {user.name}
+          </Text>
+          <Text style={{ color: C.muted, fontSize: 14 }} numberOfLines={1}>
+            {user.email}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+            <Pill color={user.role === "admin" ? C.amber : C.accent}>{user.role === "admin" ? t("acc.admin") : t("acc.student")}</Pill>
+            <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>
+              {t("acc.memberSince", { date: monthYear(user.createdAt, lang) })}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <Pressable
+        onPress={() => router.push("/stats")}
+        accessibilityRole="button"
+        accessibilityLabel={t("acc.viewStats")}
+        style={({ pressed }) => ({ borderTopWidth: 1, borderTopColor: C.border, backgroundColor: pressed ? C.card2 : "transparent" })}
+      >
+        <View style={{ flexDirection: "row" }}>
+          <Tile first value={num(words)} label={t("acc.tileWords")} />
+          <Tile value={num(stats?.streak)} label={t("acc.tileStreak")} />
+          <Tile value={num(stats?.dueToday)} label={t("acc.tileDue")} />
+        </View>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            paddingVertical: 11,
+            borderTopWidth: 1,
+            borderTopColor: C.border,
+          }}
+        >
+          <SymbolView name="chart.bar.fill" size={13} tintColor={C.accent} />
+          <Text style={{ color: C.accent, fontSize: 14, fontWeight: "700" }}>{t("acc.viewStats")}</Text>
+          <SymbolView name="chevron.right" size={11} tintColor={C.accent} weight="semibold" />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+function Pill({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, borderWidth: 1, borderColor: C.border, backgroundColor: C.card2 }}>
       <Text style={{ color, fontSize: 12, fontWeight: "700" }}>{children}</Text>
     </View>
   );
 }
 
-/** Ngôn ngữ giao diện — đang đăng nhập thì lưu vào tài khoản */
-function LanguageSection() {
+/** Cài đặt: ngôn ngữ giao diện (đang đăng nhập thì lưu vào tài khoản) · giọng đọc tiếng Đức (luôn tự động, chạm để nghe thử) */
+function SettingsSection() {
   const { lang, t } = useI18n();
   const { user, changeLang } = useAuth();
-  return (
-    <Section title={t("acc.language")} footer={user ? t("acc.langNote") : t("acc.langNoteGuest")}>
-      {LANGS.map((l, i) => (
-        <Row
-          key={l.code}
-          first={i === 0}
-          icon="globe"
-          iconBg={lang === l.code ? C.accent : C.card2}
-          title={l.label}
-          chevron={false}
-          trailing={lang === l.code && <SymbolView name="checkmark" size={16} tintColor={C.accent} weight="bold" />}
-          onPress={() => changeLang(l.code)}
-        />
-      ))}
-    </Section>
-  );
-}
-
-/** Giọng đọc tiếng Đức: luôn tự động (giọng tốt nhất trong máy). Chạm để nghe thử */
-function VoiceSection() {
-  const { t } = useI18n();
-  const [count, setCount] = useState<number | null>(null); // số giọng tiếng Đức trong máy
+  const [langOpen, setLangOpen] = useState(false);
+  const [voices, setVoices] = useState<number | null>(null); // số giọng tiếng Đức trong máy
 
   // Tải lại mỗi lần mở tab: người dùng có thể vừa tải thêm giọng trong Cài đặt
   useFocusEffect(
     useCallback(() => {
-      germanVoices(true).then((v) => setCount(v.length));
+      germanVoices(true).then((v) => setVoices(v.length));
       return () => void stopSpeaking();
     }, []),
   );
 
-  if (count === null) return null;
+  const voiceNote = voices === null ? undefined : voices ? t(Platform.OS === "ios" ? "voice.note" : "voice.noteAndroid") : t("voice.none");
   return (
-    <Section title={t("voice.title")} footer={count ? t(Platform.OS === "ios" ? "voice.note" : "voice.noteAndroid") : t("voice.none")}>
+    <Section title={t("acc.sectionSettings")} footer={voiceNote}>
       <Row
         first
-        icon="wand.and.stars"
-        iconBg={C.accent}
-        title={t("voice.auto")}
-        value={t("voice.autoSub")}
-        chevron={false}
-        trailing={<SymbolView name="play.circle.fill" size={22} tintColor={C.accent} />}
-        onPress={() => speakGerman(t("voice.sample")).catch(() => {})}
-      />
+        icon="globe"
+        iconBg="#0891b2"
+        title={t("acc.language")}
+        value={LANGS.find((l) => l.code === lang)?.label}
+        open={langOpen}
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setLangOpen(!langOpen);
+        }}
+      >
+        <Segmented options={LANGS.map((l) => [l.code, l.label] as const)} value={lang} onChange={changeLang} />
+        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{user ? t("acc.langNote") : t("acc.langNoteGuest")}</Text>
+      </Row>
+      {voices !== null && (
+        <Row
+          icon="waveform"
+          iconBg={C.accent}
+          title={t("voice.title")}
+          value={t("voice.auto")}
+          chevron={false}
+          trailing={<SymbolView name="play.circle.fill" size={22} tintColor={C.accent} />}
+          onPress={() => speakGerman(t("voice.sample")).catch(() => {})}
+        />
+      )}
     </Section>
   );
 }
@@ -304,6 +327,7 @@ function Signed({ user }: { user: User }) {
   const { t } = useI18n();
   const [panel, setPanel] = useState<Panel>(null);
   const [words, setWords] = useState<number | null>(null);
+  const [stats, setStats] = useState<Pick<Stats, "streak" | "dueToday"> | null>(null);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [current, setCurrent] = useState("");
@@ -314,13 +338,14 @@ function Signed({ user }: { user: User }) {
   const [err, setErr] = useState("");
   const hasPassword = user.hasPassword !== false; // tài khoản Google / Apple: chưa có mật khẩu
 
-  // Số từ đã lưu: tải lại mỗi lần mở tab
+  // Số từ đã lưu + chuỗi ngày / mục đến hạn: tải lại mỗi lần mở tab
   useFocusEffect(
     useCallback(() => {
       api<{ vocab: unknown[] }>("/vocab").then(
         (r) => setWords(r.vocab.length),
         () => {},
       );
+      api<Stats>(`/stats?tz=${new Date().getTimezoneOffset()}`).then(setStats, () => {});
     }, []),
   );
 
@@ -381,18 +406,7 @@ function Signed({ user }: { user: User }) {
 
   return (
     <>
-      <ProfileHeader user={user} words={words} />
-
-      <LanguageSection />
-
-      <VoiceSection />
-
-      {user.role === "admin" && (
-        <Section title={t("admin.section")} footer={t("admin.hint")}>
-          <Row first icon="person.2.fill" iconBg="#b45309" title={t("admin.users")} onPress={() => router.push("/admin/users")} />
-          <Row icon="plus.rectangle.on.rectangle" iconBg={C.accentDark} title={t("admin.addFromYoutube")} onPress={() => router.navigate("/youtube")} />
-        </Section>
-      )}
+      <ProfileCard user={user} words={words} stats={stats} />
 
       <Section title={t("acc.sectionAccount")}>
         <Row first icon="person.text.rectangle" iconBg="#2563eb" title={t("acc.profile")} open={panel === "profile"} onPress={() => toggle("profile")}>
@@ -423,7 +437,27 @@ function Signed({ user }: { user: User }) {
             disabled={(hasPassword && !current) || !next}
           />
         </Row>
-        <Row icon="rectangle.portrait.and.arrow.right" iconBg={C.card2} color={C.redText} title={t("acc.logout")} chevron={false} onPress={confirmLogout} />
+      </Section>
+
+      <SettingsSection />
+
+      {user.role === "admin" && (
+        <Section title={t("admin.section")} footer={t("admin.hint")}>
+          <Row first icon="person.2.fill" iconBg="#b45309" title={t("admin.users")} onPress={() => router.push("/admin/users")} />
+          <Row icon="plus.rectangle.on.rectangle" iconBg={C.accentDark} title={t("admin.addFromYoutube")} onPress={() => router.navigate("/youtube")} />
+        </Section>
+      )}
+
+      <Section>
+        <Row
+          first
+          icon="rectangle.portrait.and.arrow.right"
+          iconBg={C.card2}
+          color={C.redText}
+          title={t("acc.logout")}
+          chevron={false}
+          onPress={confirmLogout}
+        />
       </Section>
 
       <Section footer={t("acc.deleteSub")}>
@@ -443,6 +477,7 @@ function Signed({ user }: { user: User }) {
 
 export default function AccountScreen() {
   const { user, ready } = useAuth();
+  const { t } = useI18n();
   const { tablet } = useLayout();
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -459,10 +494,15 @@ export default function AccountScreen() {
           }}
           keyboardShouldPersistTaps="handled"
         >
+          <Text style={styles.h1}>{t("tabs.account")}</Text>
           {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
-          {ready && !user && <LanguageSection />}
-          {ready && !user && <VoiceSection />}
-          {__DEV__ && <Text style={[styles.muted, { fontSize: 12, textAlign: "center" }]}>Server: {API_URL}</Text>}
+          {ready && !user && <SettingsSection />}
+          <View style={{ alignItems: "center", gap: 2 }}>
+            <Text style={{ color: "#4a5a50", fontSize: 12, fontWeight: "600" }}>
+              {Constants.expoConfig?.name} · {t("acc.version", { v: Constants.expoConfig?.version ?? "—" })}
+            </Text>
+            {__DEV__ && <Text style={{ color: "#4a5a50", fontSize: 12 }}>Server: {API_URL}</Text>}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -245,12 +245,7 @@ function VocabRow({
             <View style={{ flexDirection: "row", gap: 6 }}>
               <SymbolView name="star.fill" size={13} tintColor={C.amber} style={{ marginTop: 4 }} />
               <View style={{ flex: 1 }}>
-                <Sentence
-                  text={v.word}
-                  phrases={phrases}
-                  onLook={open ? onLook : undefined}
-                  style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "600" }}
-                />
+                <Sentence text={v.word} phrases={phrases} style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "600" }} />
               </View>
             </View>
           ) : (

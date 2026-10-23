@@ -428,6 +428,12 @@ const vi = {
   "acc.setPwNote": "Bạn đang đăng nhập bằng Google / Apple. Đặt mật khẩu để đăng nhập bằng email trên trang web.",
   "acc.pwSet": "Đã đặt mật khẩu.",
   "acc.deleteNoPw": "Bấm nút bên dưới để xoá tài khoản.",
+  "acc.sectionSettings": "Cài đặt",
+  "acc.tileWords": "Từ đã lưu",
+  "acc.tileStreak": "Ngày liên tiếp",
+  "acc.tileDue": "Cần ôn hôm nay",
+  "acc.viewStats": "Xem thống kê học tập",
+  "acc.version": "Phiên bản {v}",
 
   // Lỗi mạng
   "api.noConnection": "Không kết nối được. Kiểm tra mạng rồi thử lại.",
@@ -847,6 +853,12 @@ const de: Dict = {
   "acc.setPwNote": "Du bist mit Google / Apple angemeldet. Lege ein Passwort fest, um dich auf der Website per E-Mail anzumelden.",
   "acc.pwSet": "Passwort festgelegt.",
   "acc.deleteNoPw": "Tippe auf die Schaltfläche unten, um dein Konto zu löschen.",
+  "acc.sectionSettings": "Einstellungen",
+  "acc.tileWords": "Gespeicherte Wörter",
+  "acc.tileStreak": "Tage in Folge",
+  "acc.tileDue": "Heute fällig",
+  "acc.viewStats": "Lernstatistik ansehen",
+  "acc.version": "Version {v}",
 
   "api.noConnection": "Keine Verbindung. Prüfe dein Internet und versuche es erneut.",
   "api.serverError": "Serverfehler ({status})",
