@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { locatePhrase } from "@shared/phrase-match";
-import { api, type WordDetail, type WordInfo } from "@/lib/api";
+import { api, type VocabItem, type WordDetail, type WordInfo } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { showError } from "@/lib/dialogs";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
@@ -127,6 +128,50 @@ export function WordSheet({
   };
 
   const retry = () => setAttempt((a) => a + 1);
+
+  // ⭐ trên câu ví dụ: lưu nguyên câu như câu ⭐ ở màn học (context trống) → vào phần luyện nói Crazy ở Ôn tập.
+  // Câu đã lưu → id trong sổ từ vựng (-1 = đang lưu); tải lại mỗi lần mở bảng
+  const [sentences, setSentences] = useState<Map<string, number>>(() => new Map());
+  useEffect(() => {
+    if (!word || !user) return;
+    let alive = true;
+    api<{ vocab: VocabItem[] }>("/vocab")
+      .then(({ vocab }) => alive && setSentences(new Map(vocab.filter((v) => !v.context.trim()).map((v) => [v.word.toLowerCase(), v.id]))))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [word, user]);
+  const isSaved = (de: string) => sentences.has(plain(de).trim().toLowerCase());
+  const setSentence = (k: string, id: number | undefined) =>
+    setSentences((m) => {
+      const n = new Map(m);
+      if (id === undefined) n.delete(k);
+      else n.set(k, id);
+      return n;
+    });
+  const toggleSentence = async (de: string, tr: string) => {
+    const text = plain(de).trim();
+    const k = text.toLowerCase();
+    const id = sentences.get(k);
+    if (id === -1) return;
+    setSentence(k, id === undefined ? -1 : undefined);
+    try {
+      if (id !== undefined) {
+        await api(`/vocab/${id}`, { method: "DELETE" });
+        return;
+      }
+      const r = await api<{ item?: VocabItem; vocab: VocabItem[] }>("/vocab", { method: "POST", body: { word: text, context: "" } });
+      const item = r.item ?? r.vocab.find((v) => v.word.toLowerCase() === k);
+      if (!item) return setSentence(k, undefined);
+      setSentence(k, item.id);
+      // Bản dịch làm đề "Nói câu tiếng Đức có nghĩa…" khi luyện Crazy
+      if (!item.meaning && tr) await api(`/vocab/${item.id}`, { method: "PATCH", body: { meaning: tr } }).catch(() => {});
+    } catch (e) {
+      setSentence(k, id);
+      showError(e);
+    }
+  };
 
   return (
     // Modal iOS mặc định chỉ cho màn dọc → iPad nằm ngang sẽ bị xoay ngược khi mở bảng
@@ -260,6 +305,7 @@ export function WordSheet({
                           playing={speaking === plain(ex.de)}
                           onPress={() => speak(plain(ex.de))}
                           onLongPress={() => speak(plain(ex.de), true)}
+                          star={{ saved: isSaved(ex.de), onPress: () => toggleSentence(ex.de, ex.tr ?? ""), label: t("word.saveSentence") }}
                         />
                       ))
                     ) : detail.error ? (
@@ -316,10 +362,18 @@ export function WordSheet({
                               {s.current && <Text style={{ color: C.accent, fontSize: 11, fontWeight: "700" }}>{t("word.inThisSentence")}</Text>}
                             </View>
                             {!!s.use && <Text style={{ color: C.amber, fontSize: 14, fontWeight: "600" }}>{s.use}</Text>}
-                            <Pressable onPress={() => speak(plain(s.de))} onLongPress={() => speak(plain(s.de), true)} accessibilityRole="button">
-                              <Rich text={s.de} style={{ color: C.text, fontSize: 15, lineHeight: 22 }} />
-                              {!!s.tr && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>{s.tr}</Text>}
-                            </Pressable>
+                            <View style={{ flexDirection: "row", gap: 10 }}>
+                              <Pressable
+                                onPress={() => speak(plain(s.de))}
+                                onLongPress={() => speak(plain(s.de), true)}
+                                accessibilityRole="button"
+                                style={{ flex: 1 }}
+                              >
+                                <Rich text={s.de} style={{ color: C.text, fontSize: 15, lineHeight: 22 }} />
+                                {!!s.tr && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>{s.tr}</Text>}
+                              </Pressable>
+                              <StarButton saved={isSaved(s.de)} onPress={() => toggleSentence(s.de, s.tr ?? "")} label={t("word.saveSentence")} />
+                            </View>
                           </View>
                         ))}
                       </View>
@@ -457,6 +511,7 @@ function ExampleRow({
   playing,
   onPress,
   onLongPress,
+  star,
 }: {
   label?: string;
   de: string;
@@ -464,21 +519,41 @@ function ExampleRow({
   playing: boolean;
   onPress: () => void;
   onLongPress: () => void;
+  star?: { saved: boolean; onPress: () => void; label: string }; // nút ⭐ lưu câu (câu trong video thì không có)
 }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 10 }}>
+      <Pressable
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={({ pressed }) => ({ flex: 1, flexDirection: "row", gap: 10, opacity: pressed ? 0.6 : 1 })}
+      >
+        <View style={{ paddingTop: label ? 22 : 4 }}>
+          <SymbolView name={playing ? "speaker.wave.2.fill" : "play.fill"} size={12} tintColor={C.accent} />
+        </View>
+        <View style={{ flex: 1, gap: 3 }}>
+          {!!label && <Text style={{ color: C.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>{label}</Text>}
+          <Rich text={de} style={{ color: C.text, fontSize: 16, fontWeight: "600", lineHeight: 22 }} />
+          {!!tr && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>{tr}</Text>}
+        </View>
+      </Pressable>
+      {star && <StarButton {...star} />}
+    </View>
+  );
+}
+
+/** ⭐ lưu câu ví dụ để luyện nói Crazy; sáng vàng khi đã lưu */
+function StarButton({ saved, onPress, label }: { saved: boolean; onPress: () => void; label: string }) {
   return (
     <Pressable
       onPress={onPress}
-      onLongPress={onLongPress}
-      style={({ pressed }) => ({ flexDirection: "row", gap: 10, opacity: pressed ? 0.6 : 1 })}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: saved }}
+      style={({ pressed }) => ({ paddingTop: 2, opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}
     >
-      <View style={{ paddingTop: label ? 22 : 4 }}>
-        <SymbolView name={playing ? "speaker.wave.2.fill" : "play.fill"} size={12} tintColor={C.accent} />
-      </View>
-      <View style={{ flex: 1, gap: 3 }}>
-        {!!label && <Text style={{ color: C.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>{label}</Text>}
-        <Rich text={de} style={{ color: C.text, fontSize: 16, fontWeight: "600", lineHeight: 22 }} />
-        {!!tr && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>{tr}</Text>}
-      </View>
+      <SymbolView name={saved ? "star.fill" : "star"} size={18} tintColor={saved ? C.amber : C.muted} />
     </Pressable>
   );
 }

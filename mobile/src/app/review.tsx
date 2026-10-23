@@ -920,16 +920,17 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 
 /**
  * Ôn tập — 2 nhiệm vụ hôm nay, mỗi thẻ đúng 1 nút:
- * - Từ vựng → bài tập kiểu Duolingo: mục đến hạn + mục mới (không có gì → ôn tất cả).
- * - Câu ⭐ (đánh dấu ở màn học) → luyện nói Crazy Deutsch.
+ * - Từ vựng → bài tập kiểu Duolingo; bấm nút → chọn Tất cả (mục đến hạn + mục mới, không có gì → ôn tất cả) hoặc từ lưu theo từng ngày.
+ * - Luyện nói Crazy: câu ⭐ (đánh dấu ở màn học / câu ví dụ trong bảng giải thích từ) → luyện nói Crazy Deutsch.
  * Xem theo ngày lưu ở tab Từ vựng (đã nhóm theo ngày), không lặp lại ở đây.
  */
 export default function ReviewScreen() {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const [data, setData] = useState<{ items: Word[]; at: number } | null>(null);
   const [error, setError] = useState("");
-  const [picked, setPicked] = useState<"words" | "sentences" | null>(null);
+  const [picked, setPicked] = useState<{ kind: "words"; list: Word[] } | { kind: "sentences" } | null>(null);
+  const [wordsOpen, setWordsOpen] = useState(false); // thẻ Từ vựng: đã bấm → hiện lựa chọn Tất cả / theo ngày
   const { tablet } = useLayout();
   const items = data?.items ?? null;
   const [block, setBlock] = useState<Block>("20");
@@ -973,15 +974,42 @@ export default function ReviewScreen() {
     return { words: part((v) => !isSentence(v)), sentences: part(isSentence) };
   }, [data]);
 
+  // Từ vựng (không gồm câu ⭐) nhóm theo ngày lưu, mới nhất trước
+  const days = useMemo(() => {
+    const groups = new Map<string, { date: Date; list: Word[] }>();
+    for (const v of data?.items ?? []) {
+      if (isSentence(v)) continue;
+      const d = new Date(v.createdAt.replace(" ", "T") + "Z"); // "2026-10-19 08:00:00" (UTC)
+      if (isNaN(+d)) continue;
+      const k = d.toDateString();
+      (groups.get(k) ?? groups.set(k, { date: d, list: [] }).get(k)!).list.push(v);
+    }
+    const today = new Date();
+    const yesterday = new Date(+today - 86400000);
+    return [...groups.values()]
+      .sort((a, b) => +b.date - +a.date)
+      .map(({ date, list }) => ({
+        key: date.toDateString(),
+        title:
+          date.toDateString() === today.toDateString()
+            ? t("vocab.today")
+            : date.toDateString() === yesterday.toDateString()
+              ? t("vocab.yesterday")
+              : date.toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "numeric", year: "numeric" }),
+        list,
+      }));
+  }, [data, lang, t]);
+
   if (items && picked) {
     const onClose = (changed: boolean) => {
       setPicked(null);
+      setWordsOpen(false);
       if (changed) load(); // cập nhật mức nhớ / lịch ôn
     };
-    return picked === "sentences" ? (
+    return picked.kind === "sentences" ? (
       <CrazyReview items={plan.sentences.list} block={Number(block)} onClose={onClose} />
     ) : (
-      <Session items={plan.words.list} pool={items} onClose={onClose} />
+      <Session items={picked.list} pool={items} onClose={onClose} />
     );
   }
 
@@ -1015,7 +1043,7 @@ export default function ReviewScreen() {
         {items && !items.length && <Text style={[styles.muted, { textAlign: "center", marginTop: 40 }]}>{t("vocab.empty")}</Text>}
         {!!items?.length && (
           <>
-            {/* Từ vựng: 1 nút — ôn mục cần ôn, không có thì ôn tất cả */}
+            {/* Từ vựng: bấm nút → chọn ôn Tất cả (mục cần ôn, không có thì tất cả) hoặc từ lưu theo từng ngày */}
             {w.total > 0 && (
               <TaskCard
                 icon="text.book.closed.fill"
@@ -1024,12 +1052,33 @@ export default function ReviewScreen() {
               >
                 <Cta
                   title={w.due + w.fresh ? t("review.startWords", { n: w.list.length }) : t("review.allWords", { n: w.total })}
-                  onPress={() => setPicked("words")}
+                  icon={wordsOpen ? "chevron.up" : "chevron.down"}
+                  onPress={() => setWordsOpen((o) => !o)}
                 />
+                {wordsOpen && (
+                  <View style={{ gap: 8 }}>
+                    <ChoiceRow
+                      icon="square.stack.fill"
+                      title={t("review.allChoice")}
+                      info={w.due + w.fresh ? t("review.dueInfo", { due: w.due, fresh: w.fresh }) : t("review.dayCount", { n: w.total })}
+                      onPress={() => setPicked({ kind: "words", list: w.list })}
+                    />
+                    <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700", letterSpacing: 1, marginTop: 6 }}>{t("review.byDay")}</Text>
+                    {days.map((d) => (
+                      <ChoiceRow
+                        key={d.key}
+                        icon="calendar"
+                        title={d.title}
+                        info={t("review.dayCount", { n: d.list.length })}
+                        onPress={() => setPicked({ kind: "words", list: d.list })}
+                      />
+                    ))}
+                  </View>
+                )}
               </TaskCard>
             )}
 
-            {/* Câu ⭐: luyện nói kiểu Crazy — số lượt mỗi câu là cài đặt, nút duy nhất là Luyện */}
+            {/* Luyện nói Crazy (câu ⭐) — số lượt mỗi câu là cài đặt, nút duy nhất là Luyện */}
             {sn.total > 0 && (
               <TaskCard
                 icon="mic.fill"
@@ -1040,7 +1089,7 @@ export default function ReviewScreen() {
                   <Text style={{ color: C.muted, fontSize: 14 }}>{t("review.blockLabel")}</Text>
                   <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
                 </View>
-                <Cta title={t("review.startSentences", { n: sn.list.length })} icon="mic.fill" onPress={() => setPicked("sentences")} />
+                <Cta title={t("review.startSentences", { n: sn.list.length })} icon="mic.fill" onPress={() => setPicked({ kind: "sentences" })} />
               </TaskCard>
             )}
 
@@ -1065,6 +1114,35 @@ export default function ReviewScreen() {
         )}
       </ScrollView>
     </View>
+  );
+}
+
+/** 1 lựa chọn ôn từ vựng (Tất cả / 1 ngày): icon · tên · số từ · › */
+function ChoiceRow({ icon, title, info, onPress }: { icon: SFSymbol; title: string; info: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        backgroundColor: C.card2,
+        borderWidth: 1,
+        borderColor: C.border,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <SymbolView name={icon} size={16} tintColor={C.accent} />
+      <Text style={{ flex: 1, color: C.text, fontSize: 16, fontWeight: "600" }} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={{ color: C.muted, fontSize: 14 }}>{info}</Text>
+      <SymbolView name="chevron.right" size={12} tintColor={C.muted} />
+    </Pressable>
   );
 }
 
