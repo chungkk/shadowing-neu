@@ -5,8 +5,9 @@ import { ActivityIndicator, LayoutAnimation, Pressable, RefreshControl, SectionL
 import { SafeAreaView } from "react-native-safe-area-context";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { Button, Card, ErrorText, Input, Segmented, styles } from "@/components/ui";
+import { WordSheet } from "@/components/WordSheet";
 import { api, type VocabItem } from "@/lib/api";
-import { confirmDestructive } from "@/lib/dialogs";
+import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
@@ -61,11 +62,16 @@ function byLetter(items: VocabItem[]): Section[] {
   return [...groups].map(([title, data]) => ({ title, data }));
 }
 
-/** Bỏ dấu câu 2 đầu, chữ thường: "Lauer," → "lauer" */
-const bare = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "").toLowerCase();
+/** Bỏ dấu câu 2 đầu: "Lauer," → "Lauer" */
+const trim = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+/** …và chữ thường: "Lauer," → "lauer" */
+const bare = (w: string) => trim(w).toLowerCase();
 
-/** Câu (ví dụ / câu đánh dấu sao): tô xanh + gạch chân cụm từ cố định, tô đậm từ đang học */
-function Sentence({ text, phrases, word, style }: { text: string; phrases: Phrase[]; word?: string; style: TextStyle }) {
+/** Mở bảng giải thích: từ + câu chứa nó (+ các phần của cụm để tô sáng) */
+type LookFn = (word: string, context: string, marks?: string[]) => void;
+
+/** Câu (ví dụ / câu đánh dấu sao): tô xanh + gạch chân cụm từ cố định, tô đậm từ đang học; có onLook thì chạm từ để tra */
+function Sentence({ text, phrases, word, style, onLook }: { text: string; phrases: Phrase[]; word?: string; style: TextStyle; onLook?: LookFn }) {
   const tokens = tokenize(text, phrases);
   const target = word && !word.includes(" ") ? word.toLowerCase() : "";
   return (
@@ -75,6 +81,12 @@ function Sentence({ text, phrases, word, style }: { text: string; phrases: Phras
         return (
           <Fragment key={k}>
             <Text
+              onPress={
+                onLook && bare(w)
+                  ? () => (p >= 0 ? onLook(phrases[p].base, text, phrases[p].parts) : onLook(trim(w), text))
+                  : undefined
+              }
+              suppressHighlighting={false}
               style={
                 p >= 0
                   ? { color: C.phrase, fontWeight: "600", textDecorationLine: "underline" }
@@ -135,6 +147,7 @@ function VocabRow({
   open,
   phrases,
   onToggle,
+  onLook,
   onChange,
   onDelete,
 }: {
@@ -144,6 +157,7 @@ function VocabRow({
   last: boolean;
   open: boolean;
   onToggle: () => void;
+  onLook: LookFn;
   onChange: (meaning: string) => void;
   onDelete: () => void;
 }) {
@@ -231,13 +245,24 @@ function VocabRow({
             <View style={{ flexDirection: "row", gap: 6 }}>
               <SymbolView name="star.fill" size={13} tintColor={C.amber} style={{ marginTop: 4 }} />
               <View style={{ flex: 1 }}>
-                <Sentence text={v.word} phrases={phrases} style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "600" }} />
+                <Sentence
+                  text={v.word}
+                  phrases={phrases}
+                  onLook={open ? onLook : undefined}
+                  style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "600" }}
+                />
               </View>
             </View>
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               {isPhrase && <SymbolView name="sparkles" size={14} tintColor={C.phrase} />}
-              <Text style={{ flex: 1, color: isPhrase ? C.phrase : C.text, fontSize: 17, fontWeight: "700" }} numberOfLines={1}>
+              {/* Chạm vào từ → bảng giải thích; chạm chỗ khác của dòng → mở/đóng */}
+              <Text
+                onPress={() => onLook(v.word, v.context || v.word)}
+                suppressHighlighting={false}
+                style={{ flexShrink: 1, color: isPhrase ? C.phrase : C.text, fontSize: 17, fontWeight: "700" }}
+                numberOfLines={1}
+              >
                 {v.word}
               </Text>
             </View>
@@ -283,6 +308,7 @@ function VocabRow({
                 text={v.context}
                 phrases={isPhrase ? own : phrases}
                 word={v.word}
+                onLook={onLook}
                 style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}
               />
               {!isPhrase && <PhraseLines phrases={phrases} />}
@@ -331,6 +357,7 @@ export default function VocabScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [phr, setPhr] = useState<Record<string, Phrase[]>>({}); // "<ngôn ngữ>|<câu>" → cụm từ trong câu
   const phrAsked = useRef<Set<string>>(new Set());
+  const [lookup, setLookup] = useState<{ word: string; context: string; marks?: string[] } | null>(null);
   const { tablet } = useLayout();
   const PAD = tablet ? 24 : 16;
 
@@ -388,6 +415,30 @@ export default function VocabScreen() {
       </SafeAreaView>
     );
   }
+
+  const lookUp: LookFn = (word, context, marks) => {
+    stopSpeaking();
+    setLookup({ word, context, marks });
+  };
+  const findSaved = (word: string) => all.find((x) => x.word.toLowerCase() === word.toLowerCase());
+  // Lưu từ tra được (từ trong câu chưa có trong sổ) → hiện luôn trong danh sách
+  const saveLooked = async (word: string, context: string, meaning: string) => {
+    try {
+      const r = await api<{ vocab: VocabItem[] }>("/vocab", { method: "POST", body: { word, context } });
+      const item = r.vocab.find((x) => x.word.toLowerCase() === word.toLowerCase());
+      if (item && !item.meaning && meaning) await api(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
+      await load();
+    } catch (e) {
+      showError(e, t("player.saveFailed"));
+    }
+  };
+  const unsaveLooked = async (word: string) => {
+    const item = findSaved(word);
+    if (!item) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setItems((list) => list?.filter((x) => x.id !== item.id) ?? null);
+    await api(`/vocab/${item.id}`, { method: "DELETE" }).catch(() => {});
+  };
 
   const toggle = (id: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -503,6 +554,7 @@ export default function VocabScreen() {
             open={openId === item.id}
             phrases={phr[`${lang}|${item.context || item.word}`] ?? []}
             onToggle={() => toggle(item.id)}
+            onLook={lookUp}
             onChange={(meaning) => setItems((list) => list?.map((x) => (x.id === item.id ? { ...x, meaning } : x)) ?? null)}
             onDelete={async () => {
               await api(`/vocab/${item.id}`, { method: "DELETE" }).catch(() => {});
@@ -519,6 +571,15 @@ export default function VocabScreen() {
             </View>
           ) : undefined
         }
+      />
+      <WordSheet
+        word={lookup?.word ?? null}
+        context={lookup?.context ?? ""}
+        marks={lookup?.marks}
+        saved={!!lookup && !!findSaved(lookup.word)}
+        onSave={(meaning) => (lookup ? saveLooked(lookup.word, lookup.context, meaning) : Promise.resolve())}
+        onRemove={() => (lookup ? unsaveLooked(lookup.word) : Promise.resolve())}
+        onClose={() => setLookup(null)}
       />
     </SafeAreaView>
   );
