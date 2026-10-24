@@ -33,6 +33,7 @@ import type { Mastery } from "@shared/srs";
 import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLookup } from "@/lib/useLookup";
+import { groupBySaved } from "@/lib/vocabGroups";
 import { C } from "@/lib/theme";
 
 /** Mục sổ từ kèm lịch ôn (server cũ không gửi → từ mới) */
@@ -928,31 +929,8 @@ export default function ReviewScreen() {
     return { words: part((v) => !isSentence(v), 30, 10), sentences: part(isSentence, 8, 4) };
   }, [data]);
 
-  // Từ vựng (không gồm câu ⭐) nhóm theo ngày lưu, mới nhất trước
-  const days = useMemo(() => {
-    const groups = new Map<string, { date: Date; list: Word[] }>();
-    for (const v of data?.items ?? []) {
-      if (isSentence(v)) continue;
-      const d = new Date(v.createdAt.replace(" ", "T") + "Z"); // "2026-10-19 08:00:00" (UTC)
-      if (isNaN(+d)) continue;
-      const k = d.toDateString();
-      (groups.get(k) ?? groups.set(k, { date: d, list: [] }).get(k)!).list.push(v);
-    }
-    const today = new Date();
-    const yesterday = new Date(+today - 86400000);
-    return [...groups.values()]
-      .sort((a, b) => +b.date - +a.date)
-      .map(({ date, list }) => ({
-        key: date.toDateString(),
-        title:
-          date.toDateString() === today.toDateString()
-            ? t("vocab.today")
-            : date.toDateString() === yesterday.toDateString()
-              ? t("vocab.yesterday")
-              : date.toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "numeric", year: "numeric" }),
-        list,
-      }));
-  }, [data, lang, t]);
+  // Từ vựng (không gồm câu ⭐) nhóm theo ngày lưu, mới nhất trước — cùng cách nhóm với tab Từ vựng
+  const days = useMemo(() => groupBySaved((data?.items ?? []).filter((v) => !isSentence(v)), t, lang), [data, lang, t]);
 
   if (items && picked) {
     const onClose = (changed: boolean) => {
@@ -1022,8 +1000,8 @@ export default function ReviewScreen() {
                         key={d.key}
                         icon="calendar"
                         title={d.title}
-                        info={t("review.dayCount", { n: d.list.length })}
-                        onPress={() => setPicked({ kind: "words", list: d.list })}
+                        info={t("review.dayCount", { n: d.data.length })}
+                        onPress={() => setPicked({ kind: "words", list: d.data })}
                       />
                     ))}
                   </View>

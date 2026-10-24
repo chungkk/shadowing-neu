@@ -1,5 +1,5 @@
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import type { ReactNode } from "react";
+import type { ComponentRef, ReactNode, Ref } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
 import { C, LEVEL_COLORS } from "@/lib/theme";
 
@@ -139,7 +139,7 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Input(props: TextInputProps) {
+export function Input(props: TextInputProps & { ref?: Ref<ComponentRef<typeof TextInput>> }) {
   return <TextInput placeholderTextColor={C.muted} {...props} style={[styles.input, props.style]} />;
 }
 

@@ -111,6 +111,13 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Đếm số lần sổ từ thay đổi (lưu / sửa / xoá / ôn — mọi request không phải GET tới /vocab…).
+ * Tab Từ vựng so số này để biết có cần tải lại sổ không, thay vì tải lại mỗi lần mở tab.
+ */
+let vocabVersion = 0;
+export const getVocabVersion = () => vocabVersion;
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   let res: Response;
   // FormData (gửi file ghi âm) → fetch tự đặt Content-Type multipart
@@ -131,6 +138,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error ?? t("api.serverError", { status: res.status }), res.status, data);
+  if ((init.method ?? "GET") !== "GET" && /^\/vocab(\/|$)/.test(path)) vocabVersion++;
   return data as T;
 }
 

@@ -520,16 +520,38 @@ export function listVocab(userId: number): VocabItem[] {
   return rows.map((r) => toVocab(r, proven.has(r.id)));
 }
 
-/** Lưu từ; đã có thì cập nhật câu ví dụ + nguồn mới nhất (giữ nghĩa đã ghi). Trả về mục vừa lưu */
+/** "heute" ↔ "Heute": cùng từ, chỉ khác viết hoa chữ cái đầu (đứng đầu câu / danh từ) */
+const caseVariants = (w: string) => [...new Set([w, w[0].toLowerCase() + w.slice(1), w[0].toUpperCase() + w.slice(1)])];
+
+/**
+ * Lưu từ. Đã có (kể cả chỉ khác viết hoa chữ cái đầu, vd. từ đứng đầu câu "Heute" ~ "heute") → giữ mục cũ:
+ * giữ nghĩa, giữ câu ví dụ + nguồn gốc (nghĩa được ghi theo câu đó); mục cũ chưa có câu ví dụ thì điền câu mới.
+ * Mục cũ viết hoa mà lần này gặp dạng viết thường (giữa câu → chắc chắn không phải danh từ) → đổi về viết thường.
+ * Trả về mục vừa lưu.
+ */
 export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }): VocabItem {
+  const variants = caseVariants(v.word);
+  const found = conn()
+    .prepare(`SELECT id, word FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
+    .all(userId, ...variants) as { id: number; word: string }[];
+  const old = found.find((f) => f.word === v.word) ?? (found.length === 1 ? found[0] : undefined);
+  if (!old) {
+    const r = conn()
+      .prepare(`INSERT INTO vocab (user_id, word, context, source_url, source_title) VALUES (?, ?, ?, ?, ?) RETURNING *`)
+      .get(userId, v.word, v.context, v.sourceUrl, v.sourceTitle) as VocabRow;
+    return toVocab(r, false);
+  }
+  const lowerFirst = v.word[0] !== v.word[0].toUpperCase();
+  const word = old.word !== v.word && lowerFirst ? v.word : old.word;
   const r = conn()
     .prepare(
-      `INSERT INTO vocab (user_id, word, context, source_url, source_title) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(user_id, word) DO UPDATE SET context = excluded.context, source_url = excluded.source_url,
-         source_title = excluded.source_title
-       RETURNING *`,
+      `UPDATE vocab SET word = ?,
+         source_url = CASE WHEN context = '' THEN ? ELSE source_url END,
+         source_title = CASE WHEN context = '' THEN ? ELSE source_title END,
+         context = CASE WHEN context = '' THEN ? ELSE context END
+       WHERE id = ? RETURNING *`,
     )
-    .get(userId, v.word, v.context, v.sourceUrl, v.sourceTitle) as VocabRow;
+    .get(word, v.sourceUrl, v.sourceTitle, v.context, old.id) as VocabRow;
   return toVocab(r, provenIds(userId).has(r.id));
 }
 

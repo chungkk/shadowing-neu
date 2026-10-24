@@ -47,7 +47,11 @@ export function useLookup(pool: VocabItem[]) {
       n.delete(word.toLowerCase());
       return n;
     });
-    await api(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
+    // Lỗi → trả lại trạng thái "đã lưu" + báo (không âm thầm coi như đã bỏ lưu)
+    await api(`/vocab/${id}`, { method: "DELETE" }).catch((e) => {
+      setSavedIds((m) => new Map(m).set(word.toLowerCase(), id));
+      showError(e, t("vocab.deleteFailed"));
+    });
   };
 
   const sheet = {

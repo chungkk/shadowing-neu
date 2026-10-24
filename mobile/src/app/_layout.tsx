@@ -22,6 +22,7 @@ export default function RootLayout() {
             <Stack.Screen name="admin/users" options={{ title: "" }} />
             <Stack.Screen name="review" options={{ title: "" }} />
             <Stack.Screen name="stats" options={{ title: "" }} />
+            <Stack.Screen name="vocab-add" options={{ title: "", presentation: "modal" }} />
           </Stack>
         </ThemeProvider>
       </AuthProvider>

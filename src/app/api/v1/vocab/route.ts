@@ -10,7 +10,7 @@ export async function GET() {
 }
 
 /**
- * POST { word, context?, sourceUrl?, sourceTitle? } → lưu từ (đã có thì cập nhật câu ví dụ)
+ * POST { word, context?, sourceUrl?, sourceTitle? } → lưu từ (đã có — kể cả khác viết hoa chữ đầu — thì giữ mục cũ, xem saveVocab)
  * → { item, vocab: [item] } — chỉ mục vừa lưu (sổ lớn trả cả danh sách thì rất chậm);
  * giữ dạng mảng `vocab` để app bản cũ (tìm từ vừa lưu trong `vocab`) vẫn chạy.
  */

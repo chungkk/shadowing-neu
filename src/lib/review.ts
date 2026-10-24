@@ -90,9 +90,9 @@ export type Step = {
   tiles?: string[]; // xếp chữ; order: các từ của câu
 };
 
-export const isPhrase = (v: ReviewWord) => v.word.trim().includes(" ");
+export const isPhrase = (v: Pick<ReviewWord, "word">) => v.word.trim().includes(" ");
 /** Câu đánh dấu sao ở màn học: lưu nguyên câu, không có câu ví dụ */
-export const isSentence = (v: ReviewWord) => isPhrase(v) && !v.context.trim();
+export const isSentence = (v: Pick<ReviewWord, "word" | "context">) => isPhrase(v) && !v.context.trim();
 /** Dạng bài tự viết / tự xếp ra (không phải nhận diện) */
 export const isRecall = (k: Kind | undefined) =>
   k === "tiles" || k === "type" || k === "cloze-type" || k === "listen-type" || k === "order" || k === "listen-order";
