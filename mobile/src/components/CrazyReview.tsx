@@ -204,6 +204,13 @@ function TakeStatus({
   const { t } = useI18n();
   const muted = (text: string) => <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{text}</Text>;
   const body = () => {
+    if (state === "starting")
+      return (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <ActivityIndicator size="small" color={C.muted} />
+          {muted(t("take.micStarting"))}
+        </View>
+      );
     if (state === "recording")
       return (
         <View style={{ gap: 10 }}>
@@ -319,8 +326,8 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
   };
   const silence = () => {
     speakId.current++;
-    stopSpeaking();
     setTalking(false);
+    return stopSpeaking();
   };
   /** Phát riêng 1 cụm (không đo thời lượng — nhịp vẫn so với cả câu) */
   const sayChunk = (c: string) => {
@@ -415,6 +422,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     score: phase !== "drill" || done === 0 || done === block - 1, // chỉ nhận dạng lượt đầu + lượt cuối
   });
   const busy = take.state !== "idle";
+  const micOn = take.state === "starting" || take.state === "recording"; // không cho phát mẫu chồng lên lượt thu
 
   // App chạy nền → dừng lặp, bỏ lượt đang thu, dừng phát
   const onBackground = useEffectEvent(() => {
@@ -518,7 +526,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
             <Cta
               title={take.state === "checking" ? t("take.checking") : t("crazyReview.record")}
               icon="mic.fill"
-              loading={take.state === "checking"}
+              loading={take.state === "checking" || take.state === "starting"}
               onPress={take.record}
             />
           )}
@@ -580,7 +588,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
             ) : (
               <>
                 {chunkOn && Array.isArray(chunks[v.word]) ? (
-                  <Chunks chunks={chunks[v.word] as string[]} size={sentenceSize(v.word)} onSay={sayChunk} disabled={take.state === "recording"} />
+                  <Chunks chunks={chunks[v.word] as string[]} size={sentenceSize(v.word)} onSay={sayChunk} disabled={micOn} />
                 ) : (
                   <Sentence text={v.word} take={take.take} />
                 )}
@@ -589,7 +597,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
                   <PlayBtn
                     talking={talking}
                     onPress={talking ? silence : listen}
-                    disabled={take.state === "recording"}
+                    disabled={micOn}
                     label={talking ? t("crazyReview.stopModel") : t("crazyReview.playModel")}
                   />
                   <Pressable

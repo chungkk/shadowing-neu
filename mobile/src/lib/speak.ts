@@ -26,13 +26,21 @@ export async function germanVoices(fresh = false): Promise<Speech.Voice[]> {
 /** Tốc độ đọc thường (1×); `speed` nhân với mức này (0,75× … 1,1×) */
 const NORMAL_RATE = 0.95;
 
+/** Mỗi lần đọc / dừng tăng 1 → lần đọc đang chờ (await) mà đã bị dừng hoặc bị lần sau thay thì không phát nữa */
+let gen = 0;
+
 export async function speakGerman(text: string, opts: { slow?: boolean; speed?: number; voice?: string; onEnd?: () => void } = {}) {
+  const my = ++gen;
   await Speech.stop();
+  if (my !== gen) return opts.onEnd?.(); // như onStopped của câu bị dừng
   // Vẫn có tiếng khi gạt công tắc im lặng
   await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
+  const voice = opts.voice ?? (await germanVoices())[0]?.identifier;
+  // Bị dừng giữa lúc chuẩn bị (vd. bấm thu âm) → không phát chồng lên lượt thu
+  if (my !== gen) return opts.onEnd?.();
   Speech.speak(text, {
     language: "de-DE",
-    voice: opts.voice ?? (await germanVoices())[0]?.identifier,
+    voice,
     rate: opts.slow ? 0.6 : NORMAL_RATE * (opts.speed ?? 1),
     onDone: opts.onEnd,
     onStopped: opts.onEnd,
@@ -40,4 +48,7 @@ export async function speakGerman(text: string, opts: { slow?: boolean; speed?: 
   });
 }
 
-export const stopSpeaking = () => Speech.stop();
+export const stopSpeaking = () => {
+  gen++;
+  return Speech.stop();
+};

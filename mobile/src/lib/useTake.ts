@@ -17,6 +17,7 @@ export const VOICE_DB = -45; // trên mức này coi là đang có tiếng nói
 const FAST = 0.9; // nói không chậm hơn câu mẫu quá 10%
 const CLEAR = 0.8; // máy nhận ra ≥ 80% số từ
 const SILENCE_MS = 1300; // đã nói rồi im lặng chừng này → tự dừng thu (rảnh tay để vung tay theo ngữ điệu)
+const AFTER_MODEL_MS = 350; // câu mẫu dứt → chờ đuôi tiếng loa tắt hẳn rồi mới mở micro (không thu lẫn giọng máy)
 
 /** 1 lượt nói. status: done = Whisper đã nhận dạng; login / error / unscored = không nhận dạng (chỉ đo nhịp) */
 export type Take = {
@@ -58,7 +59,7 @@ export function useTake({
   duration: number; // giây — thời lượng câu mẫu
   playing: boolean; // câu mẫu đang phát
   onListen: () => void;
-  onBeforeRecord: () => void; // dừng phát mẫu trước khi thu
+  onBeforeRecord: () => unknown; // dừng phát mẫu trước khi thu (trả promise → chờ dừng xong)
   onAttempt: (passed: boolean, clear?: number) => void; // clear: tỉ lệ từ máy nhận ra 0–1 (undefined = không nhận dạng)
   onCaptured?: () => void; // vừa thu xong 1 lượt có tiếng nói (trước khi nhận dạng) — vd. phát tiếng "ting"
   onSilent?: () => void; // lượt không nghe thấy tiếng (không tính lượt)
@@ -76,8 +77,15 @@ export function useTake({
   const attemptId = useRef(0); // đổi câu / lượt mới → bỏ kết quả về muộn của lượt cũ
   const busy = useRef(false); // 1 lượt đang chạy (mẫu → thu → chấm) — vòng lặp chờ xong mới sang lượt sau
   const wasPlaying = useRef(false);
+  const settling = useRef<Promise<unknown>>(Promise.resolve()); // lệnh dừng thu của lượt bị huỷ — lượt mới chờ xong mới mở micro
   const [take, setTake] = useState<Take | null>(null);
   const [armed, setArmed] = useState(false); // chờ câu mẫu phát xong để thu
+  const [starting, setStarting] = useState(false); // đã bấm thu, micro đang khởi động (chưa thu)
+  const startingRef = useRef(false); // như `starting` nhưng đọc được ngay (2 lần bấm trong cùng 1 khung hình)
+  const setStart = (on: boolean) => {
+    startingRef.current = on;
+    setStarting(on);
+  };
   const [uri, setUri] = useState<string | null>(null); // bản thu gần nhất
 
   // Sang câu khác → xoá kết quả + bản thu của câu trước
@@ -97,25 +105,38 @@ export function useTake({
   };
 
   const record = async () => {
+    if (startingRef.current || recorder.isRecording) return; // bấm 2 lần / vòng lặp gọi chồng
+    busy.current = true;
+    setStart(true); // giữ tới khi bắt đầu dừng thu → nút không nháy về "Thu âm" trong lúc chờ trạng thái micro
+    // Dừng phát mẫu ngay (không để giọng máy phát chồng lên lượt thu)
+    const silenced = Promise.resolve(onBeforeRecord()).catch(() => {});
+    const id = ++attemptId.current;
+    setTake(null);
+    samples.current = [];
+    stopping.current = false;
     const { granted } = await requestRecordingPermissionsAsync().catch(() => ({ granted: false }));
+    if (id !== attemptId.current) return; // bị huỷ trong lúc chờ (đổi bước / đổi câu / chạy nền)
     if (!granted) {
       busy.current = false;
+      setStart(false);
       setArmed(false);
       onFail?.();
       return micDenied();
     }
-    busy.current = true;
-    onBeforeRecord();
-    attemptId.current++;
-    setTake(null);
-    samples.current = [];
-    stopping.current = false;
     try {
+      await silenced;
+      await settling.current; // lượt trước còn đang dừng thu → chờ, kẻo nó tắt chế độ thu của lượt này
+      if (id !== attemptId.current) return;
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
+      if (id !== attemptId.current) {
+        setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+        return;
+      }
       recorder.record();
     } catch {
       setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+      setStart(false);
       fail();
     }
   };
@@ -130,6 +151,7 @@ export function useTake({
   const stop = async () => {
     if (stopping.current) return;
     stopping.current = true;
+    setStart(false);
     try {
       await recorder.stop();
     } catch {}
@@ -162,10 +184,11 @@ export function useTake({
     attemptId.current++;
     busy.current = false;
     setArmed(false);
+    setStart(false);
     try {
       if (!recorder.isRecording) return;
       stopping.current = true;
-      recorder
+      settling.current = recorder
         .stop()
         .then(() => setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }))
         .catch(() => {});
@@ -191,17 +214,24 @@ export function useTake({
     if (rec.isRecording && rec.metering !== undefined) onLevel(rec.durationMillis, rec.metering);
   }, [rec.isRecording, rec.durationMillis, rec.metering]);
 
-  // Câu mẫu vừa phát xong → bắt đầu thu
-  const onPlayingChange = useEffectEvent((now: boolean) => {
-    if (!armed) return;
-    if (now) wasPlaying.current = true;
-    else if (wasPlaying.current) {
-      wasPlaying.current = false;
-      setArmed(false);
-      record();
-    }
+  // Câu mẫu vừa phát xong → nghỉ một chút (loa tắt hẳn) rồi bắt đầu thu
+  const startAfterModel = useEffectEvent((id: number) => {
+    if (id !== attemptId.current) return; // đã huỷ trong lúc chờ
+    setArmed(false);
+    record();
   });
-  useEffect(() => onPlayingChange(playing), [playing, armed]);
+  useEffect(() => {
+    if (!armed) return;
+    if (playing) {
+      wasPlaying.current = true;
+      return;
+    }
+    if (!wasPlaying.current) return;
+    wasPlaying.current = false;
+    const id = attemptId.current;
+    const t = setTimeout(() => startAfterModel(id), AFTER_MODEL_MS);
+    return () => clearTimeout(t);
+  }, [playing, armed]);
 
   // Đổi câu / rời màn giữa lúc thu → dừng thu
   useEffect(() => () => cancel(), [text, recorder]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -227,9 +257,11 @@ export function useTake({
     return () => clearTimeout(id);
   }, [autoLoop, take, playing]);
 
-  const state: "idle" | "waiting" | "recording" | "checking" = rec.isRecording
+  const state: "idle" | "waiting" | "starting" | "recording" | "checking" = rec.isRecording
     ? "recording"
-    : armed
+    : starting
+      ? "starting"
+      : armed
       ? "waiting"
       : take?.status === "checking"
         ? "checking"
