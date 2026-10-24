@@ -8,7 +8,7 @@ const level = (v: unknown, max: number) => (typeof v === "number" && Number.isIn
 /**
  * Chấm 1 lần ôn (lặp lại ngắt quãng) → { stage, dueAt, mastery }. Mỗi lần ôn được ghi thành 1 sự kiện (review_events).
  * Body: { grade: "again" | "hard" | "good" | "easy" } (hoặc { correct: boolean } như app cũ → good / again)
- * + tuỳ chọn { mode: "duolingo" | "crazy", exercise, recall: 0–3, speaking: 0–2, autoClear: 0–1 }.
+ * + tuỳ chọn { mode: "duolingo" | "crazy", exercise (dạng bài; crazy: recall · recall-self · cued · shadow), recall: 0–3, speaking: 0–2, autoClear: 0–1 }.
  */
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[id]/review">) {
   const user = await apiUser();

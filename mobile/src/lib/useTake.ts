@@ -6,16 +6,18 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { checkDictation, type CheckedWord } from "@shared/dictation";
+import { speechCheck, type CheckedWord } from "@shared/dictation";
 import { api, fileForm } from "./api";
 import { useAuth } from "./auth";
 import { micDenied, notice } from "./dialogs";
 import { useI18n } from "./i18n";
 
 /** Ngưỡng. Âm lượng micro tính bằng dBFS: im lặng ≈ -160, nói thường ≈ -30, nói to ≈ -10 */
-export const VOICE_DB = -45; // trên mức này coi là đang có tiếng nói
+export const VOICE_DB = -45; // phòng yên tĩnh: trên mức này coi là đang có tiếng nói
+const NOISE_MARGIN_DB = 15; // phòng ồn: tiếng nói phải to hơn nền ồn chừng này
+const VOICE_DB_MAX = -20; // ngưỡng không vượt quá mức này (ồn mấy cũng vẫn nhận ra người nói to)
 const FAST = 0.9; // nói không chậm hơn câu mẫu quá 10%
-const CLEAR = 0.8; // máy nhận ra ≥ 80% số từ
+export const CLEAR = 0.8; // máy nhận ra ≥ 80% số từ
 const SILENCE_MS = 1300; // đã nói rồi im lặng chừng này → tự dừng thu (rảnh tay để vung tay theo ngữ điệu)
 const AFTER_MODEL_MS = 350; // câu mẫu dứt → chờ đuôi tiếng loa tắt hẳn rồi mới mở micro (không thu lẫn giọng máy)
 
@@ -24,6 +26,7 @@ export type Take = {
   speed: number; // thời lượng câu mẫu / thời lượng mình nói (1 = nhịp bằng câu mẫu)
   status: "checking" | "done" | "login" | "error" | "unscored" | "silent";
   words?: CheckedWord[]; // từng từ của câu gốc: máy có nhận ra trong bản thu không
+  extra?: number; // số từ máy nghe được mà câu gốc không có (nói thừa / lan man)
 };
 
 export const heardCount = (a: Take) => a.words?.filter((w) => w.state === "correct" || w.state === "close").length ?? 0;
@@ -32,6 +35,16 @@ export const paceOk = (a: Take) => a.speed >= FAST;
 export const clearOk = (a: Take) => a.status === "done" && clearRatio(a) >= CLEAR;
 /** Đạt: máy nhận ra đủ từ + nhịp không chậm hơn mẫu (không nhận dạng được → chỉ xét nhịp) */
 export const takePassed = (a: Take) => paceOk(a) && (a.status === "done" ? clearOk(a) : a.status !== "checking" && a.status !== "silent");
+
+/**
+ * Ngưỡng tiếng nói theo nền ồn của chính lượt thu: nền = mức thấp ở phân vị 10% (lúc chưa nói / ngừng giữa câu).
+ * Phòng yên tĩnh → VOICE_DB; phòng ồn → nâng lên để tiếng ồn không bị tính là đang nói.
+ */
+export function voiceThreshold(levels: number[], base: number, margin: number, max: number) {
+  if (levels.length < 5) return base;
+  const floor = [...levels].sort((a, b) => a - b)[Math.floor(levels.length * 0.1)];
+  return Math.min(max, Math.max(base, floor + margin));
+}
 
 /**
  * Thu âm + chấm 1 lượt nói (không có giao diện — màn luyện tự vẽ nút theo `state`).
@@ -60,7 +73,7 @@ export function useTake({
   playing: boolean; // câu mẫu đang phát
   onListen: () => void;
   onBeforeRecord: () => unknown; // dừng phát mẫu trước khi thu (trả promise → chờ dừng xong)
-  onAttempt: (passed: boolean, clear?: number) => void; // clear: tỉ lệ từ máy nhận ra 0–1 (undefined = không nhận dạng)
+  onAttempt: (passed: boolean, clear?: number, take?: Take) => void; // clear: tỉ lệ từ máy nhận ra 0–1 (undefined = không nhận dạng)
   onCaptured?: () => void; // vừa thu xong 1 lượt có tiếng nói (trước khi nhận dạng) — vd. phát tiếng "ting"
   onSilent?: () => void; // lượt không nghe thấy tiếng (không tính lượt)
   onFail?: () => void; // không thu được (quyền micro / lỗi thiết bị)
@@ -145,7 +158,7 @@ export function useTake({
     if (id !== attemptId.current) return;
     busy.current = false;
     setTake(a);
-    onAttempt(takePassed(a), a.status === "done" ? clearRatio(a) : undefined);
+    onAttempt(takePassed(a), a.status === "done" ? clearRatio(a) : undefined, a);
   };
 
   const stop = async () => {
@@ -158,7 +171,7 @@ export function useTake({
     await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {}); // trả âm thanh về loa ngoài
     const id = attemptId.current;
     const file = recorder.uri;
-    const voiced = samples.current.filter((s) => s.db > VOICE_DB);
+    const voiced = samples.current.filter((s) => s.db > threshold());
     if (!file || voiced.length < 3) {
       busy.current = false;
       onSilent?.();
@@ -173,7 +186,8 @@ export function useTake({
     setTake({ speed, status: "checking" });
     try {
       const { text: heard } = await api<{ text: string }>("/speak", { method: "POST", body: fileForm(file) });
-      report(id, { speed, status: "done", words: checkDictation(text, heard).words });
+      const r = speechCheck(text, heard);
+      report(id, { speed, status: "done", words: r.words, extra: r.extra.length });
     } catch {
       report(id, { speed, status: "error" });
     }
@@ -202,11 +216,14 @@ export function useTake({
     setUri(null);
   };
 
+  const threshold = () => voiceThreshold(samples.current.map((x) => x.db), VOICE_DB, NOISE_MARGIN_DB, VOICE_DB_MAX);
+
   // Ghi âm lượng từng nhịp; nói xong (im lặng một lúc) hoặc quá dài → tự dừng
   const onLevel = useEffectEvent((ms: number, db: number) => {
     const s = samples.current;
     s.push({ t: ms, db });
-    const lastVoice = s.findLast((x) => x.db > VOICE_DB);
+    const voice = threshold();
+    const lastVoice = s.findLast((x) => x.db > voice);
     const maxMs = Math.min(20000, Math.max(5000, duration * 3000));
     if ((lastVoice && ms - lastVoice.t > SILENCE_MS) || ms > maxMs) stop();
   });

@@ -1,13 +1,15 @@
 import { setAudioModeAsync } from "expo-audio";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { checkDictation, splitWords, type CheckedWord } from "@shared/dictation";
+import { speechCheck, type CheckedWord } from "@shared/dictation";
 import { micDenied, notice } from "./dialogs";
 import { useI18n } from "./i18n";
-import { takePassed, type Take } from "./useTake";
+import { takePassed, voiceThreshold, type Take } from "./useTake";
 
 const LANG = "de-DE";
-const VOICE_LEVEL = 1; // volumechange: -2…10, dưới 0 là không nghe thấy; trên mức này coi là đang có tiếng nói
+const VOICE_LEVEL = 1; // volumechange: -2…10, dưới 0 là không nghe thấy; phòng yên tĩnh: trên mức này coi là đang có tiếng nói
+const NOISE_MARGIN = 3; // phòng ồn: tiếng nói phải cao hơn nền ồn chừng này
+const VOICE_LEVEL_MAX = 6;
 const END_GRACE_MS = 250; // máy đã nghe tới từ cuối câu → chờ chút cho hết đuôi tiếng rồi dừng
 const SILENCE_MS = 1300; // dự phòng (máy không nghe ra từ cuối): đã nói rồi im lặng chừng này → tự dừng
 const AFTER_MODEL_MS = 350; // câu mẫu dứt → chờ đuôi tiếng loa tắt hẳn rồi mới mở micro (không thu lẫn giọng máy)
@@ -49,7 +51,7 @@ export function useLiveTake({
   playing: boolean; // câu mẫu đang phát
   onListen: () => void;
   onBeforeRecord: () => unknown; // dừng phát mẫu trước khi thu (trả promise → chờ dừng xong)
-  onAttempt: (passed: boolean, clear?: number) => void;
+  onAttempt: (passed: boolean, clear?: number, take?: Take) => void;
   onCaptured?: () => void;
   onSilent?: () => void;
   onFail?: () => void;
@@ -63,7 +65,7 @@ export function useLiveTake({
   const wasPlaying = useRef(false);
   const stopping = useRef(false);
   const transcript = useRef("");
-  const voiced = useRef<number[]>([]); // thời điểm (ms từ lúc bắt đầu) các nhịp có tiếng nói
+  const levels = useRef<{ ms: number; v: number }[]>([]); // âm lượng từng nhịp (ms từ lúc bắt đầu)
   const startedAt = useRef(0);
   const lastHeard = useRef(0); // lần cuối máy nghe thêm được chữ (ms từ lúc bắt đầu)
   const recUri = useRef<string | null>(null);
@@ -93,6 +95,12 @@ export function useLiveTake({
     setUri(null);
   }
 
+  /** Các nhịp có tiếng nói — ngưỡng theo nền ồn của lượt này */
+  const voicedAt = () => {
+    const voice = voiceThreshold(levels.current.map((x) => x.v), VOICE_LEVEL, NOISE_MARGIN, VOICE_LEVEL_MAX);
+    return levels.current.filter((x) => x.v > voice).map((x) => x.ms);
+  };
+
   const clearEndTimer = () => {
     if (endTimer.current) clearTimeout(endTimer.current);
     endTimer.current = null;
@@ -119,7 +127,7 @@ export function useLiveTake({
     const local = await canOnDevice();
     if (id !== attemptId.current) return;
     transcript.current = "";
-    voiced.current = [];
+    levels.current = [];
     lastHeard.current = 0;
     recUri.current = null;
     failed.current = false;
@@ -133,7 +141,6 @@ export function useLiveTake({
         continuous: true, // tự dừng theo luật của mình (hết câu / im lặng), không theo máy
         requiresOnDeviceRecognition: local,
         addsPunctuation: false,
-        contextualStrings: [text, ...splitWords(text)],
         iosTaskHint: "dictation",
         recordingOptions: { persist: true },
         volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
@@ -200,9 +207,9 @@ export function useLiveTake({
     const ms = Date.now() - startedAt.current;
     setLevel(toDb(value));
     setElapsed(ms);
-    if (value > VOICE_LEVEL) voiced.current.push(ms);
+    levels.current.push({ ms, v: value });
     // Dự phòng: đã nói (có tiếng hoặc đã nghe ra chữ) rồi im lặng một lúc, hoặc nói quá dài → dừng
-    const lastVoice = Math.max(voiced.current.at(-1) ?? 0, lastHeard.current);
+    const lastVoice = Math.max(voicedAt().at(-1) ?? 0, lastHeard.current);
     const maxMs = Math.min(20000, Math.max(5000, duration * 3000));
     if ((lastVoice && ms - lastVoice > SILENCE_MS) || ms > maxMs) stop();
   });
@@ -213,7 +220,7 @@ export function useLiveTake({
     if (heard === transcript.current) return;
     transcript.current = heard;
     lastHeard.current = Date.now() - startedAt.current;
-    const words = checkDictation(text, heard).words;
+    const words = speechCheck(text, heard).words;
     setLive(words);
     // Đã nghe tới từ cuối câu (ghép theo thứ tự → người học đã nói hết câu) → dừng ngay, khỏi chờ im lặng
     if (words.length && isHeard(words[words.length - 1]) && !endTimer.current) {
@@ -251,7 +258,7 @@ export function useLiveTake({
       .then(() => {
         if (id !== attemptId.current || failed.current) return;
         const heard = transcript.current;
-        const v = voiced.current;
+        const v = voicedAt();
         if (!heard.trim() && v.length < 3) {
           busy.current = false;
           onSilent?.();
@@ -263,11 +270,11 @@ export function useLiveTake({
         const from = v[0] ?? 0;
         const to = Math.max(v.at(-1) ?? 0, lastHeard.current);
         const speed = duration / Math.max((to - from) / 1000 + 0.1, 0.3);
-        const words = checkDictation(text, heard).words;
-        const a: Take = { speed, status: "done", words };
+        const r = speechCheck(text, heard);
+        const a: Take = { speed, status: "done", words: r.words, extra: r.extra.length };
         busy.current = false;
         setTake(a);
-        onAttempt(takePassed(a), words.length ? words.filter(isHeard).length / words.length : undefined);
+        onAttempt(takePassed(a), r.words.length ? r.words.filter(isHeard).length / r.words.length : undefined, a);
       });
   });
 

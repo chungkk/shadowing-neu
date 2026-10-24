@@ -34,20 +34,28 @@ export function gradeOf(recall: RecallLevel, speaking: SpeakLevel): Grade {
 }
 
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
+/** Mục mới mà lần đầu chưa nhớ / còn khó → ôn lại sau vài giờ (trong ngày), không đợi tới mai */
+export const RELEARN_HOURS = 8;
 
 /**
  * Lịch ôn sau 1 lần chấm:
  * - again: tụt về nửa mức cũ, ôn lại ngày mai (tính 1 lần quên).
  * - hard: giữ mức, hẹn gần hơn (nửa khoảng cách, ít nhất 1 ngày).
  * - good: lên 1 mức. easy: lên 1 mức, khoảng cách ×1,5 (vẫn kiểm tra lại, không nhảy cóc).
- * Ôn sớm khi chưa tới hạn mà không quên → giữ nguyên lịch.
+ * Mục mới (mức 0): again / hard → mức 1, ôn lại sau RELEARN_HOURS giờ; chưa học thì không tính là quên.
+ * Ôn sớm khi chưa tới hạn: không quên → giữ nguyên lịch; quên → giữ mức, kéo hạn ôn về sớm nhất là ngày mai
+ * (không phạt tụt mức vì ôn thêm — lần ôn đúng hạn mới quyết định lên / xuống).
  */
 export function nextSchedule(
   cur: { stage: number; dueAt: number | null },
   grade: Grade,
   now: number,
 ): { stage: number; dueAt: number; lapse: boolean } {
-  if (grade !== "again" && cur.dueAt != null && cur.dueAt > now) return { stage: cur.stage, dueAt: cur.dueAt, lapse: false };
+  const day1 = now + DAY - 4 * HOUR;
+  if (cur.stage > 0 && cur.dueAt != null && cur.dueAt > now)
+    return { stage: cur.stage, dueAt: grade === "again" ? Math.min(cur.dueAt, day1) : cur.dueAt, lapse: false };
+  if (cur.stage === 0 && (grade === "again" || grade === "hard")) return { stage: 1, dueAt: now + RELEARN_HOURS * HOUR, lapse: false };
   const stage =
     grade === "again"
       ? Math.max(1, Math.floor(cur.stage / 2))
@@ -56,7 +64,7 @@ export function nextSchedule(
         : Math.min(cur.stage + 1, SRS_MAX_STAGE);
   const days = SRS_INTERVALS[stage] * (grade === "hard" ? 0.5 : grade === "easy" ? 1.5 : 1);
   // Trừ vài giờ để hôm sau ôn sớm hơn giờ hôm nay một chút vẫn tính là tới hạn
-  return { stage, dueAt: now + Math.max(1, days) * DAY - 4 * 3_600_000, lapse: grade === "again" };
+  return { stage, dueAt: now + Math.max(1, days) * DAY - 4 * HOUR, lapse: grade === "again" };
 }
 
 /**

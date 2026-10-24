@@ -501,13 +501,14 @@ const toVocab = (r: VocabRow, proven = false): VocabItem => ({
 
 /**
  * Các mục đã "chứng minh" nhớ lâu: từng nhớ lại đúng sau khoảng cách ≥ MASTERY_GAP_DAYS ngày,
- * ở dạng bài không tự khai báo (thẻ lật "Tôi biết" không tính)
+ * ở dạng bài không tự khai báo (thẻ lật "Tôi biết", tự chấm "recall-self" không tính) và phải tự nhớ ra
+ * (Luyện to "shadow" nghe mẫu rồi nói theo, nhớ lại có gợi ý "cued" không tính)
  */
 function provenIds(userId: number): Set<number> {
   const rows = conn()
     .prepare(
       `SELECT DISTINCT vocab_id FROM review_events
-       WHERE user_id = ? AND grade IN ('good', 'easy') AND exercise != 'flash' AND gap_days >= ?`,
+       WHERE user_id = ? AND grade IN ('good', 'easy') AND exercise NOT IN ('flash', 'shadow', 'recall-self', 'cued') AND gap_days >= ?`,
     )
     .all(userId, MASTERY_GAP_DAYS) as { vocab_id: number }[];
   return new Set(rows.map((r) => r.vocab_id));
@@ -752,10 +753,12 @@ const rate = (rows: { grade: string }[]): Rate => ({ n: rows.length, ok: rows.fi
 export function getStats(userId: number, tzOffset: number, now = Date.now()): Stats {
   const dayOf = (ms: number) => new Date(ms - tzOffset * 60_000).toISOString().slice(0, 10);
   const events = conn()
-    .prepare("SELECT at, grade, mode, gap_days FROM review_events WHERE user_id = ? AND at >= ?")
-    .all(userId, now - 90 * DAY) as { at: number; grade: Grade; mode: string; gap_days: number | null }[];
+    .prepare("SELECT at, grade, mode, exercise, gap_days FROM review_events WHERE user_id = ? AND at >= ?")
+    .all(userId, now - 90 * DAY) as { at: number; grade: Grade; mode: string; exercise: string; gap_days: number | null }[];
 
-  const last30 = events.filter((e) => e.at >= now - 30 * DAY);
+  // Tỉ lệ nhớ lại không tính lượt Luyện to (nghe mẫu rồi nói theo, không phải tự nhớ ra)
+  const recalls = events.filter((e) => e.exercise !== "shadow");
+  const last30 = recalls.filter((e) => e.at >= now - 30 * DAY);
   const counts = new Map<string, number>();
   for (const e of events) counts.set(dayOf(e.at), (counts.get(dayOf(e.at)) ?? 0) + 1);
   const days = Array.from({ length: 14 }, (_, i) => {
@@ -777,8 +780,8 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
     dueToday: vocab.filter((v) => isDue(v, now)).length,
     streak,
     recall30: { ...rate(last30), duolingo: rate(last30.filter((e) => e.mode === "duolingo")), crazy: rate(last30.filter((e) => e.mode === "crazy")) },
-    retention7: rate(events.filter((e) => (e.gap_days ?? 0) >= 7)),
-    retention30: rate(events.filter((e) => (e.gap_days ?? 0) >= 30)),
+    retention7: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 7)),
+    retention30: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 30)),
     days,
     mastery,
     speaking: { reps: sp.reps, sentences: sp.n, totalSentences: vocab.filter(isSentence).length },

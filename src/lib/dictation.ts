@@ -127,3 +127,46 @@ export function hintFor(word: string, level: DictationLevel): string {
   if (level === "normal") return "*".repeat(core.length);
   return core[0] + "_".repeat(Math.max(core.length - 1, 0));
 }
+
+// ---- So câu nói (nhận dạng giọng nói) với câu gốc ----
+
+const ONES = ["null", "eins", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf", "dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn"];
+const TENS = ["", "", "zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig"];
+
+/** Số nguyên → chữ tiếng Đức viết liền: 21 → "einundzwanzig", 2024 → "zweitausendvierundzwanzig" (0 … 999 999) */
+export function germanNumber(n: number): string {
+  const below100 = (x: number) => (x < 20 ? ONES[x] : (x % 10 ? (x % 10 === 1 ? "ein" : ONES[x % 10]) + "und" : "") + TENS[Math.floor(x / 10)]);
+  // Trong số ghép "eins" → "ein" (einhundert, einundzwanzig); nói thường bỏ "ein" đầu: "hundert", "tausend"
+  const below1000 = (x: number) => (x >= 100 ? (x >= 200 ? ONES[Math.floor(x / 100)] : "") + "hundert" : "") + (x % 100 ? below100(x % 100) : "");
+  if (n < 1000) return n < 100 ? below100(n) : below1000(n);
+  const th = Math.floor(n / 1000);
+  return (th === 1 ? "" : th < 100 ? below100(th).replace(/eins$/, "ein") : below1000(th).replace(/eins$/, "ein")) + "tausend" + (n % 1000 ? below1000(n % 1000) : "");
+}
+
+/** Chữ viết tắt hay gặp → dạng đọc ra (máy nhận dạng có lúc viết tắt, có lúc viết đủ) */
+const SPOKEN: [RegExp, string][] = [
+  [/\bz\.\s?B\./gi, "zum Beispiel"],
+  [/\bd\.\s?h\./gi, "das heißt"],
+  [/\bu\.\s?a\./gi, "unter anderem"],
+  [/\busw\./gi, "und so weiter"],
+  [/\bbzw\./gi, "beziehungsweise"],
+  [/\bca\./gi, "circa"],
+  [/\bNr\./g, "Nummer"],
+  [/\s?%/g, " Prozent"],
+  [/\s?€/g, " Euro"],
+  [/(\p{L})['’]s\b/gu, "$1 es"], // gibt's → gibt es
+];
+
+/** Câu → dạng đọc ra: viết tắt → viết đủ, số → chữ ("3 Uhr" ~ "drei Uhr") */
+export function spokenText(s: string): string {
+  let out = s;
+  for (const [re, to] of SPOKEN) out = out.replace(re, to);
+  // Số nguyên đứng riêng (bỏ dấu chấm / phẩy ngăn hàng nghìn: 1.000 / 1,000); số thập phân, giờ giữ nguyên
+  return out.replace(/(?<![\d.,:])\d{1,3}(?:[.,]\d{3})+(?![\d,:])|(?<![\d.,:])\d+(?![\d,:]|\.\d)/g, (m) => {
+    const n = Number(m.replace(/[.,]/g, ""));
+    return n <= 999_999 ? germanNumber(n) : m;
+  });
+}
+
+/** Như checkDictation nhưng cho câu nói: cả câu gốc lẫn câu máy nghe được đều đổi về dạng đọc ra trước khi so */
+export const speechCheck = (reference: string, heard: string): CheckResult => checkDictation(spokenText(reference), spokenText(heard));

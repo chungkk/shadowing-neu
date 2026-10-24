@@ -2,7 +2,7 @@ import { useAudioPlayer } from "expo-audio";
 import { Stack, router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -25,21 +25,20 @@ import { isDue } from "@shared/srs";
 import { CrazyReview } from "@/components/CrazyReview";
 import { WordSheet } from "@/components/WordSheet";
 import { Button, Cta, ErrorText, Segmented, styles } from "@/components/ui";
-import { api, type VocabItem } from "@/lib/api";
+import { api, type Stats, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n, type TFn } from "@/lib/i18n";
-import { showError } from "@/lib/dialogs";
 import { masteryMeta, masteryOfItem } from "@/lib/mastery";
 import type { Mastery } from "@shared/srs";
 import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
+import { useLookup } from "@/lib/useLookup";
 import { C } from "@/lib/theme";
 
 /** Mục sổ từ kèm lịch ôn (server cũ không gửi → từ mới) */
 type Word = VocabItem & { stage: number; dueAt: number | null };
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 const say = (text: string, slow?: boolean) => speakGerman(text, { slow }).catch(() => {});
 
@@ -197,9 +196,7 @@ const Big = ({ children, color = C.text, size = 32 }: { children: ReactNode; col
 
 type Feedback = { ok: boolean; note?: string; combo: number };
 type Graded = { item: Word; correct: boolean; stage?: number; mastery?: Mastery };
-type Streak = { day: string; count: number };
 
-const STREAK_KEY = "vocab-streak";
 const SOUND_KEY = "review-sound";
 const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
 const BLOCKS = ["5", "10", "20"] as const;
@@ -241,7 +238,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const okSound = useAudioPlayer(require("@/assets/sounds/correct.wav"));
   const badSound = useAudioPlayer(require("@/assets/sounds/wrong.wav"));
   const [sound, setSound] = useState(true);
-  const [streak, setStreak] = useState<Streak | null>(null);
+  const [streak, setStreak] = useState(0); // chuỗi ngày ôn (server, cùng số với màn Thống kê) — lấy khi xong buổi
+  const pending = useRef<Promise<unknown>[]>([]); // các lần chấm đang gửi → đợi xong rồi mới hỏi chuỗi ngày
   const [queue, setQueue] = useState(() => {
     const q = buildQueue(items);
     return q.length ? [resolveStep(q[0], pool, true), ...q.slice(1)] : q;
@@ -268,35 +266,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
 
   // Tra từ: chạm từ chính / từ trong câu (sau khi trả lời, ở thẻ làm quen, hoặc thẻ đã lật) → bảng giải thích
-  const [lookup, setLookup] = useState<{ word: string; context: string } | null>(null);
-  const [savedIds, setSavedIds] = useState(() => new Map(pool.map((p) => [p.word.toLowerCase(), p.id])));
-  const lookUp = (word: string, context: string) => {
-    stopSpeaking();
-    setLookup({ word, context });
-  };
-  const saveLooked = async (word: string, context: string, meaning: string) => {
-    try {
-      const r = await api<{ vocab: VocabItem[] }>("/vocab", {
-        method: "POST",
-        body: { word, context, sourceUrl: v?.sourceUrl ?? null, sourceTitle: v?.sourceTitle ?? "" },
-      });
-      const item = r.vocab.find((x) => x.word.toLowerCase() === word.toLowerCase());
-      if (item) setSavedIds((m) => new Map(m).set(word.toLowerCase(), item.id));
-      if (item && !item.meaning && meaning) await api(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
-    } catch (e) {
-      showError(e, t("player.saveFailed"));
-    }
-  };
-  const unsaveLooked = async (word: string) => {
-    const id = savedIds.get(word.toLowerCase());
-    if (id === undefined) return;
-    setSavedIds((m) => {
-      const n = new Map(m);
-      n.delete(word.toLowerCase());
-      return n;
-    });
-    await api(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
-  };
+  const look = useLookup(pool);
+  const lookUp = (word: string, context: string) => look.open(word, context, undefined, v);
 
   const step = queue[pos] as Step | undefined;
   const done = !step;
@@ -315,9 +286,6 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     SecureStore.getItemAsync(SOUND_KEY)
       .then((s) => s === "0" && setSound(false))
       .catch(() => {});
-    SecureStore.getItemAsync(STREAK_KEY)
-      .then((s) => setStreak(s ? JSON.parse(s) : { day: "", count: 0 }))
-      .catch(() => setStreak({ day: "", count: 0 }));
     return () => void stopSpeaking();
   }, []);
 
@@ -355,12 +323,13 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       if (!practice) {
         setChanged(true);
         // Ghi kèm dạng bài: thẻ lật "Tôi biết" là tự khai báo → không tính làm bằng chứng thành thạo
-        api<{ stage: number; dueAt: number; mastery?: Mastery }>(`/vocab/${v.id}/review`, {
+        const req = api<{ stage: number; dueAt: number; mastery?: Mastery }>(`/vocab/${v.id}/review`, {
           method: "POST",
           body: { correct: ok, mode: "duolingo", exercise: s.kind },
         })
           .then((res) => setGraded((g) => g.map((x) => (x === entry ? { ...x, stage: res.stage, mastery: res.mastery } : x))))
           .catch(() => {});
+        pending.current.push(req);
       }
     }
     if (kind === "match") return;
@@ -410,17 +379,12 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     else {
       // eslint-disable-next-line react-hooks/purity -- chỉ chạy khi bấm nút, không phải lúc render
       setFinishedAt(Date.now());
-      // Chuỗi ngày ôn liên tiếp (lưu trên máy)
-      if (!practice && graded.length && streak) {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        if (streak.day !== ymd(today)) {
-          const s = { day: ymd(today), count: streak.day === ymd(yesterday) ? streak.count + 1 : 1 };
-          setStreak(s);
-          SecureStore.setItemAsync(STREAK_KEY, JSON.stringify(s)).catch(() => {});
-        }
-      }
+      // Chuỗi ngày ôn liên tiếp: server tính từ lịch sử ôn (gồm cả luyện nói) → đợi các lần chấm gửi xong
+      if (!practice && graded.length)
+        Promise.allSettled(pending.current)
+          .then(() => api<Stats>(`/stats?tz=${new Date().getTimezoneOffset()}`))
+          .then((st) => setStreak(st.streak))
+          .catch(() => {});
     }
     setPos(n);
     reset();
@@ -768,7 +732,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           {kind !== "match" && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Text style={{ flex: 1, color: tone.fg, fontSize: 17, fontWeight: "800" }}>
-                <Text onPress={() => setLookup({ word: v.word, context: v.context || v.word })}>{v.word}</Text>
+                <Text onPress={() => lookUp(v.word, v.context || v.word)}>{v.word}</Text>
                 {!!v.meaning && <Text style={{ fontWeight: "400" }}> — {v.meaning}</Text>}
               </Text>
               <SpeakButton text={v.word} />
@@ -819,7 +783,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       <KeyboardAvoidingView style={{ flex: 1, width: "100%", maxWidth: FORM_MAX, alignSelf: "center" }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         {/* Thanh trên: thoát · tiến độ · chuỗi đúng · âm thanh */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
-          <Pressable onPress={() => onClose(changed)} hitSlop={12}>
+          <Pressable onPress={() => onClose(changed || look.changed)} hitSlop={12}>
             <SymbolView name="xmark" size={22} weight="bold" tintColor={C.muted} />
           </Pressable>
           <View style={{ flex: 1, height: 16, borderRadius: 8, backgroundColor: C.card2, overflow: "hidden" }}>
@@ -836,18 +800,12 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           </Pressable>
         </View>
 
-        {!items.length ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}>
-            <Text style={{ fontSize: 52 }}>🎉</Text>
-            <Text style={{ color: C.text, fontSize: 20, fontWeight: "800", textAlign: "center" }}>{t("review.noWords")}</Text>
-            <Button title={t("review.done")} variant="primary" onPress={() => onClose(false)} style={{ alignSelf: "stretch" }} />
-          </View>
-        ) : done ? (
+        {done ? (
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", gap: 18, padding: 24 }}>
             <Text style={{ fontSize: 64 }}>{wrong.length ? "💪" : "🏆"}</Text>
             <View style={{ alignItems: "center", gap: 4 }}>
               <Text style={{ color: C.amber, fontSize: 28, fontWeight: "800", textAlign: "center" }}>{practice ? t("review.practiceDone") : t("review.finished")}</Text>
-              {!practice && !!streak?.count && <Text style={{ color: C.amber, fontWeight: "800" }}>🔥 {t("review.streak", { n: streak.count })}</Text>}
+              {!practice && streak > 0 && <Text style={{ color: C.amber, fontWeight: "800" }}>🔥 {t("review.streak", { n: streak })}</Text>}
             </View>
             <View style={{ flexDirection: "row", gap: 10, alignSelf: "stretch" }}>
               {stats.map((s) => (
@@ -883,7 +841,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               </View>
             )}
             <View style={{ alignSelf: "stretch", gap: 10 }}>
-              <Button title={t("review.continue")} variant="primary" onPress={() => onClose(changed)} />
+              <Button title={t("review.continue")} variant="primary" onPress={() => onClose(changed || look.changed)} />
               {wrong.length > 0 && <Button title={t("review.practiceWrong")} onPress={() => restart(shuffle(wrong.map((g) => ({ ...g.item, stage: g.stage ?? 1 }))))} />}
             </View>
           </ScrollView>
@@ -905,22 +863,16 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       </KeyboardAvoidingView>
 
       {/* Bảng giải thích từ (giống màn học video): nghĩa theo câu · ví dụ · các nghĩa thường gặp · lưu / bỏ lưu */}
-      <WordSheet
-        word={lookup?.word ?? null}
-        context={lookup?.context ?? ""}
-        saved={!!lookup && savedIds.has(lookup.word.toLowerCase())}
-        onSave={(meaning) => (lookup ? saveLooked(lookup.word, lookup.context, meaning) : Promise.resolve())}
-        onRemove={() => (lookup ? unsaveLooked(lookup.word) : Promise.resolve())}
-        onClose={() => setLookup(null)}
-      />
+      <WordSheet {...look.sheet} />
     </SafeAreaView>
     </LookupCtx>
   );
 }
 
 /**
- * Ôn tập — 2 nhiệm vụ hôm nay, mỗi thẻ đúng 1 nút:
- * - Từ vựng → bài tập kiểu Duolingo; bấm nút → chọn Tất cả (mục đến hạn + mục mới, không có gì → ôn tất cả) hoặc từ lưu theo từng ngày.
+ * Ôn tập — 2 nhiệm vụ hôm nay, mỗi thẻ đúng 1 nút chính:
+ * - Từ vựng → bài tập kiểu Duolingo; nút chính → mục đến hạn + mục mới (không có gì → các mục sắp đến hạn nhất);
+ *   dòng phụ → chọn từ lưu theo từng ngày.
  * - Luyện nói Crazy: câu ⭐ (đánh dấu ở màn học / câu ví dụ trong bảng giải thích từ) → luyện nói Crazy Deutsch.
  * Xem theo ngày lưu ở tab Từ vựng (đã nhóm theo ngày), không lặp lại ở đây.
  */
@@ -961,17 +913,19 @@ export default function ReviewScreen() {
 
   const plan = useMemo(() => {
     const all = data?.items ?? [];
-    const due = all.filter((v) => isDue(v, data?.at ?? 0)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0));
+    const byDue = (a: Word, b: Word) => (a.dueAt ?? 0) - (b.dueAt ?? 0);
+    const due = all.filter((v) => isDue(v, data?.at ?? 0)).sort(byDue);
     const fresh = all.filter((v) => v.stage === 0);
-    // Mỗi buổi: tối đa 30 mục đến hạn (quá hạn lâu nhất trước) + 10 mục mới (mới lưu nhất trước)
-    const pick = (f: (v: Word) => boolean) => [...due.filter(f).slice(0, 30), ...fresh.filter(f).slice(0, 10)];
-    const part = (f: (v: Word) => boolean) => {
-      const list = pick(f);
+    // Mỗi buổi: tối đa `maxDue` mục đến hạn (quá hạn lâu nhất trước) + `maxFresh` mục mới (mới lưu nhất trước)
+    const part = (f: (v: Word) => boolean, maxDue: number, maxFresh: number) => {
+      const list = [...due.filter(f).slice(0, maxDue), ...fresh.filter(f).slice(0, maxFresh)];
       const total = all.filter(f);
-      // Không có gì đến hạn / mới → ôn lại tất cả
-      return { due: due.filter(f).length, fresh: fresh.filter(f).length, total: total.length, list: list.length ? list : total };
+      // Không có gì đến hạn / mới → ôn trước các mục sắp đến hạn nhất (cùng giới hạn; ôn sớm không bị tụt mức)
+      const early = [...total].sort(byDue).slice(0, maxDue + maxFresh);
+      return { due: due.filter(f).length, fresh: fresh.filter(f).length, total: total.length, list: list.length ? list : early };
     };
-    return { words: part((v) => !isSentence(v)), sentences: part(isSentence) };
+    // Luyện nói: mỗi câu lặp `block` lượt → ít câu hơn để buổi luyện không quá dài
+    return { words: part((v) => !isSentence(v), 30, 10), sentences: part(isSentence, 8, 4) };
   }, [data]);
 
   // Từ vựng (không gồm câu ⭐) nhóm theo ngày lưu, mới nhất trước
@@ -1007,7 +961,7 @@ export default function ReviewScreen() {
       if (changed) load(); // cập nhật mức nhớ / lịch ôn
     };
     return picked.kind === "sentences" ? (
-      <CrazyReview items={plan.sentences.list} block={Number(block)} onClose={onClose} />
+      <CrazyReview items={plan.sentences.list} pool={items} block={Number(block)} onClose={onClose} />
     ) : (
       <Session items={picked.list} pool={items} onClose={onClose} />
     );
@@ -1043,27 +997,26 @@ export default function ReviewScreen() {
         {items && !items.length && <Text style={[styles.muted, { textAlign: "center", marginTop: 40 }]}>{t("vocab.empty")}</Text>}
         {!!items?.length && (
           <>
-            {/* Từ vựng: bấm nút → chọn ôn Tất cả (mục cần ôn, không có thì tất cả) hoặc từ lưu theo từng ngày */}
+            {/* Từ vựng: nút chính → ôn ngay các mục cần ôn; dòng phụ → chọn từ lưu theo từng ngày */}
             {w.total > 0 && (
               <TaskCard
                 icon="text.book.closed.fill"
                 title={t("review.wordsCard")}
-                info={w.due + w.fresh ? t("review.dueInfo", { due: w.due, fresh: w.fresh }) : t("review.wordsNone", { n: w.total })}
+                info={w.due + w.fresh ? t("review.dueInfo", { due: w.due, fresh: w.fresh }) : t("review.wordsNone", { n: w.list.length })}
               >
-                <Cta
-                  title={w.due + w.fresh ? t("review.startWords", { n: w.list.length }) : t("review.allWords", { n: w.total })}
-                  icon={wordsOpen ? "chevron.up" : "chevron.down"}
+                <Cta title={t("review.startWords", { n: w.list.length })} icon="play.fill" onPress={() => setPicked({ kind: "words", list: w.list })} />
+                <Pressable
                   onPress={() => setWordsOpen((o) => !o)}
-                />
+                  accessibilityRole="button"
+                  hitSlop={6}
+                  style={({ pressed }) => ({ minHeight: 36, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: pressed ? 0.5 : 1 })}
+                >
+                  <SymbolView name="calendar" size={14} tintColor={C.muted} />
+                  <Text style={{ color: C.muted, fontSize: 15, fontWeight: "600" }}>{t("review.byDay")}</Text>
+                  <SymbolView name={wordsOpen ? "chevron.up" : "chevron.down"} size={12} tintColor={C.muted} />
+                </Pressable>
                 {wordsOpen && (
                   <View style={{ gap: 8 }}>
-                    <ChoiceRow
-                      icon="square.stack.fill"
-                      title={t("review.allChoice")}
-                      info={w.due + w.fresh ? t("review.dueInfo", { due: w.due, fresh: w.fresh }) : t("review.dayCount", { n: w.total })}
-                      onPress={() => setPicked({ kind: "words", list: w.list })}
-                    />
-                    <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700", letterSpacing: 1, marginTop: 6 }}>{t("review.byDay")}</Text>
                     {days.map((d) => (
                       <ChoiceRow
                         key={d.key}
@@ -1083,7 +1036,7 @@ export default function ReviewScreen() {
               <TaskCard
                 icon="mic.fill"
                 title={t("review.sentencesCard")}
-                info={sn.due + sn.fresh ? t("review.dueInfo", { due: sn.due, fresh: sn.fresh }) : t("review.sentencesNone", { n: sn.total })}
+                info={sn.due + sn.fresh ? t("review.dueInfo", { due: sn.due, fresh: sn.fresh }) : t("review.sentencesNone", { n: sn.list.length })}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                   <Text style={{ color: C.muted, fontSize: 14 }}>{t("review.blockLabel")}</Text>
