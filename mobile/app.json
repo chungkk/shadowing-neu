@@ -63,7 +63,14 @@
       ],
       "expo-asset",
       "expo-image",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Ứng dụng cần micro để bạn ghi âm giọng nói khi luyện shadowing.",
+          "speechRecognitionPermission": "Ứng dụng nhận dạng giọng nói để tô sáng từng từ khi bạn nói theo câu mẫu."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

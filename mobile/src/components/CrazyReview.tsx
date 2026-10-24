@@ -13,7 +13,9 @@ import { useI18n } from "@/lib/i18n";
 import { FORM_MAX } from "@/lib/layout";
 import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
 import { C } from "@/lib/theme";
+import { useLiveTake } from "@/lib/useLiveTake";
 import { clearOk, heardCount, paceOk, useTake, type Take } from "@/lib/useTake";
+import { splitWords, type CheckedWord } from "@shared/dictation";
 
 type Item = VocabItem & { stage: number };
 /** 1 lượt trong hàng chờ; retry = ôn thêm có gợi ý cuối buổi (không chấm lại vào lịch ôn) */
@@ -53,10 +55,23 @@ const suggest = (clear?: number): Grade | null => (clear === undefined ? null : 
 /** Cỡ chữ câu tiếng Đức theo độ dài: ngắn 32 · vừa 28 · dài 24 (không nhỏ hơn) */
 const sentenceSize = (s: string) => (s.length <= 40 ? 32 : s.length <= 80 ? 28 : 24);
 
-/** Câu tiếng Đức — sau lượt đã nhận dạng: xanh = máy nhận ra, đỏ = chưa nhận ra */
-function Sentence({ text, take }: { text: string; take: Take | null }) {
+/**
+ * Câu tiếng Đức. Đang nói (`live`): kiểu karaoke — từ máy đã nghe ra sáng xanh, từ chưa tới mờ.
+ * Sau lượt đã nhận dạng: trắng = máy nhận ra, đỏ = chưa nhận ra.
+ */
+function Sentence({ text, take, live }: { text: string; take: Take | null; live?: CheckedWord[] | null }) {
   const size = sentenceSize(text);
   const style = { fontSize: size, lineHeight: Math.round(size * 1.3), fontWeight: "700" as const, color: C.text };
+  if (live)
+    return (
+      <Text style={style} maxFontSizeMultiplier={1.3}>
+        {(live.length ? live : splitWords(text).map((w): CheckedWord => ({ text: w, state: "missing" }))).map((w, k) => (
+          <Text key={k} style={{ color: w.state === "correct" || w.state === "close" ? C.accent : C.muted }}>
+            {w.text}{" "}
+          </Text>
+        ))}
+      </Text>
+    );
   if (take?.status !== "done" || !take.words) return <Text style={style} maxFontSizeMultiplier={1.3}>{text}</Text>;
   return (
     <Text style={style} maxFontSizeMultiplier={1.3}>
@@ -192,6 +207,7 @@ function TakeStatus({
   elapsed,
   pace,
   idle,
+  autoStop,
 }: {
   state: string;
   take: Take | null;
@@ -200,6 +216,7 @@ function TakeStatus({
   elapsed: number;
   pace: boolean;
   idle: string; // hướng dẫn khi chưa có gì
+  autoStop: string; // hướng dẫn khi đang thu: dừng thế nào
 }) {
   const { t } = useI18n();
   const muted = (text: string) => <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{text}</Text>;
@@ -220,7 +237,7 @@ function TakeStatus({
             <Elapsed ms={elapsed} />
           </View>
           <LiveWave level={level} tick={elapsed} />
-          {muted(t("take.autoStop"))}
+          {muted(autoStop)}
         </View>
       );
     if (talking || state === "waiting")
@@ -269,7 +286,7 @@ function TakeStatus({
  * 2. Tự đánh giá: hiện câu chuẩn để đối chiếu → Chưa nhớ · Còn khó · Nhớ được · Rất dễ (máy tô sẵn gợi ý) → lịch ôn.
  *    Chưa nhớ / Còn khó → cuối buổi ôn thêm 1 lượt có gợi ý chữ cái đầu.
  * 3. Nói theo: lặp rảnh tay `block` lượt — phát mẫu 1 lần ở lượt đầu, sau đó chỉ thu; bấm "Nghe câu mẫu" để nghe lại.
- *    Chỉ lượt đầu + lượt cuối khối gửi Whisper nhận dạng; lượt giữa chỉ đếm + đo nhịp.
+ *    Nhận dạng trực tiếp trên máy (useLiveTake): từ nói tới đâu sáng tới đó, nói hết câu là tự sang lượt tiếp.
  * Câu chưa có nghĩa thì chỉ có bước 3. Số lượt tích luỹ mỗi câu lưu trên server (source "/vocab/<id>"), hiện ở màn tổng kết.
  */
 export function CrazyReview({ items, block, onClose }: { items: Item[]; block: number; onClose: (changed: boolean) => void }) {
@@ -407,7 +424,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     }
   };
 
-  const take = useTake({
+  const takeOpts = {
     text: v?.word ?? "",
     duration: v ? (ttsSec[v.id] ?? estimate(v.word)) : 1,
     playing: talking,
@@ -418,21 +435,31 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
       ting.seekTo(0).catch(() => {});
       ting.play();
     },
+  };
+  // Nhớ lại: thu rồi Whisper nhận dạng (cần chính xác để gợi ý chấm điểm)
+  const recallTake = useTake(takeOpts);
+  // Nói theo: nhận dạng trực tiếp — tô từ kiểu karaoke, nói hết câu là dừng ngay
+  const drillTake = useLiveTake({
+    ...takeOpts,
     onSilent: () => {
       if (++silentRun.current >= SILENT_STOP) setLooping(false);
     },
     onFail: () => setLooping(false),
     autoLoop: phase === "drill" && looping,
     loopListen: done === 0, // chỉ phát mẫu ở lượt đầu; cần nghe lại thì bấm "Nghe câu mẫu"
-    score: phase !== "drill" || done === 0 || done === block - 1, // chỉ nhận dạng lượt đầu + lượt cuối
   });
+  const take = phase === "drill" ? drillTake : recallTake;
+  const cancelTakes = () => {
+    recallTake.cancel();
+    drillTake.cancel();
+  };
   const busy = take.state !== "idle";
   const micOn = take.state === "starting" || take.state === "recording"; // không cho phát mẫu chồng lên lượt thu
 
   // App chạy nền → dừng lặp, bỏ lượt đang thu, dừng phát
   const onBackground = useEffectEvent(() => {
     setLooping(false);
-    take.cancel();
+    cancelTakes();
     silence();
   });
   useEffect(() => {
@@ -442,7 +469,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
 
   const next = () => {
     silence();
-    take.cancel();
+    cancelTakes();
     const n = pos + 1;
     setPos(n);
     setPhase(phaseFor(queue[n]));
@@ -598,7 +625,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
                 {chunkOn && Array.isArray(chunks[v.word]) ? (
                   <Chunks chunks={chunks[v.word] as string[]} size={sentenceSize(v.word)} onSay={sayChunk} disabled={micOn} />
                 ) : (
-                  <Sentence text={v.word} take={take.take} />
+                  <Sentence text={v.word} take={take.take} live={drill && take.state === "recording" ? (drillTake.live ?? []) : null} />
                 )}
                 {/* Công cụ: 1 cụm liền nhau — phát mẫu · tốc độ · chia cụm · bản dịch */}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -661,6 +688,7 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
                 level={take.level}
                 elapsed={take.elapsed}
                 pace={drill}
+                autoStop={drill ? t("take.autoStopLive") : t("take.autoStop")}
                 idle={phase === "recall" ? t("crazyReview.recallHelp") : phase === "rate" ? t("crazyReview.rateHelp") : t("crazyReview.drillHelp")}
               />
             )}
