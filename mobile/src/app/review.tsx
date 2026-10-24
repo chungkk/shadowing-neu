@@ -202,7 +202,7 @@ type Streak = { day: string; count: number };
 const STREAK_KEY = "vocab-streak";
 const SOUND_KEY = "review-sound";
 const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
-const BLOCKS = ["5", "10", "20", "50"] as const;
+const BLOCKS = ["5", "10", "20"] as const;
 type Block = (typeof BLOCKS)[number];
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
@@ -933,7 +933,7 @@ export default function ReviewScreen() {
   const [wordsOpen, setWordsOpen] = useState(false); // thẻ Từ vựng: đã bấm → hiện lựa chọn Tất cả / theo ngày
   const { tablet } = useLayout();
   const items = data?.items ?? null;
-  const [block, setBlock] = useState<Block>("20");
+  const [block, setBlock] = useState<Block>("10");
   useEffect(() => {
     SecureStore.getItemAsync(BLOCK_KEY)
       .then((b) => BLOCKS.includes(b as Block) && setBlock(b as Block))

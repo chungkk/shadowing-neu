@@ -2,7 +2,7 @@ import { useAudioPlayer } from "expo-audio";
 import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, AppState, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Grade } from "@shared/srs";
@@ -13,23 +13,44 @@ import { useI18n } from "@/lib/i18n";
 import { FORM_MAX } from "@/lib/layout";
 import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
 import { C } from "@/lib/theme";
-import { useLiveTake } from "@/lib/useLiveTake";
+import type { useLiveTake } from "@/lib/useLiveTake";
 import { clearOk, heardCount, paceOk, useTake, type Take } from "@/lib/useTake";
 import { splitWords, type CheckedWord } from "@shared/dictation";
 
+/**
+ * Nhận dạng trực tiếp cần module native expo-speech-recognition. Nạp lười, lỗi thì coi như không có:
+ * bản app cũ (chưa build lại) nhận bản cập nhật JS vẫn chạy, lượt Luyện to quay về thu rồi Whisper (useTake).
+ */
+const liveTake = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- nạp lười, thiếu module native thì bỏ qua
+    return (require("@/lib/useLiveTake") as { useLiveTake: typeof useLiveTake }).useLiveTake;
+  } catch {
+    return null;
+  }
+})();
+// Cùng giao diện; bản dự phòng không có `live` → chỉ đọc `live` khi có liveTake
+const useDrillTake = liveTake ?? (useTake as unknown as typeof useLiveTake);
+
 type Item = VocabItem & { stage: number };
-/** 1 lượt trong hàng chờ; retry = ôn thêm có gợi ý cuối buổi (không chấm lại vào lịch ôn) */
+/** 1 lượt trong hàng chờ; retry = ôn lại có gợi ý cuối buổi (không chấm lại vào lịch ôn) */
 type Entry = { item: Item; retry: boolean };
-type Result = { item: Item; grade: Grade };
-type Phase = "recall" | "rate" | "drill";
+type Result = { item: Item; grade: Grade; fresh: boolean };
+/** recall: chỉ thấy nghĩa, nói câu · reveal: hiện câu + máy chấm · drill: luyện to lặp rảnh tay */
+type Phase = "recall" | "reveal" | "drill";
 
 const REP_TARGET = 500; // mục tiêu tích luỹ mỗi câu (rải qua nhiều buổi) — chỉ hiện ở màn tổng kết
 const SILENT_STOP = 2; // vòng lặp rảnh tay: 2 lượt liền không nghe thấy tiếng → tự dừng
 const SPEEDS = [0.75, 0.9, 1, 1.1]; // tốc độ giọng đọc mẫu
 const SPEED_KEY = "crazy-speed";
-const GRADE_KEYS = { again: "crazyReview.again", hard: "crazyReview.hard", good: "crazyReview.good", easy: "crazyReview.easy" } as const;
-const STEP_KEYS = { recall: "crazyReview.stepRecall", rate: "crazyReview.stepRate", drill: "crazyReview.stepDrill" } as const;
 const BTN_HEIGHT = 56;
+const TONE = {
+  good: { fg: C.accent, bg: "rgba(22,163,74,0.14)" },
+  warn: { fg: C.amber, bg: "rgba(250,204,21,0.12)" },
+  bad: { fg: C.redText, bg: "rgba(239,68,68,0.12)" },
+  neutral: { fg: C.muted, bg: C.card2 },
+} as const;
+type Tone = keyof typeof TONE;
 
 const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "•");
 /** Gợi ý: giữ chữ cái đầu mỗi từ — "Das soll andere" → "D__ s___ a_____" */
@@ -50,8 +71,10 @@ function hintOf(s: string) {
 }
 /** Chưa nghe câu mẫu lần nào → ước lượng thời lượng để đo nhịp */
 const estimate = (text: string) => 0.3 + text.split(/\s+/).length * 0.4;
-/** Máy gợi ý kết quả từ lượt nhớ lại theo số từ nhận ra (không bao giờ tự gợi ý "Rất dễ" — để người học tự quyết) */
-const suggest = (clear?: number): Grade | null => (clear === undefined ? null : clear >= 0.8 ? "good" : clear >= 0.4 ? "hard" : "again");
+/** Máy chấm lượt nhớ lại theo tỉ lệ từ nhận ra (không nhận dạng được → null, người học tự chấm) */
+const gradeOf = (clear?: number): Grade | null => (clear === undefined ? null : clear >= 0.8 ? "good" : clear >= 0.4 ? "hard" : "again");
+/** Câu mới / chưa có nghĩa: không nhớ lại được → chỉ luyện to; câu đã học → nhớ lại trước rồi luyện to */
+const phaseFor = (e?: Entry): Phase => (e && (e.retry || (e.item.meaning && e.item.stage > 0)) ? "recall" : "drill");
 /** Cỡ chữ câu tiếng Đức theo độ dài: ngắn 32 · vừa 28 · dài 24 (không nhỏ hơn) */
 const sentenceSize = (s: string) => (s.length <= 40 ? 32 : s.length <= 80 ? 28 : 24);
 
@@ -84,63 +107,7 @@ function Sentence({ text, take, live }: { text: string; take: Take | null; live?
   );
 }
 
-/** Câu chia theo cụm ngữ nghĩa: mỗi cụm 1 ô, chạm để nghe riêng cụm đó */
-function Chunks({ chunks, size, onSay, disabled }: { chunks: string[]; size: number; onSay: (c: string) => void; disabled: boolean }) {
-  const { t } = useI18n();
-  const fontSize = Math.max(20, size - 4);
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {chunks.map((c, i) => (
-        <Pressable
-          key={i}
-          onPress={() => onSay(c)}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={t("crazyReview.sayChunk", { c })}
-          style={({ pressed }) => ({
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: C.border,
-            backgroundColor: pressed ? C.border : C.card2,
-          })}
-        >
-          <Text style={{ color: C.text, fontSize, lineHeight: Math.round(fontSize * 1.3), fontWeight: "700" }} maxFontSizeMultiplier={1.3}>
-            {c}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-/** Nút chỉ có icon (hành động phụ, nền trung tính); `on` = đang bật */
-function IconBtn({ icon, label, onPress, on, disabled }: { icon: SFSymbol; label: string; onPress: () => void; on?: boolean; disabled?: boolean }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      hitSlop={4}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: !!on, disabled: !!disabled }}
-      style={({ pressed }) => ({
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: on ? "rgba(22,163,74,0.18)" : C.card2,
-        opacity: disabled ? 0.35 : pressed ? 0.6 : 1,
-      })}
-    >
-      <SymbolView name={icon} size={18} tintColor={on ? C.accent : C.text} />
-    </Pressable>
-  );
-}
-
-/** Nút phát câu mẫu (tròn, nổi hơn nút phụ khác); đang phát → thanh nhấp nhô, chạm để dừng */
+/** Nút phát câu mẫu (tròn); đang phát → thanh nhấp nhô, chạm để dừng */
 function PlayBtn({ talking, onPress, disabled, label }: { talking: boolean; onPress: () => void; disabled?: boolean; label: string }) {
   return (
     <Pressable
@@ -154,7 +121,7 @@ function PlayBtn({ talking, onPress, disabled, label }: { talking: boolean; onPr
         borderRadius: 24,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(22,163,74,0.18)",
+        backgroundColor: TONE.good.bg,
         opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
       })}
     >
@@ -163,13 +130,11 @@ function PlayBtn({ talking, onPress, disabled, label }: { talking: boolean; onPr
   );
 }
 
-/** Nhãn kết quả nhỏ: tốt (xanh) · cần chú ý (vàng) · trung tính */
-function Chip({ text, tone }: { text: string; tone: "good" | "warn" | "neutral" }) {
-  const c = tone === "good" ? C.accent : tone === "warn" ? C.amber : C.muted;
-  const bg = tone === "good" ? "rgba(22,163,74,0.14)" : tone === "warn" ? "rgba(250,204,21,0.12)" : C.card2;
+/** Nhãn nhỏ dạng viên thuốc */
+function Chip({ text, tone }: { text: string; tone: Tone }) {
   return (
-    <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: bg }}>
-      <Text style={{ color: c, fontSize: 14, fontWeight: "600" }}>{text}</Text>
+    <View style={{ alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: TONE[tone].bg }}>
+      <Text style={{ color: TONE[tone].fg, fontSize: 13, fontWeight: "700" }}>{text}</Text>
     </View>
   );
 }
@@ -189,90 +154,62 @@ function TextBtn({ title, icon, onPress }: { title: string; icon?: SFSymbol; onP
   );
 }
 
-/** Lượt đã nói của câu: 1 thanh mảnh */
-function RepProgress({ done, block }: { done: number; block: number }) {
+/** Thông báo kết quả nhớ lại: 1 khung màu, 1 câu */
+function Verdict({ text, tone }: { text: string; tone: Tone }) {
   return (
-    <View style={{ height: 4, borderRadius: 2, backgroundColor: C.card2, overflow: "hidden" }}>
-      <View style={{ height: "100%", width: `${(Math.min(done, block) / block) * 100}%`, backgroundColor: C.accent }} />
+    <View style={{ borderRadius: 16, padding: 14, backgroundColor: TONE[tone].bg }}>
+      <Text style={{ color: TONE[tone].fg, fontSize: 16, lineHeight: 22, fontWeight: "700" }}>{text}</Text>
     </View>
   );
 }
 
-/** Vùng trạng thái lượt nói (chiều cao cố định → bố cục không nhảy): đang thu (sóng âm) · phát mẫu · nhận dạng · kết quả */
+/** Vùng trạng thái lượt nói (chiều cao cố định → bố cục không nhảy): mở micro · đang thu · phát mẫu · nhận dạng · kết quả */
 function TakeStatus({
-  state,
   take,
-  talking,
-  level,
-  elapsed,
-  pace,
-  idle,
-  autoStop,
+  help,
+  live,
 }: {
-  state: string;
-  take: Take | null;
-  talking: boolean;
-  level: number;
-  elapsed: number;
-  pace: boolean;
-  idle: string; // hướng dẫn khi chưa có gì
-  autoStop: string; // hướng dẫn khi đang thu: dừng thế nào
+  take: { state: string; take: Take | null; level: number; elapsed: number };
+  help: string; // hướng dẫn khi chưa có lượt nào
+  live: boolean; // nhận dạng trực tiếp → nói hết câu là dừng
 }) {
   const { t } = useI18n();
   const muted = (text: string) => <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{text}</Text>;
+  const row = (icon: ReactNode, text: string) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      {icon}
+      {muted(text)}
+    </View>
+  );
   const body = () => {
-    if (state === "starting")
-      return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <ActivityIndicator size="small" color={C.muted} />
-          {muted(t("take.micStarting"))}
-        </View>
-      );
-    if (state === "recording")
+    if (take.state === "starting") return row(<ActivityIndicator size="small" color={C.muted} />, t("take.micStarting"));
+    if (take.state === "recording")
       return (
         <View style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <PulseDot />
             <Text style={{ flex: 1, color: C.text, fontSize: 15, fontWeight: "600" }}>{t("take.recordingShort")}</Text>
-            <Elapsed ms={elapsed} />
+            <Elapsed ms={take.elapsed} />
           </View>
-          <LiveWave level={level} tick={elapsed} />
-          {muted(autoStop)}
+          <LiveWave level={take.level} tick={take.elapsed} />
+          {muted(live ? t("take.autoStopLive") : t("take.autoStop"))}
         </View>
       );
-    if (talking || state === "waiting")
-      return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <PlayingBars />
-          {muted(t("take.playing"))}
-        </View>
-      );
-    if (state === "checking")
-      return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <ActivityIndicator size="small" color={C.muted} />
-          {muted(t("take.checking"))}
-        </View>
-      );
-    if (!take) return muted(idle);
-    if (take.status === "silent") return <Chip text={t("take.silent")} tone="warn" />;
-    // Nhịp chỉ so được khi đã nghe câu mẫu (bước Nói theo)
-    const chips: { text: string; tone: "good" | "warn" | "neutral" }[] = [];
-    if (take.status === "done") {
-      const n = take.words?.length ?? 0;
-      chips.push({ text: t("take.heard", { c: heardCount(take), n }), tone: clearOk(take) ? "good" : "warn" });
-    } else if (take.status === "error") chips.push({ text: t("take.noCheck"), tone: "neutral" });
+    if (take.state === "waiting") return row(<PlayingBars />, t("take.playing"));
+    if (take.state === "checking") return row(<ActivityIndicator size="small" color={C.muted} />, t("take.checking"));
+    const a = take.take;
+    if (!a) return muted(help);
+    if (a.status === "silent") return <Chip text={t("take.silent")} tone="warn" />;
+    const chips: { text: string; tone: Tone }[] = [];
+    if (a.status === "done") chips.push({ text: t("take.heard", { c: heardCount(a), n: a.words?.length ?? 0 }), tone: clearOk(a) ? "good" : "warn" });
+    else if (a.status === "error") chips.push({ text: t("take.noCheck"), tone: "neutral" });
     else chips.push({ text: t("take.saved"), tone: "good" });
-    if (pace) chips.push(paceOk(take) ? { text: t("take.paceOk"), tone: "good" } : { text: t("take.slow"), tone: "warn" });
-    const missed = take.status === "done" ? (take.words?.length ?? 0) - heardCount(take) : 0;
+    chips.push(paceOk(a) ? { text: t("take.paceOk"), tone: "good" } : { text: t("take.slow"), tone: "warn" });
     return (
-      <View style={{ gap: 8 }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-          {chips.map((c) => (
-            <Chip key={c.text} text={c.text} tone={c.tone} />
-          ))}
-        </View>
-        {missed > 0 && muted(t("take.redNote"))}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {chips.map((c) => (
+          <Chip key={c.text} text={c.text} tone={c.tone} />
+        ))}
       </View>
     );
   };
@@ -280,14 +217,14 @@ function TakeStatus({
 }
 
 /**
- * Luyện câu ⭐ kiểu Crazy Deutsch. Mỗi câu (có nghĩa) đi qua 3 bước:
- * 1. Nhớ lại: chỉ thấy nghĩa → thu âm câu mình nhớ (hoặc "Không nhớ — xem đáp án"). Đặt TRƯỚC khi nghe mẫu để
- *    kết quả nhớ lại là thật (nghe / nhại trước thì gần như luôn "nhớ được" → lịch ôn sai).
- * 2. Tự đánh giá: hiện câu chuẩn để đối chiếu → Chưa nhớ · Còn khó · Nhớ được · Rất dễ (máy tô sẵn gợi ý) → lịch ôn.
- *    Chưa nhớ / Còn khó → cuối buổi ôn thêm 1 lượt có gợi ý chữ cái đầu.
- * 3. Nói theo: lặp rảnh tay `block` lượt — phát mẫu 1 lần ở lượt đầu, sau đó chỉ thu; bấm "Nghe câu mẫu" để nghe lại.
- *    Nhận dạng trực tiếp trên máy (useLiveTake): từ nói tới đâu sáng tới đó, nói hết câu là tự sang lượt tiếp.
- * Câu chưa có nghĩa thì chỉ có bước 3. Số lượt tích luỹ mỗi câu lưu trên server (source "/vocab/<id>"), hiện ở màn tổng kết.
+ * Luyện câu ⭐ kiểu Crazy Deutsch (to · nhanh · rõ, lặp thật nhiều). Mỗi câu đi theo 1 đường thẳng, máy tự chấm:
+ * - Câu mới (hoặc chưa có nghĩa): chỉ Luyện to — nghe mẫu rồi nói lặp `block` lượt rảnh tay. Xong khối → vào lịch ôn
+ *   (đạt ≥ nửa số lượt → Nhớ được, không thì Còn khó).
+ * - Câu đã học: 1. Nhớ lại — chỉ thấy nghĩa, nói câu (Whisper nhận dạng) → máy chấm theo số từ nhận ra, hiện câu chuẩn
+ *   tô đỏ chỗ sai. Nhớ lại đặt TRƯỚC khi nghe mẫu để kết quả là thật. 2. Luyện to như câu mới.
+ * - Chưa nhớ / Còn khó → cuối buổi nhớ lại thêm 1 lượt có gợi ý chữ cái đầu (không chấm lại vào lịch ôn).
+ * Luyện to: nhận dạng trực tiếp (useLiveTake) — chữ sáng theo giọng, nói hết câu là sang lượt tiếp; câu mẫu phát ở
+ * lượt đầu và sau lượt chưa đạt. Số lượt tích luỹ mỗi câu lưu trên server (source "/vocab/<id>"), hiện ở màn tổng kết.
  */
 export function CrazyReview({ items, block, onClose }: { items: Item[]; block: number; onClose: (changed: boolean) => void }) {
   const { t } = useI18n();
@@ -295,11 +232,11 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
   const [pos, setPos] = useState(0);
   const entry = queue[pos] as Entry | undefined;
   const v = entry?.item;
-  const phaseFor = (e?: Entry): Phase => (e?.item.meaning ? "recall" : "drill");
   const [phase, setPhase] = useState<Phase>(() => phaseFor(queue[0]));
-  const [suggested, setSuggested] = useState<Grade | null>(null);
-  const [autoClear, setAutoClear] = useState<number | null>(null); // tỉ lệ từ máy nhận ra ở bước nhớ lại
-  const [done, setDone] = useState(0); // lượt đã nói của câu đang luyện (bước 3)
+  const [grade, setGrade] = useState<Grade | null>(null); // máy chấm lượt nhớ lại (null = chưa chấm được)
+  const [done, setDone] = useState(0); // lượt đã nói của câu đang luyện
+  const [passes, setPasses] = useState(0); // lượt đạt trong khối
+  const [lastOk, setLastOk] = useState(true); // lượt trước đạt → lượt sau không cần phát lại mẫu
   const [looping, setLooping] = useState(false); // đang lặp rảnh tay
   const silentRun = useRef(0); // số lượt liền không nghe thấy tiếng
   const [reps, setReps] = useState<Record<number, CrazyRep>>({}); // lượt tích luỹ từng câu (qua mọi buổi)
@@ -309,10 +246,6 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
   const [talking, setTalking] = useState(false); // đang phát câu mẫu
   const [ttsSec, setTtsSec] = useState<Record<number, number>>({}); // thời lượng câu mẫu từng câu (ở tốc độ đang chọn)
   const [speed, setSpeed] = useState(1);
-  const [showTr, setShowTr] = useState(true);
-  const [chunkOn, setChunkOn] = useState(false); // hiện câu theo cụm ngữ nghĩa
-  const [chunks, setChunks] = useState<Record<string, string[] | "loading" | "error">>({}); // câu → cụm (AI chia, server lưu)
-  const [chunkNote, setChunkNote] = useState(""); // báo ngắn khi không chia được
   const speakId = useRef(0); // bỏ onEnd của lần đọc cũ (bị dừng giữa chừng)
   const playback = useAudioPlayer(null);
   const ting = useAudioPlayer(require("@/assets/sounds/correct.wav")); // báo đã thu xong 1 lượt
@@ -351,59 +284,37 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     setTalking(false);
     return stopSpeaking();
   };
-  /** Phát riêng 1 cụm (không đo thời lượng — nhịp vẫn so với cả câu) */
-  const sayChunk = (c: string) => {
-    const id = ++speakId.current;
-    setTalking(true);
-    speakGerman(c, { speed, onEnd: () => id === speakId.current && setTalking(false) }).catch(() => setTalking(false));
-  };
-  /** Bật / tắt chia cụm. Server trả 1 cụm (AI không chia được) hoặc lỗi → tắt lại và báo, không giả vờ đã chia */
-  const toggleChunks = () => {
-    const text = v?.word;
-    setChunkNote("");
-    if (chunkOn || !text) return setChunkOn(false);
-    const known = chunks[text];
-    if (Array.isArray(known)) {
-      if (known.length > 1) setChunkOn(true);
-      else setChunkNote(t("crazyReview.chunkNone"));
-      return;
-    }
-    if (known === "loading") return;
-    setChunkOn(true);
-    setChunks((m) => ({ ...m, [text]: "loading" }));
-    api<{ chunks: string[][] }>("/chunks", { method: "POST", body: { sentences: [text] } })
-      .then((r) => {
-        const c = r.chunks[0] ?? [text];
-        setChunks((m) => ({ ...m, [text]: c }));
-        if (c.length < 2) {
-          setChunkOn(false);
-          setChunkNote(t("crazyReview.chunkNone"));
-        }
-      })
-      .catch(() => {
-        setChunks((m) => ({ ...m, [text]: "error" }));
-        setChunkOn(false);
-        setChunkNote(t("crazyReview.chunkFailed"));
-      });
-  };
   const cycleSpeed = () => {
     const s = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
     setSpeed(s);
     SecureStore.setItemAsync(SPEED_KEY, String(s)).catch(() => {});
   };
 
-  /** Chấm vào lịch ôn; Chưa nhớ / Còn khó → thêm 1 lượt có gợi ý cuối buổi */
-  const rate = (grade: Grade) => {
-    if (!entry || !v) return;
-    if (!entry.retry) {
-      setResults((list) => [...list, { item: v, grade }]);
-      setChanged(true);
-      api(`/vocab/${v.id}/review`, { method: "POST", body: { grade, mode: "crazy", exercise: "recall", autoClear } }).catch(() => {});
-      if (grade === "again" || grade === "hard") setQueue((q) => [...q, { item: v, retry: true }]);
-    }
-    take.reset(); // bước Nói theo bắt đầu sạch (không mang kết quả lượt nhớ lại)
-    setPhase("drill");
-    if (grade === "again") listen(); // chưa nhớ → nghe mẫu ngay
+  /** Chấm vào lịch ôn (1 lần mỗi câu, không chấm lượt ôn lại); Chưa nhớ / Còn khó → ôn lại có gợi ý cuối buổi */
+  const submit = (g: Grade, exercise: "recall" | "shadow", autoClear?: number) => {
+    if (!entry || !v || entry.retry) return;
+    const fresh = exercise === "shadow";
+    setResults((list) => [...list, { item: v, grade: g, fresh }]);
+    setChanged(true);
+    api(`/vocab/${v.id}/review`, { method: "POST", body: { grade: g, mode: "crazy", exercise, autoClear: autoClear ?? null } }).catch(() => {});
+    if (!fresh && (g === "again" || g === "hard")) setQueue((q) => [...q, { item: v, retry: true }]);
+  };
+
+  /** Nhớ lại xong (hoặc "Không nhớ") → hiện câu chuẩn + phát mẫu để đối chiếu */
+  const reveal = (g: Grade | null, clear?: number) => {
+    setGrade(g);
+    setPhase("reveal");
+    if (g) submit(g, "recall", clear);
+    listen();
+  };
+  const dontKnow = () => {
+    recallTake.reset();
+    reveal("again");
+  };
+  /** Không nhận dạng được (lỗi mạng) → người học tự đối chiếu, chọn đúng / chưa */
+  const manual = (g: Grade) => {
+    setGrade(g);
+    submit(g, "recall");
   };
 
   const onAttempt = (ok: boolean, clear?: number) => {
@@ -413,15 +324,17 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     api<{ rep: CrazyRep }>("/crazy", { method: "POST", body: { source: `/vocab/${v.id}`, idx: 0, passed: ok } })
       .then(({ rep }) => setReps((s) => ({ ...s, [v.id]: rep })))
       .catch(() => {});
-    if (phase === "recall") {
-      setAutoClear(clear ?? null);
-      setSuggested(suggest(clear));
-      setPhase("rate");
-    } else if (phase === "drill") {
-      silentRun.current = 0;
-      if (done + 1 >= block) setLooping(false); // đủ lượt → dừng lặp
-      setDone((d) => d + 1);
-    }
+    if (phase === "recall") return reveal(gradeOf(clear), clear);
+    if (phase !== "drill") return;
+    silentRun.current = 0;
+    setLastOk(ok);
+    const n = done + 1;
+    const passed = passes + (ok ? 1 : 0);
+    setDone(n);
+    setPasses(passed);
+    if (n < block) return;
+    setLooping(false); // đủ lượt → dừng lặp
+    if (phaseFor(entry) === "drill") submit(passed * 2 >= block ? "good" : "hard", "shadow"); // câu mới: vào lịch ôn theo kết quả khối
   };
 
   const takeOpts = {
@@ -436,19 +349,20 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
       ting.play();
     },
   };
-  // Nhớ lại: thu rồi Whisper nhận dạng (cần chính xác để gợi ý chấm điểm)
+  // Nhớ lại: thu rồi Whisper nhận dạng (cần chính xác để máy chấm)
   const recallTake = useTake(takeOpts);
-  // Nói theo: nhận dạng trực tiếp — tô từ kiểu karaoke, nói hết câu là dừng ngay
-  const drillTake = useLiveTake({
+  // Luyện to: nhận dạng trực tiếp — tô từ kiểu karaoke, nói hết câu là dừng ngay
+  const drillTake = useDrillTake({
     ...takeOpts,
     onSilent: () => {
       if (++silentRun.current >= SILENT_STOP) setLooping(false);
     },
     onFail: () => setLooping(false),
     autoLoop: phase === "drill" && looping,
-    loopListen: done === 0, // chỉ phát mẫu ở lượt đầu; cần nghe lại thì bấm "Nghe câu mẫu"
+    loopListen: done === 0 || !lastOk, // phát mẫu ở lượt đầu và sau lượt chưa đạt
   });
-  const take = phase === "drill" ? drillTake : recallTake;
+  const drill = phase === "drill";
+  const take = drill ? drillTake : recallTake;
   const cancelTakes = () => {
     recallTake.cancel();
     drillTake.cancel();
@@ -467,18 +381,29 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     return () => sub.remove();
   }, []);
 
+  const startDrill = () => {
+    silence();
+    setPhase("drill");
+    setDone(0);
+    setPasses(0);
+    setLastOk(true);
+    silentRun.current = 0;
+    setLooping(true); // người học vừa bấm → bắt đầu lặp luôn
+  };
+  /** Sang câu sau. Câu luyện to bắt đầu lặp luôn (người học vừa bấm), câu nhớ lại chờ bấm micro */
   const next = () => {
     silence();
     cancelTakes();
     const n = pos + 1;
+    const p = phaseFor(queue[n]);
     setPos(n);
-    setPhase(phaseFor(queue[n]));
-    setSuggested(null);
-    setAutoClear(null);
+    setPhase(p);
+    setGrade(null);
     setDone(0);
-    setLooping(false);
-    setChunkOn(false);
-    setChunkNote("");
+    setPasses(0);
+    setLastOk(true);
+    silentRun.current = 0;
+    setLooping(p === "drill");
   };
   const toggleLoop = () => {
     silentRun.current = 0;
@@ -495,7 +420,9 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     playback.play();
   };
 
-  const recalledOk = results.filter((r) => r.grade === "good" || r.grade === "easy").length;
+  const recalled = results.filter((r) => !r.fresh);
+  const recalledOk = recalled.filter((r) => r.grade === "good" || r.grade === "easy").length;
+  const freshCount = results.filter((r) => r.fresh).length;
   const practiced = [...new Map(queue.slice(0, pos).map((e) => [e.item.id, e.item])).values()];
   const weakIds = new Set(results.filter((r) => r.grade === "again" || r.grade === "hard").map((r) => r.item.id));
 
@@ -506,7 +433,9 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
         <Stack.Screen options={{ headerShown: false }} />
         <ScrollView contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 24, gap: 16 }}>
           <Text style={{ color: C.text, fontSize: 26, fontWeight: "800", marginTop: 24 }}>{t("crazyReview.finished")}</Text>
-          <Text style={{ color: C.muted, fontSize: 16 }}>{t("crazyReview.summary", { ok: recalledOk, n: results.length, shouts })}</Text>
+          <Text style={{ color: C.muted, fontSize: 16, lineHeight: 22 }}>
+            {t("crazyReview.summary", { ok: recalledOk, n: recalled.length, fresh: freshCount, shouts })}
+          </Text>
           {practiced.length > 0 && (
             <View style={{ backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 16, gap: 12 }}>
               <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{t("crazyReview.totals", { target: REP_TARGET })}</Text>
@@ -531,24 +460,33 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
       </SafeAreaView>
     );
 
-  const steps: Phase[] = v.meaning ? ["recall", "rate", "drill"] : ["drill"];
-  const stepName = entry.retry && phase === "recall" ? t("crazyReview.stepRetry") : t(STEP_KEYS[phase]);
+  const twoSteps = phaseFor(entry) === "recall" && !entry.retry;
+  const tag = entry.retry ? t("crazyReview.tagRetry") : twoSteps ? t("crazyReview.tagDue") : t("crazyReview.tagNew");
+  const stepName = entry.retry
+    ? t("crazyReview.retryHint")
+    : !twoSteps
+      ? t("crazyReview.drillOnly")
+      : drill
+        ? t("crazyReview.stepDrill")
+        : t("crazyReview.stepRecall");
   const blockDone = done >= block;
   const isLast = pos === queue.length - 1;
+  const nextTitle = isLast ? t("crazyReview.finish") : t("crazyReview.nextSentence");
+  const nextIcon = isLast ? "checkmark" : "arrow.right";
 
-  const drill = phase === "drill";
-  const words = v.word.trim().split(/\s+/).length;
+  // Kết quả nhớ lại: máy chấm (theo số từ nhận ra) hoặc người học tự chấm khi không nhận dạng được
+  const verdict = (): { text: string; tone: Tone } | null => {
+    const a = recallTake.take;
+    const counts = { c: a ? heardCount(a) : 0, n: a?.words?.length ?? 0 };
+    if (entry.retry) return a?.status === "done" ? { text: t("crazyReview.retryResult", counts), tone: "neutral" } : null;
+    if (grade === "again") return { text: t("crazyReview.again"), tone: "bad" };
+    if (grade === "hard") return { text: t("crazyReview.hard", counts), tone: "warn" };
+    if (grade) return { text: t("crazyReview.good", counts), tone: "good" };
+    return null;
+  };
 
   // ---- Đáy màn: 1 nút chính + hành động phụ dạng chữ (chỉ hiện thứ dùng được trong trạng thái hiện tại) ----
   const bottom = () => {
-    if (phase === "rate")
-      return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {(["again", "hard", "good", "easy"] as const).map((g) => (
-            <GradeButton key={g} grade={g} on={g === suggested} onRate={rate} />
-          ))}
-        </View>
-      );
     if (phase === "recall")
       return (
         <>
@@ -562,17 +500,40 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
               onPress={take.record}
             />
           )}
-          {!busy && <TextBtn title={t("crazyReview.showAnswer")} onPress={() => rate("again")} />}
+          <View style={{ minHeight: 44 }}>{!busy && <TextBtn title={t("crazyReview.dontKnow")} onPress={dontKnow} />}</View>
         </>
       );
+    if (phase === "reveal") {
+      if (!entry.retry && !grade)
+        return (
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Cta title={t("crazyReview.manualNo")} tone="neutral" onPress={() => manual("again")} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Cta title={t("crazyReview.manualOk")} onPress={() => manual("good")} />
+            </View>
+          </View>
+        );
+      return (
+        <>
+          {entry.retry ? (
+            <Cta title={nextTitle} icon={nextIcon} onPress={next} />
+          ) : (
+            <Cta title={t("crazyReview.toDrill")} icon="mic.fill" onPress={startDrill} />
+          )}
+          <View style={{ minHeight: 44 }}>{!!take.uri && <TextBtn title={t("crazyReview.myTake")} icon="play.fill" onPress={playMine} />}</View>
+        </>
+      );
+    }
     return (
       <>
         {blockDone ? (
-          <Cta title={isLast ? t("crazyReview.finish") : t("crazyReview.nextSentence")} icon={isLast ? "checkmark" : "arrow.right"} onPress={next} />
+          <Cta title={nextTitle} icon={nextIcon} onPress={next} />
         ) : looping ? (
           <Cta title={t("crazyReview.pause")} tone="neutral" icon="pause.fill" onPress={toggleLoop} />
         ) : talking ? (
-          // Máy đang đọc mẫu → chưa hiện nút nói theo (tránh chồng tiếng); giữ chỗ để bố cục không nhảy
+          // Máy đang đọc mẫu → chưa hiện nút nói (tránh chồng tiếng); giữ chỗ để bố cục không nhảy
           <View style={{ minHeight: BTN_HEIGHT }} />
         ) : (
           <Cta title={done === 0 ? t("crazyReview.startDrill") : t("crazyReview.resumeDrill")} icon="mic.fill" onPress={toggleLoop} />
@@ -584,6 +545,8 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
       </>
     );
   };
+
+  const v2 = verdict();
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
@@ -607,11 +570,12 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
         </View>
 
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between", paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16, gap: 32 }}>
-          {/* Vùng trên: bước · câu (hoặc nghĩa khi nhớ lại) · công cụ · bản dịch */}
+          {/* Vùng trên: loại câu · bước → nghĩa → câu tiếng Đức (ẩn khi nhớ lại) → nghe mẫu */}
           <View style={{ gap: 16 }}>
-            <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" }}>
-              {steps.length > 1 ? t("crazyReview.step", { i: steps.indexOf(phase) + 1, n: steps.length, name: stepName }) : stepName}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Chip text={tag} tone={entry.retry ? "warn" : twoSteps ? "neutral" : "good"} />
+              <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{stepName}</Text>
+            </View>
             {phase === "recall" ? (
               <>
                 <Text style={{ color: C.muted, fontSize: 15 }}>{t("crazyReview.recallPrompt")}</Text>
@@ -622,12 +586,8 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
               </>
             ) : (
               <>
-                {chunkOn && Array.isArray(chunks[v.word]) ? (
-                  <Chunks chunks={chunks[v.word] as string[]} size={sentenceSize(v.word)} onSay={sayChunk} disabled={micOn} />
-                ) : (
-                  <Sentence text={v.word} take={take.take} live={drill && take.state === "recording" ? (drillTake.live ?? []) : null} />
-                )}
-                {/* Công cụ: 1 cụm liền nhau — phát mẫu · tốc độ · chia cụm · bản dịch */}
+                {!!v.meaning && <Text style={{ color: C.muted, fontSize: 17, lineHeight: 24 }}>{v.meaning}</Text>}
+                <Sentence text={v.word} take={take.take} live={liveTake && drill && take.state === "recording" ? (drillTake.live ?? []) : null} />
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <PlayBtn
                     talking={talking}
@@ -643,89 +603,41 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
                   >
                     <Text style={{ color: C.text, fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{String(speed).replace(".", ",")}×</Text>
                   </Pressable>
-                  {words > 4 && (
-                    <IconBtn
-                      icon="rectangle.split.3x1"
-                      label={chunkOn ? t("crazyReview.wholeSentence") : t("crazyReview.splitChunks")}
-                      on={chunkOn}
-                      onPress={toggleChunks}
-                    />
-                  )}
-                  {!!v.meaning && (
-                    <IconBtn icon="character.bubble" label={showTr ? t("crazyReview.hideTr") : t("crazyReview.showTr")} on={showTr} onPress={() => setShowTr((x) => !x)} />
-                  )}
                 </View>
-                {chunkOn && chunks[v.word] === "loading" && <Text style={{ color: C.muted, fontSize: 13 }}>{t("crazyReview.chunking")}</Text>}
-                {chunkOn && Array.isArray(chunks[v.word]) && <Text style={{ color: C.muted, fontSize: 13 }}>{t("crazyReview.chunkHint")}</Text>}
-                {!!chunkNote && <Text style={{ color: C.muted, fontSize: 13 }}>{chunkNote}</Text>}
-                {!!v.meaning && showTr && <Text style={{ color: C.muted, fontSize: 17, lineHeight: 24 }}>{v.meaning}</Text>}
               </>
             )}
           </View>
 
-          {/* Vùng dưới (sát nút chính, không khung): lượt · trạng thái lượt nói */}
+          {/* Vùng dưới (sát nút chính): kết quả nhớ lại · hoặc lượt + trạng thái lượt nói */}
           <View style={{ gap: 12 }}>
-            {drill && (
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>{t("crazyReview.repsLabel")}</Text>
-                  <Text style={{ color: blockDone ? C.accent : C.text, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
-                    {Math.min(done, block)}/{block}
-                  </Text>
-                </View>
-                <RepProgress done={done} block={block} />
-              </View>
-            )}
-            {drill && blockDone ? (
-              <View style={{ minHeight: 72, justifyContent: "center" }}>
-                <Chip text={t("crazyReview.blockDone", { n: block })} tone="good" />
-              </View>
+            {phase === "reveal" ? (
+              v2 ? <Verdict text={v2.text} tone={v2.tone} /> : !entry.retry && <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("crazyReview.manual")}</Text>
             ) : (
-              <TakeStatus
-                state={take.state}
-                take={take.take}
-                talking={talking}
-                level={take.level}
-                elapsed={take.elapsed}
-                pace={drill}
-                autoStop={drill ? t("take.autoStopLive") : t("take.autoStop")}
-                idle={phase === "recall" ? t("crazyReview.recallHelp") : phase === "rate" ? t("crazyReview.rateHelp") : t("crazyReview.drillHelp")}
-              />
+              <>
+                {drill && (
+                  <View style={{ gap: 8 }}>
+                    <Text style={{ color: blockDone ? C.accent : C.text, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+                      {blockDone ? t("crazyReview.blockDone", { n: block }) : t("crazyReview.repsLabel", { i: done + 1, n: block })}
+                    </Text>
+                    <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
+                      <View style={{ height: "100%", width: `${(Math.min(done, block) / block) * 100}%`, backgroundColor: C.accent }} />
+                    </View>
+                  </View>
+                )}
+                {!blockDone && (
+                  <TakeStatus
+                    take={take}
+                    live={!!liveTake && drill}
+                    help={drill ? t("crazyReview.drillHelp") : t("crazyReview.recallHelp")}
+                  />
+                )}
+              </>
             )}
-            {phase === "rate" && !!take.take && <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("crazyReview.rateHelp")}</Text>}
           </View>
         </ScrollView>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, gap: 4 }}>{bottom()}</View>
       </View>
     </SafeAreaView>
-  );
-}
-
-/** Nút tự đánh giá (lưới 2×2); nút máy gợi ý có viền xanh + nhãn "Gợi ý" */
-function GradeButton({ grade, on, onRate }: { grade: Grade; on: boolean; onRate: (g: Grade) => void }) {
-  const { t } = useI18n();
-  return (
-    <Pressable
-      onPress={() => onRate(grade)}
-      accessibilityRole="button"
-      accessibilityLabel={on ? `${t(GRADE_KEYS[grade])} · ${t("crazyReview.suggested")}` : t(GRADE_KEYS[grade])}
-      style={({ pressed }) => ({
-        flexBasis: "48%",
-        flexGrow: 1,
-        minHeight: BTN_HEIGHT,
-        borderRadius: 16,
-        borderWidth: on ? 2 : 1,
-        borderColor: on ? C.accent : C.border,
-        backgroundColor: on ? "rgba(22,163,74,0.14)" : C.card2,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 8,
-        transform: [{ scale: pressed ? 0.98 : 1 }],
-      })}
-    >
-      <Text style={{ color: on ? C.accent : C.text, fontSize: 16, fontWeight: "700" }}>{t(GRADE_KEYS[grade])}</Text>
-      {on && <Text style={{ color: C.accent, fontSize: 11, fontWeight: "600" }}>{t("crazyReview.suggested")}</Text>}
-    </Pressable>
   );
 }
