@@ -145,7 +145,10 @@ export function fileForm(uri: string): FormData {
   return body;
 }
 
+/** Header đăng nhập cho request tự gọi ngoài api() (tải file, ảnh…) */
+export const authHeaders = (): Record<string, string> | undefined => (token ? { Authorization: `Bearer ${token}` } : undefined);
+
 /** Nguồn ảnh đại diện cho expo-image (kèm token — server chỉ cho chính chủ / admin xem) */
-export const avatarSource = (url: string) => ({ uri: API_URL + url, headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+export const avatarSource = (url: string) => ({ uri: API_URL + url, headers: authHeaders() });
 
 export const thumb = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;

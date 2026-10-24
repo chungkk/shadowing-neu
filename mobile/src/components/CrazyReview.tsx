@@ -11,7 +11,7 @@ import { Cta, styles } from "./ui";
 import { api, type CrazyRep, type VocabItem } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { FORM_MAX } from "@/lib/layout";
-import { speakGerman, stopSpeaking } from "@/lib/speak";
+import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
 import { C } from "@/lib/theme";
 import { clearOk, heardCount, paceOk, useTake, type Take } from "@/lib/useTake";
 
@@ -310,6 +310,11 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
     return () => void stopSpeaking();
   }, []);
 
+  // Tải sẵn giọng đọc câu đang ôn → bấm nghe là phát ngay
+  useEffect(() => {
+    if (v) prefetchGerman(v.word);
+  }, [v]);
+
   const listen = () => {
     if (!v) return;
     const id = ++speakId.current;
@@ -539,6 +544,9 @@ export function CrazyReview({ items, block, onClose }: { items: Item[]; block: n
           <Cta title={isLast ? t("crazyReview.finish") : t("crazyReview.nextSentence")} icon={isLast ? "checkmark" : "arrow.right"} onPress={next} />
         ) : looping ? (
           <Cta title={t("crazyReview.pause")} tone="neutral" icon="pause.fill" onPress={toggleLoop} />
+        ) : talking ? (
+          // Máy đang đọc mẫu → chưa hiện nút nói theo (tránh chồng tiếng); giữ chỗ để bố cục không nhảy
+          <View style={{ minHeight: BTN_HEIGHT }} />
         ) : (
           <Cta title={done === 0 ? t("crazyReview.startDrill") : t("crazyReview.resumeDrill")} icon="mic.fill" onPress={toggleLoop} />
         )}

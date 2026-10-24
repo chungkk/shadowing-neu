@@ -26,6 +26,8 @@ export type LessonSummary = Omit<Lesson, "segments"> & { segmentCount: number };
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
 /** Ảnh đại diện lưu thành file cạnh DB (cùng volume dữ liệu trên VPS) */
 export const AVATAR_DIR = path.join(path.dirname(DB_PATH), "avatars");
+/** Giọng đọc mẫu (mp3) đã tạo — mỗi câu chỉ tạo 1 lần, dùng chung cho mọi người học */
+export const TTS_DIR = path.join(path.dirname(DB_PATH), "tts");
 
 function open() {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
