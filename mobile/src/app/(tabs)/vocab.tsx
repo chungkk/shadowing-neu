@@ -123,14 +123,30 @@ function PhraseLines({ phrases }: { phrases: Phrase[] }) {
   ));
 }
 
-/** Từ có mạo từ đầu ("der Hund") → mạo từ tô màu theo giống */
-function HeadWord({ word, color }: { word: string; color: string }) {
-  const m = word.match(/^(der|die|das) /i);
-  if (!m) return word;
+/** Từ đang ở dạng số nhiều của danh từ ("Hunde" của "der Hund") */
+const isPluralForm = (v: VocabItem) =>
+  !!v.plural && v.word.toLowerCase() === v.plural.toLowerCase() && v.word.toLowerCase() !== (v.singular ?? "").toLowerCase();
+
+/**
+ * Từ kèm mạo từ tô màu theo giống: lưu sẵn mạo từ ("der Hund"), hoặc danh từ AI đã xác định giống ("Hund" → "der Hund").
+ * Từ ở dạng số nhiều → "die" (mạo từ số nhiều, màu nhạt).
+ */
+function HeadWord({ v, color }: { v: VocabItem; color: string }) {
+  const m = v.word.match(/^(der|die|das) /i);
+  if (m)
+    return (
+      <>
+        <Text style={{ color: GENDER[m[1].toLowerCase()] }}>{m[0]}</Text>
+        <Text style={{ color }}>{v.word.slice(m[0].length)}</Text>
+      </>
+    );
+  const g = v.gender;
+  if (g !== "der" && g !== "die" && g !== "das") return v.word;
+  const plural = isPluralForm(v);
   return (
     <>
-      <Text style={{ color: GENDER[m[1].toLowerCase()] }}>{m[0]}</Text>
-      <Text style={{ color }}>{word.slice(m[0].length)}</Text>
+      <Text style={{ color: plural ? C.muted : GENDER[g] }}>{plural ? "die " : `${g} `}</Text>
+      <Text style={{ color }}>{v.word}</Text>
     </>
   );
 }
@@ -197,9 +213,21 @@ function VocabRow({
   onLook,
   onChange,
   onDelete,
+  phrasesOf,
+  onDeleteExample,
+  selecting,
+  checked,
+  onSelect,
+  onLongPress,
 }: {
   v: VocabItem;
   phrases: Phrase[]; // cụm từ cố định trong câu (câu đánh dấu sao, hoặc câu ví dụ của từ)
+  phrasesOf: (text: string) => Phrase[]; // cụm từ của 1 câu ví dụ thêm
+  onDeleteExample: (exampleId: number) => void;
+  selecting: boolean; // đang chọn nhiều mục (để xoá)
+  checked: boolean;
+  onSelect: () => void;
+  onLongPress: () => void; // nhấn giữ → bắt đầu chọn nhiều mục
   first: boolean;
   last: boolean;
   open: boolean;
@@ -300,9 +328,11 @@ function VocabRow({
       {!first && <View style={{ height: 1, backgroundColor: C.border, marginLeft: 16 }} />}
       {/* Chạm dòng → mở / đóng; tra nghĩa bằng nút ⓘ riêng (không lẫn 2 vùng chạm trên cùng dòng chữ) */}
       <Pressable
-        onPress={onToggle}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
+        onPress={selecting ? onSelect : onToggle}
+        onLongPress={selecting ? undefined : onLongPress}
+        delayLongPress={350}
+        accessibilityRole={selecting ? "checkbox" : "button"}
+        accessibilityState={selecting ? { checked } : { expanded: open }}
         style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",
@@ -313,8 +343,15 @@ function VocabRow({
           backgroundColor: pressed ? C.card2 : "transparent",
         })}
       >
-        {/* Chấm màu = mức nhớ */}
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m.color, alignSelf: sentence ? "flex-start" : "center", marginTop: sentence ? 8 : 0 }} accessibilityLabel={m.label} />
+        {/* Đang chọn nhiều: ô chọn · bình thường: chấm màu = mức nhớ */}
+        {selecting ? (
+          <SymbolView name={checked ? "checkmark.circle.fill" : "circle"} size={22} tintColor={checked ? C.accent : C.muted} />
+        ) : (
+          <View
+            style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m.color, alignSelf: sentence ? "flex-start" : "center", marginTop: sentence ? 8 : 0 }}
+            accessibilityLabel={m.label}
+          />
+        )}
         <View style={{ flex: 1, gap: 2 }}>
           {sentence ? (
             <View style={{ flexDirection: "row", gap: 6 }}>
@@ -332,7 +369,7 @@ function VocabRow({
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               {phrase && <SymbolView name="sparkles" size={14} tintColor={C.phrase} />}
               <Text style={{ flexShrink: 1, color: phrase ? C.phrase : C.text, fontSize: 17, fontWeight: "700" }} numberOfLines={1}>
-                <HeadWord word={v.word} color={phrase ? C.phrase : C.text} />
+                <HeadWord v={v} color={phrase ? C.phrase : C.text} />
               </Text>
               {due && (
                 <Text style={{ color: C.amber, fontSize: 11, fontWeight: "800", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(250,204,21,0.12)", overflow: "hidden" }}>
@@ -356,17 +393,19 @@ function VocabRow({
           {/* Câu đánh dấu sao: cụm từ trong câu · từ lẻ: cụm chứa từ đó (cụm đã lưu thì nghĩa chính là của cụm, khỏi lặp) */}
           {!open && !phrase && <PhraseLines phrases={sentence ? phrases : own} />}
         </View>
-        {!sentence && (
+        {!sentence && !selecting && (
           <Pressable onPress={() => onLook(v.word, v.context || v.word)} hitSlop={6} style={{ padding: 8 }} accessibilityLabel={t("vocab.explain")}>
             <SymbolView name="info.circle" size={18} tintColor={C.muted} />
           </Pressable>
         )}
-        <Pressable onPress={speak} hitSlop={6} style={{ padding: 8 }} accessibilityLabel={t("vocab.listen")}>
-          <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2.fill"} size={18} tintColor={C.accent} />
-        </Pressable>
+        {!selecting && (
+          <Pressable onPress={speak} hitSlop={6} style={{ padding: 8 }} accessibilityLabel={t("vocab.listen")}>
+            <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2.fill"} size={18} tintColor={C.accent} />
+          </Pressable>
+        )}
       </Pressable>
 
-      {open && (
+      {open && !selecting && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 14, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Input
@@ -394,6 +433,15 @@ function VocabRow({
                   : ""}
             {!!v.lapses && ` · ${t("vocab.lapses", { n: v.lapses })}`}
           </Text>
+          {/* Danh từ: dạng số ít kèm mạo từ · số nhiều */}
+          {(v.gender === "der" || v.gender === "die" || v.gender === "das") && (
+            <Text style={{ color: C.muted, fontSize: 14 }}>
+              <Text style={{ color: GENDER[v.gender], fontWeight: "700" }}>{v.gender}</Text>
+              <Text style={{ color: C.text, fontWeight: "700" }}> {v.singular || v.word}</Text>
+              {" · "}
+              {v.plural ? t("vocab.plural", { p: `die ${v.plural}` }) : t("vocab.noPlural")}
+            </Text>
+          )}
           {!!v.context && (
             <View style={{ backgroundColor: C.background, padding: 12, borderRadius: 12, gap: 6 }}>
               <Sentence text={v.context} phrases={phrase ? own : phrases} word={v.word} onLook={onLook} style={{ color: C.muted, fontSize: 15, lineHeight: 21 }} />
@@ -401,6 +449,41 @@ function VocabRow({
             </View>
           )}
           {sentence && <PhraseLines phrases={phrases} />}
+          {/* Câu ví dụ khác: gặp lại từ ở các câu khác (bài / video khác) */}
+          {!!v.examples?.length && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: C.muted, fontSize: 12, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                {t("vocab.moreExamples", { n: v.examples.length })}
+              </Text>
+              {v.examples.map((ex) => {
+                const exSource = ex.sourceUrl?.match(/^\/(lesson|watch)\/([\w-]+)$/);
+                return (
+                  <View key={ex.id} style={{ backgroundColor: C.background, padding: 12, borderRadius: 12, gap: 6 }}>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Sentence text={ex.context} phrases={phrasesOf(ex.context)} word={v.word} onLook={onLook} style={{ color: C.muted, fontSize: 15, lineHeight: 21 }} />
+                      </View>
+                      <Pressable onPress={() => onDeleteExample(ex.id)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("vocab.removeExample")}>
+                        <SymbolView name="xmark" size={13} tintColor={C.muted} />
+                      </Pressable>
+                    </View>
+                    {exSource && (
+                      <Pressable
+                        style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                        hitSlop={8}
+                        onPress={() => router.push(exSource[1] === "lesson" ? `/lesson/${exSource[2]}` : `/watch/${exSource[2]}`)}
+                      >
+                        <SymbolView name="arrow.up.right.square" size={12} tintColor={C.amber} />
+                        <Text style={{ flex: 1, color: C.amber, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+                          {ex.sourceTitle || t("vocab.openLesson")}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             {source ? (
               <Pressable
@@ -444,8 +527,10 @@ export default function VocabScreen() {
   const phrAsked = useRef<Set<string>>(new Set());
   const [lookup, setLookup] = useState<{ word: string; context: string; marks?: string[]; source?: VocabItem } | null>(null);
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null); // AI điền nghĩa hàng loạt
-  const [trash, setTrash] = useState<VocabItem | null>(null); // vừa xoá, còn hoàn tác được
-  const trashRef = useRef<{ item: VocabItem; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [trash, setTrash] = useState<VocabItem[] | null>(null); // vừa xoá, còn hoàn tác được
+  const trashRef = useRef<{ items: VocabItem[]; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [selected, setSelected] = useState<Set<number> | null>(null); // null = không ở chế độ chọn nhiều
+  const nounAsked = useRef<Set<number>>(new Set()); // mục đã hỏi mạo từ
   const { tablet } = useLayout();
   const PAD = tablet ? 24 : 16;
 
@@ -478,10 +563,13 @@ export default function VocabScreen() {
     }, [load]),
   );
 
-  /** Xoá thật trên server; lỗi → trả mục về danh sách + báo lỗi */
-  const commitDelete = (v: VocabItem) =>
-    api(`/vocab/${v.id}`, { method: "DELETE" }).catch((e) => {
-      setItems((list) => (list ? [...list, v].sort(byNewest) : list));
+  /** Xoá thật trên server (1 mục, hoặc nhiều mục 1 lần); lỗi → trả các mục về danh sách + báo lỗi */
+  const commitDelete = (list: VocabItem[]) =>
+    (list.length === 1
+      ? api(`/vocab/${list[0].id}`, { method: "DELETE" })
+      : api("/vocab", { method: "DELETE", body: { ids: list.map((v) => v.id) } })
+    ).catch((e) => {
+      setItems((cur) => (cur ? [...cur, ...list].sort(byNewest) : cur));
       showError(e, t("vocab.deleteFailed"));
     });
   /** Mục đang chờ hoàn tác → xoá thật ngay */
@@ -491,7 +579,7 @@ export default function VocabScreen() {
     clearTimeout(p.timer);
     trashRef.current = null;
     setTrash(null);
-    commitDelete(p.item);
+    commitDelete(p.items);
   };
   // Rời tab khi còn mục chờ hoàn tác → xoá thật luôn (cleanup cần bản hàm mới nhất → qua ref)
   const flushRef = useRef(flushTrash);
@@ -504,12 +592,19 @@ export default function VocabScreen() {
 
   // ---- Cụm từ cố định: chỉ hỏi cho các dòng đang hiện trên màn hình (sổ lớn không gửi AI cả sổ một lúc) ----
   const [visibleTexts, setVisibleTexts] = useState<string[]>([]); // câu của các dòng đang hiện
+  const [visibleNouns, setVisibleNouns] = useState<number[]>([]); // từ lẻ đang hiện chưa biết có phải danh từ
   // onViewableItemsChanged không được đổi giữa các lần render → tạo 1 lần
-  const [onViewable] = useState(() => ({ viewableItems }: { viewableItems: { item?: VocabItem | null }[] }) =>
-    setVisibleTexts([...new Set(viewableItems.map((x) => (x.item ? phraseText(x.item) : "")).filter(Boolean))]),
-  );
+  const [onViewable] = useState(() => ({ viewableItems }: { viewableItems: { item?: unknown }[] }) => {
+    // SectionList: tiêu đề / chân nhóm cũng "hiện" với item = cả nhóm { title, data } → chỉ giữ mục sổ từ thật
+    const list = viewableItems.map((x) => x.item).filter((x): x is VocabItem => typeof (x as VocabItem | null)?.word === "string");
+    setVisibleTexts([...new Set(list.map(phraseText).filter(Boolean))]);
+    // gender "" = chưa xác định (undefined = server cũ, không có API → bỏ qua)
+    setVisibleNouns(list.filter((v) => v.gender === "" && kindOf(v) === "word").map((v) => v.id));
+  });
+  // Câu ví dụ thêm của dòng đang mở cũng cần cụm từ
+  const openExamples = useMemo(() => all.find((v) => v.id === openId)?.examples?.map((e) => e.context) ?? [], [all, openId]);
   useEffect(() => {
-    const want = visibleTexts.filter((x) => x.length <= 500 && !phrAsked.current.has(`${lang}|${x}`)); // server nhận câu ≤ 500 ký tự
+    const want = [...new Set([...visibleTexts, ...openExamples])].filter((x) => x.length <= 500 && !phrAsked.current.has(`${lang}|${x}`)); // server nhận câu ≤ 500 ký tự
     if (!want.length) return;
     // Chờ cuộn dừng một chút → gom các dòng vừa hiện thành ít lần gọi (≤ 40 câu / lần)
     const timer = setTimeout(() => {
@@ -522,7 +617,26 @@ export default function VocabScreen() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [visibleTexts, lang]);
+  }, [visibleTexts, openExamples, lang]);
+
+  // Mạo từ + số nhiều cho danh từ đang hiện (AI xác định 1 lần, server lưu vào sổ)
+  useEffect(() => {
+    const want = visibleNouns.filter((id) => !nounAsked.current.has(id)).slice(0, 40);
+    if (!want.length) return;
+    const timer = setTimeout(() => {
+      want.forEach((id) => nounAsked.current.add(id));
+      api<{ items: { id: number; gender: VocabItem["gender"]; singular: string; plural: string }[] }>("/vocab/nouns", {
+        method: "POST",
+        body: { ids: want },
+      })
+        .then(({ items: got }) => {
+          const m = new Map(got.map((g) => [g.id, g]));
+          setItems((list) => list?.map((v) => (m.has(v.id) ? { ...v, ...m.get(v.id)!, id: v.id } : v)) ?? null);
+        })
+        .catch(() => want.forEach((id) => nounAsked.current.delete(id))); // lỗi → lần hiện sau hỏi lại
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [visibleNouns]);
 
   // ---- Lọc + nhóm ----
   const counts = useMemo(
@@ -545,7 +659,11 @@ export default function VocabScreen() {
           (status !== "weak" || (v.lapses ?? 0) > 0) &&
           (status !== "empty" || !v.meaning) &&
           (!kind || kindOf(v) === kind) &&
-          (!query || norm(v.word).includes(query) || norm(v.meaning).includes(query) || norm(v.context).includes(query)),
+          (!query ||
+            norm(v.word).includes(query) ||
+            norm(v.meaning).includes(query) ||
+            norm(v.context).includes(query) ||
+            !!v.examples?.some((e) => norm(e.context).includes(query))),
       ),
     [all, status, kind, query, loadedAt],
   );
@@ -586,19 +704,21 @@ export default function VocabScreen() {
     }
   };
 
-  /** Xoá kèm "Hoàn tác": gỡ khỏi danh sách ngay, chờ UNDO_MS mới xoá thật (xoá mất cả lịch sử ôn) */
-  const remove = (v: VocabItem) => {
+  /** Xoá kèm "Hoàn tác" (1 hoặc nhiều mục): gỡ khỏi danh sách ngay, chờ UNDO_MS mới xoá thật (xoá mất cả lịch sử ôn) */
+  const remove = (list: VocabItem[]) => {
+    if (!list.length) return;
     flushTrash(); // mục xoá trước đó → xoá thật luôn
+    const ids = new Set(list.map((v) => v.id));
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setItems((list) => list?.filter((x) => x.id !== v.id) ?? null);
-    if (openId === v.id) setOpenId(null);
+    setItems((cur) => cur?.filter((x) => !ids.has(x.id)) ?? null);
+    if (openId !== null && ids.has(openId)) setOpenId(null);
     const timer = setTimeout(() => {
       trashRef.current = null;
       setTrash(null);
-      commitDelete(v);
+      commitDelete(list);
     }, UNDO_MS);
-    trashRef.current = { item: v, timer };
-    setTrash(v);
+    trashRef.current = { items: list, timer };
+    setTrash(list);
   };
   const undo = () => {
     const p = trashRef.current;
@@ -607,11 +727,41 @@ export default function VocabScreen() {
     trashRef.current = null;
     setTrash(null);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setItems((list) => (list ? [...list, p.item].sort(byNewest) : list));
+    setItems((list) => (list ? [...list, ...p.items].sort(byNewest) : list));
   };
   const unsaveLooked = async (word: string) => {
     const item = findSaved(word);
-    if (item) remove(item);
+    if (item) remove([item]);
+  };
+
+  /** Bỏ 1 câu ví dụ thêm (lỗi → trả lại + báo) */
+  const deleteExample = (v: VocabItem, exampleId: number) => {
+    const before = v.examples ?? [];
+    const patch = (examples: typeof before) => setItems((list) => list?.map((x) => (x.id === v.id ? { ...x, examples } : x)) ?? null);
+    patch(before.filter((e) => e.id !== exampleId));
+    api(`/vocab/${v.id}/examples/${exampleId}`, { method: "DELETE" }).catch((e) => {
+      patch(before);
+      showError(e, t("vocab.deleteFailed"));
+    });
+  };
+
+  // ---- Chọn nhiều mục để xoá ----
+  const startSelect = (id?: number) => {
+    setOpenId(null);
+    setSelected(new Set(id === undefined ? [] : [id]));
+  };
+  const toggleSelect = (id: number) =>
+    setSelected((cur) => {
+      const n = new Set(cur);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const allShownSelected = !!selected && shown.length > 0 && shown.every((v) => selected.has(v.id));
+  const deleteSelected = () => {
+    if (!selected?.size) return;
+    remove(all.filter((v) => selected.has(v.id)));
+    setSelected(null);
   };
 
   /** AI điền nghĩa cho mọi mục chưa có nghĩa (vài yêu cầu song song, mục nào xong hiện ngay) */
@@ -641,7 +791,9 @@ export default function VocabScreen() {
   /** Xuất các mục đang hiện (theo lọc / tìm kiếm) dạng bảng TSV: từ · nghĩa · câu ví dụ — dán vào Anki / bảng tính */
   const exportList = () => {
     const clean = (s: string) => s.replace(/[\t\n]+/g, " ").trim();
-    const tsv = shown.map((v) => [v.word, v.meaning, v.context].map(clean).join("\t")).join("\n");
+    const tsv = shown
+      .map((v) => [v.word, v.meaning, v.context, (v.examples ?? []).map((e) => e.context).join(" | ")].map(clean).join("\t"))
+      .join("\n");
     Share.share({ message: tsv, title: t("vocab.export") }).catch(() => {});
   };
 
@@ -691,6 +843,30 @@ export default function VocabScreen() {
         }
         ListHeaderComponent={
           <View style={{ gap: 12, paddingTop: tablet ? 20 : 12, paddingBottom: 4 }}>
+            {/* Đang chọn nhiều: Huỷ · Đã chọn n · Chọn tất cả · Xoá — thay hàng tiêu đề */}
+            {selected ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56 }}>
+                <Pressable onPress={() => setSelected(null)} hitSlop={8} accessibilityRole="button">
+                  <Text style={{ color: C.muted, fontWeight: "700", fontSize: 16 }}>{t("vocab.cancel")}</Text>
+                </Pressable>
+                <Text style={{ flex: 1, color: C.text, fontWeight: "800", fontSize: 17, textAlign: "center" }}>{t("vocab.selected", { n: selected.size })}</Text>
+                <Pressable
+                  onPress={() => setSelected(allShownSelected ? new Set() : new Set(shown.map((v) => v.id)))}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                >
+                  <Text style={{ color: C.amber, fontWeight: "700", fontSize: 15 }}>{allShownSelected ? t("vocab.selectNone") : t("vocab.selectAll")}</Text>
+                </Pressable>
+                <Button
+                  title={t("vocab.deleteSelected", { n: selected.size })}
+                  variant="red"
+                  disabled={!selected.size}
+                  icon={<SymbolView name="trash" size={14} tintColor="#fff" />}
+                  onPress={deleteSelected}
+                  style={{ paddingVertical: 8 }}
+                />
+              </View>
+            ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={styles.h1}>{t("vocab.title")}</Text>
@@ -716,6 +892,7 @@ export default function VocabScreen() {
                 />
               )}
             </View>
+            )}
             {all.length > 0 && (
               <>
                 <View
@@ -743,6 +920,13 @@ export default function VocabScreen() {
                     value={sort}
                     onChange={setSort}
                   />
+                  <View style={{ flex: 1 }} />
+                  {!selected && (
+                    <Pressable onPress={() => startSelect()} hitSlop={8} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 5, padding: 4 }}>
+                      <SymbolView name="checkmark.circle" size={15} tintColor={C.muted} />
+                      <Text style={{ color: C.muted, fontWeight: "700", fontSize: 14 }}>{t("vocab.select")}</Text>
+                    </Pressable>
+                  )}
                 </View>
                 {/* Lọc: tình trạng ôn · loại mục */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -790,7 +974,13 @@ export default function VocabScreen() {
             onToggle={() => toggle(item.id)}
             onLook={(w, c, m) => lookUp(w, c, m, item)}
             onChange={(meaning) => setItems((list) => list?.map((x) => (x.id === item.id ? { ...x, meaning } : x)) ?? null)}
-            onDelete={() => remove(item)}
+            onDelete={() => remove([item])}
+            phrasesOf={(text) => phr[`${lang}|${text}`] ?? []}
+            onDeleteExample={(exampleId) => deleteExample(item, exampleId)}
+            selecting={!!selected}
+            checked={!!selected?.has(item.id)}
+            onSelect={() => toggleSelect(item.id)}
+            onLongPress={() => startSelect(item.id)}
           />
         )}
         ListEmptyComponent={
@@ -832,7 +1022,7 @@ export default function VocabScreen() {
           }}
         >
           <Text style={{ flex: 1, color: C.text }} numberOfLines={1}>
-            {t("vocab.deleted", { w: trash.word })}
+            {trash.length === 1 ? t("vocab.deleted", { w: trash[0].word }) : t("vocab.deletedMany", { n: trash.length })}
           </Text>
           <Pressable onPress={undo} hitSlop={10} accessibilityRole="button">
             <Text style={{ color: C.amber, fontWeight: "800" }}>{t("vocab.undo")}</Text>

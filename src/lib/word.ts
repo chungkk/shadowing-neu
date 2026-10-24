@@ -164,3 +164,63 @@ function withInfinitive(d: WordDetail): WordDetail {
   if (!/Partizip|Präteritum/i.test(d.grammar) || /Infinitiv/i.test(d.grammar)) return d;
   return { ...d, grammar: `Infinitiv: ${d.lemma}, ${d.grammar}` };
 }
+
+// ---- Danh từ: mạo từ + số ít / số nhiều (sổ từ vựng hiện "der Hund · Pl. die Hunde") ----
+
+export type NounInfo = { gender: "der" | "die" | "das" | "-"; singular: string; plural: string };
+
+const nounPrompt =
+  `You help learners of German. Input JSON {"items": [{"word", "sentence"}]}: German words as they appear in a sentence. ` +
+  `For EACH item decide whether the word is used as a NOUN in that sentence (including nominalised words like "das Essen"). ` +
+  `Reply ONLY with JSON {"items": [{"article", "singular", "plural"}]} in the same order and with the same length. ` +
+  `Nouns: "article" = "der" | "die" | "das" of the SINGULAR noun (even if the word appears in plural or another case), ` +
+  `"singular" = nominative singular without article (e.g. "Hund"), "plural" = nominative plural without article (e.g. "Hunde"; "" if there is no plural). ` +
+  `Not a noun (verbs, adjectives, adverbs, pronouns, phrases…): "article": "", "singular": "", "plural": "".`;
+
+const isNounReply = (n: number) => (x: unknown): x is { items: { article: string; singular: string; plural: string }[] } => {
+  const items = (x as { items?: unknown })?.items;
+  return (
+    Array.isArray(items) &&
+    items.length === n &&
+    items.every((i) => i && typeof i.article === "string" && typeof i.singular === "string" && typeof i.plural === "string")
+  );
+};
+
+/**
+ * Mạo từ + số ít / số nhiều cho các từ (theo câu chứa từ — "der / die See" tuỳ nghĩa). Không phải danh từ → gender "-".
+ * Kết quả lưu trong kho bản dịch (khoá "noun:…", dùng chung mọi người học) → mỗi từ trong mỗi câu chỉ hỏi AI 1 lần.
+ */
+export async function nounInfo(items: { word: string; sentence: string }[]): Promise<NounInfo[]> {
+  const keys = items.map((i) => "noun:" + createHash("sha1").update(`${i.word}|${i.sentence.trim()}`).digest("hex"));
+  const cached = getTranslations(keys);
+  const out: (NounInfo | null)[] = keys.map((k) => {
+    const c = cached.get(k);
+    if (!c) return null;
+    try {
+      return JSON.parse(c) as NounInfo;
+    } catch {
+      return null;
+    }
+  });
+  const missing = items.map((it, k) => ({ it, k })).filter(({ k }) => !out[k]);
+  if (missing.length) {
+    const { items: res, provider } = await chatJson(
+      nounPrompt,
+      { items: missing.map(({ it }) => ({ word: it.word, sentence: it.sentence || it.word })) },
+      isNounReply(missing.length),
+      { prefer: "large" },
+    );
+    const save: { key: string; text: string; translation: string; provider: string }[] = [];
+    missing.forEach(({ it, k }, j) => {
+      const a = res[j].article.trim().toLowerCase();
+      const info: NounInfo =
+        a === "der" || a === "die" || a === "das"
+          ? { gender: a, singular: res[j].singular.trim().slice(0, 80), plural: res[j].plural.trim().slice(0, 80) }
+          : { gender: "-", singular: "", plural: "" };
+      out[k] = info;
+      save.push({ key: keys[k], text: `${it.word} | ${it.sentence}`, translation: JSON.stringify(info), provider });
+    });
+    saveTranslations(save);
+  }
+  return out as NounInfo[];
+}

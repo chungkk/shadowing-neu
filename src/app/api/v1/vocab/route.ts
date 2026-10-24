@@ -1,5 +1,5 @@
 import { addWord } from "@/lib/account";
-import { listVocab } from "@/lib/db";
+import { deleteVocabs, listVocab } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
 
 /** GET → sổ từ vựng */
@@ -26,4 +26,14 @@ export async function POST(req: Request) {
   });
   if (typeof item === "string") return fail(item);
   return Response.json({ item, vocab: [item] }, { status: 201 });
+}
+
+/** DELETE { ids: number[] (≤ 500) } → xoá nhiều mục 1 lần (kèm lịch sử ôn, câu ví dụ, lượt luyện nói) → { deleted } */
+export async function DELETE(req: Request) {
+  const user = await apiUser();
+  if (user instanceof Response) return user;
+  const b = await body<{ ids: unknown[] }>(req);
+  const ids = Array.isArray(b.ids) ? [...new Set(b.ids.filter((x): x is number => Number.isInteger(x)))] : [];
+  if (!ids.length || ids.length > 500) return fail("Danh sách mục không hợp lệ");
+  return Response.json({ deleted: deleteVocabs(user.id, ids) });
 }

@@ -94,7 +94,13 @@ export type VocabItem = {
   dueAt?: number | null; // ms, null = từ mới
   lapses?: number;
   mastery?: Mastery; // thành thạo suy ra từ lịch sử ôn (server cũ không gửi)
+  examples?: VocabExample[]; // câu ví dụ thêm ngoài câu chính `context` (server cũ không gửi)
+  // Danh từ (AI xác định dần qua POST /vocab/nouns): mạo từ, "-" = không phải danh từ, "" = chưa xác định, undefined = server cũ
+  gender?: "der" | "die" | "das" | "-" | "";
+  singular?: string;
+  plural?: string;
 };
+export type VocabExample = { id: number; context: string; sourceUrl: string | null; sourceTitle: string };
 
 let token: string | null = null;
 export const setApiToken = (t: string | null) => {

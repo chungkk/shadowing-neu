@@ -109,6 +109,18 @@ function open() {
       gap_days REAL -- số ngày kể từ lần ôn trước của mục này (null = lần đầu)
     );
     CREATE INDEX IF NOT EXISTS review_events_user ON review_events (user_id, vocab_id, at);
+    -- Câu ví dụ thêm của 1 mục sổ từ (gặp lại từ ở câu khác). Câu chính vẫn ở vocab.context — nghĩa được ghi theo câu đó
+    CREATE TABLE IF NOT EXISTS vocab_examples (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vocab_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      context TEXT NOT NULL,
+      source_url TEXT, -- /lesson/1, /watch/abc… (null = tự thêm / không rõ)
+      source_title TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (vocab_id, context)
+    );
+    CREATE INDEX IF NOT EXISTS vocab_examples_user ON vocab_examples (user_id, vocab_id);
     -- Mã xác nhận email khi đăng ký (lưu dạng băm, mỗi email 1 mã mới nhất)
     CREATE TABLE IF NOT EXISTS email_codes (
       email TEXT PRIMARY KEY,
@@ -157,6 +169,14 @@ function open() {
       ALTER TABLE vocab ADD COLUMN srs_stage INTEGER NOT NULL DEFAULT 0; -- 0 = chưa ôn lần nào
       ALTER TABLE vocab ADD COLUMN due_at INTEGER; -- ms, NULL = từ mới
       ALTER TABLE vocab ADD COLUMN lapses INTEGER NOT NULL DEFAULT 0;
+    `);
+  }
+  // Danh từ: mạo từ (giống) + dạng số ít / số nhiều — AI xác định dần ('' = chưa xác định, '-' = không phải danh từ)
+  if (!vocabCols.some((c) => c.name === "gender")) {
+    db.exec(`
+      ALTER TABLE vocab ADD COLUMN gender TEXT NOT NULL DEFAULT ''; -- 'der' | 'die' | 'das' | '-' | ''
+      ALTER TABLE vocab ADD COLUMN singular TEXT NOT NULL DEFAULT '';
+      ALTER TABLE vocab ADD COLUMN plural TEXT NOT NULL DEFAULT '';
     `);
   }
   return db;
@@ -419,6 +439,7 @@ export function setUserRole(id: number, role: Role) {
 export function deleteUser(id: number) {
   conn().prepare("DELETE FROM oauth_accounts WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM vocab_examples WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
@@ -470,7 +491,13 @@ export type VocabItem = {
   dueAt: number | null; // ms, null = từ mới
   lapses: number; // số lần ôn sai
   mastery: Mastery; // suy ra từ mức nhớ + lịch sử ôn (review_events)
+  examples: VocabExample[]; // câu ví dụ thêm (ngoài câu chính `context`), cũ → mới
+  gender: NounGender; // danh từ: mạo từ; '-' = không phải danh từ; '' = chưa xác định
+  singular: string; // danh từ: dạng số ít (không mạo từ) — "" nếu chưa biết / không phải danh từ
+  plural: string; // danh từ: dạng số nhiều (không mạo từ), "" nếu không có / chưa biết
 };
+export type VocabExample = { id: number; context: string; sourceUrl: string | null; sourceTitle: string };
+export type NounGender = "der" | "die" | "das" | "-" | "";
 
 type VocabRow = {
   id: number;
@@ -483,9 +510,12 @@ type VocabRow = {
   srs_stage: number;
   due_at: number | null;
   lapses: number;
+  gender: NounGender;
+  singular: string;
+  plural: string;
 };
 
-const toVocab = (r: VocabRow, proven = false): VocabItem => ({
+const toVocab = (r: VocabRow, proven = false, examples: VocabExample[] = []): VocabItem => ({
   id: r.id,
   word: r.word,
   meaning: r.meaning,
@@ -497,7 +527,35 @@ const toVocab = (r: VocabRow, proven = false): VocabItem => ({
   dueAt: r.due_at,
   lapses: r.lapses,
   mastery: masteryOf(r.srs_stage, proven),
+  examples,
+  gender: r.gender ?? "",
+  singular: r.singular ?? "",
+  plural: r.plural ?? "",
 });
+
+const MAX_EXAMPLES = 20; // câu ví dụ thêm tối đa mỗi mục
+
+/** Câu ví dụ thêm của các mục (1 truy vấn cho cả sổ), nhóm theo mục */
+function examplesOf(userId: number, vocabId?: number): Map<number, VocabExample[]> {
+  const rows = conn()
+    .prepare(
+      `SELECT id, vocab_id, context, source_url, source_title FROM vocab_examples
+       WHERE user_id = ? ${vocabId === undefined ? "" : "AND vocab_id = ?"} ORDER BY id`,
+    )
+    .all(...(vocabId === undefined ? [userId] : [userId, vocabId])) as {
+    id: number;
+    vocab_id: number;
+    context: string;
+    source_url: string | null;
+    source_title: string;
+  }[];
+  const out = new Map<number, VocabExample[]>();
+  for (const r of rows) {
+    const list = out.get(r.vocab_id) ?? out.set(r.vocab_id, []).get(r.vocab_id)!;
+    list.push({ id: r.id, context: r.context, sourceUrl: r.source_url, sourceTitle: r.source_title });
+  }
+  return out;
+}
 
 /**
  * Các mục đã "chứng minh" nhớ lâu: từng nhớ lại đúng sau khoảng cách ≥ MASTERY_GAP_DAYS ngày,
@@ -517,7 +575,8 @@ function provenIds(userId: number): Set<number> {
 export function listVocab(userId: number): VocabItem[] {
   const rows = conn().prepare("SELECT * FROM vocab WHERE user_id = ? ORDER BY created_at DESC, id DESC").all(userId) as VocabRow[];
   const proven = provenIds(userId);
-  return rows.map((r) => toVocab(r, proven.has(r.id)));
+  const examples = examplesOf(userId);
+  return rows.map((r) => toVocab(r, proven.has(r.id), examples.get(r.id)));
 }
 
 /** "heute" ↔ "Heute": cùng từ, chỉ khác viết hoa chữ cái đầu (đứng đầu câu / danh từ) */
@@ -532,8 +591,8 @@ const caseVariants = (w: string) => [...new Set([w, w[0].toLowerCase() + w.slice
 export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }): VocabItem {
   const variants = caseVariants(v.word);
   const found = conn()
-    .prepare(`SELECT id, word FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
-    .all(userId, ...variants) as { id: number; word: string }[];
+    .prepare(`SELECT id, word, context FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
+    .all(userId, ...variants) as { id: number; word: string; context: string }[];
   const old = found.find((f) => f.word === v.word) ?? (found.length === 1 ? found[0] : undefined);
   if (!old) {
     const r = conn()
@@ -552,7 +611,16 @@ export function saveVocab(userId: number, v: { word: string; context: string; so
        WHERE id = ? RETURNING *`,
     )
     .get(word, v.sourceUrl, v.sourceTitle, v.context, old.id) as VocabRow;
-  return toVocab(r, provenIds(userId).has(r.id));
+  // Gặp lại ở câu khác → giữ thêm làm câu ví dụ (không trùng câu chính / câu đã có, tối đa MAX_EXAMPLES)
+  const ctx = v.context.trim();
+  if (old.context && ctx && ctx !== old.context.trim()) {
+    const n = conn().prepare("SELECT COUNT(*) AS n FROM vocab_examples WHERE vocab_id = ?").get(old.id) as { n: number };
+    if (n.n < MAX_EXAMPLES)
+      conn()
+        .prepare("INSERT OR IGNORE INTO vocab_examples (vocab_id, user_id, context, source_url, source_title) VALUES (?, ?, ?, ?, ?)")
+        .run(old.id, userId, ctx, v.sourceUrl, v.sourceTitle);
+  }
+  return toVocab(r, provenIds(userId).has(r.id), examplesOf(userId, old.id).get(old.id));
 }
 
 export function getVocab(userId: number, id: number): { word: string; context: string } | undefined {
@@ -624,7 +692,40 @@ export function reviewVocab(
 export function deleteVocab(userId: number, id: number): boolean {
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ? AND source = ?").run(userId, `/vocab/${id}`);
   conn().prepare("DELETE FROM review_events WHERE user_id = ? AND vocab_id = ?").run(userId, id);
+  conn().prepare("DELETE FROM vocab_examples WHERE user_id = ? AND vocab_id = ?").run(userId, id);
   return conn().prepare("DELETE FROM vocab WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
+}
+
+/** Xoá nhiều mục 1 lần (1 giao dịch) → số mục đã xoá */
+export function deleteVocabs(userId: number, ids: number[]): number {
+  const db = conn();
+  db.exec("BEGIN");
+  try {
+    let n = 0;
+    for (const id of ids) if (deleteVocab(userId, id)) n++;
+    db.exec("COMMIT");
+    return n;
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
+/** Xoá 1 câu ví dụ thêm → false = không có (của người này) */
+export function deleteVocabExample(userId: number, vocabId: number, exampleId: number): boolean {
+  return conn().prepare("DELETE FROM vocab_examples WHERE id = ? AND vocab_id = ? AND user_id = ?").run(exampleId, vocabId, userId).changes > 0;
+}
+
+/** Các mục (của người này) chưa xác định có phải danh từ không — để AI xác định mạo từ */
+export function vocabNounsUnknown(userId: number, ids: number[]): { id: number; word: string; context: string }[] {
+  if (!ids.length) return [];
+  return conn()
+    .prepare(`SELECT id, word, context FROM vocab WHERE user_id = ? AND gender = '' AND id IN (${ids.map(() => "?").join(", ")})`)
+    .all(userId, ...ids) as { id: number; word: string; context: string }[];
+}
+
+export function setVocabNoun(userId: number, id: number, n: { gender: NounGender; singular: string; plural: string }) {
+  conn().prepare("UPDATE vocab SET gender = ?, singular = ?, plural = ? WHERE id = ? AND user_id = ?").run(n.gender, n.singular, n.plural, id, userId);
 }
 
 export function setLessonPublished(id: number, published: boolean) {
