@@ -1,6 +1,7 @@
 import { setAudioModeAsync } from "expo-audio";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { speechCheck, type CheckedWord } from "@shared/dictation";
 import { micDenied, notice } from "./dialogs";
 import { useI18n } from "./i18n";
@@ -18,6 +19,19 @@ const SILENT_ERRORS = new Set(["no-speech", "speech-timeout", "nomatch"]);
 const isHeard = (w: CheckedWord) => w.state === "correct" || w.state === "close";
 /** volumechange (-2…10) → dBFS gần đúng, để dùng chung sóng âm với lượt thu thường */
 const toDb = (v: number) => (v <= 0 ? -160 : -50 + v * 5);
+
+/**
+ * Trả âm thanh về loa ngoài sau lượt nhận dạng. iOS: module nhận dạng để phiên âm thanh ở mode "measurement" (loa phát
+ * rất nhỏ), còn setAudioModeAsync của expo-audio chỉ đổi category, giữ nguyên mode → phải tự đặt mode về "default" trước.
+ */
+const speakerOut = () => {
+  if (Platform.OS === "ios") {
+    try {
+      ExpoSpeechRecognitionModule.setCategoryIOS({ category: "playback", categoryOptions: ["mixWithOthers"], mode: "default" });
+    } catch {}
+  }
+  return setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+};
 
 /** Nhận dạng trên máy (không gửi âm thanh lên mạng) nếu máy đã có gói tiếng Đức — nhanh hơn, không bị giới hạn lượt */
 let onDevice: Promise<boolean> | null = null;
@@ -185,7 +199,7 @@ export function useLiveTake({
     try {
       ExpoSpeechRecognitionModule.abort();
     } catch {}
-    setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+    speakerOut();
   };
 
   const reset = () => {
@@ -253,29 +267,27 @@ export function useLiveTake({
     setRecording(false);
     setLive(null);
     // Trả âm thanh về loa ngoài (nhận dạng để phiên âm thanh ở chế độ thu) trước khi phát "ting" / câu mẫu
-    setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true })
-      .catch(() => {})
-      .then(() => {
-        if (id !== attemptId.current || failed.current) return;
-        const heard = transcript.current;
-        const v = voicedAt();
-        if (!heard.trim() && v.length < 3) {
-          busy.current = false;
-          onSilent?.();
-          return setTake({ speed: 0, status: "silent" });
-        }
-        if (recUri.current) setUri(recUri.current);
-        onCaptured?.();
-        // Thời lượng nói: từ nhịp có tiếng đầu tiên tới lúc máy nghe ra chữ cuối / nhịp có tiếng cuối
-        const from = v[0] ?? 0;
-        const to = Math.max(v.at(-1) ?? 0, lastHeard.current);
-        const speed = duration / Math.max((to - from) / 1000 + 0.1, 0.3);
-        const r = speechCheck(text, heard);
-        const a: Take = { speed, status: "done", words: r.words, extra: r.extra.length };
+    speakerOut().then(() => {
+      if (id !== attemptId.current || failed.current) return;
+      const heard = transcript.current;
+      const v = voicedAt();
+      if (!heard.trim() && v.length < 3) {
         busy.current = false;
-        setTake(a);
-        onAttempt(takePassed(a), r.words.length ? r.words.filter(isHeard).length / r.words.length : undefined, a);
-      });
+        onSilent?.();
+        return setTake({ speed: 0, status: "silent" });
+      }
+      if (recUri.current) setUri(recUri.current);
+      onCaptured?.();
+      // Thời lượng nói: từ nhịp có tiếng đầu tiên tới lúc máy nghe ra chữ cuối / nhịp có tiếng cuối
+      const from = v[0] ?? 0;
+      const to = Math.max(v.at(-1) ?? 0, lastHeard.current);
+      const speed = duration / Math.max((to - from) / 1000 + 0.1, 0.3);
+      const r = speechCheck(text, heard);
+      const a: Take = { speed, status: "done", words: r.words, extra: r.extra.length };
+      busy.current = false;
+      setTake(a);
+      onAttempt(takePassed(a), r.words.length ? r.words.filter(isHeard).length / r.words.length : undefined, a);
+    });
   });
 
   // Câu mẫu vừa phát xong → nghỉ một chút (loa tắt hẳn) rồi bắt đầu thu

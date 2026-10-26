@@ -356,7 +356,6 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
   const [done, setDone] = useState(0); // lượt đã nói của câu đang luyện
   const [level, setLevel] = useState<Level>(0); // bậc Luyện to (che chữ tới đâu)
   const [run, setRun] = useState(0); // số lượt đạt liền ở bậc hiện tại
-  const [replay, setReplay] = useState(true); // lượt sau phát mẫu trước: lượt đầu, vừa đổi bậc, sau lượt chưa đạt
   const [looping, setLooping] = useState(false); // đang lặp rảnh tay
   const [autoNext, setAutoNext] = useState(false); // xong khối lúc rảnh tay → sắp tự sang câu sau
   const silentRun = useRef(0); // số lượt liền không nghe thấy tiếng
@@ -527,7 +526,6 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     setDone(n);
     setRun(r);
     setLevel(lv);
-    setReplay(!ok || lv !== level);
     const fluent = lv === TOP && r >= LEVEL_RUN;
     if (n < block && !fluent) return;
     if (looping) setAutoNext(true); // đang rảnh tay → tự sang câu sau
@@ -557,7 +555,7 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     },
     onFail: () => setLooping(false),
     autoLoop: phase === "drill" && looping,
-    loopListen: replay, // phát mẫu ở lượt đầu, khi đổi bậc và sau lượt chưa đạt
+    loopListen: false, // vào nói luôn — cần nghe mẫu thì bấm nút loa
   });
   const drill = phase === "drill";
   const take = drill ? drillTake : recallTake;
@@ -589,7 +587,6 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     setDone(0);
     setLevel(0);
     setRun(0);
-    setReplay(true);
     setAutoNext(false);
     silentRun.current = 0;
   };
@@ -601,7 +598,6 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     setDone(0);
     setLevel(grade === "good" || grade === "easy" ? TOP : 0);
     setRun(0);
-    setReplay(true);
     silentRun.current = 0;
     setLooping(true); // người học vừa bấm → bắt đầu lặp luôn
   };
