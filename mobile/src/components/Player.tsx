@@ -21,6 +21,7 @@ import { Label, Segmented } from "./ui";
 import { api, type DictResult, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { askLogin, micDenied, showError } from "@/lib/dialogs";
+import { prefetchGerman } from "@/lib/speak";
 import { C } from "@/lib/theme";
 import type { DictationLevel } from "@shared/dictation";
 import { useI18n } from "@/lib/i18n";
@@ -267,6 +268,19 @@ export default function Player({
     pause();
     setPicked({ word: p.base, context, marks: p.parts });
   };
+  // Ở lại câu một chút → tải sẵn giọng đọc mọi từ / cụm chạm được trong câu, chạm vào là phát ngay
+  // (chờ trước khi tải để lướt nhanh qua nhiều câu không tốn lượt tạo giọng mới của server)
+  const curHidden = dictation ? !dictDone[idx] : hideText && !revealed.has(idx);
+  const curPhrases = current && showPhr && !curHidden ? phrasesOf(current.text) : undefined;
+  useEffect(() => {
+    if (!user || !current || curHidden) return;
+    const timer = setTimeout(() => {
+      const phrases = curPhrases ?? [];
+      const words = tokenize(current.text, phrases).flatMap(({ word, phrase }) => (phrase >= 0 ? [] : [cleanWord(word)]));
+      new Set([...words, ...phrases.map((p) => p.base)]).forEach((w) => w && prefetchGerman(w));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [user, current, curHidden, curPhrases]);
   const saveWord = async (word: string, context: string, meaning: string) => {
     if (!user) return askLogin(t("player.needLogin"), t("player.needLoginBody"));
     try {
