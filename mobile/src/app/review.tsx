@@ -200,7 +200,7 @@ type Graded = { item: Word; correct: boolean; stage?: number; mastery?: Mastery 
 
 const SOUND_KEY = "review-sound";
 const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
-const BLOCKS = ["5", "10", "20"] as const;
+const BLOCKS = ["8", "12", "20"] as const; // tối thiểu 6 lượt (3 bậc × 2 lượt đạt liền) mới tới bậc không nhìn
 type Block = (typeof BLOCKS)[number];
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
@@ -886,7 +886,7 @@ export default function ReviewScreen() {
   const [wordsOpen, setWordsOpen] = useState(false); // thẻ Từ vựng: đã bấm → hiện lựa chọn Tất cả / theo ngày
   const { tablet } = useLayout();
   const items = data?.items ?? null;
-  const [block, setBlock] = useState<Block>("10");
+  const [block, setBlock] = useState<Block>("12");
   useEffect(() => {
     SecureStore.getItemAsync(BLOCK_KEY)
       .then((b) => BLOCKS.includes(b as Block) && setBlock(b as Block))

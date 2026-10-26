@@ -44,14 +44,17 @@ const useDrillTake = liveTake ?? useRecordedDrill;
 
 type Item = VocabItem & { stage: number };
 /**
- * Loại lượt trong hàng chờ:
- * - new: câu mới — chỉ Luyện to; xong khối → thêm 1 lượt "check" cuối buổi.
- * - due: câu đến hạn — Nhớ lại (chấm vào lịch ôn) → Luyện to.
- * - check: câu mới, cuối buổi — nhớ lại có gợi ý chữ cái đầu; lần chấm đầu tiên vào lịch ôn.
- * - retry: câu đến hạn nhớ chưa tốt — cuối buổi nhớ lại có gợi ý (không chấm lại).
- * - practice: luyện thêm câu yếu sau buổi — Nhớ lại → Luyện to (không chấm).
+ * Loại lượt trong hàng chờ. Câu chưa thuộc: tiếng Đức trước → Luyện to bớt dần chữ → lát sau mới nhớ lại từ nghĩa.
+ * Câu đã thuộc: nhớ lại từ nghĩa trước (lần kiểm tra thật), quên mới học lại.
+ * - new: câu mới — Luyện to 3 bậc; xong khối → thêm 1 lượt "check" cuối buổi.
+ * - learn: câu đang học (mức < RECALL_STAGE) đến hạn — như câu mới.
+ * - due: câu đã thuộc (mức ≥ RECALL_STAGE) đến hạn — Nhớ lại không gợi ý (chấm vào lịch ôn) → Luyện to:
+ *   nhớ tốt → chỉ bậc không nhìn; chưa tốt → đủ 3 bậc + 1 lượt "retry" cuối buổi.
+ * - check: cuối buổi, câu vừa luyện — chỉ thấy nghĩa, nói câu (gợi ý chữ cái đầu khi cần); chấm vào lịch ôn.
+ * - retry: cuối buổi nhớ lại thêm (không chấm): câu đến hạn nhớ chưa tốt, hoặc câu vừa luyện mà không có câu nào chen giữa.
+ * - practice: luyện thêm câu yếu sau buổi — Luyện to 3 bậc (không chấm).
  */
-type Kind = "new" | "due" | "check" | "retry" | "practice";
+type Kind = "new" | "learn" | "due" | "check" | "retry" | "practice";
 type Entry = { item: Item; kind: Kind };
 /** recall: tự nhớ ra · recall-self: người học tự chấm (nói đúng ý / lỗi mạng) · cued: nhớ có gợi ý · shadow: chỉ Luyện to */
 type Exercise = "recall" | "recall-self" | "cued" | "shadow";
@@ -59,7 +62,12 @@ type Result = { item: Item; grade: Grade; exercise: Exercise; dueDays?: number }
 /** recall: chỉ thấy nghĩa, nói câu · reveal: hiện câu + máy chấm · drill: luyện to lặp rảnh tay */
 type Phase = "recall" | "reveal" | "drill";
 
-const FLUENT_RUN = 3; // đạt chừng này lượt liền → câu đã nói trôi, xong khối sớm (block chỉ là số lượt tối đa)
+/** Bậc Luyện to: 0 nhìn đủ câu · 1 chỉ còn chữ cái đầu · 2 không nhìn */
+type Level = 0 | 1 | 2;
+const TOP: Level = 2;
+const LEVEL_RUN = 2; // đạt chừng này lượt liền → lên bậc; ở bậc cuối → đã nói được không cần nhìn, xong khối sớm (block chỉ là số lượt tối đa)
+const RECALL_STAGE = 3; // từ mức này câu coi như đã thuộc → nhớ lại từ nghĩa trước
+const MIN_GAP = 1; // ít nhất chừng này lượt chen giữa Luyện to và nhớ lại cuối buổi (không thì không chấm)
 const AUTO_NEXT_MS = 1500; // xong khối lúc đang lặp rảnh tay → tự sang câu sau
 const SILENT_STOP = 2; // vòng lặp rảnh tay: 2 lượt liền không nghe thấy tiếng → tự dừng
 const SPEEDS = [0.75, 0.9, 1, 1.1]; // tốc độ giọng đọc mẫu
@@ -90,6 +98,8 @@ function hintOf(s: string) {
     })
     .join("");
 }
+/** Che 1 từ theo bậc: 1 → giữ chữ cái đầu, 2 → che hết (giữ dấu câu) */
+const maskWord = (w: string, level: Level) => (level === 0 ? w : level === 1 ? hintOf(w) : w.replace(/[\p{L}\p{N}]/gu, "_"));
 /** Chưa nghe câu mẫu ở tốc độ này lần nào → ước lượng thời lượng để đo nhịp */
 const estimate = (text: string, speed: number) => (0.3 + text.split(/\s+/).length * 0.4) / speed;
 /** Cỡ chữ câu tiếng Đức theo độ dài: ngắn 32 · vừa 28 · dài 24 (không nhỏ hơn) */
@@ -97,53 +107,61 @@ const sentenceSize = (s: string) => (s.length <= 40 ? 32 : s.length <= 80 ? 28 :
 const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 
 const graded = (k: Kind) => k === "due" || k === "check";
+/** Lượt nhớ lại cuối buổi (đã luyện câu này trong buổi → được gợi ý chữ cái đầu khi cần) */
 const cued = (k: Kind) => k === "check" || k === "retry";
-/** Câu mới / chưa có nghĩa: chỉ Luyện to; lượt có nhớ lại: nhớ lại trước */
-const phaseFor = (e?: Entry): Phase =>
-  !e ? "drill" : cued(e.kind) || ((e.kind === "due" || e.kind === "practice") && !!e.item.meaning) ? "recall" : "drill";
+/** Câu đã thuộc (có nghĩa) / lượt cuối buổi: nhớ lại trước; còn lại: tiếng Đức trước — Luyện to */
+const phaseFor = (e?: Entry): Phase => (e && (cued(e.kind) || (e.kind === "due" && !!e.item.meaning)) ? "recall" : "drill");
+const kindOf = (stage: number): Kind => (stage === 0 ? "new" : stage < RECALL_STAGE ? "learn" : "due");
 
 /** Số từ được phép thiếu mà vẫn tính "nhớ tốt": câu ≤ 3 từ phải đủ; dài hơn cho thiếu ~20% (ít nhất 1 từ) */
 const allowedMiss = (n: number) => (n <= 3 ? 0 : Math.max(1, Math.round(n * 0.2)));
 const LOWER: Record<Grade, Grade> = { easy: "good", good: "hard", hard: "again", again: "again" };
 /**
- * Máy chấm lượt nhớ lại theo số từ nhận ra (ngưỡng theo độ dài câu). Đủ từng chữ, không nói thừa, không gợi ý → easy.
- * Nói thừa nhiều (lan man, đoán mò) → hạ 1 bậc. Không nhận dạng được → null (người học tự chấm).
+ * Máy chấm lượt nhớ lại theo số từ nhận ra (ngưỡng theo độ dài câu). Đủ từng chữ, không nói thừa, chưa luyện trước
+ * trong buổi (primed) → easy. Nói thừa nhiều (lan man, đoán mò) → hạ 1 bậc. Phải xem gợi ý → cao nhất "hard".
+ * Không nhận dạng được → null (người học tự chấm).
  */
-function recallGrade(a: Take | undefined, withHint: boolean): Grade | null {
+function recallGrade(a: Take | undefined, primed: boolean, hinted: boolean): Grade | null {
   if (a?.status !== "done" || !a.words?.length) return null;
   const n = a.words.length;
   const heard = heardCount(a);
   let g: Grade = n - heard <= allowedMiss(n) ? "good" : heard * 2 >= n ? "hard" : "again";
-  if (g === "good" && !withHint && !a.extra && a.words.every((w) => w.state === "correct")) g = "easy";
+  if (g === "good" && !primed && !hinted && !a.extra && a.words.every((w) => w.state === "correct")) g = "easy";
   if ((a.extra ?? 0) > Math.max(2, n / 2)) g = LOWER[g];
+  if (hinted && (g === "good" || g === "easy")) g = "hard";
   return g;
 }
 
 /**
- * Câu tiếng Đức. Đang nói (`live`): kiểu karaoke — từ máy đã nghe ra sáng xanh, từ chưa tới mờ.
- * Sau lượt đã nhận dạng: trắng = máy nhận ra, đỏ = chưa nhận ra. Có `onLook` → chạm từ để tra.
+ * Câu tiếng Đức, che theo bậc Luyện to (`level`). Đang nói (`live`): kiểu karaoke — từ máy đã nghe ra sáng xanh
+ * (hiện chữ), từ chưa tới mờ (che theo bậc). Sau lượt đã nhận dạng: trắng = máy nhận ra, đỏ = chưa nhận ra
+ * (bậc che chữ: vẫn che, kẻo lượt sau đọc lại kết quả). Có `onLook` → chạm từ để tra (chỉ khi không che).
  */
-function Sentence({ text, take, live, onLook }: { text: string; take: Take | null; live?: CheckedWord[] | null; onLook?: (word: string, context: string) => void }) {
+function Sentence({ text, take, live, level, onLook }: { text: string; take: Take | null; live?: CheckedWord[] | null; level: Level; onLook?: (word: string, context: string) => void }) {
   const size = sentenceSize(text);
   const style = { fontSize: size, lineHeight: Math.round(size * 1.3), fontWeight: "700" as const, color: C.text };
+  const look = level === 0 ? onLook : undefined;
   const word = (w: string, k: number, color?: string) => (
     <Text
       key={k}
       style={color ? { color } : undefined}
-      onPress={onLook && cleanWord(w) ? () => onLook(cleanWord(w), text) : undefined}
+      onPress={look && cleanWord(w) ? () => look(cleanWord(w), text) : undefined}
       suppressHighlighting={false}
     >
-      {w}{" "}
+      {maskWord(w, level)}{" "}
     </Text>
   );
   if (live)
     return (
       <Text style={style} maxFontSizeMultiplier={1.3}>
-        {(live.length ? live : splitWords(text).map((w): CheckedWord => ({ text: w, state: "missing" }))).map((w, k) => (
-          <Text key={k} style={{ color: w.state === "correct" || w.state === "close" ? C.accent : C.muted }}>
-            {w.text}{" "}
-          </Text>
-        ))}
+        {(live.length ? live : splitWords(text).map((w): CheckedWord => ({ text: w, state: "missing" }))).map((w, k) => {
+          const heard = w.state === "correct" || w.state === "close";
+          return (
+            <Text key={k} style={{ color: heard ? C.accent : C.muted }}>
+              {heard ? w.text : maskWord(w.text, level)}{" "}
+            </Text>
+          );
+        })}
       </Text>
     );
   if (take?.status !== "done" || !take.words)
@@ -156,6 +174,29 @@ function Sentence({ text, take, live, onLook }: { text: string; take: Take | nul
     <Text style={style} maxFontSizeMultiplier={1.3}>
       {take.words.map((w, k) => word(w.text, k, w.state === "correct" || w.state === "close" ? C.text : C.redText))}
     </Text>
+  );
+}
+
+/** Thanh 3 bậc Luyện to: bậc đã qua đầy, bậc đang luyện đầy dần theo số lượt đạt liền */
+function LevelSteps({ level, run, done }: { level: Level; run: number; done: boolean }) {
+  const { t } = useI18n();
+  const names = [t("crazyReview.level0"), t("crazyReview.level1"), t("crazyReview.level2")];
+  return (
+    <View style={{ flexDirection: "row", gap: 6 }}>
+      {names.map((name, k) => {
+        const fill = done || k < level ? 1 : k === level ? run / LEVEL_RUN : 0;
+        return (
+          <View key={k} style={{ flex: 1, gap: 6 }}>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
+              <View style={{ height: "100%", width: `${fill * 100}%`, backgroundColor: C.accent }} />
+            </View>
+            <Text style={{ color: k === level && !done ? C.text : C.muted, fontSize: 12, fontWeight: "700" }} numberOfLines={1}>
+              {name}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -287,11 +328,13 @@ function TakeStatus({
 
 /**
  * Luyện câu ⭐ kiểu Crazy Deutsch (to · nhanh · rõ). Mỗi câu đi theo 1 đường thẳng, máy tự chấm:
- * - Câu mới: Luyện to — nghe mẫu rồi nói lặp tới khi nói trôi (FLUENT_RUN lượt đạt liền) hoặc đủ `block` lượt.
- *   Cuối buổi nhớ lại câu đó 1 lần có gợi ý chữ cái đầu → kết quả này (không phải lượt bắt chước) vào lịch ôn.
- * - Câu đã học: 1. Nhớ lại — chỉ thấy nghĩa, nói câu (Whisper nhận dạng, không gợi ý câu gốc) → máy chấm theo số từ
+ * - Luyện to 3 bậc, bớt dần chữ: nhìn đủ câu → chỉ chữ cái đầu → không nhìn. Đạt LEVEL_RUN lượt liền → lên bậc,
+ *   trượt → lùi 1 bậc và phát lại mẫu; xong khi nói được không cần nhìn hoặc đủ `block` lượt.
+ * - Câu mới / đang học: tiếng Đức trước — Luyện to 3 bậc. Cuối buổi (có câu khác chen giữa) chỉ thấy nghĩa, nói câu
+ *   (gợi ý chữ cái đầu khi cần) → kết quả này (không phải lượt bắt chước) vào lịch ôn.
+ * - Câu đã thuộc: 1. Nhớ lại — chỉ thấy nghĩa, nói câu (Whisper nhận dạng, không gợi ý câu gốc) → máy chấm theo số từ
  *   nhận ra, hiện câu chuẩn tô đỏ chỗ sai; chấm sai ý → người học tự nâng ("nói đúng ý", ghi là tự đánh giá).
- *   2. Luyện to như câu mới. Chưa nhớ / Còn khó → cuối buổi nhớ lại thêm 1 lượt có gợi ý (không chấm lại).
+ *   2. Luyện to: nhớ tốt → chỉ bậc không nhìn; chưa nhớ / còn khó → đủ 3 bậc, cuối buổi nhớ lại thêm 1 lượt (không chấm lại).
  * - Lượt đạt khi máy nhận ra đủ từ; nhịp so với mẫu chỉ là nhận xét (đúng trước, nhanh sau).
  * - Câu chưa có nghĩa → AI điền nghĩa lúc vào buổi để nhớ lại được. Chạm từ / cụm trong câu → bảng giải thích.
  * Luyện to: nhận dạng trực tiếp (useLiveTake) — chữ sáng theo giọng, nói hết câu là sang lượt tiếp; câu mẫu phát ở
@@ -299,7 +342,7 @@ function TakeStatus({
  */
 export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; pool: VocabItem[]; block: number; onClose: (changed: boolean) => void }) {
   const { t, lang } = useI18n();
-  const [queue, setQueue] = useState<Entry[]>(() => items.map((item) => ({ item, kind: item.stage > 0 ? "due" : "new" })));
+  const [queue, setQueue] = useState<Entry[]>(() => items.map((item) => ({ item, kind: kindOf(item.stage) })));
   const [mainCount, setMainCount] = useState(items.length); // số lượt chính (trước vòng ôn lại cuối buổi)
   const [practice, setPractice] = useState(false); // đang luyện thêm câu yếu (không chấm)
   const [pos, setPos] = useState(0);
@@ -308,10 +351,12 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
   const [phase, setPhase] = useState<Phase>(() => phaseFor(queue[0]));
   const [grade, setGrade] = useState<Grade | null>(null); // kết quả nhớ lại (null = chưa chấm được)
   const [self, setSelf] = useState(false); // kết quả do người học tự chấm
+  const [hinted, setHinted] = useState(false); // lượt nhớ lại cuối buổi: đã xem gợi ý chữ cái đầu
   const committed = useRef(false); // kết quả nhớ lại của câu này đã gửi vào lịch ôn
   const [done, setDone] = useState(0); // lượt đã nói của câu đang luyện
-  const [run, setRun] = useState(0); // số lượt đạt liền
-  const [lastOk, setLastOk] = useState(true); // lượt trước đạt → lượt sau không cần phát lại mẫu
+  const [level, setLevel] = useState<Level>(0); // bậc Luyện to (che chữ tới đâu)
+  const [run, setRun] = useState(0); // số lượt đạt liền ở bậc hiện tại
+  const [replay, setReplay] = useState(true); // lượt sau phát mẫu trước: lượt đầu, vừa đổi bậc, sau lượt chưa đạt
   const [looping, setLooping] = useState(false); // đang lặp rảnh tay
   const [autoNext, setAutoNext] = useState(false); // xong khối lúc rảnh tay → sắp tự sang câu sau
   const silentRun = useRef(0); // số lượt liền không nghe thấy tiếng
@@ -319,7 +364,7 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
   const [results, setResults] = useState<Result[]>([]);
   const [shouts, setShouts] = useState(0); // lượt nói to trong buổi này
   const changed = useRef(false); // đã chấm vào lịch ôn / AI điền nghĩa → quay lại thì tải lại sổ từ
-  const introduced = useRef(new Set<number>()); // câu mới đã nói ít nhất 1 lượt
+  const introduced = useRef(new Set<number>()); // câu mới / đang học đã nói ít nhất 1 lượt → cần được chấm trong buổi
   const gradedIds = useRef(new Set<number>()); // câu đã chấm vào lịch ôn trong buổi
   const [talking, setTalking] = useState(false); // đang phát câu mẫu
   const [ttsSec, setTtsSec] = useState<Record<string, number>>({}); // "<id>@<tốc độ>" → thời lượng câu mẫu (giây)
@@ -419,7 +464,7 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     return q;
   };
 
-  /** Câu mới đã luyện mà chưa kịp nhớ lại cuối buổi (bỏ qua / thoát sớm) → hẹn ôn lại sớm (vài giờ) */
+  /** Câu mới / đang học đã luyện mà chưa được chấm qua nhớ lại cuối buổi (bỏ qua / thoát sớm / không có câu chen giữa) → hẹn ôn lại sớm */
   const settle = () => {
     for (const id of introduced.current) {
       if (gradedIds.current.has(id)) continue;
@@ -439,29 +484,31 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     recallTake.reset();
     reveal("again");
   };
-  /** Người học tự chấm: lỗi mạng không nhận dạng được, hoặc máy chấm sai ý (nói khác chữ nhưng đúng nghĩa) */
+  /** Người học tự chấm: lỗi mạng không nhận dạng được, hoặc máy chấm sai ý (nói khác chữ nhưng đúng nghĩa). Đã xem gợi ý → cao nhất "hard" */
   const selfGrade = (g: Grade) => {
-    setGrade(g);
+    setGrade(hinted && g === "good" ? "hard" : g);
     setSelf(true);
   };
 
   /**
-   * Xong khối Luyện to: câu mới → nhớ lại cuối buổi. Câu chưa được chấm qua nhớ lại (chưa có nghĩa nên chỉ
-   * Luyện to) → chấm theo khối; Luyện to không tính là bằng chứng thành thạo.
+   * Xong khối Luyện to: câu mới / đang học → nhớ lại từ nghĩa cuối buổi (chấm nếu có câu chen giữa, không thì chỉ
+   * nhớ lại thêm và hẹn ôn sớm). Câu chưa được chấm qua nhớ lại (chưa có nghĩa nên chỉ Luyện to) → chấm theo khối;
+   * Luyện to không tính là bằng chứng thành thạo.
    */
   const finishBlock = (fluent: boolean) => {
     if (!entry || !v || practice) return;
-    if (entry.kind === "new" && v.meaning) setQueue((q) => [...q, { item: v, kind: "check" }]);
-    else if ((entry.kind === "new" || entry.kind === "due") && !gradedIds.current.has(v.id)) submit(v, fluent ? "good" : "hard", "shadow");
+    if ((entry.kind === "new" || entry.kind === "learn") && v.meaning)
+      setQueue((q) => [...q, { item: v, kind: q.length - 1 - pos >= MIN_GAP ? "check" : "retry" }]);
+    else if (!gradedIds.current.has(v.id)) submit(v, fluent ? "good" : "hard", "shadow");
   };
 
   const onAttempt = (passed: boolean, _clear?: number, a?: Take) => {
     if (!v || !entry) return;
-    if (phase === "recall") return reveal(recallGrade(a, cued(entry.kind)));
+    if (phase === "recall") return reveal(recallGrade(a, cued(entry.kind), hinted));
     if (phase !== "drill") return;
     // Chỉ lượt Luyện to mới tính là lượt nói (lượt nhớ lại không cộng vào)
     setShouts((n) => n + 1);
-    if (entry.kind === "new") introduced.current.add(v.id);
+    if (entry.kind === "new" || entry.kind === "learn") introduced.current.add(v.id);
     // Đạt = máy nhận ra đủ từ; không nhận dạng được (bản dự phòng) → theo nhịp
     const ok = a?.status === "done" ? clearOk(a) : passed;
     setReps((s) => ({ ...s, [v.id]: { reps: (s[v.id]?.reps ?? 0) + 1, passed: ok || !!s[v.id]?.passed } }));
@@ -469,15 +516,23 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
       .then(({ rep }) => setReps((s) => ({ ...s, [v.id]: rep })))
       .catch(() => {});
     silentRun.current = 0;
-    setLastOk(ok);
     const n = done + 1;
-    const r = ok ? run + 1 : 0;
+    // Đạt đủ lượt liền → lên bậc (che thêm chữ); trượt → lùi 1 bậc (hiện thêm chữ)
+    let r = ok ? run + 1 : 0;
+    let lv = ok ? level : (Math.max(0, level - 1) as Level);
+    if (r >= LEVEL_RUN && lv < TOP) {
+      lv = (lv + 1) as Level;
+      r = 0;
+    }
     setDone(n);
     setRun(r);
-    if (n < block && r < FLUENT_RUN) return;
+    setLevel(lv);
+    setReplay(!ok || lv !== level);
+    const fluent = lv === TOP && r >= LEVEL_RUN;
+    if (n < block && !fluent) return;
     if (looping) setAutoNext(true); // đang rảnh tay → tự sang câu sau
     setLooping(false);
-    finishBlock(r >= FLUENT_RUN);
+    finishBlock(fluent);
   };
 
   const takeOpts = {
@@ -502,7 +557,7 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     },
     onFail: () => setLooping(false),
     autoLoop: phase === "drill" && looping,
-    loopListen: done === 0 || !lastOk, // phát mẫu ở lượt đầu và sau lượt chưa đạt
+    loopListen: replay, // phát mẫu ở lượt đầu, khi đổi bậc và sau lượt chưa đạt
   });
   const drill = phase === "drill";
   const take = drill ? drillTake : recallTake;
@@ -529,20 +584,24 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
   const resetSentence = () => {
     setGrade(null);
     setSelf(false);
+    setHinted(false);
     committed.current = false;
     setDone(0);
+    setLevel(0);
     setRun(0);
-    setLastOk(true);
+    setReplay(true);
     setAutoNext(false);
     silentRun.current = 0;
   };
+  /** Câu đã thuộc: nhớ tốt → chỉ luyện bậc không nhìn (giữ phát âm, tốc độ); chưa tốt → học lại đủ 3 bậc */
   const startDrill = () => {
     commit();
     silence();
     setPhase("drill");
     setDone(0);
+    setLevel(grade === "good" || grade === "easy" ? TOP : 0);
     setRun(0);
-    setLastOk(true);
+    setReplay(true);
     silentRun.current = 0;
     setLooping(true); // người học vừa bấm → bắt đầu lặp luôn
   };
@@ -674,9 +733,10 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     );
 
   const kind = entry.kind;
-  const twoSteps = (kind === "due" || kind === "practice") && !!v.meaning;
+  const twoSteps = kind === "due" && !!v.meaning;
   const tags: Record<Kind, { text: string; tone: Tone }> = {
     new: { text: t("crazyReview.tagNew"), tone: "good" },
+    learn: { text: t("crazyReview.tagLearn"), tone: "good" },
     due: { text: t("crazyReview.tagDue"), tone: "neutral" },
     check: { text: t("crazyReview.tagCheck"), tone: "warn" },
     retry: { text: t("crazyReview.tagRetry"), tone: "warn" },
@@ -692,15 +752,16 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
           : drill
             ? t("crazyReview.stepDrill")
             : t("crazyReview.stepRecall");
-  const fluent = run >= FLUENT_RUN;
+  const fluent = level === TOP && run >= LEVEL_RUN;
   const blockDone = done >= block || fluent;
+  const shown: Level = drill && !blockDone ? level : 0; // che chữ chỉ lúc đang Luyện to
   const isLast = pos === queue.length - 1;
   const nextTitle = isLast ? t("crazyReview.finish") : t("crazyReview.nextSentence");
   const nextIcon = isLast ? "checkmark" : "arrow.right";
   const endRound = pos >= mainCount; // vòng ôn lại cuối buổi
   const needManual = phase === "reveal" && graded(kind) && !grade; // không nhận dạng được → tự chấm
   // Máy chấm chưa nhớ / còn khó → cho người học sửa nếu thật ra nói đúng ý (khác chữ)
-  const canSelfOk = phase === "reveal" && graded(kind) && !self && (grade === "again" || grade === "hard") && recallTake.take?.status === "done";
+  const canSelfOk = phase === "reveal" && graded(kind) && !self && (grade === "again" || (grade === "hard" && !hinted)) && recallTake.take?.status === "done";
   // Tra từ khi không đang thu / đang lặp (kẻo bảng giải thích chen vào lượt nói)
   const canLook = phase === "reveal" || (drill && !looping && !busy);
   const onLook = canLook
@@ -719,7 +780,8 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
     if (!graded(kind)) return a?.status === "done" ? { text: t("crazyReview.retryResult", counts) + extra, tone: "neutral" } : null;
     if (!grade) return null;
     if (self) return { text: t("crazyReview.selfNote"), tone: "good" };
-    if (kind === "check" && (grade === "again" || grade === "hard")) return { text: t("crazyReview.checkWeak"), tone: grade === "again" ? "bad" : "warn" };
+    if (kind === "check" && (grade === "again" || grade === "hard"))
+      return { text: hinted && grade === "hard" ? t("crazyReview.checkHinted") : t("crazyReview.checkWeak"), tone: grade === "again" ? "bad" : "warn" };
     if (grade === "again") return { text: t("crazyReview.again") + extra, tone: "bad" };
     if (grade === "hard") return { text: t("crazyReview.hard", counts) + extra, tone: "warn" };
     if (grade === "easy") return { text: t("crazyReview.easy"), tone: "good" };
@@ -748,7 +810,10 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
               onPress={take.record}
             />
           )}
-          <View style={{ minHeight: 44 }}>{!busy && <TextBtn title={t("crazyReview.dontKnow")} onPress={dontKnow} />}</View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", minHeight: 44 }}>
+            {!busy && cued(kind) && !hinted && <TextBtn title={t("crazyReview.showHint")} icon="lightbulb" onPress={() => setHinted(true)} />}
+            {!busy && <TextBtn title={t("crazyReview.dontKnow")} onPress={dontKnow} />}
+          </View>
         </>
       );
     if (phase === "reveal") {
@@ -831,7 +896,7 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
                 <Text style={{ color: C.text, fontSize: 26, lineHeight: 34, fontWeight: "700" }} maxFontSizeMultiplier={1.3}>
                   {v.meaning}
                 </Text>
-                {cued(kind) ? (
+                {hinted ? (
                   <Text style={{ color: C.muted, fontSize: 18, letterSpacing: 2 }}>{hintOf(v.word)}</Text>
                 ) : (
                   <Text style={{ color: C.muted, fontSize: 15 }}>{t("crazyReview.wordCount", { n: splitWords(v.word).length })}</Text>
@@ -844,9 +909,10 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
                   text={v.word}
                   take={take.take}
                   live={liveTake && drill && take.state === "recording" ? (drillTake.live ?? []) : null}
+                  level={shown}
                   onLook={onLook}
                 />
-                <PhraseLines phrases={sentencePhrases} sentence={v.word} onLook={onLook} />
+                {shown === 0 && <PhraseLines phrases={sentencePhrases} sentence={v.word} onLook={onLook} />}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <PlayBtn
                     talking={talking}
@@ -876,11 +942,9 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
                 {drill && (
                   <View style={{ gap: 8 }}>
                     <Text style={{ color: blockDone ? C.accent : C.text, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
-                      {fluent ? t("crazyReview.fluent", { n: FLUENT_RUN }) : blockDone ? t("crazyReview.blockDone", { n: block }) : t("crazyReview.repsLabel", { i: done + 1, n: block })}
+                      {fluent ? t("crazyReview.fluent") : blockDone ? t("crazyReview.blockDone", { n: block }) : t("crazyReview.repsLabel", { i: done + 1, n: block })}
                     </Text>
-                    <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
-                      <View style={{ height: "100%", width: `${blockDone ? 100 : (Math.min(done, block) / block) * 100}%`, backgroundColor: C.accent }} />
-                    </View>
+                    <LevelSteps level={level} run={run} done={fluent} />
                     {autoNext && <Text style={{ color: C.muted, fontSize: 14 }}>{t("crazyReview.autoNext")}</Text>}
                   </View>
                 )}
@@ -888,7 +952,7 @@ export function CrazyReview({ items, pool, block, onClose }: { items: Item[]; po
                   <TakeStatus
                     take={take}
                     live={!!liveTake && drill}
-                    help={drill ? t("crazyReview.drillHelp") : t("crazyReview.recallHelp")}
+                    help={drill ? t("crazyReview.drillHelp", { n: LEVEL_RUN }) : t("crazyReview.recallHelp")}
                   />
                 )}
               </>
