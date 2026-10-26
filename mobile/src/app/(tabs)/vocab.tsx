@@ -1,9 +1,12 @@
 import { router, useFocusEffect } from "expo-router";
-import { SymbolView, type SFSymbol } from "expo-symbols";
+import { SymbolView } from "expo-symbols";
 import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
+  Alert,
   LayoutAnimation,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,7 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { isPhrase, isSentence } from "@shared/review";
 import { isDue } from "@shared/srs";
-import { Button, Card, ErrorText, Input, Segmented, styles } from "@/components/ui";
+import { Button, Card, ErrorText, Input, styles } from "@/components/ui";
 import { WordSheet } from "@/components/WordSheet";
 import { api, getVocabVersion, type VocabItem } from "@/lib/api";
 import { notice, showError } from "@/lib/dialogs";
@@ -151,7 +154,7 @@ function HeadWord({ v, color }: { v: VocabItem; color: string }) {
   );
 }
 
-/** Nút ✨ AI ghi nghĩa */
+/** Nút ✨ AI ghi nghĩa (cạnh ô sửa nghĩa) */
 function AiButton({ busy, onPress, label }: { busy: boolean; onPress: () => void; label: string }) {
   return (
     <Pressable
@@ -160,25 +163,21 @@ function AiButton({ busy, onPress, label }: { busy: boolean; onPress: () => void
       hitSlop={8}
       accessibilityLabel={label}
       style={({ pressed }) => ({
-        flexDirection: "row",
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         alignItems: "center",
-        gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 99,
-        borderWidth: 1,
-        borderColor: C.amber,
-        backgroundColor: pressed ? "rgba(250,204,21,0.2)" : "rgba(250,204,21,0.1)",
+        justifyContent: "center",
+        backgroundColor: pressed ? C.border : C.card2,
       })}
     >
-      {busy ? <ActivityIndicator size="small" color={C.amber} /> : <SymbolView name="sparkles" size={13} tintColor={C.amber} />}
-      <Text style={{ color: C.amber, fontWeight: "700", fontSize: 13 }}>AI</Text>
+      {busy ? <ActivityIndicator size="small" color={C.amber} /> : <SymbolView name="sparkles" size={17} tintColor={C.amber} />}
     </Pressable>
   );
 }
 
-/** Nút lọc dạng viên thuốc (chạm lần nữa để bỏ lọc) */
-function Chip({ label, icon, active, onPress }: { label: string; icon?: SFSymbol; active: boolean; onPress: () => void }) {
+/** Nút lọc dạng viên thuốc, chỉ chữ + số (chạm lần nữa để bỏ lọc) */
+function Chip({ label, n, active, onPress }: { label: string; n: number; active: boolean; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
@@ -189,15 +188,13 @@ function Chip({ label, icon, active, onPress }: { label: string; icon?: SFSymbol
         alignItems: "center",
         gap: 6,
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 7,
         borderRadius: 99,
-        borderWidth: 1,
-        borderColor: active ? C.amber : C.border,
-        backgroundColor: active ? "rgba(250,204,21,0.12)" : C.card2,
+        backgroundColor: active ? C.text : C.card2,
       }}
     >
-      {icon && <SymbolView name={icon} size={13} tintColor={active ? C.amber : C.muted} />}
-      <Text style={{ color: active ? C.amber : C.muted, fontWeight: "700", fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: active ? C.background : C.text, fontWeight: "600", fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: active ? C.background : C.muted, fontWeight: "600", fontSize: 13, opacity: active ? 0.6 : 1 }}>{n}</Text>
     </Pressable>
   );
 }
@@ -313,20 +310,15 @@ function VocabRow({
     <View
       style={{
         backgroundColor: C.card,
-        borderColor: C.border,
-        borderLeftWidth: 1,
-        borderRightWidth: 1,
-        borderTopWidth: first ? 1 : 0,
-        borderBottomWidth: last ? 1 : 0,
-        borderTopLeftRadius: first ? 16 : 0,
-        borderTopRightRadius: first ? 16 : 0,
-        borderBottomLeftRadius: last ? 16 : 0,
-        borderBottomRightRadius: last ? 16 : 0,
+        borderTopLeftRadius: first ? 14 : 0,
+        borderTopRightRadius: first ? 14 : 0,
+        borderBottomLeftRadius: last ? 14 : 0,
+        borderBottomRightRadius: last ? 14 : 0,
         overflow: "hidden",
       }}
     >
-      {!first && <View style={{ height: 1, backgroundColor: C.border, marginLeft: 16 }} />}
-      {/* Chạm dòng → mở / đóng; tra nghĩa bằng nút ⓘ riêng (không lẫn 2 vùng chạm trên cùng dòng chữ) */}
+      {!first && <View style={{ height: 1, backgroundColor: C.border, marginLeft: selecting ? 48 : 32 }} />}
+      {/* Chạm dòng → mở / đóng; tra nghĩa bằng nút "Giải thích" khi mở (không lẫn 2 vùng chạm trên cùng dòng chữ) */}
       <Pressable
         onPress={selecting ? onSelect : onToggle}
         onLongPress={selecting ? undefined : onLongPress}
@@ -336,10 +328,10 @@ function VocabRow({
         style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",
-          gap: 10,
+          gap: 12,
           paddingLeft: 14,
-          paddingRight: 6,
-          paddingVertical: 11,
+          paddingRight: 4,
+          paddingVertical: 12,
           backgroundColor: pressed ? C.card2 : "transparent",
         })}
       >
@@ -348,59 +340,39 @@ function VocabRow({
           <SymbolView name={checked ? "checkmark.circle.fill" : "circle"} size={22} tintColor={checked ? C.accent : C.muted} />
         ) : (
           <View
-            style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m.color, alignSelf: sentence ? "flex-start" : "center", marginTop: sentence ? 8 : 0 }}
+            style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color, alignSelf: sentence ? "flex-start" : "center", marginTop: sentence ? 9 : 0 }}
             accessibilityLabel={m.label}
           />
         )}
-        <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flex: 1, gap: 3 }}>
           {sentence ? (
-            <View style={{ flexDirection: "row", gap: 6 }}>
-              <SymbolView name="star.fill" size={13} tintColor={C.amber} style={{ marginTop: 4 }} />
-              <View style={{ flex: 1 }}>
-                <Sentence
-                  text={v.word}
-                  phrases={phrases}
-                  onLook={open ? onLook : undefined}
-                  style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "600" }}
-                />
-              </View>
-            </View>
+            <Sentence
+              text={v.word}
+              phrases={phrases}
+              onLook={open ? onLook : undefined}
+              style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "500" }}
+            />
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {phrase && <SymbolView name="sparkles" size={14} tintColor={C.phrase} />}
-              <Text style={{ flexShrink: 1, color: phrase ? C.phrase : C.text, fontSize: 17, fontWeight: "700" }} numberOfLines={1}>
+              <Text style={{ flexShrink: 1, color: phrase ? C.phrase : C.text, fontSize: 17, fontWeight: "600" }} numberOfLines={1}>
                 <HeadWord v={v} color={phrase ? C.phrase : C.text} />
               </Text>
-              {due && (
-                <Text style={{ color: C.amber, fontSize: 11, fontWeight: "800", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(250,204,21,0.12)", overflow: "hidden" }}>
-                  {t("vocab.due")}
-                </Text>
-              )}
+              {due && <SymbolView name="clock" size={12} tintColor={C.amber} accessibilityLabel={t("vocab.due")} />}
             </View>
           )}
           {/* Đang mở thì nghĩa nằm trong ô sửa bên dưới */}
-          {open ? null : v.meaning ? (
-            <Text style={{ color: C.muted, fontSize: 14 }} numberOfLines={sentence ? 3 : 1}>
-              {v.meaning}
+          {!open && (
+            <Text
+              style={{ color: C.muted, fontSize: 14, fontStyle: v.meaning ? "normal" : "italic", opacity: v.meaning ? 1 : 0.6 }}
+              numberOfLines={sentence ? 2 : 1}
+            >
+              {v.meaning || t("vocab.noMeaning")}
             </Text>
-          ) : (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Text style={{ color: "#a16207", fontSize: 14, fontStyle: "italic" }}>{t("vocab.noMeaning")}</Text>
-              <AiButton busy={aiBusy} onPress={fillAi} label={t("vocab.aiFill")} />
-            </View>
           )}
-          {!open && !!aiError && <ErrorText>{aiError}</ErrorText>}
-          {/* Câu đánh dấu sao: cụm từ trong câu · từ lẻ: cụm chứa từ đó (cụm đã lưu thì nghĩa chính là của cụm, khỏi lặp) */}
-          {!open && !phrase && <PhraseLines phrases={sentence ? phrases : own} />}
         </View>
-        {!sentence && !selecting && (
-          <Pressable onPress={() => onLook(v.word, v.context || v.word)} hitSlop={6} style={{ padding: 8 }} accessibilityLabel={t("vocab.explain")}>
-            <SymbolView name="info.circle" size={18} tintColor={C.muted} />
-          </Pressable>
-        )}
         {!selecting && (
-          <Pressable onPress={speak} hitSlop={6} style={{ padding: 8 }} accessibilityLabel={t("vocab.listen")}>
-            <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2.fill"} size={18} tintColor={C.accent} />
+          <Pressable onPress={speak} hitSlop={6} style={{ padding: 10 }} accessibilityLabel={t("vocab.listen")}>
+            <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2"} size={17} tintColor={speaking ? C.accent : C.muted} />
           </Pressable>
         )}
       </Pressable>
@@ -452,7 +424,7 @@ function VocabRow({
           {/* Câu ví dụ khác: gặp lại từ ở các câu khác (bài / video khác) */}
           {!!v.examples?.length && (
             <View style={{ gap: 8 }}>
-              <Text style={{ color: C.muted, fontSize: 12, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" }}>
+              <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>
                 {t("vocab.moreExamples", { n: v.examples.length })}
               </Text>
               {v.examples.map((ex) => {
@@ -473,8 +445,8 @@ function VocabRow({
                         hitSlop={8}
                         onPress={() => router.push(exSource[1] === "lesson" ? `/lesson/${exSource[2]}` : `/watch/${exSource[2]}`)}
                       >
-                        <SymbolView name="arrow.up.right.square" size={12} tintColor={C.amber} />
-                        <Text style={{ flex: 1, color: C.amber, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+                        <SymbolView name="arrow.up.right" size={11} tintColor={C.muted} />
+                        <Text style={{ flex: 1, color: C.muted, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
                           {ex.sourceTitle || t("vocab.openLesson")}
                         </Text>
                       </Pressable>
@@ -484,24 +456,35 @@ function VocabRow({
               })}
             </View>
           )}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          {/* Nguồn · giải thích · xoá */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 16, paddingTop: 2 }}>
             {source ? (
               <Pressable
                 style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}
                 hitSlop={8}
                 onPress={() => router.push(source[1] === "lesson" ? `/lesson/${source[2]}` : `/watch/${source[2]}`)}
               >
-                <SymbolView name="arrow.up.right.square" size={14} tintColor={C.amber} />
-                <Text style={{ flex: 1, color: C.amber, fontWeight: "700" }} numberOfLines={1}>
+                <SymbolView name="arrow.up.right" size={12} tintColor={C.muted} />
+                <Text style={{ flex: 1, color: C.muted, fontSize: 14, fontWeight: "600" }} numberOfLines={1}>
                   {v.sourceTitle || t("vocab.openLesson")}
                 </Text>
               </Pressable>
             ) : (
               <View style={{ flex: 1 }} />
             )}
-            <Pressable hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4 }} onPress={onDelete}>
-              <SymbolView name="trash" size={14} tintColor={C.redText} />
-              <Text style={{ color: C.redText, fontWeight: "700" }}>{t("delete")}</Text>
+            {!sentence && (
+              <Pressable
+                hitSlop={10}
+                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+                onPress={() => onLook(v.word, v.context || v.word)}
+                accessibilityRole="button"
+              >
+                <SymbolView name="text.book.closed" size={14} tintColor={C.text} />
+                <Text style={{ color: C.text, fontSize: 14, fontWeight: "600" }}>{t("vocab.explain")}</Text>
+              </Pressable>
+            )}
+            <Pressable hitSlop={10} onPress={onDelete} accessibilityRole="button" accessibilityLabel={t("delete")}>
+              <SymbolView name="trash" size={16} tintColor={C.redText} />
             </Pressable>
           </View>
         </View>
@@ -805,10 +788,10 @@ export default function VocabScreen() {
   const pickKind = (k: Kind) => setKind(kind === k ? null : k);
   const filtered = !!(query || status || kind);
   // Mỗi nút lọc chỉ hiện khi có mục — trừ khi đang bật (để luôn tắt được, kể cả khi vừa hết mục khớp)
-  const statusChips: { key: Status; label: string; icon: SFSymbol; n: number }[] = [
-    { key: "due", label: t("vocab.due"), icon: "clock", n: counts.due },
-    { key: "weak", label: t("vocab.weak"), icon: "exclamationmark.triangle", n: counts.weak },
-    { key: "empty", label: t("vocab.noMeaning"), icon: "pencil.line", n: counts.empty },
+  const statusChips: { key: Status; label: string; n: number }[] = [
+    { key: "due", label: t("vocab.due"), n: counts.due },
+    { key: "weak", label: t("vocab.weak"), n: counts.weak },
+    { key: "empty", label: t("vocab.noMeaning"), n: counts.empty },
   ];
   const kindChips: { key: Kind; label: string; n: number }[] = [
     { key: "word", label: t("vocab.typeWord"), n: counts.word },
@@ -817,6 +800,26 @@ export default function VocabScreen() {
   ];
   // Chỉ có 1 loại mục thì lọc theo loại vô nghĩa
   const showKinds = kindChips.filter((c) => c.n > 0).length > 1 || !!kind;
+
+  /** Menu ⋯: sắp xếp · chọn nhiều · xuất */
+  const openMenu = () => {
+    const actions: [string, () => void][] = [
+      [sort === "new" ? t("vocab.sortToAz") : t("vocab.sortToNew"), () => setSort(sort === "new" ? "az" : "new")],
+      [t("vocab.select"), () => startSelect()],
+      [t("vocab.export"), exportList],
+    ];
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: [...actions.map(([label]) => label), t("cancel")], cancelButtonIndex: actions.length },
+        (i) => actions[i]?.[1](),
+      );
+    } else {
+      Alert.alert(t("vocab.more"), undefined, [
+        ...actions.map(([text, onPress]) => ({ text, onPress })),
+        { text: t("cancel"), style: "cancel" as const },
+      ]);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -857,46 +860,55 @@ export default function VocabScreen() {
                 >
                   <Text style={{ color: C.amber, fontWeight: "700", fontSize: 15 }}>{allShownSelected ? t("vocab.selectNone") : t("vocab.selectAll")}</Text>
                 </Pressable>
-                <Button
-                  title={t("vocab.deleteSelected", { n: selected.size })}
-                  variant="red"
-                  disabled={!selected.size}
-                  icon={<SymbolView name="trash" size={14} tintColor="#fff" />}
-                  onPress={deleteSelected}
-                  style={{ paddingVertical: 8 }}
-                />
+                <Pressable onPress={deleteSelected} disabled={!selected.size} hitSlop={8} accessibilityRole="button">
+                  <Text style={{ color: C.redText, fontWeight: "700", fontSize: 15, opacity: selected.size ? 1 : 0.4 }}>
+                    {t("vocab.deleteSelected", { n: selected.size })}
+                  </Text>
+                </Pressable>
               </View>
             ) : (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.h1}>{t("vocab.title")}</Text>
-                <Text style={styles.muted}>{items ? t("vocab.count", { n: all.length }) : t("loading")}</Text>
+                <Text style={[styles.muted, { fontSize: 14 }]}>{items ? t("vocab.count", { n: all.length }) : t("loading")}</Text>
               </View>
-              {/* Thêm từ tự do (không cần gặp trong bài học) */}
-              <Pressable onPress={() => router.push("/vocab-add")} hitSlop={8} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel={t("vocab.add")}>
-                <SymbolView name="plus.circle.fill" size={24} tintColor={C.accent} />
-              </Pressable>
+              {/* Có mục đến hạn → viên xanh kèm số mục */}
               {all.length > 0 && (
-                <Pressable onPress={exportList} hitSlop={8} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel={t("vocab.export")}>
-                  <SymbolView name="square.and.arrow.up" size={20} tintColor={C.muted} />
+                <Pressable
+                  onPress={() => router.push("/review")}
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 14,
+                    height: 36,
+                    borderRadius: 99,
+                    backgroundColor: counts.due ? C.accent : C.card2,
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <SymbolView name="rectangle.stack" size={14} tintColor={counts.due ? "#fff" : C.text} />
+                  <Text style={{ color: counts.due ? "#fff" : C.text, fontWeight: "700", fontSize: 14 }}>
+                    {counts.due ? t("vocab.reviewDue", { n: counts.due }) : t("vocab.review")}
+                  </Text>
                 </Pressable>
               )}
-              {/* Có mục đến hạn → nút nổi bật kèm số mục */}
+              {/* Thêm từ tự do (không cần gặp trong bài học) */}
+              <Pressable onPress={() => router.push("/vocab-add")} hitSlop={6} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel={t("vocab.add")}>
+                <SymbolView name="plus" size={20} tintColor={C.text} />
+              </Pressable>
               {all.length > 0 && (
-                <Button
-                  title={counts.due ? t("vocab.reviewDue", { n: counts.due }) : t("vocab.review")}
-                  variant={counts.due ? "primary" : "amber"}
-                  icon={<SymbolView name="rectangle.stack.fill" size={16} tintColor={counts.due ? "#fff" : C.amber} />}
-                  onPress={() => router.push("/review")}
-                  style={{ paddingVertical: 9 }}
-                />
+                <Pressable onPress={openMenu} hitSlop={6} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel={t("vocab.more")}>
+                  <SymbolView name="ellipsis" size={20} tintColor={C.text} />
+                </Pressable>
               )}
             </View>
             )}
             {all.length > 0 && (
               <>
                 <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: C.card2 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 40, paddingHorizontal: 12, borderRadius: 10, backgroundColor: C.card2 }}
                 >
                   <SymbolView name="magnifyingglass" size={16} tintColor={C.muted} />
                   <TextInput
@@ -911,44 +923,40 @@ export default function VocabScreen() {
                     style={{ flex: 1, color: C.text, fontSize: 16, height: "100%" }}
                   />
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Segmented
-                    options={[
-                      ["new", t("vocab.sortNew")],
-                      ["az", "A–Z"],
-                    ]}
-                    value={sort}
-                    onChange={setSort}
-                  />
-                  <View style={{ flex: 1 }} />
-                  {!selected && (
-                    <Pressable onPress={() => startSelect()} hitSlop={8} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 5, padding: 4 }}>
-                      <SymbolView name="checkmark.circle" size={15} tintColor={C.muted} />
-                      <Text style={{ color: C.muted, fontWeight: "700", fontSize: 14 }}>{t("vocab.select")}</Text>
-                    </Pressable>
-                  )}
-                </View>
-                {/* Lọc: tình trạng ôn · loại mục */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {/* Lọc: tình trạng ôn · loại mục (vạch mảnh ngăn 2 nhóm) */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, alignItems: "center" }}>
                   {statusChips
                     .filter((c) => c.n > 0 || status === c.key)
                     .map((c) => (
-                      <Chip key={c.key} label={`${c.label} · ${c.n}`} icon={c.icon} active={status === c.key} onPress={() => pickStatus(c.key)} />
+                      <Chip key={c.key} label={c.label} n={c.n} active={status === c.key} onPress={() => pickStatus(c.key)} />
                     ))}
+                  {showKinds && <View style={{ width: 1, height: 18, backgroundColor: C.border }} />}
                   {showKinds &&
                     kindChips
                       .filter((c) => c.n > 0 || kind === c.key)
-                      .map((c) => <Chip key={c.key} label={`${c.label} · ${c.n}`} active={kind === c.key} onPress={() => pickKind(c.key)} />)}
+                      .map((c) => <Chip key={c.key} label={c.label} n={c.n} active={kind === c.key} onPress={() => pickKind(c.key)} />)}
                 </ScrollView>
                 {/* Đang lọc "Chưa ghi nghĩa" → điền hết bằng AI một lần */}
                 {status === "empty" && (counts.empty > 0 || bulk) && (
-                  <Button
-                    title={bulk ? t("vocab.aiFilling", { done: bulk.done, total: bulk.total }) : t("vocab.aiFillAll", { n: counts.empty })}
-                    variant="amber"
-                    loading={!!bulk}
-                    icon={<SymbolView name="sparkles" size={15} tintColor={C.amber} />}
+                  <Pressable
                     onPress={fillAll}
-                  />
+                    disabled={!!bulk}
+                    accessibilityRole="button"
+                    style={({ pressed }) => ({
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingHorizontal: 14,
+                      height: 44,
+                      borderRadius: 12,
+                      backgroundColor: pressed ? C.border : C.card2,
+                    })}
+                  >
+                    {bulk ? <ActivityIndicator size="small" color={C.amber} /> : <SymbolView name="sparkles" size={15} tintColor={C.amber} />}
+                    <Text style={{ color: C.text, fontWeight: "600", fontSize: 15 }}>
+                      {bulk ? t("vocab.aiFilling", { done: bulk.done, total: bulk.total }) : t("vocab.aiFillAll", { n: counts.empty })}
+                    </Text>
+                  </Pressable>
                 )}
               </>
             )}
@@ -956,11 +964,9 @@ export default function VocabScreen() {
           </View>
         }
         renderSectionHeader={({ section }) => (
-          <View style={{ backgroundColor: C.background, paddingTop: 14, paddingBottom: 6, paddingHorizontal: 4, flexDirection: "row" }}>
-            <Text style={{ flex: 1, color: C.muted, fontSize: 13, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" }}>
-              {section.title}
-            </Text>
-            <Text style={{ color: "#4a5a50", fontSize: 13, fontWeight: "700" }}>{section.data.length}</Text>
+          <View style={{ backgroundColor: C.background, paddingTop: 18, paddingBottom: 8, paddingHorizontal: 4, flexDirection: "row" }}>
+            <Text style={{ flex: 1, color: C.muted, fontSize: 13, fontWeight: "600" }}>{section.title}</Text>
+            <Text style={{ color: C.muted, fontSize: 13, opacity: 0.6 }}>{section.data.length}</Text>
           </View>
         )}
         renderItem={({ item, index, section }) => (
