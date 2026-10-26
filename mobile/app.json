@@ -8,7 +8,11 @@
     "scheme": "deutschshadowing",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/images/icon.png",
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/icon-dark.png",
+        "tinted": "./assets/images/icon-tinted.png"
+      },
       "bundleIdentifier": "com.chungkk.deutschshadowing",
       "buildNumber": "1",
       "supportsTablet": true,
@@ -51,7 +55,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Ứng dụng cần truy cập ảnh để bạn chọn ảnh đại diện."
+          "photosPermission": "Ứng dụng cần truy cập ảnh để bạn chọn ảnh đại diện.",
+          "cameraPermission": false
         }
       ],
       [
