@@ -43,11 +43,14 @@ function providers(): Provider[] {
   }
   const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
+    const openaiModel = process.env.OPENAI_TRANSLATE_MODEL ?? "gpt-5-mini";
     list.push({
       name: "openai",
       url: "https://api.openai.com/v1/chat/completions",
       key: openaiKey,
-      model: process.env.OPENAI_TRANSLATE_MODEL ?? "gpt-5-mini",
+      model: openaiModel,
+      // Mô hình suy luận (gpt-5*, o*) mặc định nghĩ lâu → dễ quá 45s; dịch phụ đề không cần
+      extra: /^(gpt-5|o\d)/.test(openaiModel) ? { reasoning_effort: "low" } : undefined,
     });
   }
   return list;
@@ -57,9 +60,10 @@ export const translationEnabled = () => providers().length > 0;
 
 const PROMPT =
   "Bạn là người dịch phụ đề tiếng Đức sang tiếng Việt cho người học tiếng Đức. " +
-  'Nhận JSON {"s": [câu 1, câu 2, …]} là các câu liên tiếp trong một video. ' +
-  "Dịch từng câu sang tiếng Việt tự nhiên, sát nghĩa, dựa vào ngữ cảnh các câu xung quanh. " +
-  'Trả về đúng JSON {"t": [bản dịch 1, bản dịch 2, …]} với ĐÚNG số phần tử và đúng thứ tự, không giải thích.';
+  'Nhận JSON {"s": {"1": dòng 1, "2": dòng 2, …}} là các dòng phụ đề liên tiếp trong một video. ' +
+  "Dịch từng dòng sang tiếng Việt tự nhiên, sát nghĩa, dựa vào ngữ cảnh các dòng xung quanh. " +
+  "Một câu có thể bị ngắt sang nhiều dòng: khi đó mỗi dòng chỉ dịch phần chữ của chính nó (bản dịch cũng dở dang theo), TUYỆT ĐỐI không gộp nội dung dòng sau vào dòng trước. " +
+  'Trả về đúng JSON {"t": {"1": bản dịch dòng 1, "2": bản dịch dòng 2, …}}: đủ mọi khóa có trong đầu vào, khóa nào dịch đúng dòng có khóa đó, không giải thích.';
 
 const BATCH = 25; // số câu mỗi lần gọi AI
 
@@ -88,7 +92,7 @@ async function callProvider(p: Provider, sentences: string[]): Promise<string[]>
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: PROMPT },
-        { role: "user", content: JSON.stringify({ s: sentences }) },
+        { role: "user", content: JSON.stringify({ s: Object.fromEntries(sentences.map((x, i) => [i + 1, x])) }) },
       ],
       ...p.extra,
     }),
@@ -97,21 +101,29 @@ async function callProvider(p: Provider, sentences: string[]): Promise<string[]>
   if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data: { choices?: { message?: { content?: string } }[] } = await res.json();
   const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+  // Thiếu câu nào = mô hình đã gộp câu → các bản dịch phía sau có thể bị lệch, bỏ cả lô
   const t: unknown = parsed.t;
-  if (!Array.isArray(t) || t.length !== sentences.length || !t.every((x) => typeof x === "string")) {
-    throw new Error(`${p.name}: trả về sai định dạng (${Array.isArray(t) ? t.length : "?"}/${sentences.length} câu)`);
+  const out = sentences.map((_, i) => {
+    const x = Array.isArray(t) ? (t.length === sentences.length ? t[i] : undefined) : (t as Record<string, unknown>)?.[i + 1];
+    return typeof x === "string" ? x.trim() : undefined;
+  });
+  if (!out.every((x) => x !== undefined)) {
+    throw new FormatError(`${p.name}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${sentences.length} câu)`);
   }
-  return t.map((x: string) => x.trim());
+  return out as string[];
 }
+
+class FormatError extends Error {}
 
 /**
  * Dịch 1 lô câu: thử lần lượt từng nhà cung cấp; câu nào chưa ra tiếng Việt thì gửi riêng
- * cho nhà cung cấp kế tiếp. Trả về bản dịch ("" = chưa dịch được) + tên nhà cung cấp.
+ * cho nhà cung cấp kế tiếp. Nhà cung cấp nào cũng gộp câu (sai định dạng) → chia đôi lô, dịch lại.
+ * Trả về bản dịch ("" = chưa dịch được) + tên nhà cung cấp.
  */
 async function translateBatch(sentences: string[]): Promise<{ out: string; provider: string }[]> {
   const result = sentences.map(() => ({ out: "", provider: "" }));
   let todo = sentences.map((_, i) => i);
-  const errors: string[] = [];
+  let formatError = false;
   const list = providers();
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
 
@@ -128,9 +140,19 @@ async function translateBatch(sentences: string[]): Promise<{ out: string; provi
       todo = todo.filter((i) => !result[i].out);
       if (todo.length) console.error(`[translate] ${p.name}: ${todo.length} câu chưa dịch, thử tiếp`);
     } catch (e) {
-      errors.push((e as Error).message);
+      if (e instanceof FormatError) formatError = true;
       console.error("[translate]", (e as Error).message);
     }
+  }
+  if (formatError && todo.length > 1) {
+    const mid = Math.ceil(todo.length / 2);
+    for (const part of [todo.slice(0, mid), todo.slice(mid)]) {
+      const res = await translateBatch(part.map((i) => sentences[i])).catch(() => null);
+      part.forEach((i, k) => {
+        if (res?.[k].out) result[i] = res[k];
+      });
+    }
+    todo = todo.filter((i) => !result[i].out);
   }
   if (todo.length === sentences.length) throw new Error("Không dịch được lúc này.");
   return result;
