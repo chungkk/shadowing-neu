@@ -50,16 +50,13 @@ export type Rate = { n: number; ok: number };
 export type Stats = {
   dueToday: number;
   streak: number;
-  recall30: Rate & { duolingo: Rate; crazy: Rate };
+  recall30: Rate;
   retention7: Rate;
   retention30: Rate;
   days: { day: string; reviews: number }[]; // 14 ngày, cũ → mới, "YYYY-MM-DD" theo giờ máy
   mastery: Record<Mastery, number>;
-  speaking: { reps: number; sentences: number; totalSentences: number };
   forgotten: { id: number; word: string; meaning: string; lapses: number }[];
 };
-/** Ôn tập Crazy Deutsch: số lượt luyện 1 mục trong sổ từ vựng (GET/POST /crazy) */
-export type CrazyRep = { reps: number; passed: boolean };
 
 export type Track = { languageCode: string; name: string; auto: boolean };
 export type Transcript = { videoId: string; title: string; track: Track; tracks: Track[]; segments: Segment[] };

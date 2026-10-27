@@ -22,9 +22,8 @@ import {
   type Step,
 } from "@shared/review";
 import { isDue } from "@shared/srs";
-import { CrazyReview } from "@/components/CrazyReview";
 import { WordSheet } from "@/components/WordSheet";
-import { Button, Cta, ErrorText, Segmented, styles } from "@/components/ui";
+import { Button, Cta, ErrorText, styles } from "@/components/ui";
 import { api, type Stats, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n, type TFn } from "@/lib/i18n";
@@ -199,9 +198,6 @@ type Feedback = { ok: boolean; note?: string; combo: number };
 type Graded = { item: Word; correct: boolean; stage?: number; mastery?: Mastery };
 
 const SOUND_KEY = "review-sound";
-const BLOCK_KEY = "crazy-block"; // Crazy Deutsch: số lượt lặp mỗi câu trong 1 buổi ôn
-const BLOCKS = ["8", "12", "20"] as const; // tối thiểu 6 lượt (3 bậc × 2 lượt đạt liền) mới tới bậc không nhìn
-type Block = (typeof BLOCKS)[number];
 
 const PROMPT_KEY: Record<Kind, Parameters<TFn>[0]> = {
   intro: "review.k.intro",
@@ -871,37 +867,25 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 }
 
 /**
- * Ôn tập — 2 nhiệm vụ hôm nay, mỗi thẻ đúng 1 nút chính:
- * - Từ vựng → bài tập kiểu Duolingo; nút chính → mục đến hạn + mục mới (không có gì → các mục sắp đến hạn nhất);
- *   dòng phụ → chọn từ lưu theo từng ngày.
- * - Luyện nói Crazy: câu ⭐ (đánh dấu ở màn học / câu ví dụ trong bảng giải thích từ) → luyện nói Crazy Deutsch.
- * Xem theo ngày lưu ở tab Từ vựng (đã nhóm theo ngày), không lặp lại ở đây.
+ * Ôn tập từ vựng → bài tập kiểu Duolingo; nút chính → mục đến hạn + mục mới (không có gì → các mục sắp đến hạn nhất);
+ * dòng phụ → chọn từ lưu theo từng ngày. Câu ⭐ chỉ là đánh dấu trong bài học, không ôn ở đây.
  */
 export default function ReviewScreen() {
   const { user } = useAuth();
   const { lang, t } = useI18n();
   const [data, setData] = useState<{ items: Word[]; at: number } | null>(null);
   const [error, setError] = useState("");
-  const [picked, setPicked] = useState<{ kind: "words"; list: Word[] } | { kind: "sentences" } | null>(null);
+  const [picked, setPicked] = useState<Word[] | null>(null);
   const [wordsOpen, setWordsOpen] = useState(false); // thẻ Từ vựng: đã bấm → hiện lựa chọn Tất cả / theo ngày
   const { tablet } = useLayout();
   const items = data?.items ?? null;
-  const [block, setBlock] = useState<Block>("12");
-  useEffect(() => {
-    SecureStore.getItemAsync(BLOCK_KEY)
-      .then((b) => BLOCKS.includes(b as Block) && setBlock(b as Block))
-      .catch(() => {});
-  }, []);
-  const pickBlock = (b: Block) => {
-    setBlock(b);
-    SecureStore.setItemAsync(BLOCK_KEY, b).catch(() => {});
-  };
 
   const load = useCallback(async () => {
     try {
       setError("");
       const { vocab } = await api<{ vocab: VocabItem[] }>("/vocab");
-      setData({ items: vocab.map((v) => ({ ...v, stage: v.stage ?? 0, dueAt: v.dueAt ?? null })), at: Date.now() });
+      // Câu ⭐ (đánh dấu trong bài học) không ôn tập
+      setData({ items: vocab.filter((v) => !isSentence(v)).map((v) => ({ ...v, stage: v.stage ?? 0, dueAt: v.dueAt ?? null })), at: Date.now() });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -917,20 +901,15 @@ export default function ReviewScreen() {
     const byDue = (a: Word, b: Word) => (a.dueAt ?? 0) - (b.dueAt ?? 0);
     const due = all.filter((v) => isDue(v, data?.at ?? 0)).sort(byDue);
     const fresh = all.filter((v) => v.stage === 0);
-    // Mỗi buổi: tối đa `maxDue` mục đến hạn (quá hạn lâu nhất trước) + `maxFresh` mục mới (mới lưu nhất trước)
-    const part = (f: (v: Word) => boolean, maxDue: number, maxFresh: number) => {
-      const list = [...due.filter(f).slice(0, maxDue), ...fresh.filter(f).slice(0, maxFresh)];
-      const total = all.filter(f);
-      // Không có gì đến hạn / mới → ôn trước các mục sắp đến hạn nhất (cùng giới hạn; ôn sớm không bị tụt mức)
-      const early = [...total].sort(byDue).slice(0, maxDue + maxFresh);
-      return { due: due.filter(f).length, fresh: fresh.filter(f).length, total: total.length, list: list.length ? list : early };
-    };
-    // Luyện nói: mỗi câu lặp `block` lượt → ít câu hơn để buổi luyện không quá dài
-    return { words: part((v) => !isSentence(v), 30, 10), sentences: part(isSentence, 8, 4) };
+    // Mỗi buổi: tối đa 30 mục đến hạn (quá hạn lâu nhất trước) + 10 mục mới (mới lưu nhất trước)
+    const list = [...due.slice(0, 30), ...fresh.slice(0, 10)];
+    // Không có gì đến hạn / mới → ôn trước các mục sắp đến hạn nhất (cùng giới hạn; ôn sớm không bị tụt mức)
+    const early = [...all].sort(byDue).slice(0, 40);
+    return { words: { due: due.length, fresh: fresh.length, total: all.length, list: list.length ? list : early } };
   }, [data]);
 
-  // Từ vựng (không gồm câu ⭐) nhóm theo ngày lưu, mới nhất trước — cùng cách nhóm với tab Từ vựng
-  const days = useMemo(() => groupBySaved((data?.items ?? []).filter((v) => !isSentence(v)), t, lang), [data, lang, t]);
+  // Từ vựng nhóm theo ngày lưu, mới nhất trước — cùng cách nhóm với tab Từ vựng
+  const days = useMemo(() => groupBySaved(data?.items ?? [], t, lang), [data, lang, t]);
 
   if (items && picked) {
     const onClose = (changed: boolean) => {
@@ -938,11 +917,7 @@ export default function ReviewScreen() {
       setWordsOpen(false);
       if (changed) load(); // cập nhật mức nhớ / lịch ôn
     };
-    return picked.kind === "sentences" ? (
-      <CrazyReview items={plan.sentences.list} pool={items} block={Number(block)} onClose={onClose} />
-    ) : (
-      <Session items={picked.list} pool={items} onClose={onClose} />
-    );
+    return <Session items={picked} pool={items} onClose={onClose} />;
   }
 
   const mastery = { learning: 0, active: 0, mastered: 0 };
@@ -951,7 +926,6 @@ export default function ReviewScreen() {
     if (m !== "saved") mastery[m]++;
   }
   const w = plan.words;
-  const sn = plan.sentences;
 
   return (
     <View style={styles.screen}>
@@ -982,7 +956,7 @@ export default function ReviewScreen() {
                 title={t("review.wordsCard")}
                 info={w.due + w.fresh ? t("review.dueInfo", { due: w.due, fresh: w.fresh }) : t("review.wordsNone", { n: w.list.length })}
               >
-                <Cta title={t("review.startWords", { n: w.list.length })} icon="play.fill" onPress={() => setPicked({ kind: "words", list: w.list })} />
+                <Cta title={t("review.startWords", { n: w.list.length })} icon="play.fill" onPress={() => setPicked(w.list)} />
                 <Pressable
                   onPress={() => setWordsOpen((o) => !o)}
                   accessibilityRole="button"
@@ -1001,26 +975,11 @@ export default function ReviewScreen() {
                         icon="calendar"
                         title={d.title}
                         info={t("review.dayCount", { n: d.data.length })}
-                        onPress={() => setPicked({ kind: "words", list: d.data })}
+                        onPress={() => setPicked(d.data)}
                       />
                     ))}
                   </View>
                 )}
-              </TaskCard>
-            )}
-
-            {/* Luyện nói Crazy (câu ⭐) — số lượt mỗi câu là cài đặt, nút duy nhất là Luyện */}
-            {sn.total > 0 && (
-              <TaskCard
-                icon="mic.fill"
-                title={t("review.sentencesCard")}
-                info={sn.due + sn.fresh ? t("review.dueInfo", { due: sn.due, fresh: sn.fresh }) : t("review.sentencesNone", { n: sn.list.length })}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <Text style={{ color: C.muted, fontSize: 14 }}>{t("review.blockLabel")}</Text>
-                  <Segmented options={BLOCKS.map((b) => [b, b] as const)} value={block} onChange={pickBlock} />
-                </View>
-                <Cta title={t("review.startSentences", { n: sn.list.length })} icon="mic.fill" onPress={() => setPicked({ kind: "sentences" })} />
               </TaskCard>
             )}
 

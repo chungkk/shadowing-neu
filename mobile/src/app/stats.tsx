@@ -118,7 +118,7 @@ function MasteryBar({ m }: { m: Stats["mastery"] }) {
   );
 }
 
-/** Thống kê học tập — mọi số liệu tính trên server từ lịch sử ôn thật (review_events, crazy_reps, sổ từ vựng) */
+/** Thống kê học tập — mọi số liệu tính trên server từ lịch sử ôn thật (review_events, sổ từ vựng) */
 export default function StatsScreen() {
   const { user } = useAuth();
   const { t } = useI18n();
@@ -165,17 +165,10 @@ export default function StatsScreen() {
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Tile label={t("stats.streak")} value={`${s.streak}`} />
               <Tile label={t("stats.due")} value={`${s.dueToday}`} />
-              <Tile label={t("stats.spoken")} value={`${s.speaking.reps}`} />
             </View>
 
             <Card title={t("stats.recallTitle")}>
               <RateRow label={t("stats.all")} r={s.recall30} />
-              {s.recall30.duolingo.n > 0 && s.recall30.crazy.n > 0 && (
-                <>
-                  <RateRow label={t("stats.words")} r={s.recall30.duolingo} />
-                  <RateRow label={t("stats.sentences")} r={s.recall30.crazy} />
-                </>
-              )}
             </Card>
 
             <Card title={t("stats.retentionTitle")}>
@@ -192,13 +185,6 @@ export default function StatsScreen() {
               <MasteryBar m={s.mastery} />
             </Card>
 
-            {s.speaking.totalSentences > 0 && (
-              <Card title={t("stats.speakingTitle")}>
-                <Text style={{ color: C.text, fontSize: 15, lineHeight: 22 }}>
-                  {t("stats.speakingBody", { reps: s.speaking.reps, n: s.speaking.sentences, total: s.speaking.totalSentences })}
-                </Text>
-              </Card>
-            )}
 
             {s.forgotten.length > 0 && (
               <Card title={t("stats.forgottenTitle")}>

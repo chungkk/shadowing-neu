@@ -2,7 +2,7 @@ import { Stack, router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
+import { Button, ErrorText, Input, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
 import { showError } from "@/lib/dialogs";
 import { useI18n } from "@/lib/i18n";
@@ -10,22 +10,16 @@ import { FORM_MAX } from "@/lib/layout";
 import { speakGerman } from "@/lib/speak";
 import { C } from "@/lib/theme";
 
-type Kind = "phrase" | "sentence";
-
-/** Nhiều từ: ≥ 4 từ hoặc có dấu kết câu → đoán là câu (luyện nói), ít hơn → cụm từ */
-const looksLikeSentence = (w: string) => w.split(/\s+/).length >= 4 || /[.!?]$/.test(w);
-
 /**
  * Thêm từ tự do vào sổ từ vựng (không cần gặp trong bài học): điền từ / cụm từ / câu, câu ví dụ (không bắt buộc),
  * tự ghi nghĩa hoặc nhờ AI tạo nghĩa (điền sẵn vào ô để sửa trước khi lưu).
- * Nhiều từ → chọn ôn như cụm từ (bài tập) hay câu ⭐ (Luyện nói Crazy). "Lưu và thêm từ khác" để nhập liên tục.
+ * "Lưu và thêm từ khác" để nhập liên tục.
  */
 export default function VocabAddScreen() {
   const { t, lang } = useI18n();
   const [word, setWord] = useState("");
   const [context, setContext] = useState("");
   const [meaning, setMeaning] = useState("");
-  const [picked, setPicked] = useState<Kind | null>(null); // null = tự đoán theo số từ
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,11 +28,10 @@ export default function VocabAddScreen() {
 
   const w = word.trim().replace(/\s+/g, " ");
   const multi = w.includes(" ");
-  const kind: Kind = multi ? (picked ?? (looksLikeSentence(w) ? "sentence" : "phrase")) : "phrase";
   const tooLong = w.length > (multi ? 500 : 80); // giới hạn của server
   const canSave = !!w && !tooLong && !saving;
 
-  // AI tạo nghĩa: từ / cụm → nghĩa theo câu ví dụ (nếu có); câu → bản dịch cả câu
+  // AI tạo nghĩa: từ / cụm → nghĩa theo câu ví dụ (nếu có)
   const fillAi = async () => {
     if (!w || aiBusy) return;
     setAiBusy(true);
@@ -46,7 +39,7 @@ export default function VocabAddScreen() {
     try {
       const r = await api<{ meaning: string }>("/word", {
         method: "POST",
-        body: { word: w, context: kind === "sentence" ? "" : context.trim(), lang },
+        body: { word: w, context: context.trim(), lang },
       });
       setMeaning(r.meaning);
     } catch (e) {
@@ -60,8 +53,8 @@ export default function VocabAddScreen() {
     if (!canSave) return;
     setSaving(true);
     try {
-      // Câu ⭐ = không có câu ví dụ. Cụm từ không kèm câu ví dụ → lấy chính cụm làm ngữ cảnh để không bị coi là câu ⭐
-      const ctx = kind === "sentence" ? "" : context.trim() || (multi ? w : "");
+      // Cụm từ không kèm câu ví dụ → lấy chính cụm làm ngữ cảnh để không bị coi là câu ⭐ (câu đánh dấu trong bài học)
+      const ctx = context.trim() || (multi ? w : "");
       const r = await api<{ item?: VocabItem; vocab: VocabItem[] }>("/vocab", { method: "POST", body: { word: w, context: ctx } });
       const item = r.item ?? r.vocab[0];
       // Nghĩa người học vừa ghi / AI vừa tạo được ưu tiên (từ đã có trong sổ thì cập nhật nghĩa)
@@ -72,7 +65,6 @@ export default function VocabAddScreen() {
       setWord("");
       setContext("");
       setMeaning("");
-      setPicked(null);
       setAiError("");
       wordRef.current?.focus();
     } catch (e) {
@@ -141,29 +133,12 @@ export default function VocabAddScreen() {
           {tooLong && <ErrorText>{t("vocabAdd.tooLong")}</ErrorText>}
         </View>
 
-        {/* Nhiều từ: ôn như cụm từ hay câu luyện nói */}
-        {multi && (
-          <View style={{ gap: 8 }}>
-            <Segmented
-              options={[
-                ["phrase", t("vocabAdd.typePhrase")],
-                ["sentence", t("vocabAdd.typeSentence")],
-              ]}
-              value={kind}
-              onChange={setPicked}
-            />
-            <Text style={[styles.muted, { fontSize: 13 }]}>{t("vocabAdd.typeHint")}</Text>
-          </View>
-        )}
-
-        {/* Câu ví dụ (câu ⭐ thì chính nó là câu, không cần) */}
-        {kind === "phrase" && (
-          <View style={{ gap: 8 }}>
-            {label(t("vocabAdd.context"))}
-            <Input value={context} onChangeText={setContext} multiline autoCapitalize="sentences" autoCorrect={false} placeholder="…" />
-            <Text style={[styles.muted, { fontSize: 13 }]}>{t("vocabAdd.contextHint")}</Text>
-          </View>
-        )}
+        {/* Câu ví dụ */}
+        <View style={{ gap: 8 }}>
+          {label(t("vocabAdd.context"))}
+          <Input value={context} onChangeText={setContext} multiline autoCapitalize="sentences" autoCorrect={false} placeholder="…" />
+          <Text style={[styles.muted, { fontSize: 13 }]}>{t("vocabAdd.contextHint")}</Text>
+        </View>
 
         {/* Nghĩa: tự ghi hoặc AI */}
         <View style={{ gap: 8 }}>

@@ -522,7 +522,8 @@ export default function VocabScreen() {
     try {
       setError("");
       const version = getVocabVersion(); // lấy trước khi tải: có thay đổi trong lúc tải → lần sau tải lại
-      setItems((await api<{ vocab: VocabItem[] }>("/vocab")).vocab);
+      // Câu ⭐ chỉ là đánh dấu trong bài học → không hiện trong sổ từ vựng
+      setItems((await api<{ vocab: VocabItem[] }>("/vocab")).vocab.filter((v) => !isSentence(v)));
       const at = Date.now();
       setLoadedAt(at);
       loaded.current = { version, at };
@@ -629,7 +630,6 @@ export default function VocabScreen() {
       empty: all.filter((v) => !v.meaning).length,
       word: all.filter((v) => kindOf(v) === "word").length,
       phrase: all.filter((v) => kindOf(v) === "phrase").length,
-      sentence: all.filter((v) => kindOf(v) === "sentence").length,
     }),
     [all, loadedAt],
   );
@@ -796,7 +796,6 @@ export default function VocabScreen() {
   const kindChips: { key: Kind; label: string; n: number }[] = [
     { key: "word", label: t("vocab.typeWord"), n: counts.word },
     { key: "phrase", label: t("vocab.typePhrase"), n: counts.phrase },
-    { key: "sentence", label: t("vocab.typeSentence"), n: counts.sentence },
   ];
   // Chỉ có 1 loại mục thì lọc theo loại vô nghĩa
   const showKinds = kindChips.filter((c) => c.n > 0).length > 1 || !!kind;

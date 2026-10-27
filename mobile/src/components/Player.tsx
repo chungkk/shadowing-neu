@@ -131,6 +131,7 @@ export default function Player({
   const [hideText, setHideText] = useState(false); // Shadowing: ẩn chữ tiếng Đức (chỉ nghe rồi nói theo)
   const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
   const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ / câu đã lưu (chữ thường) → id trong sổ từ vựng
+  const [starredOnly, setStarredOnly] = useState(false); // chỉ hiện các câu ⭐
   const [trOn, setTrOn] = useState(false); // hiện bản dịch dưới mỗi câu
   const showTr = trOn && !!user; // dịch chỉ dành cho tài khoản (đăng xuất → tự tắt)
   const [autoStop, setAutoStop] = useState(true); // dừng ở cuối mỗi câu
@@ -293,7 +294,7 @@ export default function Player({
       showError(e, t("player.saveFailed"));
     }
   };
-  // Sao trên mỗi câu: lưu nguyên câu (kèm bản dịch nếu có) vào sổ từ vựng; bấm lại để bỏ
+  // Sao trên mỗi câu: đánh dấu câu trong bài (lưu nguyên câu kèm bản dịch, chỉ hiện ở bài học); bấm lại để bỏ
   /** Bỏ từ / câu khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
   const unsave = async (text: string) => {
     const id = saved.get(text.toLowerCase());
@@ -318,8 +319,24 @@ export default function Player({
     };
   }, [user]);
 
-  const next = () => playSegment(Math.min(segments.length - 1, idx + 1));
-  const prev = () => playSegment(Math.max(0, idx - 1));
+  // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu
+  const starredIdx = useMemo(() => segments.flatMap((s, i) => (saved.has(s.text.toLowerCase()) ? [i] : [])), [segments, saved]);
+  const nextIdx = starredOnly ? starredIdx.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
+  const prevIdx = starredOnly ? starredIdx.findLast((i) => i < idx) : idx > 0 ? idx - 1 : undefined;
+  const next = () => nextIdx !== undefined && playSegment(nextIdx);
+  const prev = () => prevIdx !== undefined && playSegment(prevIdx);
+  const toggleStarredOnly = () => {
+    const on = !starredOnly;
+    setStarredOnly(on);
+    // Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe)
+    const i = starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1);
+    if (on && i !== undefined && i !== idx) {
+      pause();
+      stopAt.current = null;
+      setIdx(i);
+      ytRef.current?.seekTo(segments[i].start, true);
+    }
+  };
   const doneCount = Object.keys(dictDone).length;
 
   // ---- Tiến độ học: lưu theo tài khoản (đồng bộ web ↔ app), mở lại bài là học tiếp ----
@@ -509,6 +526,8 @@ export default function Player({
       <ToggleIcon icon="translate" on={showTr} label={t("player.translation")} onPress={toggleTranslation} />
       {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video */}
       <ToggleIcon icon="pause.circle" on={autoStop} label={t("player.autoStop")} onPress={toggleAutoStop} />
+      {/* Chỉ hiện các câu đã đánh dấu ⭐ */}
+      {!!user && <ToggleIcon icon="star" on={starredOnly} label={t("player.starredOnly")} onPress={toggleStarredOnly} />}
     </View>
   );
 
@@ -537,7 +556,7 @@ export default function Player({
               level={dictLevel}
               onReplay={() => playSegment(idx)}
               onNext={next}
-              hasNext={idx < segments.length - 1}
+              hasNext={nextIdx !== undefined}
               onDone={(correct, total) => setDictDone((d) => ({ ...d, [idx]: { correct, total } }))}
               draft={dictDrafts[idx]}
               saved={dictDone[idx]}
@@ -584,6 +603,11 @@ export default function Player({
         setTimeout(() => listRef.current?.scrollToIndex({ index, viewPosition: 0.3, animated: true }), 100);
       }}
       keyExtractor={(_, i) => String(i)}
+      ListFooterComponent={
+        starredOnly && !starredIdx.length ? (
+          <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", marginTop: 24 }}>{t("player.noStarred")}</Text>
+        ) : undefined
+      }
       ListHeaderComponent={
         split ? (
           <View style={{ paddingVertical: 16 }}>
@@ -599,6 +623,7 @@ export default function Player({
         // Chính tả: che tới khi làm xong; Shadowing ẩn chữ: che tới khi bấm 👁
         const hidden = dictation ? !dictDone[index] : hideText && !revealed.has(index);
         const starred = saved.has(item.text.toLowerCase());
+        if (starredOnly && !starred) return null;
         const phrases = showPhr && !hidden ? (phrasesOf(item.text) ?? []) : [];
         const tokens = tokenize(item.text, phrases);
         return (
@@ -740,7 +765,7 @@ export default function Player({
           <Text style={{ color: rate === 1 ? C.muted : C.amber, fontWeight: "800", fontSize: 14 }}>{rate}×</Text>
         </Pressable>
         <IconButton icon="arrow.counterclockwise" onPress={() => playSegment(idx)} />
-        <IconButton icon="backward.end.fill" onPress={prev} disabled={idx === 0} />
+        <IconButton icon="backward.end.fill" onPress={prev} disabled={prevIdx === undefined} />
         <Pressable
           onPress={togglePlay}
           style={({ pressed }) => ({
@@ -755,7 +780,7 @@ export default function Player({
         >
           <SymbolView name={playing ? "pause.fill" : "play.fill"} size={tablet ? 24 : 20} tintColor="#fff" />
         </Pressable>
-        <IconButton icon="forward.end.fill" onPress={next} disabled={idx >= segments.length - 1} />
+        <IconButton icon="forward.end.fill" onPress={next} disabled={nextIdx === undefined} />
         {!dictation && (
           <>
             <Pressable
