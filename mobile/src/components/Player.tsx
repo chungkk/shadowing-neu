@@ -21,6 +21,7 @@ import { Label, Segmented } from "./ui";
 import { api, type DictResult, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { askLogin, micDenied, showError } from "@/lib/dialogs";
+import { noteProgress, progressSaved } from "@/lib/progress";
 import { prefetchGerman } from "@/lib/speak";
 import { C } from "@/lib/theme";
 import type { DictationLevel } from "@shared/dictation";
@@ -127,6 +128,7 @@ export default function Player({
   const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã làm: idx → 7/8 từ đúng
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả kể cả khi đang ở câu 1
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã hiện của từng câu (sang câu khác rồi quay lại vẫn còn)
+  const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   const [recordings, setRecordings] = useState<Record<number, string>>({});
   const [hideText, setHideText] = useState(false); // Shadowing: ẩn chữ tiếng Đức (chỉ nghe rồi nói theo)
   const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
@@ -158,25 +160,32 @@ export default function Player({
   useEffect(() => {
     live.current = { dictation, split };
   });
+  // Câu vừa được phát → tính là đã nghe (chỉ chạm / chọn câu mà không phát thì không tính)
+  const markSeen = useCallback((i: number) => {
+    if (!live.current.dictation) setSeen((s) => (s.has(i) ? s : new Set(s).add(i)));
+  }, []);
 
   const playSegment = useCallback(
     (i: number, stop = autoStop) => {
       const s = segments[i];
       if (!s) return;
       setIdx(i);
+      markSeen(i);
       ytRef.current?.seekTo(s.start, true);
       stopAt.current = stop ? s.end : null;
       setPlaying(true);
     },
-    [segments, autoStop],
+    [segments, autoStop, markSeen],
   );
   // Giữ stopAt: phát tiếp sẽ dừng đúng cuối câu đang dở
   const pause = () => setPlaying(false);
   // Đang dở câu → phát tiếp từ chỗ dừng; đã hết câu → phát lại câu hiện tại
   const togglePlay = () => {
     if (playing) pause();
-    else if (stopAt.current !== null || !autoStop) setPlaying(true);
-    else playSegment(idx);
+    else if (stopAt.current !== null || !autoStop) {
+      markSeen(idx);
+      setPlaying(true);
+    } else playSegment(idx);
   };
   const toggleTranslation = () => {
     if (user) return setTrOn((v) => !v);
@@ -228,10 +237,13 @@ export default function Player({
         return;
       }
       const i = segments.findIndex((s) => now >= s.start && now < s.end);
-      if (i >= 0) setIdx(i);
+      if (i >= 0) {
+        setIdx(i);
+        markSeen(i);
+      }
     }, 100);
     return () => clearInterval(timer);
-  }, [playing, segments]);
+  }, [playing, segments, markSeen]);
 
   // ---- Ghi âm (Shadowing) ----
   const toggleRecord = async () => {
@@ -342,7 +354,8 @@ export default function Player({
   // ---- Tiến độ học: lưu theo tài khoản (đồng bộ web ↔ app), mở lại bài là học tiếp ----
   const [resumed, setResumed] = useState<number | null>(null); // vừa tiếp tục từ câu này → hiện thông báo
   const progressLoaded = useRef(false);
-  const pendingSave = useRef<object | null>(null);
+  // Bản chờ gửi lên server + số thứ tự trong kho tiến độ trên máy (@/lib/progress)
+  const pendingSave = useRef<{ user: number; seq: number; body: { source: string } & Record<string, unknown> } | null>(null);
 
   useEffect(() => {
     progressLoaded.current = false;
@@ -357,6 +370,8 @@ export default function Player({
         if (allowDictation) setPractice(p.mode);
         if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") setDictLevel(p.dictLevel);
         setDictDone(done);
+        // Gộp (không ghi đè): có thể đã phát vài câu trong lúc chờ tải
+        setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
       })
       .catch(() => {})
@@ -371,16 +386,32 @@ export default function Player({
   const flushProgress = useCallback(() => {
     const b = pendingSave.current;
     pendingSave.current = null;
-    if (b) api("/progress", { method: "PUT", body: b }).catch(() => {});
+    if (b)
+      api<{ progress: Progress | null }>("/progress", { method: "PUT", body: b.body })
+        .then((r) => progressSaved(b.user, b.body.source, b.seq, r.progress?.updatedAt ?? 0))
+        .catch(() => {});
   }, []);
   // Lưu sau 1,5 giây kể từ thay đổi cuối (đổi câu, đổi chế độ, làm xong câu chính tả)…
+  // Tab Bài học thấy ngay qua kho tiến độ trên máy, không phải chờ lưu xong
   useEffect(() => {
     if (!user || !progressLoaded.current || !segments.length) return;
     const mode = dictation ? "dictation" : "shadow";
-    pendingSave.current = { source: sourceUrl, title, idx, total: segments.length, mode, dictLevel, dictDone };
+    const total = segments.length;
+    const seq = noteProgress(user.id, sourceUrl, {
+      source: sourceUrl,
+      title,
+      idx,
+      total,
+      mode,
+      dictLevel,
+      dictCount: Object.keys(dictDone).length,
+      seenCount: mode === "shadow" ? new Set(seen).add(idx).size : seen.size, // server cũng tính câu đang học (Shadowing) là đã nghe
+      updatedAt: 0,
+    });
+    pendingSave.current = { user: user.id, seq, body: { source: sourceUrl, title, idx, total, mode, dictLevel, dictDone, seen: [...seen] } };
     const id = setTimeout(flushProgress, 1500);
     return () => clearTimeout(id);
-  }, [user, sourceUrl, title, idx, segments.length, dictation, dictLevel, dictDone, flushProgress]);
+  }, [user, sourceUrl, title, idx, segments.length, dictation, dictLevel, dictDone, seen, flushProgress]);
   // …và lưu ngay khi rời màn hình
   useEffect(() => flushProgress, [flushProgress]);
   // Thông báo "tiếp tục từ câu …" tự ẩn sau 8 giây
@@ -393,8 +424,14 @@ export default function Player({
   const restart = () => {
     pause();
     pendingSave.current = null;
-    api(`/progress?source=${encodeURIComponent(sourceUrl)}`, { method: "DELETE" }).catch(() => {});
+    if (user) {
+      const seq = noteProgress(user.id, sourceUrl, null);
+      api<{ at?: number }>(`/progress?source=${encodeURIComponent(sourceUrl)}`, { method: "DELETE" })
+        .then((r) => progressSaved(user.id, sourceUrl, seq, r.at ?? 0))
+        .catch(() => {});
+    }
     setIdx(0);
+    setSeen(new Set());
     setDictDone({});
     setDictDrafts({});
     setDictEpoch((e) => e + 1);

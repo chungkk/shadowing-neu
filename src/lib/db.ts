@@ -4,7 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isSentence } from "./review";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
-import type { Segment } from "./subtitles";
+import { mergeIntoSentences, type Segment } from "./subtitles";
 
 export const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 export type Level = (typeof LEVELS)[number];
@@ -21,7 +21,10 @@ export type Lesson = {
   createdAt: string;
 };
 
-export type LessonSummary = Omit<Lesson, "segments"> & { segmentCount: number };
+export type LessonSummary = Omit<Lesson, "segments"> & {
+  segmentCount: number; // số dòng phụ đề thô
+  sentenceCount?: number; // số câu sau khi gộp (như màn học đếm) — chỉ có trong danh sách bài
+};
 
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
 /** Ảnh đại diện lưu thành file cạnh DB (cùng volume dữ liệu trên VPS) */
@@ -162,6 +165,17 @@ function open() {
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
+  // Tiến độ: các câu đã thực sự nghe (% tính theo số này, không theo câu đang mở).
+  // Tiến độ cũ chỉ có câu đang học → coi mọi câu tới đó là đã nghe, để % đang hiện không bị tụt
+  const progressCols = db.prepare("PRAGMA table_info(progress)").all() as { name: string }[];
+  if (!progressCols.some((c) => c.name === "seen")) {
+    db.exec("BEGIN");
+    db.exec("ALTER TABLE progress ADD COLUMN seen TEXT NOT NULL DEFAULT '[]'"); // [0, 1, 4, …]
+    const fill = db.prepare("UPDATE progress SET seen = ? WHERE user_id = ? AND source = ?");
+    for (const r of db.prepare("SELECT user_id, source, idx FROM progress").all() as { user_id: number; source: string; idx: number }[])
+      fill.run(JSON.stringify(Array.from({ length: r.idx + 1 }, (_, i) => i)), r.user_id, r.source);
+    db.exec("COMMIT");
+  }
   // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
   const vocabCols = db.prepare("PRAGMA table_info(vocab)").all() as { name: string }[];
   if (!vocabCols.some((c) => c.name === "srs_stage")) {
@@ -221,7 +235,22 @@ export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
        ORDER BY created_at DESC, id DESC`,
     )
     .all() as Row[];
-  return rows.map(toSummary);
+  return rows.map((r) => ({ ...toSummary(r), sentenceCount: sentenceCount(r.id) }));
+}
+
+/**
+ * Số câu của bài sau khi gộp dòng phụ đề thành câu (đúng số màn học hiện "Câu 3/52").
+ * Tính 1 lần mỗi bài rồi giữ trong bộ nhớ; deploy lại (có thể đổi cách gộp) thì tự tính lại.
+ */
+const sentenceCounts = new Map<number, number>();
+function sentenceCount(id: number): number {
+  let n = sentenceCounts.get(id);
+  if (n === undefined) {
+    const r = conn().prepare("SELECT segments FROM lessons WHERE id = ?").get(id) as { segments: string } | undefined;
+    n = r ? mergeIntoSentences(JSON.parse(r.segments)).length : 0;
+    sentenceCounts.set(id, n);
+  }
+  return n;
 }
 
 export function getLesson(id: number): Lesson | null {
@@ -247,9 +276,11 @@ export function updateLesson(id: number, l: LessonInput) {
   conn().prepare(
     "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ?, dictation = ? WHERE id = ?",
   ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0, id);
+  sentenceCounts.delete(id);
 }
 
 export function deleteLesson(id: number) {
+  sentenceCounts.delete(id);
   conn().prepare("DELETE FROM lessons WHERE id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE source = ?").run(`/lesson/${id}`);
   conn().prepare("DELETE FROM crazy_reps WHERE source = ?").run(`/lesson/${id}`);
@@ -762,6 +793,7 @@ export type Progress = {
   mode: "shadow" | "dictation";
   dictLevel: string;
   dictDone: Record<string, DictResult>;
+  seen: number[]; // các câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   updatedAt: number;
 };
 
@@ -773,6 +805,7 @@ type ProgressRow = {
   mode: Progress["mode"];
   dict_level: string;
   dict_done: string;
+  seen: string;
   updated_at: number;
 };
 
@@ -784,6 +817,7 @@ const toProgress = (r: ProgressRow): Progress => ({
   mode: r.mode,
   dictLevel: r.dict_level,
   dictDone: JSON.parse(r.dict_done),
+  seen: JSON.parse(r.seen ?? "[]"),
   updatedAt: r.updated_at,
 });
 
@@ -802,12 +836,13 @@ const MAX_PROGRESS = 300;
 export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
   conn()
     .prepare(
-      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, source) DO UPDATE SET title = excluded.title, idx = excluded.idx, total = excluded.total,
-         mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, updated_at = excluded.updated_at`,
+         mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, seen = excluded.seen,
+         updated_at = excluded.updated_at`,
     )
-    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), Date.now());
+    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), Date.now());
   // Chỉ giữ MAX_PROGRESS bài học gần nhất / người (source /watch/<id> là tuỳ ý → không giới hạn thì DB phình mãi)
   conn()
     .prepare(

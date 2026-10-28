@@ -17,20 +17,21 @@ export async function GET(req: NextRequest) {
   if (user instanceof Response) return user;
   const source = req.nextUrl.searchParams.get("source");
   if (source) return Response.json({ progress: SOURCE_RE.test(source) ? getProgress(user.id, source) : null });
-  // Danh sách: bỏ chi tiết từng câu chính tả, chỉ trả số câu đã làm
+  // Danh sách: bỏ chi tiết từng câu, chỉ trả số câu chính tả đã làm / số câu đã nghe
   return Response.json({
-    progress: listProgress(user.id).map(({ dictDone, ...p }) => ({ ...p, dictCount: Object.keys(dictDone).length })),
+    progress: listProgress(user.id).map(({ dictDone, seen, ...p }) => ({ ...p, dictCount: Object.keys(dictDone).length, seenCount: seen.length })),
   });
 }
 
 /**
- * PUT { source, title, idx, total, mode, dictLevel, dictDone } → lưu.
+ * PUT { source, title, idx, total, mode, dictLevel, dictDone, seen? } → lưu.
  * dictDone được GỘP với bản đã lưu (học trên 2 máy cùng lúc không mất câu nào); kết quả mới ghi đè câu trùng.
+ * seen (các câu đã nghe) cũng GỘP, kèm câu đang học khi ở Shadowing — client cũ / web không gửi seen thì vẫn tăng dần.
  */
 export async function PUT(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown }>(req);
+  const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
   const total = int(b.total);
@@ -46,25 +47,31 @@ export async function PUT(req: Request) {
       if (Number.isInteger(i) && i >= 0 && i < total && correct !== null && all !== null && correct <= all) incoming[i] = { correct, total: all };
     }
   }
+  const at = Math.min(idx, Math.max(0, total - 1));
+  const mode = b.mode === "dictation" ? "dictation" : "shadow";
   const prev = getProgress(user.id, source);
+  const seen = new Set((prev?.seen ?? []).filter((i) => i < total));
+  if (Array.isArray(b.seen)) for (const v of b.seen.slice(0, 10000)) if (int(v) !== null && v < total) seen.add(v);
+  if (mode === "shadow") seen.add(at); // Chính tả tính riêng bằng dictDone
   saveProgress(user.id, {
     source,
     title: str(b.title).slice(0, 200),
-    idx: Math.min(idx, Math.max(0, total - 1)),
+    idx: at,
     total,
-    mode: b.mode === "dictation" ? "dictation" : "shadow",
+    mode,
     dictLevel: LEVELS.includes(str(b.dictLevel)) ? str(b.dictLevel) : "normal",
     dictDone: { ...prev?.dictDone, ...incoming },
+    seen: [...seen].sort((x, y) => x - y),
   });
   return Response.json({ progress: getProgress(user.id, source) });
 }
 
-/** DELETE ?source=… → học lại từ đầu (xoá tiến độ bài này) */
+/** DELETE ?source=… → học lại từ đầu (xoá tiến độ bài này) · at = thời điểm xoá (cùng đồng hồ với updatedAt, để app so bản nào mới hơn) */
 export async function DELETE(req: NextRequest) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   const source = req.nextUrl.searchParams.get("source") ?? "";
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
   deleteProgress(user.id, source);
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, at: Date.now() });
 }

@@ -27,7 +27,8 @@ export type LessonSummary = {
   published: boolean;
   dictation: boolean; // admin bật luyện Chính tả cho bài (tắt = chỉ Shadowing)
   createdAt: string;
-  segmentCount: number;
+  segmentCount: number; // số dòng phụ đề thô
+  sentenceCount?: number; // số câu sau khi gộp, như màn học đếm (server cũ không gửi → dùng segmentCount)
 };
 export type Lesson = Omit<LessonSummary, "segmentCount"> & { segments: Segment[] };
 
@@ -41,10 +42,11 @@ export type Progress = {
   mode: "shadow" | "dictation";
   dictLevel: string;
   dictDone: Record<string, DictResult>;
+  seen?: number[]; // các câu đã thực sự nghe (server cũ không gửi)
   updatedAt: number;
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */
-export type ProgressSummary = Omit<Progress, "dictDone"> & { dictCount: number };
+export type ProgressSummary = Omit<Progress, "dictDone" | "seen"> & { dictCount: number; seenCount?: number };
 /** Thống kê học tập (GET /stats?tz=…) — ok = số lần nhớ được trên n lần ôn */
 export type Rate = { n: number; ok: number };
 export type Stats = {
@@ -120,6 +122,9 @@ export class ApiError extends Error {
  */
 let vocabVersion = 0;
 export const getVocabVersion = () => vocabVersion;
+/** Tương tự cho danh sách bài học (admin thêm / sửa / đăng / xoá bài) → tab Bài học tải lại */
+let lessonsVersion = 0;
+export const getLessonsVersion = () => lessonsVersion;
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   let res: Response;
@@ -142,6 +147,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error ?? t("api.serverError", { status: res.status }), res.status, data);
   if ((init.method ?? "GET") !== "GET" && /^\/vocab(\/|$)/.test(path)) vocabVersion++;
+  if ((init.method ?? "GET") !== "GET" && /^\/lessons(\/|$)/.test(path)) lessonsVersion++;
   return data as T;
 }
 
@@ -162,4 +168,5 @@ export const authHeaders = (): Record<string, string> | undefined => (token ? { 
 /** Nguồn ảnh đại diện cho expo-image (kèm token — server chỉ cho chính chủ / admin xem) */
 export const avatarSource = (url: string) => ({ uri: API_URL + url, headers: authHeaders() });
 
-export const thumb = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+/** Ảnh bìa YouTube: mq 320×180 (ảnh nhỏ) · hq 480×360 (thẻ lớn trên iPad; có viền đen trên dưới, contentFit "cover" cắt đúng phần viền) */
+export const thumb = (videoId: string, size: "mq" | "hq" = "mq") => `https://i.ytimg.com/vi/${videoId}/${size}default.jpg`;
