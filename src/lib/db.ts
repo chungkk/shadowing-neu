@@ -888,19 +888,29 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
     const day = dayOf(now - (13 - i) * DAY);
     return { day, reviews: counts.get(day) ?? 0 };
   });
-  // Chuỗi ngày: hôm nay chưa ôn thì vẫn giữ chuỗi tới hôm qua
+  // Chuỗi ngày: hôm nay chưa ôn thì vẫn giữ chuỗi tới hôm qua.
+  // Lấy mọi ngày có ôn (không chỉ 90 ngày như trên) để chuỗi dài hơn 90 ngày không bị cắt
+  const studied = new Set(
+    (
+      conn()
+        .prepare("SELECT DISTINCT date((at - ? * 60000) / 1000, 'unixepoch') AS day FROM review_events WHERE user_id = ?")
+        .all(tzOffset, userId) as { day: string }[]
+    ).map((r) => r.day),
+  );
   let streak = 0;
-  for (let i = counts.has(dayOf(now)) ? 0 : 1; counts.has(dayOf(now - i * DAY)); i++) streak++;
+  for (let i = studied.has(dayOf(now)) ? 0 : 1; studied.has(dayOf(now - i * DAY)); i++) streak++;
 
   const vocab = listVocab(userId);
+  // Câu ⭐ chỉ là đánh dấu trong bài học, app không ôn → không tính vào mục đến hạn / mức thành thạo / hay quên
+  const words = vocab.filter((v) => !isSentence(v));
   const mastery: Record<Mastery, number> = { saved: 0, learning: 0, active: 0, mastered: 0 };
-  for (const v of vocab) mastery[v.mastery]++;
+  for (const v of words) mastery[v.mastery]++;
   const sp = conn()
     .prepare("SELECT COALESCE(SUM(reps), 0) AS reps, COUNT(*) AS n FROM crazy_reps WHERE user_id = ? AND source LIKE '/vocab/%'")
     .get(userId) as { reps: number; n: number };
 
   return {
-    dueToday: vocab.filter((v) => isDue(v, now)).length,
+    dueToday: words.filter((v) => isDue(v, now)).length,
     streak,
     recall30: { ...rate(last30), duolingo: rate(last30.filter((e) => e.mode === "duolingo")), crazy: rate(last30.filter((e) => e.mode === "crazy")) },
     retention7: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 7)),
@@ -908,7 +918,7 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
     days,
     mastery,
     speaking: { reps: sp.reps, sentences: sp.n, totalSentences: vocab.filter(isSentence).length },
-    forgotten: vocab
+    forgotten: words
       .filter((v) => v.lapses > 0)
       .sort((a, b) => b.lapses - a.lapses)
       .slice(0, 5)
