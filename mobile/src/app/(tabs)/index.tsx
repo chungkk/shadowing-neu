@@ -16,9 +16,15 @@ const STALE_MS = 5 * 60_000; // mở tab: chỉ tải lại khi lâu chưa tải
 const CONTINUE_SHOWN = 3; // "Tiếp tục học" thu gọn
 const CONTINUE_MAX = 20; // "Xem tất cả"
 
-/** % đã học: số câu đã nghe (Shadowing) hoặc đã làm chính tả, lấy cái nhiều hơn. Server cũ chưa gửi seenCount → theo câu đang học */
-const percent = (p?: ProgressSummary) =>
-  p && p.total ? Math.min(100, Math.round((Math.max(p.seenCount ?? p.idx + 1, p.dictCount) / p.total) * 100)) : 0;
+/**
+ * % đã học: số câu đã nghe (Shadowing) hoặc đã làm chính tả, lấy cái nhiều hơn. Server cũ chưa gửi seenCount → theo câu đang học.
+ * Làm tròn xuống (199/200 câu là 99%, chưa "Xong"); đã học ít nhất 1 câu thì tối thiểu 1% (1/300 câu không hiện 0%)
+ */
+const percent = (p?: ProgressSummary) => {
+  if (!p?.total) return 0;
+  const done = Math.min(p.total, Math.max(p.seenCount ?? p.idx + 1, p.dictCount));
+  return done ? Math.max(1, Math.floor((done * 100) / p.total)) : 0;
+};
 
 /** Số câu như màn học đếm (sau khi gộp dòng phụ đề); server cũ chỉ có số dòng phụ đề */
 const sentences = (l: LessonSummary) => l.sentenceCount ?? l.segmentCount;
@@ -29,7 +35,7 @@ const lessonLabel = (l: LessonSummary, p: ProgressSummary | undefined, t: TFn) =
     l.title,
     l.level,
     t("sentences", { n: sentences(l) }),
-    p ? (percent(p) >= 100 ? t("lessons.finished") : `${percent(p)}%`) : "",
+    percent(p) >= 100 ? t("lessons.finished") : percent(p) > 0 ? `${percent(p)}%` : "",
     l.published ? "" : t("lessons.draft"),
   ]
     .filter(Boolean)
@@ -45,11 +51,11 @@ function ProgressBar({ p }: { p?: ProgressSummary }) {
   );
 }
 
-/** "45%" / "✓ Xong" cạnh số câu */
+/** "45%" / "✓ Xong" cạnh số câu (mở bài nhưng chưa học câu nào → không hiện "0%") */
 function ProgressText({ p }: { p?: ProgressSummary }) {
   const { t } = useI18n();
-  if (!p) return null;
   const n = percent(p);
+  if (!n) return null;
   return <Text style={{ color: n >= 100 ? C.accent : C.amber, fontSize: 13, fontWeight: "800" }}>{n >= 100 ? `✓ ${t("lessons.finished")}` : `${n}%`}</Text>;
 }
 
@@ -73,10 +79,14 @@ function ContinueRow({
   last: boolean;
 }) {
   const { t } = useI18n();
+  const n = percent(p);
+  const at =
+    p.mode === "dictation" && dictation ? t("lessons.progressDict", { d: p.dictCount, n: p.total }) : t("lessons.progressAt", { i: p.idx + 1, n: p.total });
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={[title, at, n ? `${n}%` : ""].filter(Boolean).join(", ")}
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
@@ -96,12 +106,8 @@ function ContinueRow({
           {title}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ color: C.muted, fontSize: 13 }}>
-            {p.mode === "dictation" && dictation
-              ? t("lessons.progressDict", { d: p.dictCount, n: p.total })
-              : t("lessons.progressAt", { i: p.idx + 1, n: p.total })}
-          </Text>
-          <Text style={{ color: C.accent, fontSize: 13, fontWeight: "700" }}>{percent(p)}%</Text>
+          <Text style={{ color: C.muted, fontSize: 13 }}>{at}</Text>
+          {!!n && <Text style={{ color: C.accent, fontSize: 13, fontWeight: "700" }}>{n}%</Text>}
         </View>
       </View>
       <SymbolView name="play.circle.fill" size={28} tintColor={C.accent} />
@@ -299,8 +305,10 @@ export default function LessonsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAll, setShowAll] = useState(false); // "Tiếp tục học": hiện hết thay vì 3 bài
   const loaded = useRef<{ user: number | null; version: number; at: number } | null>(null); // lần tải gần nhất
+  const loadSeq = useRef(0); // mở tab + kéo tải lại cùng lúc → chỉ nhận kết quả của lần gọi sau cùng
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const version = getLessonsVersion(); // lấy trước khi tải: admin sửa bài trong lúc tải → lần sau tải lại
     try {
       setError("");
@@ -309,15 +317,20 @@ export default function LessonsScreen() {
         // Lỗi tải tiến độ → null: giữ bản đang có thay vì xoá hết thanh tiến độ / "Tiếp tục học"
         me !== null ? api<{ progress: ProgressSummary[] }>("/progress").then((r) => r.progress, () => null) : [],
       ]);
+      if (seq !== loadSeq.current) return;
       setLessons(l.lessons);
+      // Cấp đang lọc không còn bài (admin xoá / chuyển về nháp) → nút lọc đó biến mất, bỏ lọc luôn
+      // để không kẹt ở "Không tìm thấy bài nào" (hết sạch bài thì cả hàng nút lọc cũng ẩn)
+      setLevel((cur) => (cur && l.lessons.some((x) => x.level === cur) ? cur : null));
       setServer((s) => (p ? { user: me, list: p } : s.user === me ? s : { user: me, list: [] }));
       loaded.current = { user: me, version, at: Date.now() };
     } catch (e) {
-      setError((e as Error).message);
+      if (seq === loadSeq.current) setError((e as Error).message);
     }
   }, [me]);
   const progress = useMemo(() => mergeProgress(server.user === me ? server.list : [], me ?? undefined, local), [server, me, local]);
   const progressOf = useMemo(() => new Map(progress.map((p) => [p.source, p])), [progress]);
+  const lessonById = useMemo(() => new Map((lessons ?? []).map((l) => [String(l.id), l])), [lessons]);
   // Đang học dở (chưa xong 100%), mới nhất trước — bài học còn tồn tại hoặc video YouTube tự mở.
   // Đang lọc cấp độ → chỉ các bài của cấp đó (video tự mở không có cấp độ)
   const continuing = useMemo(
@@ -326,12 +339,12 @@ export default function LessonsScreen() {
         .filter((p) => percent(p) < 100)
         .map((p) => {
           const [, kind, id] = p.source.split("/");
-          const lesson = kind === "lesson" ? lessons?.find((l) => String(l.id) === id) : undefined;
+          const lesson = kind === "lesson" ? lessonById.get(id) : undefined;
           return { p, kind, id, lesson, videoId: kind === "watch" ? id : lesson?.videoId };
         })
         .filter((x): x is typeof x & { videoId: string } => !!x.videoId && (!level || x.lesson?.level === level))
         .slice(0, CONTINUE_MAX),
-    [progress, lessons, level],
+    [progress, lessonById, level],
   );
 
   // Mở tab → tải lại khi: chưa tải / đổi tài khoản / admin vừa thêm, sửa bài / lâu chưa tải.
@@ -492,7 +505,12 @@ export default function LessonsScreen() {
               </View>
             )
           ) : level ? (
-            <EmptyState icon="magnifyingglass" title={t("lessons.noResults")} text={t("lessons.noResultsHint")} />
+            <EmptyState
+              icon="magnifyingglass"
+              title={t("lessons.noResults")}
+              text={t("lessons.noResultsHint")}
+              action={{ label: t("lessons.clearFilter"), onPress: () => setLevel(null) }}
+            />
           ) : (
             <EmptyState icon="books.vertical" title={t("lessons.empty")} text={t("lessons.emptyHint")} />
           )

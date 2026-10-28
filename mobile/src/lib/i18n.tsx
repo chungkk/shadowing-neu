@@ -91,7 +91,8 @@ const vi = {
   "lessons.allHeading": "Tất cả bài học",
   "lessons.loadError": "Không tải được bài học",
   "lessons.noResults": "Không tìm thấy bài nào",
-  "lessons.noResultsHint": "Thử từ khoá khác hoặc bỏ lọc cấp độ.",
+  "lessons.noResultsHint": "Cấp độ này hiện chưa có bài nào.",
+  "lessons.clearFilter": "Xem tất cả bài",
   "lessons.empty": "Chưa có bài học nào",
   "lessons.emptyHint": "Bài học mới sẽ xuất hiện ở đây.",
 
@@ -511,7 +512,8 @@ const de: Dict = {
   "lessons.allHeading": "Alle Lektionen",
   "lessons.loadError": "Lektionen konnten nicht geladen werden",
   "lessons.noResults": "Keine Lektionen gefunden",
-  "lessons.noResultsHint": "Versuche ein anderes Suchwort oder entferne den Niveaufilter.",
+  "lessons.noResultsHint": "Für dieses Niveau gibt es noch keine Lektionen.",
+  "lessons.clearFilter": "Alle Lektionen anzeigen",
   "lessons.empty": "Noch keine Lektionen",
   "lessons.emptyHint": "Neue Lektionen erscheinen hier.",
 
