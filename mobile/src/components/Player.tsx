@@ -47,6 +47,17 @@ window.addEventListener("message", function (e) {
     }
   } catch (_) {}
 });
+// cc_load_policy=0 không chặn được phụ đề YouTube tự bật (theo cài đặt tài khoản / phụ đề tự động) → gỡ module phụ đề mỗi lần phát
+(function hideCaptions() {
+  if (!window.player || typeof player.getPlayerState !== "function") return setTimeout(hideCaptions, 300);
+  player.addEventListener("onStateChange", function (e) {
+    if (e.data !== 1) return;
+    try {
+      player.unloadModule("captions");
+      player.unloadModule("cc");
+    } catch (_) {}
+  });
+})();
 true;
 `;
 
@@ -674,21 +685,33 @@ export default function Player({
     </View>
   );
 
+  // Video "sạch": tắt thanh điều khiển / phụ đề / chú thích của YouTube (app có thanh điều khiển riêng).
+  // Lớp phủ trong suốt chặn chạm vào iframe (không hiện lại tiêu đề, "Video khác"...) và dùng để phát / dừng.
   const video = (
-    <YoutubePlayer
-      ref={ytRef}
-      height={(videoWidth * 9) / 16}
-      width={videoWidth}
-      videoId={videoId}
-      play={playing}
-      playbackRate={rate}
-      initialPlayerParams={{ rel: false, preventFullScreen: false }}
-      webViewProps={{ injectedJavaScript: YT_COMMAND_SHIM }}
-      onChangeState={(s: PLAYER_STATES) => {
-        if (s === PLAYER_STATES.PLAYING) setPlaying(true);
-        if (s === PLAYER_STATES.PAUSED || s === PLAYER_STATES.ENDED) setPlaying(false);
-      }}
-    />
+    <View>
+      <YoutubePlayer
+        ref={ytRef}
+        height={(videoWidth * 9) / 16}
+        width={videoWidth}
+        videoId={videoId}
+        play={playing}
+        playbackRate={rate}
+        initialPlayerParams={{
+          rel: false,
+          controls: false,
+          modestbranding: true,
+          iv_load_policy: 3,
+          showClosedCaptions: false,
+          preventFullScreen: true,
+        }}
+        webViewProps={{ injectedJavaScript: YT_COMMAND_SHIM }}
+        onChangeState={(s: PLAYER_STATES) => {
+          if (s === PLAYER_STATES.PLAYING) setPlaying(true);
+          if (s === PLAYER_STATES.PAUSED || s === PLAYER_STATES.ENDED) setPlaying(false);
+        }}
+      />
+      <Pressable onPress={togglePlay} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+    </View>
   );
 
   const transcript = (
