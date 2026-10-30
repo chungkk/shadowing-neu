@@ -59,6 +59,8 @@ export function DictationPanel({
   // Điểm hiển thị: lần làm này (nếu vừa làm xong) hoặc điểm đã lưu
   const [score, setScore] = useState(saved);
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
+  // Số từ phải bấm xem — không tính từ đã gõ đúng (bấm "Hiện tất cả" thêm cả chúng vào `revealed`)
+  const revealedCount = result.words.filter((w) => w.state === "revealed").length;
 
   const change = (nextInput: string, nextRevealed: Set<number>) => {
     setInput(nextInput);
@@ -135,7 +137,7 @@ export function DictationPanel({
             ? t("dict.done", {
                 c: score?.correct ?? result.correct,
                 n: score?.total ?? result.total,
-                r: revealed.size ? t("dict.revealed", { k: revealed.size }) : "",
+                r: revealedCount ? t("dict.revealed", { k: revealedCount }) : "",
               }) +
               " " +
               t("dict.tapWord")

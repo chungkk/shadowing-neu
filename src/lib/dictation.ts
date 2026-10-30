@@ -33,9 +33,20 @@ export function normalizeWord(w: string): string {
     .replace(/[^\p{L}\p{N}]/gu, "");
 }
 
-/** Tách câu thành các từ (bỏ dấu câu đứng riêng như "–") */
+/**
+ * Tách câu thành các từ (bỏ dấu câu đứng riêng như "–"). Từ nối gạch tách thành từng phần, gạch giữ ở phần trước:
+ * "20-Liter-Challenge" → "20-", "Liter-", "Challenge" — gạch nối không nghe được nên chép "20 Liter Challenge" là đúng.
+ * `group`: các phần của cùng một từ nối gạch chung một số.
+ */
+function splitTokens(text: string): { text: string; group: number }[] {
+  return text
+    .split(/\s+/)
+    .flatMap((w, group) => w.split(/(?<=[-‐‑])/).map((part) => ({ text: part, group })))
+    .filter((t) => normalizeWord(t.text));
+}
+
 export function splitWords(text: string): string[] {
-  return text.split(/\s+/).filter((w) => normalizeWord(w));
+  return splitTokens(text).map((t) => t.text);
 }
 
 function editDistance(a: string, b: string): number {
@@ -63,48 +74,68 @@ function isClose(ref: string, typed: string): boolean {
  * gõ thiếu / thừa / sai một từ không làm lệch các từ phía sau.
  */
 export function checkDictation(reference: string, input: string, revealed: ReadonlySet<number> = new Set()): CheckResult {
-  const ref = splitWords(reference);
-  const typed = splitWords(input);
+  const refTok = splitTokens(reference);
+  const typedTok = splitTokens(input);
+  const ref = refTok.map((t) => t.text);
+  const typed = typedTok.map((t) => t.text);
   const a = ref.map(normalizeWord);
   const b = typed.map(normalizeWord);
   const n = a.length;
   const m = b.length;
 
-  // điểm ghép: đúng 2, gần đúng 1 (ưu tiên ghép nhiều từ đúng nhất)
-  const score = (i: number, j: number) => (a[i] === b[j] ? 2 : isClose(a[i], b[j]) ? 1 : 0);
+  // Một bước ghép: di từ gốc ↔ dj từ gõ. Thường là 1 ↔ 1; với từ nối gạch còn cho ghép cả cụm phần với 1 từ gõ liền
+  // ("20-Liter-Challenge" ↔ "20literchallenge") và ngược lại. Điểm: mỗi từ gốc đúng 2, gần đúng 1.
+  type Move = { di: number; dj: number; s: number };
+  const moves = (i: number, j: number): Move[] => {
+    const out: Move[] = [];
+    const add = (di: number, dj: number) => {
+      const x = a.slice(i, i + di).join("");
+      const y = b.slice(j, j + dj).join("");
+      const s = x === y ? 2 : isClose(x, y) ? 1 : 0;
+      if (s) out.push({ di, dj, s: s * di });
+    };
+    add(1, 1);
+    for (let k = i + 1; k < n && refTok[k].group === refTok[i].group; k++) add(k - i + 1, 1);
+    for (let k = j + 1; k < m && typedTok[k].group === typedTok[j].group; k++) add(1, k - j + 1);
+    return out;
+  };
+
+  // Quy hoạch động: tối đa điểm ghép (ưu tiên ghép nhiều từ đúng nhất)
   const dp = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      const s = score(i, j);
-      dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1], s ? dp[i + 1][j + 1] + s : 0);
+      dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1], ...moves(i, j).map((mv) => dp[i + mv.di][j + mv.dj] + mv.s));
     }
   }
 
-  // Lần theo bảng để lấy các cặp (từ gốc, từ gõ) khớp nhau
+  // Lần theo bảng để lấy các đoạn (từ gốc, từ gõ) khớp nhau
   const words: CheckedWord[] = ref.map((text) => ({ text, state: "missing" }));
-  const pairs: [number, number][] = [];
+  const matched: { i: number; j: number; di: number; dj: number }[] = [];
   for (let i = 0, j = 0; i < n && j < m; ) {
-    const s = score(i, j);
-    if (s && dp[i][j] === dp[i + 1][j + 1] + s) {
-      words[i] = { text: ref[i], state: s === 2 ? "correct" : "close", typed: typed[j] };
-      pairs.push([i, j]);
-      i++;
-      j++;
+    const mv = moves(i, j).find((mv) => dp[i][j] === dp[i + mv.di][j + mv.dj] + mv.s);
+    if (mv) {
+      const state = mv.s === 2 * mv.di ? "correct" : "close";
+      const t = typed.slice(j, j + mv.dj).join("");
+      for (let k = i; k < i + mv.di; k++) words[k] = { text: ref[k], state, typed: t };
+      matched.push({ i, j, ...mv });
+      i += mv.di;
+      j += mv.dj;
     } else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
     else j++;
   }
 
-  // Giữa 2 cặp khớp: từ gốc còn trống + từ gõ chưa dùng → ghép lần lượt thành "gõ sai", dư ra là "thừa"
+  // Giữa 2 đoạn khớp: từ gốc còn trống + từ gõ chưa dùng → ghép lần lượt thành "gõ sai", dư ra là "thừa"
   const extra: string[] = [];
-  const bounds: [number, number][] = [[-1, -1], ...pairs, [n, m]];
-  for (let k = 0; k < bounds.length - 1; k++) {
-    const [i0, j0] = bounds[k];
-    const [i1, j1] = bounds[k + 1];
-    const gapTyped = typed.slice(j0 + 1, j1);
-    for (let i = i0 + 1; i < i1 && gapTyped.length; i++) {
+  let pi = 0;
+  let pj = 0;
+  for (const mv of [...matched, { i: n, j: m, di: 0, dj: 0 }]) {
+    const gapTyped = typed.slice(pj, mv.j);
+    for (let i = pi; i < mv.i && gapTyped.length; i++) {
       words[i] = { text: ref[i], state: "wrong", typed: gapTyped.shift() };
     }
     extra.push(...gapTyped);
+    pi = mv.i + mv.di;
+    pj = mv.j + mv.dj;
   }
 
   revealed.forEach((k) => {
