@@ -176,6 +176,8 @@ function open() {
       fill.run(JSON.stringify(Array.from({ length: r.idx + 1 }, (_, i) => i)), r.user_id, r.source);
     db.exec("COMMIT");
   }
+  // Chính tả: các câu của lượt đang làm (app chọn ngẫu nhiên 5–10 câu / lượt)
+  if (!progressCols.some((c) => c.name === "dict_pick")) db.exec("ALTER TABLE progress ADD COLUMN dict_pick TEXT NOT NULL DEFAULT '[]'"); // [3, 17, 42, …]
   // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
   const vocabCols = db.prepare("PRAGMA table_info(vocab)").all() as { name: string }[];
   if (!vocabCols.some((c) => c.name === "srs_stage")) {
@@ -794,6 +796,7 @@ export type Progress = {
   dictLevel: string;
   dictDone: Record<string, DictResult>;
   seen: number[]; // các câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
+  dictPick: number[]; // Chính tả: các câu của lượt đang làm ([] = chưa chọn)
   updatedAt: number;
 };
 
@@ -806,6 +809,7 @@ type ProgressRow = {
   dict_level: string;
   dict_done: string;
   seen: string;
+  dict_pick: string;
   updated_at: number;
 };
 
@@ -818,6 +822,7 @@ const toProgress = (r: ProgressRow): Progress => ({
   dictLevel: r.dict_level,
   dictDone: JSON.parse(r.dict_done),
   seen: JSON.parse(r.seen ?? "[]"),
+  dictPick: JSON.parse(r.dict_pick ?? "[]"),
   updatedAt: r.updated_at,
 });
 
@@ -836,13 +841,13 @@ const MAX_PROGRESS = 300;
 export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
   conn()
     .prepare(
-      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, dict_pick, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, source) DO UPDATE SET title = excluded.title, idx = excluded.idx, total = excluded.total,
          mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, seen = excluded.seen,
-         updated_at = excluded.updated_at`,
+         dict_pick = excluded.dict_pick, updated_at = excluded.updated_at`,
     )
-    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), Date.now());
+    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), JSON.stringify(p.dictPick), Date.now());
   // Chỉ giữ MAX_PROGRESS bài học gần nhất / người (source /watch/<id> là tuỳ ý → không giới hạn thì DB phình mãi)
   conn()
     .prepare(

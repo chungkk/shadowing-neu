@@ -43,10 +43,11 @@ export type Progress = {
   dictLevel: string;
   dictDone: Record<string, DictResult>;
   seen?: number[]; // các câu đã thực sự nghe (server cũ không gửi)
+  dictPick?: number[]; // Chính tả: các câu của lượt đang làm (server cũ không gửi)
   updatedAt: number;
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */
-export type ProgressSummary = Omit<Progress, "dictDone" | "seen"> & { dictCount: number; seenCount?: number };
+export type ProgressSummary = Omit<Progress, "dictDone" | "seen" | "dictPick"> & { dictCount: number; seenCount?: number };
 /** Thống kê học tập (GET /stats?tz=…) — ok = số lần nhớ được trên n lần ôn */
 export type Rate = { n: number; ok: number };
 export type Stats = {

@@ -17,10 +17,11 @@ import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles"
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { DictationPanel, type DictDraft } from "./DictationPanel";
 import { WordSheet } from "./WordSheet";
-import { Label, Segmented } from "./ui";
+import { Button, Label, Segmented } from "./ui";
 import { api, type DictResult, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { askLogin, micDenied, showError } from "@/lib/dialogs";
+import { pickDictation } from "@/lib/dictPick";
 import { noteProgress, progressSaved } from "@/lib/progress";
 import { prefetchGerman } from "@/lib/speak";
 import { C } from "@/lib/theme";
@@ -119,6 +120,7 @@ export default function Player({
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const segments = useMemo(() => mergeIntoSentences(rawSegments), [rawSegments]);
+  const texts = useMemo(() => segments.map((s) => s.text), [segments]);
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -128,6 +130,7 @@ export default function Player({
   const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã làm: idx → 7/8 từ đúng
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả kể cả khi đang ở câu 1
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã hiện của từng câu (sang câu khác rồi quay lại vẫn còn)
+  const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép ([] khi đang chép = đã chép hết bài)
   const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   const [recordings, setRecordings] = useState<Record<number, string>>({});
   const [hideText, setHideText] = useState(false); // Shadowing: ẩn chữ tiếng Đức (chỉ nghe rồi nói theo)
@@ -331,25 +334,45 @@ export default function Player({
     };
   }, [user]);
 
-  // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu
+  // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu · Chính tả: chỉ các câu của lượt đang làm
   const starredIdx = useMemo(() => segments.flatMap((s, i) => (saved.has(s.text.toLowerCase()) ? [i] : [])), [segments, saved]);
-  const nextIdx = starredOnly ? starredIdx.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
-  const prevIdx = starredOnly ? starredIdx.findLast((i) => i < idx) : idx > 0 ? idx - 1 : undefined;
+  const queue = starredOnly ? starredIdx : dictation ? dictPick : null; // null = mọi câu
+  const inQueue = useMemo(() => queue && new Set(queue), [queue]);
+  const nextIdx = queue ? queue.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
+  const prevIdx = queue ? queue.findLast((i) => i < idx) : idx > 0 ? idx - 1 : undefined;
   const next = () => nextIdx !== undefined && playSegment(nextIdx);
   const prev = () => prevIdx !== undefined && playSegment(prevIdx);
+  /** Chọn câu `i` mà không phát (bấm ▶ để nghe) */
+  const select = (i: number) => {
+    pause();
+    stopAt.current = null;
+    setIdx(i);
+    ytRef.current?.seekTo(segments[i].start, true);
+  };
+  /** Câu nên mở khi vào lượt chính tả: câu đang chọn nếu thuộc lượt, không thì câu đầu tiên chưa chép */
+  const roundStart = (round: number[]) => (round.includes(idx) ? idx : (round.find((k) => !dictDone[k]) ?? round[0]));
+  /** Lượt chính tả đang làm; chưa có → chọn lượt mới */
+  const ensureRound = () => {
+    if (dictPick.length) return dictPick;
+    const round = pickDictation(texts, dictDone);
+    setDictPick(round);
+    return round;
+  };
+  const newRound = () => {
+    const round = pickDictation(texts, dictDone);
+    setDictPick(round);
+    setDictDrafts({});
+    if (round.length) select(round[0]);
+  };
   const toggleStarredOnly = () => {
     const on = !starredOnly;
     setStarredOnly(on);
-    // Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe)
-    const i = starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1);
-    if (on && i !== undefined && i !== idx) {
-      pause();
-      stopAt.current = null;
-      setIdx(i);
-      ytRef.current?.seekTo(segments[i].start, true);
-    }
+    // Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe); tắt lúc đang chép chính tả → về lượt đang làm
+    const i = on ? (starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1)) : dictation ? roundStart(dictPick) : undefined;
+    if (i !== undefined && i !== idx) select(i);
   };
   const doneCount = Object.keys(dictDone).length;
+  const roundDone = dictation && !starredOnly && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
 
   // ---- Tiến độ học: lưu theo tài khoản (đồng bộ web ↔ app), mở lại bài là học tiếp ----
   const [resumed, setResumed] = useState<number | null>(null); // vừa tiếp tục từ câu này → hiện thông báo
@@ -364,9 +387,15 @@ export default function Player({
     api<{ progress: Progress | null }>(`/progress?source=${encodeURIComponent(sourceUrl)}`)
       .then(({ progress: p }) => {
         if (!alive || !p) return;
-        const i = Math.min(p.idx, segments.length - 1);
         const done = Object.fromEntries(Object.entries(p.dictDone).filter(([k]) => Number(k) < segments.length));
+        const dict = allowDictation && p.mode === "dictation";
+        // Lượt chính tả đã lưu (server cũ / lượt chưa chọn → chọn lượt mới nếu đang ở Chính tả)
+        const pick = (p.dictPick ?? []).filter((k) => k < segments.length);
+        const round = pick.length || !dict ? pick : pickDictation(texts, done);
+        let i = Math.min(p.idx, segments.length - 1);
+        if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
         setIdx(i);
+        setDictPick(round);
         if (allowDictation) setPractice(p.mode);
         if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") setDictLevel(p.dictLevel);
         setDictDone(done);
@@ -381,7 +410,7 @@ export default function Player({
     return () => {
       alive = false;
     };
-  }, [user, sourceUrl, segments.length, allowDictation]);
+  }, [user, sourceUrl, segments.length, texts, allowDictation]);
 
   const flushProgress = useCallback(() => {
     const b = pendingSave.current;
@@ -408,10 +437,10 @@ export default function Player({
       seenCount: mode === "shadow" ? new Set(seen).add(idx).size : seen.size, // server cũng tính câu đang học (Shadowing) là đã nghe
       updatedAt: 0,
     });
-    pendingSave.current = { user: user.id, seq, body: { source: sourceUrl, title, idx, total, mode, dictLevel, dictDone, seen: [...seen] } };
+    pendingSave.current = { user: user.id, seq, body: { source: sourceUrl, title, idx, total, mode, dictLevel, dictDone, seen: [...seen], dictPick } };
     const id = setTimeout(flushProgress, 1500);
     return () => clearTimeout(id);
-  }, [user, sourceUrl, title, idx, segments.length, dictation, dictLevel, dictDone, seen, flushProgress]);
+  }, [user, sourceUrl, title, idx, segments.length, dictation, dictLevel, dictDone, seen, dictPick, flushProgress]);
   // …và lưu ngay khi rời màn hình
   useEffect(() => flushProgress, [flushProgress]);
   // Thông báo "tiếp tục từ câu …" tự ẩn sau 8 giây
@@ -430,9 +459,11 @@ export default function Player({
         .then((r) => progressSaved(user.id, sourceUrl, seq, r.at ?? 0))
         .catch(() => {});
     }
-    setIdx(0);
+    const round = dictation ? pickDictation(texts, {}) : [];
+    setIdx(round.length && !starredOnly ? round[0] : 0);
     setSeen(new Set());
     setDictDone({});
+    setDictPick(round);
     setDictDrafts({});
     setDictEpoch((e) => e + 1);
     setResumed(null);
@@ -544,6 +575,10 @@ export default function Player({
           onChange={(p) => {
             pause();
             setPractice(p);
+            if (p !== "dictation") return;
+            // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
+            const i = roundStart(ensureRound());
+            if (!starredOnly && i !== undefined && i !== idx) select(i);
           }}
         />
       )}
@@ -568,14 +603,39 @@ export default function Player({
     </View>
   );
 
+  // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
+  const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
+  const left = segments.length - doneCount;
+  const roundCard = dictation && !starredOnly && (roundDone || !dictPick.length) && (
+    <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(22,163,74,0.12)", borderWidth: 1, borderColor: "rgba(22,163,74,0.35)" }}>
+      {roundDone && (
+        <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }}>
+          {t("dict.roundDone", { n: dictPick.length, p: roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0 })}
+        </Text>
+      )}
+      <Text style={{ color: C.muted, fontSize: 14 }}>
+        {left > 0 ? t("dict.lessonLeft", { d: doneCount, n: segments.length }) : t("dict.lessonAll", { n: segments.length })}
+      </Text>
+      <Button title={left > 0 ? t("dict.newRound") : t("player.restart")} variant="primary" onPress={left > 0 ? newRound : restart} />
+    </View>
+  );
+
   // Phần chính tả. Màn hẹp: nằm đầu danh sách câu; chia cột: nằm dưới video
   const controls = (
     <View style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", paddingVertical: 14, gap: 14 }}>
-      {current && dictation && (
+      {current && dictation && (starredOnly || dictPick.length > 0) && (
         <>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Label color={C.amber}>{t("player.sentenceOf", { i: idx + 1, n: segments.length })}</Label>
-            <Text style={{ color: C.muted, fontSize: 12 }}>{t("player.doneOf", { d: doneCount, n: segments.length })}</Text>
+            <Label color={C.amber}>
+              {queue?.includes(idx)
+                ? t("player.roundOf", { i: queue.indexOf(idx) + 1, n: queue.length, k: idx + 1 })
+                : t("player.sentenceOf", { i: idx + 1, n: segments.length })}
+            </Label>
+            <Text style={{ color: C.muted, fontSize: 12 }}>
+              {queue
+                ? t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })
+                : t("player.doneOf", { d: doneCount, n: segments.length })}
+            </Text>
           </View>
           <Segmented
             options={[
@@ -609,6 +669,7 @@ export default function Player({
           </View>
         </>
       )}
+      {roundCard}
       {!split && <Label>{t("player.transcript")}</Label>}
     </View>
   );
@@ -660,7 +721,7 @@ export default function Player({
         // Chính tả: che tới khi làm xong; Shadowing ẩn chữ: che tới khi bấm 👁
         const hidden = dictation ? !dictDone[index] : hideText && !revealed.has(index);
         const starred = saved.has(item.text.toLowerCase());
-        if (starredOnly && !starred) return null;
+        if (inQueue && !inQueue.has(index)) return null;
         const phrases = showPhr && !hidden ? (phrasesOf(item.text) ?? []) : [];
         const tokens = tokenize(item.text, phrases);
         return (

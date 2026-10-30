@@ -124,6 +124,7 @@ const vi = {
   "player.autoStop": "Tự dừng sau mỗi câu",
   "player.sentenceOf": "Câu {i}/{n}",
   "player.doneOf": "Đã xong {d}/{n} câu",
+  "player.roundOf": "Câu {i}/{n} · #{k}",
   "player.resumed": "Tiếp tục từ câu {i}/{n}",
   "player.restart": "Học lại từ đầu",
   "player.easy": "Dễ",
@@ -177,6 +178,10 @@ const vi = {
   "dict.retry": "Làm lại câu này",
   "dict.next": "Câu tiếp theo ›",
   "dict.check": "Kiểm tra",
+  "dict.roundDone": "🎉 Xong lượt {n} câu — đúng {p}% số từ",
+  "dict.lessonLeft": "Cả bài: đã chép {d}/{n} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.",
+  "dict.lessonAll": "Bạn đã chép hết {n} câu của bài này 👏",
+  "dict.newRound": "Lượt mới ›",
 
   // Từ vựng
   "vocab.title": "Sổ từ vựng",
@@ -542,6 +547,7 @@ const de: Dict = {
   "player.autoStop": "Nach jedem Satz anhalten",
   "player.sentenceOf": "Satz {i}/{n}",
   "player.doneOf": "{d}/{n} erledigt",
+  "player.roundOf": "Satz {i}/{n} · #{k}",
   "player.resumed": "Weiter ab Satz {i}/{n}",
   "player.restart": "Von vorn beginnen",
   "player.easy": "Leicht",
@@ -594,6 +600,10 @@ const de: Dict = {
   "dict.retry": "Satz wiederholen",
   "dict.next": "Nächster Satz ›",
   "dict.check": "Prüfen",
+  "dict.roundDone": "🎉 Runde mit {n} Sätzen geschafft — {p} % der Wörter richtig",
+  "dict.lessonLeft": "Ganze Lektion: {d}/{n} Sätze geschrieben. Eine neue Runde wählt zufällig 5–10 noch offene Sätze.",
+  "dict.lessonAll": "Du hast alle {n} Sätze dieser Lektion geschrieben 👏",
+  "dict.newRound": "Neue Runde ›",
 
   "vocab.title": "Vokabelheft",
   "vocab.loginHint": "Melde dich an, um beim Lernen Wörter zu speichern und hier zu wiederholen.",

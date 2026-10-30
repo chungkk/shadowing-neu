@@ -8,7 +8,9 @@ import { TTS_DIR } from "./db";
  * Giọng đọc tiếng Đức tự nhiên (neural, như người Đức thật) cho app — thay giọng máy của expo-speech.
  * - Mặc định OpenAI gpt-4o-mini-tts (chung OPENAI_API_KEY), dặn đọc chuẩn hochdeutsch, không lơ lớ.
  * - Có AZURE_SPEECH_KEY + AZURE_SPEECH_REGION → dùng Azure (giọng de-DE bản xứ, rẻ, rất tự nhiên).
- * - TTS_VOICE đổi giọng (OpenAI: marin, cedar, coral…; Azure: de-DE-SeraphinaMultilingualNeural, de-DE-ConradNeural…).
+ * - Có ELEVENLABS_API_KEYS (nhiều key cách nhau dấu phẩy) → ưu tiên ElevenLabs, key hết quota thì chuyển key sau.
+ * - TTS_VOICE đổi giọng (OpenAI: marin, cedar, coral…; Azure: de-DE-SeraphinaMultilingualNeural, de-DE-ConradNeural…;
+ *   ElevenLabs: voice ID).
  * File mp3 lưu trong TTS_DIR (cạnh DB, trên volume VPS) → mỗi câu chỉ trả tiền tạo 1 lần.
  */
 
@@ -16,9 +18,18 @@ const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
 const AZURE_REGION = process.env.AZURE_SPEECH_REGION;
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_TTS_MODEL ?? "gpt-4o-mini-tts";
+const ELEVEN_KEYS = (process.env.ELEVENLABS_API_KEYS ?? process.env.ELEVENLABS_API_KEY ?? "")
+  .split(",")
+  .map((k) => k.trim())
+  .filter(Boolean);
+const ELEVEN_MODEL = process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2";
 
-const provider = AZURE_KEY && AZURE_REGION ? "azure" : OPENAI_KEY ? "openai" : null;
-const VOICE = process.env.TTS_VOICE ?? (provider === "azure" ? "de-DE-SeraphinaMultilingualNeural" : "marin");
+const provider = ELEVEN_KEYS.length ? "elevenlabs" : AZURE_KEY && AZURE_REGION ? "azure" : OPENAI_KEY ? "openai" : null;
+const VOICE =
+  process.env.TTS_VOICE ??
+  // ElevenLabs: Matilda (nữ, ấm, đọc tiếng Đức tự nhiên với multilingual v2)
+  (provider === "elevenlabs" ? "XrExE9yKIg1WjnnlVkGX" : provider === "azure" ? "de-DE-SeraphinaMultilingualNeural" : "marin");
+const MODEL = provider === "elevenlabs" ? ELEVEN_MODEL : OPENAI_MODEL;
 
 const INSTRUCTIONS =
   "Sprich wie eine Muttersprachlerin aus Deutschland: reines Hochdeutsch ohne fremden Akzent, " +
@@ -31,7 +42,35 @@ export const ttsEnabled = () => provider !== null;
 
 const escapeXml = (s: string) => s.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
+// Key ElevenLabs hết quota / bị khoá / quá tải → bỏ qua 1 giờ rồi thử lại
+const KEY_COOLDOWN_MS = 60 * 60 * 1000;
+const keyBlockedUntil = new Map<string, number>();
+let nextKey = 0;
+
+async function elevenSpeech(text: string): Promise<Buffer> {
+  let lastError = "Mọi key ElevenLabs đều hết quota";
+  for (let i = 0; i < ELEVEN_KEYS.length; i++) {
+    const key = ELEVEN_KEYS[(nextKey + i) % ELEVEN_KEYS.length];
+    if ((keyBlockedUntil.get(key) ?? 0) > Date.now()) continue;
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE}?output_format=mp3_44100_128`, {
+      method: "POST",
+      headers: { "xi-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ text, model_id: ELEVEN_MODEL }),
+    });
+    if (res.ok) {
+      nextKey = (nextKey + i) % ELEVEN_KEYS.length;
+      return Buffer.from(await res.arrayBuffer());
+    }
+    lastError = `Lỗi tạo giọng đọc (${res.status}): ${(await res.text()).slice(0, 200)}`;
+    // 401 sai key / hết quota, 402 hết tiền, 429 quá tải → đổi key; lỗi khác (vd. câu không hợp lệ) thì dừng
+    if (![401, 402, 429].includes(res.status)) throw new Error(lastError);
+    keyBlockedUntil.set(key, Date.now() + KEY_COOLDOWN_MS);
+  }
+  throw new Error(lastError);
+}
+
 async function synthesize(text: string): Promise<Buffer> {
+  if (provider === "elevenlabs") return elevenSpeech(text);
   const res =
     provider === "azure"
       ? await fetch(`https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`, {
@@ -54,7 +93,7 @@ async function synthesize(text: string): Promise<Buffer> {
 
 /** File cache của 1 câu — đổi nhà cung cấp / giọng thì tạo lại */
 const fileFor = (text: string) =>
-  path.join(TTS_DIR, createHash("sha1").update(`${provider}|${OPENAI_MODEL}|${VOICE}|${text}`).digest("hex") + ".mp3");
+  path.join(TTS_DIR, createHash("sha1").update(`${provider}|${MODEL}|${VOICE}|${text}`).digest("hex") + ".mp3");
 
 /** Đã có file sẵn (đọc lại không tốn tiền API → không tính vào giới hạn lượt) */
 export const hasSpeech = (text: string) => fs.existsSync(fileFor(text));

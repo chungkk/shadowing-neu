@@ -24,14 +24,15 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * PUT { source, title, idx, total, mode, dictLevel, dictDone, seen? } → lưu.
+ * PUT { source, title, idx, total, mode, dictLevel, dictDone, seen?, dictPick? } → lưu.
  * dictDone được GỘP với bản đã lưu (học trên 2 máy cùng lúc không mất câu nào); kết quả mới ghi đè câu trùng.
  * seen (các câu đã nghe) cũng GỘP, kèm câu đang học khi ở Shadowing — client cũ / web không gửi seen thì vẫn tăng dần.
+ * dictPick (lượt chính tả đang làm) GHI ĐÈ — lượt mới thay lượt cũ; không gửi thì giữ lượt đã lưu.
  */
 export async function PUT(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown }>(req);
+  const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown; dictPick: unknown }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
   const total = int(b.total);
@@ -53,6 +54,9 @@ export async function PUT(req: Request) {
   const seen = new Set((prev?.seen ?? []).filter((i) => i < total));
   if (Array.isArray(b.seen)) for (const v of b.seen.slice(0, 10000)) if (int(v) !== null && v < total) seen.add(v);
   if (mode === "shadow") seen.add(at); // Chính tả tính riêng bằng dictDone
+  const dictPick = Array.isArray(b.dictPick)
+    ? [...new Set(b.dictPick.slice(0, 50).filter((v) => int(v) !== null && v < total) as number[])].sort((x, y) => x - y)
+    : (prev?.dictPick ?? []).filter((i) => i < total);
   saveProgress(user.id, {
     source,
     title: str(b.title).slice(0, 200),
@@ -62,6 +66,7 @@ export async function PUT(req: Request) {
     dictLevel: LEVELS.includes(str(b.dictLevel)) ? str(b.dictLevel) : "normal",
     dictDone: { ...prev?.dictDone, ...incoming },
     seen: [...seen].sort((x, y) => x - y),
+    dictPick,
   });
   return Response.json({ progress: getProgress(user.id, source) });
 }
