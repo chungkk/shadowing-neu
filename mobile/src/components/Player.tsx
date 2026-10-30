@@ -135,8 +135,6 @@ export default function Player({
   const { user } = useAuth();
   const { lang, t } = useI18n();
   const { width, tablet, split, fs } = useLayout();
-  // iPad nằm ngang: video + điều khiển bên trái (~58%), transcript bên phải
-  const videoWidth = split ? Math.round(width * 0.58) : width;
   // Header iOS trong suốt nằm đè lên nội dung → đẩy video xuống dưới header.
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -180,6 +178,9 @@ export default function Player({
 
   const current = segments[idx];
   const dictation = allowDictation && practice === "dictation";
+  // iPad nằm ngang: video + điều khiển bên trái (~58%), transcript bên phải.
+  // iPad dọc lúc chép chính tả: thu nhỏ video để còn chỗ cho ô nhập + bàn phím
+  const videoWidth = Math.round(width * (split ? 0.58 : tablet && dictation ? 0.6 : 1));
   const live = useRef({ dictation, split });
   useEffect(() => {
     live.current = { dictation, split };
@@ -225,14 +226,14 @@ export default function Player({
   // Bàn phím (gõ chính tả): dock ▶ / chuyển câu nằm ngay trên bàn phím. Điện thoại chật (video + bàn phím gần kín màn)
   // → ẩn tạm thanh chế độ và cuộn ô nhập lên đầu danh sách để vẫn thấy chỗ gõ
   const [kbOpen, setKbOpen] = useState(false);
-  const dictPanelY = useRef(0); // vị trí ô chính tả trong danh sách câu
+  const dictPanelY = useRef({ block: 0, panel: 0 }); // vị trí khối chính tả (trong danh sách) + ô nhập (trong khối)
   useEffect(() => {
     const subs = [
       Keyboard.addListener("keyboardWillShow", () => setKbOpen(true)),
       Keyboard.addListener("keyboardWillHide", () => setKbOpen(false)),
       Keyboard.addListener("keyboardDidShow", () => {
         if (live.current.dictation && !live.current.split)
-          listRef.current?.scrollToOffset({ offset: dictPanelY.current, animated: true });
+          listRef.current?.scrollToOffset({ offset: Math.max(0, dictPanelY.current.block + dictPanelY.current.panel - 8), animated: true });
       }),
     ];
     return () => subs.forEach((s) => s.remove());
@@ -668,7 +669,11 @@ export default function Player({
   const controls = (
     <View style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", paddingVertical: 14, gap: 14 }}>
       {current && dictation && (starredOnly || dictPick.length > 0) && (
-        <Animated.View {...swipe} style={{ gap: 14, transform: [{ translateX: swipeX }] }}>
+        <Animated.View
+          {...swipe}
+          onLayout={(e) => (dictPanelY.current.block = e.nativeEvent.layout.y)}
+          style={{ gap: 14, transform: [{ translateX: swipeX }] }}
+        >
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Label color={C.amber}>
               {queue?.includes(idx)
@@ -690,7 +695,7 @@ export default function Player({
             value={dictLevel}
             onChange={setDictLevel}
           />
-          <View onLayout={(e) => (dictPanelY.current = e.nativeEvent.layout.y)}>
+          <View onLayout={(e) => (dictPanelY.current.panel = e.nativeEvent.layout.y)}>
             <DictationPanel
               key={`${idx}-${dictEpoch}`}
               text={current.text}
@@ -778,7 +783,8 @@ export default function Player({
         )
       }
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingHorizontal: tablet ? 20 : 16, paddingBottom: 40 }}
+      // Đang gõ chính tả: chừa chỗ dưới đáy để cuộn được ô nhập lên sát video
+      contentContainerStyle={{ paddingHorizontal: tablet ? 20 : 16, paddingBottom: typing ? 400 : 40 }}
       renderItem={({ item, index }) => {
         // Shadowing ẩn chữ: che tới khi bấm 👁
         const hidden = hideText && !revealed.has(index);
