@@ -10,7 +10,17 @@ import { Stack } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { FlatList, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Animated,
+  FlatList,
+  type GestureResponderEvent,
+  Keyboard,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
@@ -229,12 +239,11 @@ export default function Player({
   }, []);
   const typing = kbOpen && dictation && !split;
 
-  // Câu đang phát luôn nằm trong tầm nhìn (Chính tả thì không cuộn để khỏi che ô nhập —
-  // trừ khi chia cột: ô nhập nằm ở cột trái, transcript cuộn riêng)
+  // Câu đang phát luôn nằm trong tầm nhìn (Chính tả không có danh sách câu)
   useEffect(() => {
-    if ((dictation && !split) || !segments.length) return;
+    if (dictation || !segments.length) return;
     listRef.current?.scrollToIndex({ index: idx, viewPosition: 0.3, animated: true });
-  }, [idx, dictation, split, segments.length]);
+  }, [idx, dictation, segments.length]);
 
   // Theo dõi thời gian: tới cuối câu thì dừng; phát tự do (bấm thẳng vào video) thì câu hiện tại chạy theo video
   useEffect(() => {
@@ -381,6 +390,30 @@ export default function Player({
     // Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe); tắt lúc đang chép chính tả → về lượt đang làm
     const i = on ? (starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1)) : dictation ? roundStart(dictPick) : undefined;
     if (i !== undefined && i !== idx) select(i);
+  };
+  // Chính tả: vuốt ngang phần chép để chuyển câu (trái → câu sau, phải → câu trước), kéo theo ngón tay rồi bật về
+  const [swipeX] = useState(() => new Animated.Value(0));
+  const swipeStart = useRef({ x: 0, y: 0 });
+  const swipeDelta = (e: GestureResponderEvent) => ({
+    dx: e.nativeEvent.pageX - swipeStart.current.x,
+    dy: e.nativeEvent.pageY - swipeStart.current.y,
+  });
+  const swipeBack = () => Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
+  const swipe = {
+    onTouchStart: (e: GestureResponderEvent) => (swipeStart.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY }),
+    // Chỉ nhận vuốt rõ ràng theo chiều ngang → cuộn dọc / chạm ô từ / gõ chữ vẫn như cũ
+    onMoveShouldSetResponder: (e: GestureResponderEvent) => {
+      const { dx, dy } = swipeDelta(e);
+      return Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy) * 2;
+    },
+    onResponderMove: (e: GestureResponderEvent) => swipeX.setValue(swipeDelta(e).dx * 0.4),
+    onResponderRelease: (e: GestureResponderEvent) => {
+      const { dx } = swipeDelta(e);
+      if (dx < -60) next();
+      else if (dx > 60) prev();
+      swipeBack();
+    },
+    onResponderTerminate: swipeBack,
   };
   const doneCount = Object.keys(dictDone).length;
   const roundDone = dictation && !starredOnly && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
@@ -631,11 +664,11 @@ export default function Player({
     </View>
   );
 
-  // Phần chính tả. Màn hẹp: nằm đầu danh sách câu; chia cột: nằm dưới video
+  // Phần chính tả: chỉ câu đang chép, không hiện danh sách câu. Màn hẹp: đầu FlatList (rỗng); chia cột: dưới video
   const controls = (
     <View style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", paddingVertical: 14, gap: 14 }}>
       {current && dictation && (starredOnly || dictPick.length > 0) && (
-        <>
+        <Animated.View {...swipe} style={{ gap: 14, transform: [{ translateX: swipeX }] }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Label color={C.amber}>
               {queue?.includes(idx)
@@ -666,6 +699,12 @@ export default function Player({
               onNext={next}
               hasNext={nextIdx !== undefined}
               onDone={(correct, total) => setDictDone((d) => ({ ...d, [idx]: { correct, total } }))}
+              onWord={pickWord}
+              translation={
+                showTr
+                  ? tr[current.text] || (current.text in tr ? t("player.trFailed") : trError ? `⚠ ${trError}` : t("player.translating"))
+                  : undefined
+              }
               draft={dictDrafts[idx]}
               saved={dictDone[idx]}
               onDraft={(d) =>
@@ -678,17 +717,17 @@ export default function Player({
               }
             />
           </View>
-        </>
+        </Animated.View>
       )}
       {roundCard}
-      {!split && <Label>{t("player.transcript")}</Label>}
+      {!split && !dictation && <Label>{t("player.transcript")}</Label>}
     </View>
   );
 
   // Video "sạch": tắt thanh điều khiển / phụ đề / chú thích của YouTube (app có thanh điều khiển riêng).
   // Lớp phủ trong suốt chặn chạm vào iframe (không hiện lại tiêu đề, "Video khác"...) và dùng để phát / dừng.
   const video = (
-    <View>
+    <View style={{ alignSelf: "center" }}>
       <YoutubePlayer
         ref={ytRef}
         height={(videoWidth * 9) / 16}
@@ -717,7 +756,7 @@ export default function Player({
   const transcript = (
     <FlatList
       ref={listRef}
-      data={segments}
+      data={dictation ? [] : segments}
       onScrollToIndexFailed={({ index, averageItemLength }) => {
         // Câu chưa render (chiều cao không cố định) → cuộn ước lượng rồi thử lại
         listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
@@ -725,7 +764,7 @@ export default function Player({
       }}
       keyExtractor={(_, i) => String(i)}
       ListFooterComponent={
-        starredOnly && !starredIdx.length ? (
+        starredOnly && !starredIdx.length && !dictation ? (
           <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", marginTop: 24 }}>{t("player.noStarred")}</Text>
         ) : undefined
       }
@@ -741,8 +780,8 @@ export default function Player({
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingHorizontal: tablet ? 20 : 16, paddingBottom: 40 }}
       renderItem={({ item, index }) => {
-        // Chính tả: che tới khi làm xong; Shadowing ẩn chữ: che tới khi bấm 👁
-        const hidden = dictation ? !dictDone[index] : hideText && !revealed.has(index);
+        // Shadowing ẩn chữ: che tới khi bấm 👁
+        const hidden = hideText && !revealed.has(index);
         const starred = saved.has(item.text.toLowerCase());
         if (inQueue && !inQueue.has(index)) return null;
         const phrases = showPhr && !hidden ? (phrasesOf(item.text) ?? []) : [];
@@ -766,11 +805,6 @@ export default function Player({
             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
               <Text style={{ color: C.text, fontWeight: "800" }}>#{index + 1}</Text>
               <Text style={{ color: C.muted, fontSize: 12 }}>{formatTime(item.start)}</Text>
-              {dictation && dictDone[index] && (
-                <Text style={{ color: C.accent, fontWeight: "800" }}>
-                  ✓ {dictDone[index].correct}/{dictDone[index].total}
-                </Text>
-              )}
               <View style={{ flex: 1 }} />
               {recordings[index] && (
                 <Text onPress={() => playRecording(index)} style={{ fontSize: 18 }}>
@@ -778,7 +812,7 @@ export default function Player({
                 </Text>
               )}
               {/* Shadowing ẩn chữ: xem / ẩn lại chữ của riêng câu này */}
-              {hideText && !dictation && (
+              {hideText && (
                 <Pressable
                   onPress={() =>
                     setRevealed((r) => {
@@ -793,7 +827,7 @@ export default function Player({
                   <SymbolView name={hidden ? "eye" : "eye.slash"} size={18} tintColor={C.muted} />
                 </Pressable>
               )}
-              {/* Đánh dấu câu → lưu vào sổ từ vựng (Chính tả: chỉ khi câu đã hiện chữ) */}
+              {/* Đánh dấu câu → lưu vào sổ từ vựng */}
               {!hidden && (
                 <Pressable
                   onPress={() => toggleStar(item.text)}
@@ -844,8 +878,8 @@ export default function Player({
                 {phrError ? `⚠ ${phrError}` : t("player.phrasesFinding")}
               </Text>
             )}
-            {/* Bản dịch: Chính tả thì che theo câu; Shadowing ẩn chữ vẫn cho xem nghĩa */}
-            {(!hidden || !dictation) && showTr && (tr[item.text] || index === idx) && (
+            {/* Bản dịch: ẩn chữ vẫn cho xem nghĩa */}
+            {showTr && (tr[item.text] || index === idx) && (
               <Text style={{ color: C.muted, fontSize: fs(13), lineHeight: fs(18) }}>
                 {tr[item.text] || (item.text in tr ? t("player.trFailed") : trError ? `⚠ ${trError}` : t("player.translating"))}
               </Text>
@@ -935,7 +969,8 @@ export default function Player({
       {/* Video luôn ở cùng chỗ trong cây → xoay iPad (đổi bố cục) không làm tải lại video */}
       {/* Điện thoại: bàn phím mở → cả cột co lại, dock nằm trên bàn phím. iPad chia cột: cột trái tự cuộn theo bàn phím */}
       <KeyboardAvoidingView behavior="padding" enabled={!split} style={{ flex: 1, flexDirection: split ? "row" : "column" }}>
-        <View style={split ? { width: videoWidth, borderRightWidth: 1, borderRightColor: C.border } : { flex: 1 }}>
+        {/* Chính tả không có danh sách câu → iPad bỏ cột phải, video nằm giữa */}
+        <View style={split && !dictation ? { width: videoWidth, borderRightWidth: 1, borderRightColor: C.border } : { flex: 1 }}>
           {video}
           {resumeBanner}
           {!typing && modeBar}
@@ -953,7 +988,7 @@ export default function Player({
           )}
           {dock}
         </View>
-        {split && <View style={{ flex: 1 }}>{transcript}</View>}
+        {split && !dictation && <View style={{ flex: 1 }}>{transcript}</View>}
       </KeyboardAvoidingView>
 
       <WordSheet

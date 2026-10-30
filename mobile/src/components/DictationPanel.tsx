@@ -21,7 +21,8 @@ export type DictDraft = { input: string; revealed: number[] };
 /**
  * Nghe chép chính tả 1 câu (bản di động của components/DictationPanel.tsx trên web).
  * Gõ đúng từ nào hiện từ đó; "Kiểm tra" để xem từ sai / thiếu; chạm 👁 để xem từ (tính là lỗi).
- * Câu đã làm xong (`saved`, kể cả lưu trên server từ lần trước) → hiện đủ câu + điểm, có nút "Làm lại".
+ * Câu đã làm xong (`saved`, kể cả lưu trên server từ lần trước) → hiện đủ câu + điểm, có nút "Làm lại";
+ * chạm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
  */
 export function DictationPanel({
   text,
@@ -33,6 +34,8 @@ export function DictationPanel({
   draft,
   saved,
   onDraft,
+  onWord,
+  translation,
 }: {
   text: string;
   level: DictationLevel;
@@ -43,6 +46,8 @@ export function DictationPanel({
   draft?: DictDraft; // bản nháp lần trước (trong phiên học này)
   saved?: { correct: number; total: number }; // kết quả đã lưu của câu này
   onDraft: (d: DictDraft | null) => void;
+  onWord: (word: string) => void; // câu đã xong: chạm vào từ → bảng tra từ
+  translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
 }) {
   const { t } = useI18n();
   const { tablet } = useLayout();
@@ -111,8 +116,8 @@ export function DictationPanel({
           return (
             <Pressable
               key={k}
-              disabled={shown}
-              onPress={() => change(input, new Set(revealed).add(k))}
+              disabled={shown && !result.done}
+              onPress={() => (result.done ? onWord(w.text) : change(input, new Set(revealed).add(k)))}
               style={{ borderColor: b.border, backgroundColor: b.bg, borderWidth: 2, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}
             >
               <Text style={{ color: b.fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>
@@ -123,6 +128,7 @@ export function DictationPanel({
         })}
       </View>
       {checked && result.extra.length > 0 && <Text style={{ color: C.redText }}>{t("dict.extra", { w: result.extra.join(", ") })}</Text>}
+      {result.done && translation && <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{translation}</Text>}
       <Text style={{ color: C.muted, fontSize: 12 }}>
         {checked
           ? result.done
@@ -130,7 +136,9 @@ export function DictationPanel({
                 c: score?.correct ?? result.correct,
                 n: score?.total ?? result.total,
                 r: revealed.size ? t("dict.revealed", { k: revealed.size }) : "",
-              })
+              }) +
+              " " +
+              t("dict.tapWord")
             : t("dict.partial", { c: result.correct, n: result.total })
           : t("dict.tapHint")}
       </Text>
