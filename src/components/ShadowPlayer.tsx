@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Download,
   Eye,
   EyeOff,
   Keyboard,
@@ -21,7 +20,7 @@ import {
   Volume2,
   Zap,
 } from "lucide-react";
-import { formatTime, mergeIntoSentences, toSrt, type Segment } from "@/lib/subtitles";
+import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
 import { pickDictation, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
@@ -461,7 +460,7 @@ export default function ShadowPlayer({
         if (recorder.recordingKey !== null) recorder.stop();
         else void recorder.start(idx);
       } else if (e.key === "p" || e.key === "P") recorder.play(idx);
-      else if (e.key === "h" || e.key === "H") toggleHideText();
+      else if ((e.key === "h" || e.key === "H") && live.current.settings.practice !== "dictation") toggleHideText();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -766,12 +765,16 @@ export default function ShadowPlayer({
             {settings.hideMedia ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
             {settings.hideMedia ? "Hiện video" : "Ẩn video"}
           </button>
-          {!dictation && (
-            <button className={`btn ${settings.hideText ? "border-accent text-accent" : ""}`} onClick={toggleHideText} title="Ẩn chữ — chỉ nghe rồi nói theo (H)">
-              {settings.hideText ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-              {settings.hideText ? "Hiện chữ" : "Ẩn chữ"}
-            </button>
-          )}
+          {/* Ẩn chữ / Câu ⭐ chỉ dùng cho Shadowing — Chính tả vẫn giữ nút (mờ) để các nút không nhảy chỗ khi đổi chế độ */}
+          <button
+            className={`btn ${settings.hideText && !dictation ? "border-accent text-accent" : ""}`}
+            onClick={toggleHideText}
+            disabled={dictation}
+            title={dictation ? "Chỉ dùng ở chế độ Shadowing" : "Ẩn chữ — chỉ nghe rồi nói theo (H)"}
+          >
+            {settings.hideText && !dictation ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            {settings.hideText && !dictation ? "Hiện chữ" : "Ẩn chữ"}
+          </button>
           <button
             className={`btn ${settings.showTranslation ? "border-accent text-accent" : ""}`}
             onClick={() => update({ showTranslation: !settings.showTranslation })}
@@ -779,18 +782,16 @@ export default function ShadowPlayer({
           >
             <Languages className="size-4" /> Bản dịch
           </button>
-          {loggedIn && !dictation && (
+          {loggedIn && (
             <button
               className={`btn ${starredOnly ? "border-accent text-accent" : ""}`}
               onClick={toggleStarredOnly}
-              title="Chỉ hiện câu đã đánh dấu ⭐"
+              disabled={dictation}
+              title={dictation ? "Chỉ dùng ở chế độ Shadowing" : "Chỉ hiện câu đã đánh dấu ⭐"}
             >
               <Star className={`size-4 ${starredOnly ? "fill-current" : ""}`} /> Câu ⭐
             </button>
           )}
-          <button className="btn" onClick={() => downloadSrt(title, segments)} title="Tải phụ đề .srt">
-            <Download className="size-4" /> .srt
-          </button>
         </div>
       </div>
 
@@ -1194,14 +1195,4 @@ export default function ShadowPlayer({
       />
     </div>
   );
-}
-
-function downloadSrt(title: string, segments: Segment[]) {
-  const url = URL.createObjectURL(new Blob([toSrt(segments)], { type: "text/plain" }));
-  const a = Object.assign(document.createElement("a"), {
-    href: url,
-    download: `${title}.srt`,
-  });
-  a.click();
-  URL.revokeObjectURL(url);
 }

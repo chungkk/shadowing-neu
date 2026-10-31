@@ -18,6 +18,9 @@ type AppleAuth = {
   init(o: { clientId: string; scope: string; redirectURI: string; usePopup: boolean }): void;
   signIn(): Promise<AppleSignIn>;
 };
+let googleInitFor: string | null = null; // client ID đã khởi tạo SDK Google
+let googleCallback: (r: { credential?: string }) => void = () => {};
+
 declare global {
   interface Window {
     google?: { accounts: { id: GoogleId } };
@@ -52,12 +55,12 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
   const initGoogle = () => {
     const box = googleBox.current;
     if (!google || !box || !window.google) return;
-    window.google.accounts.id.initialize({
-      client_id: google,
-      ux_mode: "popup",
-      context: "signin",
-      callback: (r) => (r.credential ? void finishRef.current("google", r.credential) : setError("Google không trả về thông tin đăng nhập.")),
-    });
+    // SDK chỉ khởi tạo 1 lần mỗi trang (quay lại trang đăng nhập chỉ vẽ lại nút); callback gọi qua biến toàn cục → luôn là bản mới nhất
+    googleCallback = (r) => (r.credential ? void finishRef.current("google", r.credential) : setError("Google không trả về thông tin đăng nhập."));
+    if (googleInitFor !== google) {
+      window.google.accounts.id.initialize({ client_id: google, ux_mode: "popup", context: "signin", callback: (r) => googleCallback(r) });
+      googleInitFor = google;
+    }
     box.replaceChildren();
     window.google.accounts.id.renderButton(box, {
       type: "standard",

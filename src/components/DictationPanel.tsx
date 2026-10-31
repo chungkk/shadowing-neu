@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
 import { checkDictation, hintFor, type DictationLevel, type WordState } from "@/lib/dictation";
 
@@ -52,6 +52,9 @@ export default function DictationPanel({
   const [reported, setReported] = useState(!!saved);
   const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
+  // Mở câu → con trỏ vào ô gõ luôn, nhưng không cuộn trang (autoFocus kéo cả trang tới ô gõ, các phần khác nhảy theo)
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
   // Số từ phải bấm xem — không tính từ đã gõ đúng ("Hiện tất cả" thêm cả chúng vào `revealed`)
   const revealedCount = result.words.filter((w) => w.state === "revealed").length;
 
@@ -100,7 +103,7 @@ export default function DictationPanel({
           </button>
         </div>
         <textarea
-          autoFocus
+          ref={inputRef}
           rows={3}
           value={input}
           onChange={(e) => change(e.target.value, revealed)}
