@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
+  CirclePause,
   Clock,
   Eye,
   EyeOff,
@@ -42,7 +43,7 @@ type Settings = {
   autoRecord: boolean; // tự ghi âm trong lúc nghỉ
   hideText: boolean;
   hideMedia: boolean; // thu gọn khung video (vẫn phát tiếng)
-  dictHideMedia: boolean; // như hideMedia nhưng cho Chính tả — mặc định ẩn: phụ đề CC / tên chương của YouTube lộ đáp án
+  dictHideMedia: boolean; // như hideMedia nhưng riêng cho Chính tả (bật / tắt độc lập với Shadowing)
   practice: "shadow" | "dictation"; // nói theo | nghe chép chính tả
   dictLevel: DictationLevel;
   showTranslation: boolean; // hiện bản dịch tiếng Việt dưới mỗi câu
@@ -58,7 +59,7 @@ const DEFAULTS: Settings = {
   autoRecord: false,
   hideText: false,
   hideMedia: false,
-  dictHideMedia: true,
+  dictHideMedia: false,
   practice: "shadow",
   dictLevel: "normal",
   showTranslation: false,
@@ -113,10 +114,6 @@ function Segmented<T extends string>({
 const PRACTICES = [
   ["shadow", "Shadowing"],
   ["dictation", "Chính tả"],
-] as const;
-const MODES = [
-  ["segment", "Từng câu"],
-  ["free", "Liên tục"],
 ] as const;
 const DICT_LEVELS = [
   ["easy", "Dễ", "Gợi ý chữ cái đầu"],
@@ -812,12 +809,9 @@ export default function ShadowPlayer({
               <Clock className="size-4" /> {formatTime(time)}
             </span>
           </div>
-          <div className={mediaHidden ? "h-0 overflow-hidden" : "relative overflow-hidden rounded-2xl"}>
-            <YouTubePlayer videoId={videoId} onReady={onReady} />
-            {/* Chính tả: lớp phủ chặn bấm vào giao diện YouTube (nút CC bật phụ đề = lộ đáp án); bấm video → phát / dừng */}
-            {dictation && !mediaHidden && (
-              <button className="absolute inset-0 cursor-pointer" title="Phát / dừng (Space)" onClick={togglePlay} />
-            )}
+          <div className={mediaHidden ? "h-0 overflow-hidden" : "overflow-hidden rounded-2xl"}>
+            {/* Chính tả: tắt phụ đề YouTube (phụ đề = đáp án) */}
+            <YouTubePlayer videoId={videoId} onReady={onReady} captions={!dictation} />
           </div>
           {mediaHidden && (
             <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
@@ -846,7 +840,15 @@ export default function ShadowPlayer({
             {dictation ? (
               <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
             ) : (
-              <Segmented options={MODES} value={settings.mode} onChange={(m) => update({ mode: m })} />
+              // 1 nút bật/tắt thay cho cặp "Từng câu / Liên tục" (như nút "Tự dừng sau mỗi câu" của app)
+              <button
+                className={`btn ${settings.mode === "segment" ? "border-accent text-accent" : ""}`}
+                aria-pressed={settings.mode === "segment"}
+                title={settings.mode === "segment" ? "Đang dừng sau mỗi câu — bấm để phát liên tục" : "Đang phát liên tục — bấm để dừng sau mỗi câu"}
+                onClick={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
+              >
+                <CirclePause className="size-4" /> Tự dừng sau mỗi câu
+              </button>
             )}
           </div>
 
