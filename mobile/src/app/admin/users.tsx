@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { ErrorText, Segmented, styles } from "@/components/ui";
 import { api, type User } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
@@ -20,7 +20,7 @@ const initials = (name: string) =>
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("") || "?";
 
-/** Admin: danh sách người dùng · cấp / bỏ quyền admin · xoá tài khoản (giống /admin/users trên web) */
+/** Admin: danh sách người dùng · cấp / bỏ quyền admin · đổi mật khẩu · xoá tài khoản (giống /admin/users trên web) */
 export default function UsersScreen() {
   const { user: me } = useAuth();
   const { t, lang } = useI18n();
@@ -59,6 +59,27 @@ export default function UsersScreen() {
       (e: Error) => showError(e),
     );
 
+  /** Đặt mật khẩu mới (chữ hiện rõ để admin báo lại cho người dùng); server kiểm tra độ dài */
+  const setPassword = (u: AdminUser) =>
+    Alert.prompt(
+      t("admin.setPasswordTitle", { email: u.email }),
+      t("admin.setPasswordBody"),
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("admin.setPasswordSave"),
+          onPress: (password?: string) =>
+            api(`/admin/users/${u.id}`, { method: "PATCH", body: { password: password ?? "" } }).then(
+              () => notice(t("admin.passwordChanged"), t("admin.passwordChangedBody", { email: u.email })),
+              (e: Error) => showError(e),
+            ),
+        },
+      ],
+      "plain-text",
+      "",
+      "default",
+    );
+
   const remove = (u: AdminUser) =>
     confirmDestructive(t("admin.deleteUserConfirm", { email: u.email }), t("admin.deleteUserSub"), t("delete"), () =>
       api(`/admin/users/${u.id}`, { method: "DELETE" }).then(
@@ -74,13 +95,14 @@ export default function UsersScreen() {
       {
         title: u.name,
         message: u.email,
-        options: [makeAdmin ? t("admin.makeAdmin") : t("admin.removeAdmin"), t("admin.deleteUser"), t("cancel")],
-        destructiveButtonIndex: 1,
-        cancelButtonIndex: 2,
+        options: [makeAdmin ? t("admin.makeAdmin") : t("admin.removeAdmin"), t("admin.setPassword"), t("admin.deleteUser"), t("cancel")],
+        destructiveButtonIndex: 2,
+        cancelButtonIndex: 3,
       },
       (i) => {
         if (i === 0) setRole(u, makeAdmin ? "admin" : "user");
-        else if (i === 1) remove(u);
+        else if (i === 1) setPassword(u);
+        else if (i === 2) remove(u);
       },
     );
   };
