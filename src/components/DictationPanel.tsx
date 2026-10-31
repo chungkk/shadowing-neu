@@ -171,24 +171,28 @@ export default function DictationPanel({
           : "Bấm vào ô để xem từ (tính là lỗi). Enter để kiểm tra."}
       </p>
 
-      {result.done ? (
-        <button className="btn py-3" onClick={retry}>
-          <RotateCcw className="size-4" /> Làm lại câu này
+      {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
+          — cùng một hàng để "Kiểm tra" không bị đẩy xuống dưới màn hình */}
+      <div className="flex gap-3">
+        <button className="btn btn-primary flex-[2] py-3.5 text-base" onClick={submit} disabled={result.done && !hasNext}>
+          {result.done ? (
+            <>
+              Câu tiếp theo <ChevronRight className="size-5" />
+            </>
+          ) : (
+            "Kiểm tra"
+          )}
         </button>
-      ) : (
-        <button className="btn btn-amber py-3" onClick={revealAll}>
-          Hiện tất cả
-        </button>
-      )}
-      <button className="btn btn-primary py-3.5 text-base" onClick={submit} disabled={result.done && !hasNext}>
         {result.done ? (
-          <>
-            Câu tiếp theo <ChevronRight className="size-5" />
-          </>
+          <button className="btn flex-1 py-3" onClick={retry}>
+            <RotateCcw className="size-4" /> Làm lại
+          </button>
         ) : (
-          "Kiểm tra"
+          <button className="btn flex-1 py-3" onClick={revealAll} title="Hiện cả câu (các từ chưa gõ đúng tính là lỗi)">
+            <Eye className="size-4" /> Hiện tất cả
+          </button>
         )}
-      </button>
+      </div>
     </div>
   );
 }

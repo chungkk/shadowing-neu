@@ -145,25 +145,25 @@ export function DictationPanel({
           : t("dict.tapHint")}
       </Text>
 
-      {/* iPad: 2 nút cạnh nhau */}
+      {/* Nút chính (Kiểm tra / Câu tiếp) đứng trước; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ. iPad: 2 nút cạnh nhau, nút chính rộng hơn */}
       <View style={{ flexDirection: tablet ? "row" : "column", gap: 12 }}>
-        {result.done ? (
-          <Button title={t("dict.retry")} variant="plain" onPress={retry} style={tablet ? { flex: 1 } : undefined} />
-        ) : (
-          <Button
-            title={t("dict.showAll")}
-            variant="amber"
-            onPress={() => change(input, new Set(result.words.map((_, k) => k)))}
-            style={tablet ? { flex: 1 } : undefined}
-          />
-        )}
         <Button
           title={result.done ? t("dict.next") : t("dict.check")}
           variant="primary"
           disabled={result.done && !hasNext}
           onPress={submit}
-          style={tablet ? { flex: 1 } : undefined}
+          style={tablet ? { flex: 2 } : undefined}
         />
+        {result.done ? (
+          <Button title={t("dict.retry")} variant="plain" onPress={retry} style={tablet ? { flex: 1 } : undefined} />
+        ) : (
+          <Button
+            title={t("dict.showAll")}
+            variant="plain"
+            onPress={() => change(input, new Set(result.words.map((_, k) => k)))}
+            style={tablet ? { flex: 1 } : undefined}
+          />
+        )}
       </View>
     </View>
   );
