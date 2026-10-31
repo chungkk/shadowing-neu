@@ -15,13 +15,13 @@ export function RecentVideos() {
   if (!recent.length) return null;
   return (
     <section className="flex flex-col gap-4">
-      <SectionHeader title="Video bạn đã mở gần đây" count={`${recent.length}`} />
+      <SectionHeader title="Video bạn đã mở gần đây" count={recent.length} />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {recent.map((r) => (
           <Link
             key={r.videoId}
             href={`/watch/${r.videoId}`}
-            className="group overflow-hidden rounded-2xl border-2 border-border bg-card transition hover:border-accent"
+            className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:border-accent"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />

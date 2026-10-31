@@ -67,9 +67,9 @@ body {
   .btn-red {
     @apply border-2 border-red bg-red/15 tracking-wide text-red-400 uppercase shadow-[0_4px_0_var(--red-dark)] hover:border-red active:translate-y-0.5 active:shadow-[0_2px_0_var(--red-dark)];
   }
-  /* Dải đen – đỏ – vàng (cờ Đức) */
+  /* Dải đen – đỏ – vàng (cờ Đức); "đen" là xám đậm để không chìm vào nền tối */
   .flag-stripe {
-    background: linear-gradient(to right, #000 0 33.3%, var(--red) 33.3% 66.6%, var(--amber) 66.6%);
+    background: linear-gradient(to right, #3f3f46 0 33.3%, var(--red) 33.3% 66.6%, var(--amber) 66.6%);
   }
   .btn-icon {
     @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40;

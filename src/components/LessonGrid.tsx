@@ -2,27 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Headphones, Mic, MonitorPlay } from "lucide-react";
+import { Headphones } from "lucide-react";
 import LevelBadge from "./LevelBadge";
 
-type Item = { id: number; title: string; videoId: string; level: string; description: string; segmentCount: number };
+type Item = { id: number; title: string; videoId: string; level: string; description: string; sentences: number; isNew: boolean };
 
-const LEVELS = [
-  { level: "A1", name: "Mới bắt đầu" },
-  { level: "A2", name: "Sơ cấp" },
-  { level: "B1", name: "Trung cấp" },
-  { level: "B2", name: "Trung cấp cao" },
-  { level: "C1", name: "Nâng cao" },
-  { level: "C2", name: "Thành thạo" },
-];
+const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
-export function SectionHeader({ title, count, children }: { title: string; count?: string; children?: React.ReactNode }) {
+/** Tiêu đề mục: chữ đậm, số lượng nhạt bên cạnh, nội dung phụ (vd. nút lọc) bên phải */
+export function SectionHeader({ title, count, children }: { title: string; count?: number; children?: React.ReactNode }) {
   return (
-    <div className="card flex items-center gap-3 px-5 py-4">
-      <span className="h-8 w-1.5 rounded-full bg-accent" />
-      <h2 className="text-xl font-extrabold md:text-2xl">{title}</h2>
-      {count && <span className="text-sm font-semibold text-link">({count})</span>}
-      <div className="ml-auto">{children}</div>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+      <h2 className="flex items-baseline gap-2 text-xl font-extrabold md:text-2xl">
+        {title}
+        {count !== undefined && <span className="text-base font-bold text-muted">{count}</span>}
+      </h2>
+      {children && <div className="sm:ml-auto">{children}</div>}
     </div>
   );
 }
@@ -31,71 +26,68 @@ function LessonCard({ l }: { l: Item }) {
   return (
     <Link
       href={`/lesson/${l.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border-2 border-border bg-card transition hover:-translate-y-1 hover:border-accent"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent"
     >
       <div className="relative aspect-video overflow-hidden bg-black">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`https://i.ytimg.com/vi/${l.videoId}/mqdefault.jpg`}
+          src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
+          loading="lazy"
           className="size-full object-cover transition group-hover:scale-105"
         />
-        <span className="pill absolute top-2 left-2 bg-accent/90 text-white">
-          <Headphones className="size-3.5" /> {l.segmentCount} câu
-        </span>
-        <LevelBadge level={l.level} className="absolute top-2 right-2" />
-        <span className="pill absolute bottom-2 left-2 bg-white text-red-600">
-          <MonitorPlay className="size-3.5" /> YouTube
+        {l.isNew && <span className="pill absolute top-2 left-2 bg-amber text-sidebar">Mới</span>}
+        <span className="pill absolute right-2 bottom-2 bg-black/75 text-white">
+          <Headphones className="size-3.5" /> {l.sentences} câu
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <h3 className="line-clamp-2 font-extrabold">{l.title}</h3>
-        {l.description && <p className="line-clamp-2 text-xs text-muted">{l.description}</p>}
-        <div className="mt-auto flex items-center gap-1.5 pt-2 text-sm font-bold text-link">
-          <Mic className="size-4" /> Shadowing
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex items-start gap-2">
+          <h3 className="line-clamp-2 flex-1 font-extrabold leading-snug">{l.title}</h3>
+          <LevelBadge level={l.level} className="shrink-0" />
         </div>
+        {l.description && <p className="line-clamp-2 text-xs text-muted">{l.description}</p>}
       </div>
     </Link>
   );
 }
 
-/** Bài học admin đăng, chia nhóm theo cấp độ, có nút lọc */
+/** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ */
 export default function LessonGrid({ lessons }: { lessons: Item[] }) {
   const [level, setLevel] = useState<string | null>(null);
 
   if (!lessons.length) return <p className="text-sm text-muted">Chưa có bài học nào.</p>;
 
-  const groups = LEVELS.map((g) => ({ ...g, items: lessons.filter((l) => l.level === g.level) })).filter(
-    (g) => g.items.length && (!level || g.level === level),
+  // Chỉ hiện cấp độ có bài, kèm số bài
+  const levels = LEVELS.map((lv) => ({ level: lv, count: lessons.filter((l) => l.level === lv).length })).filter((g) => g.count);
+  const shown = level ? lessons.filter((l) => l.level === level) : lessons;
+
+  const chip = (lv: string | null, count: number) => (
+    <button
+      key={lv ?? "all"}
+      onClick={() => setLevel(lv)}
+      className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-sm font-bold transition ${
+        level === lv ? "border-accent bg-accent text-white" : "border-border bg-card text-foreground hover:border-accent"
+      }`}
+    >
+      {lv ?? "Tất cả"}
+      <span className={level === lv ? "text-white/75" : "text-muted"}>{count}</span>
+    </button>
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap gap-2">
-        {[null, ...LEVELS.map((g) => g.level)].map((lv) => (
-          <button
-            key={lv ?? "all"}
-            onClick={() => setLevel(lv)}
-            className={`cursor-pointer rounded-xl border-2 px-4 py-1.5 text-sm font-bold transition ${
-              level === lv ? "border-accent bg-accent text-white" : "border-border text-muted hover:border-accent"
-            }`}
-          >
-            {lv ?? "Tất cả"}
-          </button>
+    <section className="flex flex-col gap-5">
+      <SectionHeader title="Thư viện bài học" count={lessons.length}>
+        <div className="flex flex-wrap gap-2">
+          {chip(null, lessons.length)}
+          {levels.map((g) => chip(g.level, g.count))}
+        </div>
+      </SectionHeader>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {shown.map((l) => (
+          <LessonCard key={l.id} l={l} />
         ))}
       </div>
-
-      {groups.map((g) => (
-        <section key={g.level} className="flex flex-col gap-4">
-          <SectionHeader title={`${g.level} · ${g.name}`} count={`${g.items.length} bài`} />
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-            {g.items.map((l) => (
-              <LessonCard key={l.id} l={l} />
-            ))}
-          </div>
-        </section>
-      ))}
-      {!groups.length && <p className="text-sm text-muted">Chưa có bài ở cấp độ {level}.</p>}
-    </div>
+    </section>
   );
 }

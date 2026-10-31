@@ -661,7 +661,7 @@ export default function VocabScreen() {
         <Text style={styles.h1}>{t("vocab.title")}</Text>
         <Card style={{ maxWidth: FORM_MAX }}>
           <Text style={styles.muted}>{t("vocab.loginHint")}</Text>
-          <Button title={t("login")} variant="primary" onPress={() => router.push("/account")} />
+          <Button title={t("login")} variant="primary" onPress={() => router.push("/login")} />
         </Card>
       </SafeAreaView>
     );
