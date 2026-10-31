@@ -110,16 +110,24 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  shrink = false,
 }: {
   options: readonly (readonly [T, string])[];
   value: T;
   onChange: (v: T) => void;
+  shrink?: boolean; // co lại (thu nhỏ chữ) khi chung hàng với nút khác trên màn hẹp
 }) {
   return (
-    <View style={styles.seg}>
+    <View style={[styles.seg, shrink && { flexShrink: 1 }]}>
       {options.map(([v, label]) => (
-        <Pressable key={v} onPress={() => onChange(v)} style={[styles.segItem, value === v && { backgroundColor: C.accent }]}>
-          <Text style={[styles.segText, { color: value === v ? "#fff" : C.muted }]}>{label}</Text>
+        <Pressable
+          key={v}
+          onPress={() => onChange(v)}
+          style={[styles.segItem, shrink && { flexShrink: 1, paddingHorizontal: 10 }, value === v && { backgroundColor: C.accent }]}
+        >
+          <Text numberOfLines={1} adjustsFontSizeToFit={shrink} style={[styles.segText, { color: value === v ? "#fff" : C.muted }]}>
+            {label}
+          </Text>
         </Pressable>
       ))}
     </View>

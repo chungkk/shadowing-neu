@@ -97,8 +97,8 @@ function ToggleIcon({ icon, on, onPress, label }: { icon: SFSymbol; on: boolean;
       accessibilityLabel={label}
       accessibilityState={{ checked: on }}
       style={({ pressed }) => ({
-        width: 40,
-        height: 40,
+        width: 38,
+        height: 38,
         borderRadius: 12,
         alignItems: "center",
         justifyContent: "center",
@@ -603,9 +603,7 @@ export default function Player({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        gap: 10,
-        flexWrap: "wrap", // điện thoại + bài có Chính tả: 3 chế độ không vừa 1 hàng → icon xuống hàng dưới
-        rowGap: 8,
+        gap: 8, // luôn 1 hàng: màn hẹp thì Shadowing / Chính tả co lại, icon giữ nguyên
         paddingHorizontal: 16,
         paddingVertical: 10,
         backgroundColor: C.background,
@@ -620,6 +618,7 @@ export default function Player({
             ["dictation", t("player.dictation")],
           ]}
           value={practice}
+          shrink
           onChange={(p) => {
             pause();
             setPractice(p);
