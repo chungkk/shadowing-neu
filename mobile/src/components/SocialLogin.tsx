@@ -7,7 +7,7 @@ import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { apple, googleAvailable, signInWithApple, signInWithGoogle, type SocialResult } from "@/lib/social";
 
-/** Đăng nhập nhanh bằng Google / Apple (tự tạo tài khoản lần đầu) + đường kẻ "hoặc tiếp tục với email" — ẩn nếu máy / bản build không hỗ trợ */
+/** Đăng nhập nhanh bằng Apple / Google (tự tạo tài khoản lần đầu) — ẩn nếu máy / bản build không hỗ trợ */
 export function SocialLogin({ onError }: { onError: (message: string) => void }) {
   const { oauthLogin } = useAuth();
   const { t } = useI18n();
@@ -38,6 +38,30 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
 
   return (
     <View style={{ gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+        <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>{t("auth.or")}</Text>
+        <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+      </View>
+
+      {appleOk && apple && (
+        <View style={{ height: 54, opacity: busy === "google" ? 0.6 : 1 }}>
+          {busy === "apple" ? (
+            <View style={{ flex: 1, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
+              <ActivityIndicator color="#000" />
+            </View>
+          ) : (
+            <apple.AppleAuthenticationButton
+              buttonType={apple.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={apple.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={14}
+              style={{ width: "100%", height: 54 }}
+              onPress={() => run("apple", signInWithApple)}
+            />
+          )}
+        </View>
+      )}
+
       {showGoogle && (
         <Pressable
           onPress={() => run("google", signInWithGoogle)}
@@ -64,30 +88,6 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
           )}
         </Pressable>
       )}
-
-      {appleOk && apple && (
-        <View style={{ height: 54, opacity: busy === "google" ? 0.6 : 1 }}>
-          {busy === "apple" ? (
-            <View style={{ flex: 1, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
-              <ActivityIndicator color="#000" />
-            </View>
-          ) : (
-            <apple.AppleAuthenticationButton
-              buttonType={apple.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={apple.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={14}
-              style={{ width: "100%", height: 54 }}
-              onPress={() => run("apple", signInWithApple)}
-            />
-          )}
-        </View>
-      )}
-
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 4 }}>
-        <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
-        <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 }}>{t("auth.orEmail")}</Text>
-        <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
-      </View>
     </View>
   );
 }

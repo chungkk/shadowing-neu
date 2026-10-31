@@ -128,7 +128,7 @@ export default function YouTubeScreen() {
           {!user && (
             <Text style={styles.muted}>
               {t("yt.guestCta")}{" "}
-              <Text style={{ color: C.accent, fontWeight: "800" }} onPress={() => router.push("/login")}>
+              <Text style={{ color: C.accent, fontWeight: "800" }} onPress={() => router.push("/account")}>
                 {t("loginOrRegister")}
               </Text>
             </Text>

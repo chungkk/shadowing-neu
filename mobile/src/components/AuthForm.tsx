@@ -19,7 +19,7 @@ function Field({
   ref,
   ...props
 }: TextInputProps & {
-  label?: string;
+  label: string;
   icon: SFSymbol;
   error?: string;
   secure?: boolean;
@@ -31,7 +31,7 @@ function Field({
   const borderColor = error ? C.red : focused ? C.accent : C.border;
   return (
     <View style={{ gap: 6 }}>
-      {!!label && <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{label}</Text>}
+      <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{label}</Text>
       <View
         style={{
           flexDirection: "row",
@@ -243,14 +243,12 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
 
 /**
  * Màn đăng nhập / đăng ký (dùng chung tài khoản với web).
- * Đăng nhập: Google / Apple, hoặc nhập email → bấm "Tiếp tục với email" → nhập mật khẩu.
  * Đăng ký 2 bước: điền thông tin → nhận mã 6 số qua email → nhập mã mới tạo được tài khoản.
  */
 export function AuthForm() {
   const { login, register, sendSignupCode } = useAuth();
   const { t } = useI18n();
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
-  const [loginStep, setLoginStep] = useState<"email" | "password">("email");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -265,9 +263,6 @@ export function AuthForm() {
   const passwordRef = useRef<InputRef>(null);
 
   const isRegister = mode === "register";
-  const codeStep = isRegister && step === "code";
-  const emailStep = mode === "login" && loginStep === "email";
-  const pwStep = mode === "login" && loginStep === "password";
   const errors = {
     name: isRegister && !name.trim() ? t("auth.errName") : undefined,
     email: !email.trim() ? t("auth.errEmail") : !EMAIL_RE.test(email.trim()) ? t("auth.errEmailInvalid") : undefined,
@@ -311,13 +306,6 @@ export function AuthForm() {
 
   const submit = () => {
     setTouched(true);
-    if (emailStep) {
-      if (errors.email) return;
-      setTouched(false);
-      setError("");
-      setLoginStep("password");
-      return;
-    }
     if (!valid || busy) return;
     if (isRegister) sendCode();
     else run(() => login(email.trim(), password));
@@ -325,11 +313,12 @@ export function AuthForm() {
 
   const switchMode = () => {
     setMode(isRegister ? "login" : "register");
-    setLoginStep(EMAIL_RE.test(email.trim()) ? "password" : "email"); // đã nhập email ở form đăng ký → vào thẳng bước mật khẩu
     setStep("info");
     setTouched(false);
     setError("");
   };
+
+  const codeStep = isRegister && step === "code";
 
   if (mode === "forgot") {
     return (
@@ -337,7 +326,6 @@ export function AuthForm() {
         initialEmail={EMAIL_RE.test(email.trim()) ? email.trim() : ""}
         onBack={() => {
           setMode("login");
-          setLoginStep("password");
           setError("");
         }}
       />
@@ -362,45 +350,27 @@ export function AuthForm() {
             shadowOffset: { width: 0, height: 6 },
           }}
         >
-          <SymbolView name={codeStep ? "envelope.badge" : pwStep ? "lock.fill" : "waveform"} size={34} tintColor="#fff" weight="bold" />
+          <SymbolView name={codeStep ? "envelope.badge" : "waveform"} size={34} tintColor="#fff" weight="bold" />
         </View>
         <View style={{ alignItems: "center", gap: 6 }}>
           <Text style={{ color: C.text, fontSize: 26, fontWeight: "800" }}>
-            {codeStep ? t("auth.codeTitle") : isRegister ? t("auth.createTitle") : pwStep ? t("auth.pwTitle") : t("auth.welcome")}
+            {codeStep ? t("auth.codeTitle") : isRegister ? t("auth.createTitle") : t("auth.welcome")}
           </Text>
-          {pwStep ? (
-            // Email vừa nhập + nút đổi
-            <Pressable
-              onPress={() => {
-                setLoginStep("email");
-                setPassword("");
-                setTouched(false);
-                setError("");
-              }}
-              hitSlop={8}
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Text style={{ color: C.muted, fontSize: 15 }}>{email.trim()}</Text>
-              <Text style={{ color: C.accent, fontSize: 15, fontWeight: "700" }}>{t("auth.change")}</Text>
-            </Pressable>
-          ) : (
-            <Text
-              style={{
-                color: C.muted,
-                fontSize: 15,
-                textAlign: "center",
-                lineHeight: 21,
-              }}
-            >
-              {codeStep ? t("auth.codeSub", { email: email.trim() }) : isRegister ? t("auth.createSub") : t("auth.welcomeSub")}
-            </Text>
-          )}
+          <Text
+            style={{
+              color: C.muted,
+              fontSize: 15,
+              textAlign: "center",
+              lineHeight: 21,
+            }}
+          >
+            {codeStep ? t("auth.codeSub", { email: email.trim() }) : isRegister ? t("auth.createSub") : t("auth.welcomeSub")}
+          </Text>
         </View>
       </View>
 
       {/* Form */}
       <View style={{ gap: 16 }}>
-        {(emailStep || (isRegister && !codeStep)) && <SocialLogin onError={setError} />}
         {codeStep && (
           <Field
             label={t("auth.code")}
@@ -435,10 +405,10 @@ export function AuthForm() {
             error={show("name")}
           />
         )}
-        {!codeStep && !pwStep && (
+        {!codeStep && (
           <Field
             ref={emailRef}
-            label={emailStep ? undefined : t("auth.email")}
+            label={t("auth.email")}
             icon="envelope"
             value={email}
             onChangeText={setEmail}
@@ -448,13 +418,13 @@ export function AuthForm() {
             autoComplete="email"
             textContentType="username"
             keyboardType="email-address"
-            returnKeyType={emailStep ? "go" : "next"}
-            onSubmitEditing={emailStep ? submit : () => passwordRef.current?.focus()}
-            submitBehavior={emailStep ? undefined : "submit"}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            submitBehavior="submit"
             error={show("email")}
           />
         )}
-        {!codeStep && !emailStep && (
+        {!codeStep && (
           <Field
             ref={passwordRef}
             label={t("auth.password")}
@@ -468,11 +438,10 @@ export function AuthForm() {
             textContentType={isRegister ? "newPassword" : "password"}
             returnKeyType="go"
             onSubmitEditing={submit}
-            autoFocus={pwStep}
             error={show("password")}
           />
         )}
-        {pwStep && (
+        {mode === "login" && (
           <Pressable onPress={() => setMode("forgot")} hitSlop={8} style={{ alignSelf: "flex-end", marginTop: -6 }}>
             <Text style={{ color: C.accent, fontSize: 14, fontWeight: "700" }}>{t("auth.forgot")}</Text>
           </Pressable>
@@ -516,11 +485,12 @@ export function AuthForm() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>
-              {codeStep ? t("auth.confirm") : isRegister ? t("auth.sendCode") : emailStep ? t("auth.continueEmail") : t("login")}
+              {codeStep ? t("auth.confirm") : isRegister ? t("auth.sendCode") : t("login")}
             </Text>
           )}
         </Pressable>
 
+        {!codeStep && <SocialLogin onError={setError} />}
       </View>
 
       {/* Bước nhập mã: đổi email / gửi lại mã */}

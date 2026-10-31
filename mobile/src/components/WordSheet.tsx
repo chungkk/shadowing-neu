@@ -210,7 +210,7 @@ export function WordSheet({
               action={t("loginOrRegister")}
               onPress={() => {
                 onClose();
-                router.push("/login");
+                router.push("/account");
               }}
             />
           ) : (
