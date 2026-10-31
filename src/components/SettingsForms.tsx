@@ -10,15 +10,17 @@ function Status({ state }: { state: FormResult }) {
   return null;
 }
 
-/** Hai form: thông tin cá nhân + đổi mật khẩu */
+/** Hai form: thông tin cá nhân + đổi (hoặc đặt) mật khẩu */
 export default function SettingsForms({
   name,
   email,
   fixedAdmin,
+  hasPassword,
 }: {
   name: string;
   email: string;
   fixedAdmin: boolean; // admin chính: email + mật khẩu lấy từ biến môi trường
+  hasPassword: boolean; // false = tài khoản tạo bằng Google / Apple → "Đặt mật khẩu", không hỏi mật khẩu cũ
 }) {
   const [profile, profileAction, savingProfile] = useActionState(updateProfile, {});
   const [pw, pwAction, savingPw] = useActionState(updatePassword, {});
@@ -54,7 +56,7 @@ export default function SettingsForms({
       {/* key: form tự xoá trắng sau khi đổi thành công */}
       <form key={pw.ok} action={pwAction} className="card flex flex-col gap-3 p-6">
         <h2 className="flex items-center gap-2 text-lg font-extrabold">
-          <KeyRound className="size-5 text-link" /> Đổi mật khẩu
+          <KeyRound className="size-5 text-link" /> {hasPassword ? "Đổi mật khẩu" : "Đặt mật khẩu"}
         </h2>
         {fixedAdmin ? (
           <p className="text-sm text-muted">
@@ -63,12 +65,16 @@ export default function SettingsForms({
           </p>
         ) : (
           <>
-            <input name="current" type="password" placeholder="Mật khẩu hiện tại" className="input" autoComplete="current-password" required />
+            {hasPassword ? (
+              <input name="current" type="password" placeholder="Mật khẩu hiện tại" className="input" autoComplete="current-password" required />
+            ) : (
+              <p className="text-sm text-muted">Bạn đang đăng nhập bằng Google / Apple. Đặt mật khẩu để đăng nhập được cả bằng email.</p>
+            )}
             <input name="next" type="password" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" className="input" autoComplete="new-password" minLength={8} required />
             <input name="confirm" type="password" placeholder="Nhập lại mật khẩu mới" className="input" autoComplete="new-password" minLength={8} required />
             <Status state={pw} />
             <button className="btn btn-primary mt-auto py-3" disabled={savingPw}>
-              {savingPw ? "Đang đổi…" : "Đổi mật khẩu"}
+              {savingPw ? "Đang lưu…" : hasPassword ? "Đổi mật khẩu" : "Đặt mật khẩu"}
             </button>
           </>
         )}

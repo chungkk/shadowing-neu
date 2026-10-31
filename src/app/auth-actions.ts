@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { authenticate, createSession, destroySession } from "@/lib/auth";
-import { authConfigured, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
+import { authConfigured, oauthSignIn, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
+import { allow, clientIp } from "@/lib/rate-limit";
 
 export type AuthState = { error?: string; email?: string; name?: string };
 
@@ -20,6 +21,38 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   if (typeof res === "string") return { error: res, email };
   await createSession(res);
   redirect(safeNext(formData.get("next")));
+}
+
+/**
+ * Đăng nhập / tự tạo tài khoản bằng Google hoặc Apple trên web: nút của Google / Apple trả ID token ngay trên trình duyệt,
+ * server kiểm tra (như app, xem lib/oauth.ts) rồi đặt cookie phiên. Trả về lỗi; thành công thì chuyển tới `next`.
+ */
+export async function oauthLogin(input: {
+  provider: "google" | "apple";
+  idToken: string;
+  name?: string; // Apple chỉ gửi tên ở lần đăng nhập đầu
+  code?: string; // Apple: authorization code để thu hồi quyền khi xoá tài khoản
+  next?: string;
+}): Promise<string> {
+  if (!authConfigured()) return "Server chưa cấu hình AUTH_SECRET";
+  if (input.provider !== "google" && input.provider !== "apple") return "Cách đăng nhập không hợp lệ";
+  if (!allow(`oauth:ip:${await clientIp()}`, 30, 10 * 60 * 1000)) return "Thử quá nhiều lần, chờ ít phút.";
+  let res: number | string;
+  try {
+    res = await oauthSignIn({
+      provider: input.provider,
+      idToken: String(input.idToken ?? ""),
+      name: String(input.name ?? ""),
+      authorizationCode: String(input.code ?? ""),
+      web: true,
+    });
+  } catch (e) {
+    console.error("[oauth]", e);
+    return "Không kết nối được Google / Apple, thử lại.";
+  }
+  if (typeof res === "string") return res;
+  await createSession(res);
+  redirect(safeNext(input.next ?? null));
 }
 
 /** Bước 1 đăng ký: kiểm tra thông tin rồi gửi mã xác nhận về email. Trả về lỗi hoặc null */

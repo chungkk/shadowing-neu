@@ -219,6 +219,7 @@ export async function oauthSignIn(input: {
   name?: string;
   authorizationCode?: string;
   lang?: string | null;
+  web?: boolean; // đăng nhập trên web (Apple: mã cấp cho Services ID, không phải bundle ID của app)
 }): Promise<number | string> {
   const { provider } = input;
   if (!oauthEnabled(provider)) return `Server chưa cấu hình đăng nhập bằng ${provider === "google" ? "Google" : "Apple"}`;
@@ -253,7 +254,7 @@ export async function oauthSignIn(input: {
     linkOAuth(provider, profile.subject, userId, email);
   }
   if (provider === "apple" && input.authorizationCode) {
-    const refresh = await appleRefreshToken(input.authorizationCode);
+    const refresh = await appleRefreshToken(input.authorizationCode, input.web);
     if (refresh) setOAuthRefreshToken("apple", profile.subject, refresh);
   }
   return userId;

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
+import SocialLogin from "./SocialLogin";
 
 /** Đăng ký 2 bước: điền thông tin → nhận mã 6 số qua email → nhập mã để tạo tài khoản */
 function RegisterForm({ next }: { next: string }) {
@@ -112,7 +113,15 @@ function RegisterForm({ next }: { next: string }) {
 }
 
 /** Form đăng nhập / đăng ký dùng chung — hộp 2 nửa: form bên trái, hình minh hoạ bên phải */
-export default function AuthForm({ mode, next }: { mode: "login" | "register"; next: string }) {
+export default function AuthForm({
+  mode,
+  next,
+  social,
+}: {
+  mode: "login" | "register";
+  next: string;
+  social: { google: string | null; apple: string | null }; // client ID nút Google / Apple (null = ẩn)
+}) {
   const isLogin = mode === "login";
   const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
   const query = next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
@@ -158,6 +167,9 @@ export default function AuthForm({ mode, next }: { mode: "login" | "register"; n
           ) : (
             <RegisterForm next={next} />
           )}
+
+          {/* Google / Apple: chưa có tài khoản thì tự tạo luôn, nên dùng chung cho cả đăng nhập lẫn đăng ký */}
+          <SocialLogin google={social.google} apple={social.apple} next={next} />
 
           <div className="flex items-center gap-3 text-xs font-bold text-link uppercase">
             <span className="h-px flex-1 bg-border" />

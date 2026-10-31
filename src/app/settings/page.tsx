@@ -12,7 +12,7 @@ async function Settings() {
           {user.role === "admin" ? "Admin" : "Học viên"} · tham gia từ {user.createdAt.slice(0, 10)}
         </p>
       </div>
-      <SettingsForms name={user.name} email={user.email} fixedAdmin={user.email === envAdminEmail()} />
+      <SettingsForms name={user.name} email={user.email} fixedAdmin={user.email === envAdminEmail()} hasPassword={user.hasPassword} />
     </>
   );
 }
