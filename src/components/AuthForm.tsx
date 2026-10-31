@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
 import SocialLogin from "./SocialLogin";
@@ -117,21 +118,21 @@ export default function AuthForm({
   mode,
   next,
   social,
+  modal = false,
 }: {
   mode: "login" | "register";
   next: string;
   social: { google: string | null; apple: string | null }; // client ID nút Google / Apple (null = ẩn)
+  modal?: boolean; // hiện dạng popup đè lên trang đang xem (đóng = quay lại trang đó)
 }) {
   const isLogin = mode === "login";
   const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
   const query = next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4 md:p-8">
+    <Frame modal={modal}>
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-black/40 md:grid-cols-2">
-        <Link href="/" title="Đóng" className="btn-icon absolute top-3 right-3 z-10 text-link">
-          <X className="size-6" />
-        </Link>
+        <CloseButton modal={modal} />
 
         <div className="flex flex-col gap-5 p-8 md:p-10">
           <div className="text-center">
@@ -176,7 +177,8 @@ export default function AuthForm({
             {isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?"}
             <span className="h-px flex-1 bg-border" />
           </div>
-          <Link href={`${isLogin ? "/register" : "/login"}${query}`} className="btn py-3 uppercase">
+          {/* Popup: thay chỗ trong lịch sử để "đóng" vẫn về trang đang xem chứ không về popup trước */}
+          <Link href={`${isLogin ? "/register" : "/login"}${query}`} replace={modal} className="btn py-3 uppercase">
             {isLogin ? "Tạo tài khoản mới" : "Đăng nhập"}
           </Link>
           <p className="text-center text-xs text-muted">
@@ -196,6 +198,53 @@ export default function AuthForm({
           </div>
         </div>
       </div>
-    </main>
+    </Frame>
+  );
+}
+
+/** Trang riêng: căn giữa trong vùng nội dung. Popup: nền mờ phủ cả màn hình, bấm ra ngoài / Esc để đóng */
+function Frame({ modal, children }: { modal: boolean; children: ReactNode }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!modal) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && router.back();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden"; // khoá cuộn trang phía sau
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [modal, router]);
+
+  if (!modal) return <main className="flex flex-1 items-center justify-center p-4 md:p-8">{children}</main>;
+  return (
+    <div
+      role="dialog"
+      aria-modal
+      className="fixed inset-0 z-50 flex overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8"
+      onClick={(e) => e.target === e.currentTarget && router.back()}
+    >
+      {/* m-auto thay cho căn giữa: hộp cao hơn màn hình vẫn cuộn được tới mép trên */}
+      <div className="m-auto w-full max-w-4xl">{children}</div>
+    </div>
+  );
+}
+
+function CloseButton({ modal }: { modal: boolean }) {
+  const router = useRouter();
+  const className = "btn-icon absolute top-3 right-3 z-10 text-link";
+  if (modal) {
+    return (
+      <button type="button" title="Đóng" className={className} onClick={() => router.back()}>
+        <X className="size-6" />
+      </button>
+    );
+  }
+  return (
+    <Link href="/" title="Đóng" className={className}>
+      <X className="size-6" />
+    </Link>
   );
 }

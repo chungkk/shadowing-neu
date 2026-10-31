@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: "Luyện shadowing tiếng Đức với video YouTube",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children, auth }: LayoutProps<"/">) {
   return (
     <html lang="vi" className={`${nunito.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full">
@@ -41,6 +41,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </header>
           {children}
         </div>
+        {/* Popup đăng nhập / đăng ký (app/@auth) */}
+        {auth}
       </body>
     </html>
   );

@@ -37,6 +37,7 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
   const [error, setError] = useState("");
   const [pending, setPending] = useState<"google" | "apple" | null>(null);
   const [appleReady, setAppleReady] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
   const googleBox = useRef<HTMLDivElement>(null);
 
   const finish = async (provider: "google" | "apple", idToken: string, extra: { name?: string; code?: string } = {}) => {
@@ -64,14 +65,12 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
     box.replaceChildren();
     window.google.accounts.id.renderButton(box, {
       type: "standard",
-      theme: "filled_black",
       size: "large",
-      shape: "pill",
       text: "continue_with",
-      logo_alignment: "center",
       locale: "vi",
       width: Math.min(400, box.offsetWidth || 320), // Google giới hạn 400px
     });
+    setGoogleReady(true);
   };
 
   const initApple = () => {
@@ -107,9 +106,16 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
       {google && (
         <>
           <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={initGoogle} />
-          {/* Chỗ Google vẽ nút; giữ chiều cao để trang không nhảy khi nút hiện ra */}
-          <div className={`flex h-10 justify-center ${pending ? "pointer-events-none opacity-50" : ""}`}>
-            <div ref={googleBox} className="w-full max-w-[400px]" />
+          {/* Nút Google vẽ sẵn không đổi được kiểu cho hợp giao diện → hiện nút của mình,
+              nút thật của Google nằm vô hình phủ lên trên (phóng to cho kín) để nhận cú bấm */}
+          <div className={`group relative ${pending || !googleReady ? "pointer-events-none opacity-50" : ""}`}>
+            <div aria-hidden className="btn w-full py-3 text-[15px] group-focus-within:border-accent group-hover:border-accent">
+              {pending === "google" ? <Loader2 className="size-5 animate-spin" /> : <GoogleLogo />}
+              Tiếp tục với Google
+            </div>
+            <div className="absolute inset-0 overflow-hidden opacity-0">
+              <div ref={googleBox} className="flex h-full scale-150 items-center justify-center" />
+            </div>
           </div>
         </>
       )}
@@ -121,26 +127,27 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
             strategy="afterInteractive"
             onReady={initApple}
           />
-          {/* Theo hướng dẫn của Apple: nút trắng chữ đen trên nền tối, logo Apple bên trái chữ */}
-          <button
-            type="button"
-            onClick={signInApple}
-            disabled={!appleReady || !!pending}
-            className="mx-auto flex h-10 w-full max-w-[400px] cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-[15px] font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {pending === "apple" ? <Loader2 className="size-4 animate-spin" /> : <AppleLogo />}
-            Đăng nhập với Apple
+          {/* Cùng kiểu với nút Google; logo Apple bên trái chữ */}
+          <button type="button" onClick={signInApple} disabled={!appleReady || !!pending} className="btn w-full py-3 text-[15px]">
+            {pending === "apple" ? <Loader2 className="size-5 animate-spin" /> : <AppleLogo />}
+            Tiếp tục với Apple
           </button>
         </>
       )}
 
-      {pending === "google" && (
-        <p className="flex items-center justify-center gap-2 text-sm text-muted">
-          <Loader2 className="size-4 animate-spin" /> Đang đăng nhập…
-        </p>
-      )}
       {error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
     </div>
+  );
+}
+
+function GoogleLogo() {
+  return (
+    <svg viewBox="0 0 48 48" className="size-5" aria-hidden>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
   );
 }
 
