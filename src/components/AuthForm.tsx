@@ -3,18 +3,93 @@
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
-import { login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
+import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
 import SocialLogin from "./SocialLogin";
 
-/** Đăng ký 2 bước: điền thông tin → nhận mã 6 số qua email → nhập mã để tạo tài khoản */
-function RegisterForm({ next, close }: { next: string; close?: () => void }) {
+const ErrorBox = ({ children }: { children?: string }) =>
+  children ? <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
+
+/** Email đã nhập ở bước đầu + nút "Đổi" để quay lại sửa */
+function EmailRow({ email, onChange }: { email: string; onChange: () => void }) {
+  return (
+    <p className="flex items-center justify-center gap-2 text-sm">
+      <span className="truncate text-muted">{email}</span>
+      <button type="button" className="shrink-0 font-bold text-link" onClick={onChange}>
+        Đổi
+      </button>
+    </p>
+  );
+}
+
+/** Bước đầu: nhập email → server cho biết đã có tài khoản chưa */
+function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: string) => void; onFound: (exists: boolean) => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setPending(true);
+        setError("");
+        const res = await checkEmail(email).catch(() => ({ error: "Không kết nối được, thử lại." }));
+        setPending(false);
+        if ("error" in res) return setError(res.error);
+        onFound(res.exists);
+      }}
+      className="flex flex-col gap-3"
+    >
+      <input
+        type="email"
+        placeholder="Nhập email của bạn"
+        className="input"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoComplete="username"
+        autoFocus
+        required
+      />
+      <ErrorBox>{error}</ErrorBox>
+      <button className="btn btn-primary mt-1 py-3.5 text-base uppercase" disabled={pending}>
+        {pending ? "Đang kiểm tra…" : "Tiếp tục với email"}
+      </button>
+    </form>
+  );
+}
+
+/** Email đã có tài khoản → nhập mật khẩu */
+function LoginForm({ email, next, close, back }: { email: string; next: string; close?: () => void; back: () => void }) {
+  const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
+  useEffect(() => {
+    if (state.ok) close?.();
+  }, [state.ok, close]);
+
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <input type="hidden" name="next" value={next} />
+      {close && <input type="hidden" name="stay" value="1" />}
+      {/* Ô email ẩn (không phải type=hidden) để trình quản lý mật khẩu biết lưu cho tài khoản nào */}
+      <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
+      <EmailRow email={email} onChange={back} />
+      <input name="password" type="password" placeholder="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
+      <Link href="/forgot-password" onClick={close} className="-mt-1 self-end text-sm font-bold text-link">
+        Quên mật khẩu?
+      </Link>
+      <ErrorBox>{state.error}</ErrorBox>
+      <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending}>
+        {pending ? "Đang xử lý…" : "Đăng nhập"}
+      </button>
+    </form>
+  );
+}
+
+/** Email chưa có tài khoản → điền tên + mật khẩu → nhận mã 6 số qua email → nhập mã để tạo tài khoản */
+function RegisterForm({ email, next, close, back }: { email: string; next: string; close?: () => void; back: () => void }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(register, {});
   useEffect(() => {
     if (state.ok) close?.();
   }, [state.ok, close]);
   const [step, setStep] = useState<"info" | "code">("info");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -49,20 +124,12 @@ function RegisterForm({ next, close }: { next: string; close?: () => void }) {
         }}
         className="flex flex-col gap-3"
       >
-        <input placeholder="Tên của bạn" className="input" value={name} onChange={(e) => setName(e.target.value)} required />
-        <input
-          type="email"
-          placeholder="Email"
-          className="input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          autoFocus
-          required
-        />
+        <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
+        <EmailRow email={email} onChange={back} />
+        <input placeholder="Tên của bạn" className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus required />
         <input
           type="password"
-          placeholder="Mật khẩu (ít nhất 8 ký tự)"
+          placeholder="Tạo mật khẩu (ít nhất 8 ký tự)"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -70,7 +137,7 @@ function RegisterForm({ next, close }: { next: string; close?: () => void }) {
           minLength={8}
           required
         />
-        {err && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{err}</p>}
+        <ErrorBox>{err}</ErrorBox>
         <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={sending}>
           {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
         </button>
@@ -100,13 +167,13 @@ function RegisterForm({ next, close }: { next: string; close?: () => void }) {
         autoFocus
         required
       />
-      {err && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{err}</p>}
+      <ErrorBox>{err}</ErrorBox>
       <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending || code.length !== 6}>
         {pending ? "Đang xử lý…" : "Xác nhận & đăng ký"}
       </button>
       <div className="flex justify-between text-sm font-bold">
         <button type="button" className="text-link" onClick={() => setStep("info")}>
-          ← Đổi email
+          ← Sửa thông tin
         </button>
         <button type="button" className="text-link disabled:opacity-40" disabled={cooldown > 0 || sending} onClick={send}>
           {cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : sending ? "Đang gửi…" : "Gửi lại mã"}
@@ -116,78 +183,29 @@ function RegisterForm({ next, close }: { next: string; close?: () => void }) {
   );
 }
 
-/** Đăng nhập kiểu nhập email trước: "Tiếp tục với email" → nhập mật khẩu */
-function LoginForm({ next, close }: { next: string; close?: () => void }) {
-  const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
-  useEffect(() => {
-    if (state.ok) close?.();
-  }, [state.ok, close]);
-  const [step, setStep] = useState<"email" | "password">("email");
-  const [email, setEmail] = useState("");
+const HEADINGS = {
+  email: ["Chào mừng bạn", "Nhập email để đăng nhập — chưa có tài khoản thì tạo mới luôn"],
+  login: ["Chào mừng trở lại", "Nhập mật khẩu để tiếp tục luyện nói tiếng Đức"],
+  register: ["Tạo tài khoản", "Email này chưa có tài khoản — điền tên và mật khẩu để đăng ký miễn phí"],
+} as const;
 
-  if (step === "email") {
-    return (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          setStep("password");
-        }}
-        className="flex flex-col gap-3"
-      >
-        <input
-          type="email"
-          placeholder="Nhập email của bạn"
-          className="input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="username"
-          autoFocus
-          required
-        />
-        <button className="btn btn-primary mt-1 py-3.5 text-base uppercase">Tiếp tục với email</button>
-      </form>
-    );
-  }
-
-  return (
-    <form action={action} className="flex flex-col gap-3">
-      <input type="hidden" name="next" value={next} />
-      {close && <input type="hidden" name="stay" value="1" />}
-      <input type="hidden" name="email" value={email} />
-      <p className="flex items-center justify-center gap-2 text-sm">
-        <span className="truncate text-muted">{email}</span>
-        <button type="button" className="shrink-0 font-bold text-link" onClick={() => setStep("email")}>
-          Đổi
-        </button>
-      </p>
-      <input name="password" type="password" placeholder="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
-      <Link href="/forgot-password" onClick={close} className="-mt-1 self-end text-sm font-bold text-link">
-        Quên mật khẩu?
-      </Link>
-      {state.error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
-      <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending}>
-        {pending ? "Đang xử lý…" : "Đăng nhập"}
-      </button>
-    </form>
-  );
-}
-
-/** Form đăng nhập / đăng ký dùng chung — hộp 2 nửa: form bên trái, hình minh hoạ bên phải */
+/**
+ * Đăng nhập / đăng ký chung 1 form — hộp 2 nửa: form bên trái, hình minh hoạ bên phải.
+ * Nhập email trước: đã có tài khoản → hỏi mật khẩu; chưa có → chuyển sang đăng ký.
+ */
 export default function AuthForm({
-  mode,
   next,
   social,
   onClose,
-  onSwitch,
 }: {
-  mode: "login" | "register";
   next: string;
   social: { google: string | null; apple: string | null }; // client ID nút Google / Apple (null = ẩn)
   onClose?: () => void; // có = popup đè lên trang đang xem: đăng nhập xong ở lại trang đó (không chuyển tới `next`)
-  onSwitch?: () => void; // popup: chuyển đăng nhập ↔ đăng ký ngay trong popup
 }) {
-  const isLogin = mode === "login";
-  const query = next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
+  const [step, setStep] = useState<"email" | "login" | "register">("email");
+  const [email, setEmail] = useState("");
+  const [title, subtitle] = HEADINGS[step];
+  const back = () => setStep("email");
 
   return (
     <Frame onClose={onClose}>
@@ -201,31 +219,22 @@ export default function AuthForm({
 
         <div className="flex flex-col gap-4 px-5 pt-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-8 md:p-10">
           <div className="text-center">
-            <h1 className="text-2xl font-extrabold sm:text-3xl">{isLogin ? "Chào mừng trở lại" : "Tạo tài khoản"}</h1>
-            <p className="mt-2 text-link">
-              {isLogin ? "Tiếp tục hành trình luyện nói tiếng Đức của bạn" : "Miễn phí — bắt đầu luyện shadowing ngay"}
-            </p>
+            <h1 className="text-2xl font-extrabold sm:text-3xl">{title}</h1>
+            <p className="mt-2 text-link">{subtitle}</p>
           </div>
 
-          {/* Google / Apple: chưa có tài khoản thì tự tạo luôn, nên dùng chung cho cả đăng nhập lẫn đăng ký */}
-          <SocialLogin google={social.google} apple={social.apple} next={next} onDone={onClose} />
-
-          {isLogin ? <LoginForm next={next} close={onClose} /> : <RegisterForm next={next} close={onClose} />}
-
-          <div className="flex items-center gap-3 text-xs font-bold text-link uppercase">
-            <span className="h-px flex-1 bg-border" />
-            {isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?"}
-            <span className="h-px flex-1 bg-border" />
-          </div>
-          {onSwitch ? (
-            <button type="button" onClick={onSwitch} className="btn py-3 uppercase">
-              {isLogin ? "Tạo tài khoản mới" : "Đăng nhập"}
-            </button>
+          {step === "email" ? (
+            <>
+              {/* Google / Apple: chưa có tài khoản thì tự tạo luôn, nên dùng chung cho cả đăng nhập lẫn đăng ký */}
+              <SocialLogin google={social.google} apple={social.apple} next={next} onDone={onClose} />
+              <EmailStep email={email} setEmail={setEmail} onFound={(exists) => setStep(exists ? "login" : "register")} />
+            </>
+          ) : step === "login" ? (
+            <LoginForm email={email.trim().toLowerCase()} next={next} close={onClose} back={back} />
           ) : (
-            <Link href={`${isLogin ? "/register" : "/login"}${query}`} className="btn py-3 uppercase">
-              {isLogin ? "Tạo tài khoản mới" : "Đăng nhập"}
-            </Link>
+            <RegisterForm email={email.trim().toLowerCase()} next={next} close={onClose} back={back} />
           )}
+
           <p className="text-center text-xs text-muted">
             Khách vẫn học được bài miễn phí. Đăng nhập để tạo phụ đề bằng AI (Whisper).
           </p>

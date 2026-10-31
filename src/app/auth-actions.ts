@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { authenticate, createSession, destroySession } from "@/lib/auth";
-import { authConfigured, oauthSignIn, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
+import { authConfigured, lookupEmail, oauthSignIn, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
 import { allow, clientIp } from "@/lib/rate-limit";
 
 export type AuthState = { error?: string; email?: string; name?: string; ok?: boolean };
@@ -57,6 +57,11 @@ export async function oauthLogin(input: {
   await createSession(res);
   if (input.stay) return "";
   redirect(safeNext(input.next ?? null));
+}
+
+/** Form email: email này đã có tài khoản chưa (→ nhập mật khẩu / → đăng ký) */
+export async function checkEmail(email: string): Promise<{ exists: boolean } | { error: string }> {
+  return lookupEmail(String(email ?? ""));
 }
 
 /** Bước 1 đăng ký: kiểm tra thông tin rồi gửi mã xác nhận về email. Trả về lỗi hoặc null */

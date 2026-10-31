@@ -54,6 +54,17 @@ function checkSignup(input: SignupInput): string | null {
   return null;
 }
 
+/**
+ * Bước đầu của form email: email đã có tài khoản → hỏi mật khẩu, chưa có → đăng ký.
+ * (Đăng ký vốn đã báo "Email này đã được đăng ký" nên không lộ thêm gì; vẫn giới hạn theo IP để khỏi dò hàng loạt)
+ */
+export async function lookupEmail(raw: string): Promise<{ exists: boolean } | { error: string }> {
+  const email = raw.trim().toLowerCase();
+  if (!EMAIL_RE.test(email) || email.length > 254) return { error: "Email không hợp lệ" };
+  if (!allow(`lookup:ip:${await clientIp()}`, 30, 10 * 60 * 1000)) return { error: "Thử quá nhiều lần, chờ ít phút." };
+  return { exists: email === envAdminEmail() || emailTaken(email) };
+}
+
 // ---- Mã xác nhận qua email (6 số, hạn 10 phút, sai tối đa 5 lần, gửi lại sau 60 giây) ----
 // Dùng cho đăng ký (khoá = email) và quên mật khẩu (khoá = "reset:<email>").
 

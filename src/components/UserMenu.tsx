@@ -9,19 +9,15 @@ export async function SidebarWithUser() {
   return <Sidebar user={user && { name: user.name, role: user.role }} />;
 }
 
-/** Góc phải thanh trên cùng: nút đăng nhập/đăng ký, hoặc tên + vai trò */
+/** Góc phải thanh trên cùng: nút đăng nhập, hoặc tên + vai trò */
 export default async function UserMenu() {
   const user = await getCurrentUser();
+  // Chỉ 1 nút: popup đăng nhập đã có nút chuyển sang đăng ký
   if (!user) {
     return (
-      <div className="flex items-center gap-2">
-        <LoginLink href="/login" className="btn max-sm:px-3">
-          Đăng nhập
-        </LoginLink>
-        <LoginLink href="/register" mode="register" className="btn btn-primary py-2 max-sm:px-3">
-          Đăng ký
-        </LoginLink>
-      </div>
+      <LoginLink href="/login" className="btn max-sm:px-3">
+        Đăng nhập
+      </LoginLink>
     );
   }
   return (
