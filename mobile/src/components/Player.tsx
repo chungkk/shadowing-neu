@@ -110,6 +110,44 @@ function ToggleIcon({ icon, on, onPress, label }: { icon: SFSymbol; on: boolean;
     </Pressable>
   );
 }
+/** Công tắc gạt bật/tắt: icon + rãnh có nút tròn trượt sang phải khi bật */
+function ToggleSwitch({ icon, on, onPress, label }: { icon: SFSymbol; on: boolean; onPress: () => void; label: string }) {
+  const [x] = useState(() => new Animated.Value(on ? 1 : 0)); // 0 = tắt, 1 = bật
+  useEffect(() => {
+    Animated.timing(x, { toValue: on ? 1 : 0, duration: 160, useNativeDriver: true }).start();
+  }, [on, x]);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: on }}
+      style={({ pressed }) => ({
+        height: 38,
+        paddingHorizontal: 8,
+        gap: 6,
+        borderRadius: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: C.card2,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <SymbolView name={icon} size={18} tintColor={on ? C.accent : C.muted} weight="semibold" />
+      <View style={{ width: 34, height: 20, borderRadius: 10, padding: 2, backgroundColor: on ? C.accent : C.border }}>
+        <Animated.View
+          style={{
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: "#fff",
+            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }) }],
+          }}
+        />
+      </View>
+    </Pressable>
+  );
+}
 const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "*");
 const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 
@@ -645,7 +683,7 @@ export default function Player({
       {/* Bản dịch tiếng Việt dưới mỗi câu */}
       <ToggleIcon icon="translate" on={showTr} label={t("player.translation")} onPress={toggleTranslation} />
       {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video */}
-      <ToggleIcon icon="pause.circle" on={autoStop} label={t("player.autoStop")} onPress={toggleAutoStop} />
+      <ToggleSwitch icon="pause.circle" on={autoStop} label={t("player.autoStop")} onPress={toggleAutoStop} />
       {/* Shadowing: chỉ hiện các câu đã đánh dấu ⭐ */}
       {!!user && !dictation && <ToggleIcon icon="star" on={starredOnly} label={t("player.starredOnly")} onPress={toggleStarredOnly} />}
     </View>
