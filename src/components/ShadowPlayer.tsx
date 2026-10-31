@@ -42,6 +42,7 @@ type Settings = {
   autoRecord: boolean; // tự ghi âm trong lúc nghỉ
   hideText: boolean;
   hideMedia: boolean; // thu gọn khung video (vẫn phát tiếng)
+  dictHideMedia: boolean; // như hideMedia nhưng cho Chính tả — mặc định ẩn: phụ đề CC / tên chương của YouTube lộ đáp án
   practice: "shadow" | "dictation"; // nói theo | nghe chép chính tả
   dictLevel: DictationLevel;
   showTranslation: boolean; // hiện bản dịch tiếng Việt dưới mỗi câu
@@ -57,6 +58,7 @@ const DEFAULTS: Settings = {
   autoRecord: false,
   hideText: false,
   hideMedia: false,
+  dictHideMedia: true,
   practice: "shadow",
   dictLevel: "normal",
   showTranslation: false,
@@ -237,6 +239,7 @@ export default function ShadowPlayer({
   const listRef = useRef<HTMLDivElement>(null);
 
   const dictation = settings.practice === "dictation";
+  const mediaHidden = dictation ? settings.dictHideMedia : settings.hideMedia;
   const starredOnly = starFilter && loggedIn && !dictation; // Chính tả luôn theo lượt ngẫu nhiên, không lọc câu ⭐
   // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu · Chính tả: chỉ các câu của lượt đang làm
   const starredIdx = useMemo(() => segments.flatMap((s, i) => (saved.has(s.text.toLowerCase()) ? [i] : [])), [segments, saved]);
@@ -757,13 +760,18 @@ export default function ShadowPlayer({
         <Link href={backHref} className="btn shrink-0">
           <ChevronLeft className="size-4" /> Quay lại
         </Link>
-        <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-link">{title}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-link" title={title}>
+          {title}
+        </h1>
         {level && <LevelBadge level={level} />}
         {allowDictation && <Segmented options={PRACTICES} value={settings.practice} onChange={changePractice} />}
         <div className="flex flex-wrap gap-2">
-          <button className="btn" onClick={() => update({ hideMedia: !settings.hideMedia })}>
-            {settings.hideMedia ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            {settings.hideMedia ? "Hiện video" : "Ẩn video"}
+          <button
+            className="btn"
+            onClick={() => update(dictation ? { dictHideMedia: !mediaHidden } : { hideMedia: !mediaHidden })}
+          >
+            {mediaHidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            {mediaHidden ? "Hiện video" : "Ẩn video"}
           </button>
           {/* Ẩn chữ / Câu ⭐ chỉ dùng cho Shadowing — Chính tả vẫn giữ nút (mờ) để các nút không nhảy chỗ khi đổi chế độ */}
           <button
@@ -804,22 +812,31 @@ export default function ShadowPlayer({
               <Clock className="size-4" /> {formatTime(time)}
             </span>
           </div>
-          <div className={settings.hideMedia ? "h-0 overflow-hidden" : "overflow-hidden rounded-2xl"}>
+          <div className={mediaHidden ? "h-0 overflow-hidden" : "relative overflow-hidden rounded-2xl"}>
             <YouTubePlayer videoId={videoId} onReady={onReady} />
+            {/* Chính tả: lớp phủ chặn bấm vào giao diện YouTube (nút CC bật phụ đề = lộ đáp án); bấm video → phát / dừng */}
+            {dictation && !mediaHidden && (
+              <button className="absolute inset-0 cursor-pointer" title="Phát / dừng (Space)" onClick={togglePlay} />
+            )}
           </div>
-          {settings.hideMedia && (
+          {mediaHidden && (
             <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
           )}
-          <span className="label text-link">Điều khiển</span>
-          <div className="grid grid-cols-2 gap-3">
-            <button className="btn btn-primary py-3 text-base" onClick={togglePlay}>
-              {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
-              {playing ? "Dừng" : "Phát"}
-            </button>
-            <button className="btn py-3 text-base uppercase" onClick={() => go(idx)}>
-              <RotateCcw className="size-5" /> Phát lại
-            </button>
-          </div>
+          {/* Chính tả đã có thanh công cụ + "Nghe lại (Tab)" ở cột giữa → bỏ khối này cho đỡ trùng */}
+          {!dictation && (
+            <>
+              <span className="label text-link">Điều khiển</span>
+              <div className="grid grid-cols-2 gap-3">
+                <button className="btn btn-primary py-3 text-base" onClick={togglePlay}>
+                  {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+                  {playing ? "Dừng" : "Phát"}
+                </button>
+                <button className="btn py-3 text-base uppercase" onClick={() => go(idx)}>
+                  <RotateCcw className="size-5" /> Phát lại
+                </button>
+              </div>
+            </>
+          )}
           {children}
         </div>
 
@@ -1115,8 +1132,9 @@ export default function ShadowPlayer({
         <div className="card flex max-h-[80vh] flex-col gap-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
           <div className="flex items-center justify-between">
             <span className="label">{dictation ? "Lượt chính tả" : starredOnly ? "Câu đã đánh dấu ⭐" : "Transcript"}</span>
+            {/* Chính tả: % tính trên cả bài (không phải lượt) — ghi rõ để khỏi lẫn với "Đã xong x/y câu" của lượt */}
             <span className="pill bg-card-2 px-3 py-1 text-sm" title={dictation ? "Số câu đã chép trong cả bài" : "Số câu đã nghe"}>
-              {progress}%
+              {dictation ? `Cả bài ${progress}%` : `${progress}%`}
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-card-2">
@@ -1161,9 +1179,18 @@ export default function ShadowPlayer({
                     {!dictation && settings.hideText && revealButton(i)}
                     {loggedIn && !hidden && starButton(s.text, "size-[18px]")}
                   </div>
-                  <p className={`mt-2 text-sm leading-relaxed ${hidden ? "font-mono tracking-wider text-muted" : ""}`}>
+                  {/* Chính tả: câu chưa chép không hiện "****" — dấu sao lộ số từ, độ dài từ, dấu câu (mức Khó thành vô nghĩa) */}
+                  <p
+                    className={`mt-2 text-sm leading-relaxed ${
+                      hidden ? (dictation ? "text-muted italic" : "font-mono tracking-wider text-muted") : ""
+                    }`}
+                  >
                     {hidden ? (
-                      mask(s.text)
+                      dictation ? (
+                        i === idx ? "Đang chép…" : "Chưa chép"
+                      ) : (
+                        mask(s.text)
+                      )
                     ) : (
                       <SentenceText text={s.text} phrases={phrases} saved={i === idx ? saved : undefined} onPhrase={(p) => pickPhrase(p, s.text)} />
                     )}

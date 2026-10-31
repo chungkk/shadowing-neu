@@ -124,41 +124,40 @@ export default function DictationPanel({
         />
       </div>
 
-      {/* Ô từng từ: đúng → hiện từ; chưa đúng → gợi ý theo mức độ; 👁 để xem (tính là lỗi); xong → bấm để tra từ */}
+      {/* Ô từng từ: đúng → hiện từ; chưa đúng → gợi ý theo mức độ, bấm vào ô để xem (tính là lỗi); xong → bấm để tra từ.
+          Bấm thẳng vào ô như app — không đặt nút xem riêng phía trên ô (mỗi dòng ô cao gấp đôi) */}
       <div className="flex flex-wrap gap-2">
         {result.words.map((w, k) => {
           const shown = w.state === "correct" || w.state === "revealed";
           const state = shown || checked ? w.state : "hint";
+          const box = `min-w-10 rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]}`;
+          if (result.done && onWord)
+            return (
+              <button
+                key={k}
+                className={`${box} cursor-pointer transition hover:brightness-125`}
+                title="Tra nghĩa từ này"
+                onClick={() => onWord(w.text)}
+              >
+                {w.text}
+              </button>
+            );
+          if (shown)
+            return (
+              <span key={k} className={box}>
+                {w.text}
+              </span>
+            );
+          const hint = checked && w.typed ? w.typed : hintFor(w.text, level);
           return (
-            <div key={k} className="flex flex-col items-center gap-1">
-              {!shown && (
-                <button
-                  title="Xem từ này (tính là lỗi)"
-                  className="cursor-pointer text-muted hover:text-amber"
-                  onClick={() => change(input, new Set(revealed).add(k))}
-                >
-                  <Eye className="size-4" />
-                </button>
-              )}
-              {result.done && onWord ? (
-                <button
-                  className={`mt-5 min-w-10 cursor-pointer rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold transition hover:brightness-125 ${BOX[state]}`}
-                  title="Tra nghĩa từ này"
-                  onClick={() => onWord(w.text)}
-                >
-                  {w.text}
-                </button>
-              ) : (
-                <span
-                  className={`min-w-10 rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]} ${
-                    shown ? "mt-5" : ""
-                  }`}
-                  title={checked && w.typed && !shown ? `Bạn gõ: ${w.typed}` : undefined}
-                >
-                  {shown ? w.text : checked && w.typed ? w.typed : hintFor(w.text, level) || "   "}
-                </span>
-              )}
-            </div>
+            <button
+              key={k}
+              className={`${box} cursor-pointer transition hover:border-amber hover:text-amber`}
+              title={`${checked && w.typed ? `Bạn gõ: ${w.typed} · ` : ""}Bấm để xem từ này (tính là lỗi)`}
+              onClick={() => change(input, new Set(revealed).add(k))}
+            >
+              {hint || <Eye className="mx-auto size-4" />}
+            </button>
           );
         })}
       </div>
@@ -169,7 +168,7 @@ export default function DictationPanel({
           ? result.done
             ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealedCount ? ` · xem ${revealedCount} từ` : ""}.${onWord ? " Bấm vào từ để tra nghĩa." : ""}`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
-          : "Từ đã xem sẽ bị tính là lỗi. Enter để kiểm tra."}
+          : "Bấm vào ô để xem từ (tính là lỗi). Enter để kiểm tra."}
       </p>
 
       {result.done ? (
