@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
-import { envAdminEmail, requireAdmin } from "@/lib/auth";
+import { adminSetPassword, envAdminEmail, requireAdmin } from "@/lib/auth";
 import { createLesson, deleteLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
 import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
@@ -96,6 +96,14 @@ export async function changeUserRole(id: number, role: Role) {
   if (role !== "user" && role !== "admin") return;
   if (await editableUser(id)) setUserRole(id, role);
   refresh();
+}
+
+/** Đặt mật khẩu mới cho người dùng khác (người đó bị đăng xuất trên mọi thiết bị) */
+export async function resetUserPassword(id: number, _: FormState & { ok?: string }, formData: FormData): Promise<FormState & { ok?: string }> {
+  const target = await editableUser(id);
+  if (!target) return { error: "Không thể đổi mật khẩu tài khoản này" };
+  const error = await adminSetPassword(target.id, String(formData.get("password") ?? ""));
+  return error ? { error } : { ok: `Đã đổi mật khẩu cho ${target.email}. Người này đã bị đăng xuất trên mọi thiết bị.` };
 }
 
 export async function removeUser(id: number) {

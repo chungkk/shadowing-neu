@@ -150,6 +150,16 @@ export async function changePassword(user: User, current: string, next: string):
   return null;
 }
 
+/**
+ * Admin đặt mật khẩu mới cho người khác (không cần mật khẩu cũ; người gọi tự kiểm tra quyền + không phải chính mình / admin cố định).
+ * Phiên ký bằng mật khẩu → người đó bị đăng xuất trên mọi thiết bị. Trả về lỗi hoặc null.
+ */
+export async function adminSetPassword(userId: number, next: string): Promise<string | null> {
+  if (next.length < 8) return "Mật khẩu mới cần ít nhất 8 ký tự";
+  setUserPassword(userId, await hashPassword(next));
+  return null;
+}
+
 export async function isAdmin(): Promise<boolean> {
   return (await getCurrentUser())?.role === "admin";
 }

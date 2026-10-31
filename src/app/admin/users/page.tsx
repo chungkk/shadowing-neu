@@ -4,6 +4,7 @@ import { envAdminEmail, requireAdmin } from "@/lib/auth";
 import { listUsers } from "@/lib/db";
 import { changeUserRole, removeUser } from "../actions";
 import DeleteButton from "../DeleteButton";
+import PasswordButton from "./PasswordButton";
 
 async function Users() {
   const me = await requireAdmin();
@@ -18,7 +19,7 @@ async function Users() {
           const locked = u.id === me.id || u.email === fixedAdmin;
           const nextRole = u.role === "admin" ? "user" : "admin";
           return (
-            <div key={u.id} className="flex items-center gap-3 p-3">
+            <div key={u.id} className="flex flex-wrap items-center gap-3 p-3">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">
                   {u.name} {u.id === me.id && <span className="text-xs text-muted">(bạn)</span>}
@@ -33,6 +34,7 @@ async function Users() {
               </div>
               {!locked && (
                 <>
+                  <PasswordButton userId={u.id} email={u.email} />
                   <form action={changeUserRole.bind(null, u.id, nextRole)}>
                     <button className="btn">{nextRole === "admin" ? "Cấp quyền admin" : "Bỏ quyền admin"}</button>
                   </form>

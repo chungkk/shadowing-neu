@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
-import { envAdminEmail } from "@/lib/auth";
+import { adminSetPassword, envAdminEmail } from "@/lib/auth";
 import { getUserById, setUserRole } from "@/lib/db";
 import { removeAccount } from "@/lib/account";
-import { apiAdmin, body, fail, publicUser } from "@/lib/api";
+import { apiAdmin, body, fail, publicUser, str } from "@/lib/api";
 
 /** Người dùng admin được sửa: không phải chính mình, không phải admin cố định (ADMIN_EMAIL) — giống trang web */
 async function editable(ctx: RouteContext<"/api/v1/admin/users/[id]">) {
@@ -15,13 +15,21 @@ async function editable(ctx: RouteContext<"/api/v1/admin/users/[id]">) {
   return target;
 }
 
-/** PATCH { role: "user" | "admin" } → đổi quyền */
+/**
+ * PATCH { role?: "user" | "admin", password?: string } → đổi quyền và / hoặc đặt mật khẩu mới
+ * (đặt mật khẩu: người đó bị đăng xuất trên mọi thiết bị)
+ */
 export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/v1/admin/users/[id]">) {
   const target = await editable(ctx);
   if (target instanceof Response) return target;
-  const { role } = await body<{ role: string }>(req);
-  if (role !== "user" && role !== "admin") return fail("Quyền không hợp lệ");
-  setUserRole(target.id, role);
+  const { role, password } = await body<{ role: string; password: string }>(req);
+  if (role === undefined && password === undefined) return fail("Thiếu thông tin cần sửa");
+  if (role !== undefined && role !== "user" && role !== "admin") return fail("Quyền không hợp lệ");
+  if (password !== undefined) {
+    const error = await adminSetPassword(target.id, str(password));
+    if (error) return fail(error);
+  }
+  if (role === "user" || role === "admin") setUserRole(target.id, role);
   return Response.json({ user: { ...publicUser(getUserById(target.id)!), locked: false } });
 }
 
