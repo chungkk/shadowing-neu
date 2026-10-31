@@ -155,7 +155,7 @@ export default function Player({
   const [hideText, setHideText] = useState(false); // Shadowing: ẩn chữ tiếng Đức (chỉ nghe rồi nói theo)
   const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
   const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ / câu đã lưu (chữ thường) → id trong sổ từ vựng
-  const [starredOnly, setStarredOnly] = useState(false); // chỉ hiện các câu ⭐
+  const [starFilter, setStarFilter] = useState(false); // Shadowing: chỉ hiện các câu ⭐
   const [trOn, setTrOn] = useState(false); // hiện bản dịch dưới mỗi câu
   const showTr = trOn && !!user; // dịch chỉ dành cho tài khoản (đăng xuất → tự tắt)
   const [autoStop, setAutoStop] = useState(true); // dừng ở cuối mỗi câu
@@ -178,6 +178,7 @@ export default function Player({
 
   const current = segments[idx];
   const dictation = allowDictation && practice === "dictation";
+  const starredOnly = starFilter && !dictation; // Chính tả luôn theo lượt ngẫu nhiên, không lọc câu ⭐
   // iPad nằm ngang: video + điều khiển bên trái (~58%), transcript bên phải.
   // iPad dọc lúc chép chính tả: thu nhỏ video để còn chỗ cho ô nhập + bàn phím
   const videoWidth = Math.round(width * (split ? 0.58 : tablet && dictation ? 0.6 : 1));
@@ -385,12 +386,14 @@ export default function Player({
     setDictDrafts({});
     if (round.length) select(round[0]);
   };
-  const toggleStarredOnly = () => {
-    const on = !starredOnly;
-    setStarredOnly(on);
-    // Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe); tắt lúc đang chép chính tả → về lượt đang làm
-    const i = on ? (starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1)) : dictation ? roundStart(dictPick) : undefined;
+  /** Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe) */
+  const toNearestStarred = () => {
+    const i = starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1);
     if (i !== undefined && i !== idx) select(i);
+  };
+  const toggleStarredOnly = () => {
+    setStarFilter(!starFilter);
+    if (!starFilter) toNearestStarred();
   };
   // Chính tả: vuốt ngang phần chép để chuyển câu (trái → câu sau, phải → câu trước), kéo theo ngón tay rồi bật về
   const [swipeX] = useState(() => new Animated.Value(0));
@@ -417,7 +420,7 @@ export default function Player({
     onResponderTerminate: swipeBack,
   };
   const doneCount = Object.keys(dictDone).length;
-  const roundDone = dictation && !starredOnly && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
+  const roundDone = dictation && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
 
   // ---- Tiến độ học: lưu theo tài khoản (đồng bộ web ↔ app), mở lại bài là học tiếp ----
   const [resumed, setResumed] = useState<number | null>(null); // vừa tiếp tục từ câu này → hiện thông báo
@@ -505,7 +508,7 @@ export default function Player({
         .catch(() => {});
     }
     const round = dictation ? pickDictation(texts, {}) : [];
-    setIdx(round.length && !starredOnly ? round[0] : 0);
+    setIdx(round.length ? round[0] : 0);
     setSeen(new Set());
     setDictDone({});
     setDictPick(round);
@@ -620,10 +623,11 @@ export default function Player({
           onChange={(p) => {
             pause();
             setPractice(p);
-            if (p !== "dictation") return;
+            // Về Shadowing đang lọc câu ⭐ → về câu ⭐ gần nhất
+            if (p !== "dictation") return starFilter && toNearestStarred();
             // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
             const i = roundStart(ensureRound());
-            if (!starredOnly && i !== undefined && i !== idx) select(i);
+            if (i !== undefined && i !== idx) select(i);
           }}
         />
       )}
@@ -643,15 +647,15 @@ export default function Player({
       <ToggleIcon icon="translate" on={showTr} label={t("player.translation")} onPress={toggleTranslation} />
       {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video */}
       <ToggleIcon icon="pause.circle" on={autoStop} label={t("player.autoStop")} onPress={toggleAutoStop} />
-      {/* Chỉ hiện các câu đã đánh dấu ⭐ */}
-      {!!user && <ToggleIcon icon="star" on={starredOnly} label={t("player.starredOnly")} onPress={toggleStarredOnly} />}
+      {/* Shadowing: chỉ hiện các câu đã đánh dấu ⭐ */}
+      {!!user && !dictation && <ToggleIcon icon="star" on={starredOnly} label={t("player.starredOnly")} onPress={toggleStarredOnly} />}
     </View>
   );
 
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
   const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
   const left = segments.length - doneCount;
-  const roundCard = dictation && !starredOnly && (roundDone || !dictPick.length) && (
+  const roundCard = dictation && (roundDone || !dictPick.length) && (
     <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(22,163,74,0.12)", borderWidth: 1, borderColor: "rgba(22,163,74,0.35)" }}>
       {roundDone && (
         <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }}>
@@ -668,23 +672,40 @@ export default function Player({
   // Phần chính tả: chỉ câu đang chép, không hiện danh sách câu. Màn hẹp: đầu FlatList (rỗng); chia cột: dưới video
   const controls = (
     <View style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", paddingVertical: 14, gap: 14 }}>
-      {current && dictation && (starredOnly || dictPick.length > 0) && (
+      {current && dictation && dictPick.length > 0 && (
         <Animated.View
           {...swipe}
           onLayout={(e) => (dictPanelY.current.block = e.nativeEvent.layout.y)}
           style={{ gap: 14, transform: [{ translateX: swipeX }] }}
         >
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Label color={C.amber}>
               {queue?.includes(idx)
                 ? t("player.roundOf", { i: queue.indexOf(idx) + 1, n: queue.length, k: idx + 1 })
                 : t("player.sentenceOf", { i: idx + 1, n: segments.length })}
             </Label>
-            <Text style={{ color: C.muted, fontSize: 12 }}>
-              {queue
-                ? t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })
-                : t("player.doneOf", { d: doneCount, n: segments.length })}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={{ color: C.muted, fontSize: 12 }}>
+                {queue
+                  ? t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })
+                  : t("player.doneOf", { d: doneCount, n: segments.length })}
+              </Text>
+              {/* Đánh dấu câu đang chép (giống sao trên từng câu ở Shadowing) */}
+              {!!user && (
+                <Pressable
+                  onPress={() => toggleStar(current.text)}
+                  hitSlop={10}
+                  accessibilityLabel={t("player.starSentence")}
+                  accessibilityState={{ checked: saved.has(current.text.toLowerCase()) }}
+                >
+                  <SymbolView
+                    name={saved.has(current.text.toLowerCase()) ? "star.fill" : "star"}
+                    size={18}
+                    tintColor={saved.has(current.text.toLowerCase()) ? C.amber : C.muted}
+                  />
+                </Pressable>
+              )}
+            </View>
           </View>
           <Segmented
             options={[
@@ -769,7 +790,7 @@ export default function Player({
       }}
       keyExtractor={(_, i) => String(i)}
       ListFooterComponent={
-        starredOnly && !starredIdx.length && !dictation ? (
+        starredOnly && !starredIdx.length ? (
           <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", marginTop: 24 }}>{t("player.noStarred")}</Text>
         ) : undefined
       }
