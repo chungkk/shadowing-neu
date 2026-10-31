@@ -2,14 +2,16 @@
 
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
 import SocialLogin from "./SocialLogin";
 
 /** Đăng ký 2 bước: điền thông tin → nhận mã 6 số qua email → nhập mã để tạo tài khoản */
-function RegisterForm({ next }: { next: string }) {
+function RegisterForm({ next, close }: { next: string; close?: () => void }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(register, {});
+  useEffect(() => {
+    if (state.ok) close?.();
+  }, [state.ok, close]);
   const [step, setStep] = useState<"info" | "code">("info");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -79,6 +81,7 @@ function RegisterForm({ next }: { next: string }) {
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="next" value={next} />
+      {close && <input type="hidden" name="stay" value="1" />}
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="password" value={password} />
@@ -113,26 +116,83 @@ function RegisterForm({ next }: { next: string }) {
   );
 }
 
+/** Đăng nhập kiểu nhập email trước: "Tiếp tục với email" → nhập mật khẩu */
+function LoginForm({ next, close }: { next: string; close?: () => void }) {
+  const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
+  useEffect(() => {
+    if (state.ok) close?.();
+  }, [state.ok, close]);
+  const [step, setStep] = useState<"email" | "password">("email");
+  const [email, setEmail] = useState("");
+
+  if (step === "email") {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setStep("password");
+        }}
+        className="flex flex-col gap-3"
+      >
+        <input
+          type="email"
+          placeholder="Nhập email của bạn"
+          className="input"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="username"
+          autoFocus
+          required
+        />
+        <button className="btn btn-primary mt-1 py-3.5 text-base uppercase">Tiếp tục với email</button>
+      </form>
+    );
+  }
+
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <input type="hidden" name="next" value={next} />
+      {close && <input type="hidden" name="stay" value="1" />}
+      <input type="hidden" name="email" value={email} />
+      <p className="flex items-center justify-center gap-2 text-sm">
+        <span className="truncate text-muted">{email}</span>
+        <button type="button" className="shrink-0 font-bold text-link" onClick={() => setStep("email")}>
+          Đổi
+        </button>
+      </p>
+      <input name="password" type="password" placeholder="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
+      <Link href="/forgot-password" onClick={close} className="-mt-1 self-end text-sm font-bold text-link">
+        Quên mật khẩu?
+      </Link>
+      {state.error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
+      <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending}>
+        {pending ? "Đang xử lý…" : "Đăng nhập"}
+      </button>
+    </form>
+  );
+}
+
 /** Form đăng nhập / đăng ký dùng chung — hộp 2 nửa: form bên trái, hình minh hoạ bên phải */
 export default function AuthForm({
   mode,
   next,
   social,
-  modal = false,
+  onClose,
+  onSwitch,
 }: {
   mode: "login" | "register";
   next: string;
   social: { google: string | null; apple: string | null }; // client ID nút Google / Apple (null = ẩn)
-  modal?: boolean; // hiện dạng popup đè lên trang đang xem (đóng = quay lại trang đó)
+  onClose?: () => void; // có = popup đè lên trang đang xem: đăng nhập xong ở lại trang đó (không chuyển tới `next`)
+  onSwitch?: () => void; // popup: chuyển đăng nhập ↔ đăng ký ngay trong popup
 }) {
   const isLogin = mode === "login";
-  const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
   const query = next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
 
   return (
-    <Frame modal={modal}>
+    <Frame onClose={onClose}>
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-black/40 md:grid-cols-2">
-        <CloseButton modal={modal} />
+        <CloseButton onClose={onClose} />
 
         <div className="flex flex-col gap-5 p-8 md:p-10">
           <div className="text-center">
@@ -142,45 +202,25 @@ export default function AuthForm({
             </p>
           </div>
 
-          {isLogin ? (
-            // key: khi lỗi, React reset form → dựng lại với giá trị cũ để không mất chữ đã nhập
-            <form key={JSON.stringify(state)} action={action} className="flex flex-col gap-3">
-              <input type="hidden" name="next" value={next} />
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                className="input"
-                defaultValue={state.email}
-                autoComplete="email"
-                autoFocus
-                required
-              />
-              <input name="password" type="password" placeholder="Mật khẩu" className="input" autoComplete="current-password" required />
-              <Link href="/forgot-password" className="-mt-1 self-end text-sm font-bold text-link">
-                Quên mật khẩu?
-              </Link>
-              {state.error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
-              <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending}>
-                {pending ? "Đang xử lý…" : "Đăng nhập"}
-              </button>
-            </form>
-          ) : (
-            <RegisterForm next={next} />
-          )}
-
           {/* Google / Apple: chưa có tài khoản thì tự tạo luôn, nên dùng chung cho cả đăng nhập lẫn đăng ký */}
-          <SocialLogin google={social.google} apple={social.apple} next={next} />
+          <SocialLogin google={social.google} apple={social.apple} next={next} onDone={onClose} />
+
+          {isLogin ? <LoginForm next={next} close={onClose} /> : <RegisterForm next={next} close={onClose} />}
 
           <div className="flex items-center gap-3 text-xs font-bold text-link uppercase">
             <span className="h-px flex-1 bg-border" />
             {isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?"}
             <span className="h-px flex-1 bg-border" />
           </div>
-          {/* Popup: thay chỗ trong lịch sử để "đóng" vẫn về trang đang xem chứ không về popup trước */}
-          <Link href={`${isLogin ? "/register" : "/login"}${query}`} replace={modal} className="btn py-3 uppercase">
-            {isLogin ? "Tạo tài khoản mới" : "Đăng nhập"}
-          </Link>
+          {onSwitch ? (
+            <button type="button" onClick={onSwitch} className="btn py-3 uppercase">
+              {isLogin ? "Tạo tài khoản mới" : "Đăng nhập"}
+            </button>
+          ) : (
+            <Link href={`${isLogin ? "/register" : "/login"}${query}`} className="btn py-3 uppercase">
+              {isLogin ? "Tạo tài khoản mới" : "Đăng nhập"}
+            </Link>
+          )}
           <p className="text-center text-xs text-muted">
             Khách vẫn học được bài miễn phí. Đăng nhập để tạo phụ đề bằng AI (Whisper).
           </p>
@@ -203,12 +243,10 @@ export default function AuthForm({
 }
 
 /** Trang riêng: căn giữa trong vùng nội dung. Popup: nền mờ phủ cả màn hình, bấm ra ngoài / Esc để đóng */
-function Frame({ modal, children }: { modal: boolean; children: ReactNode }) {
-  const router = useRouter();
-
+function Frame({ onClose, children }: { onClose?: () => void; children: ReactNode }) {
   useEffect(() => {
-    if (!modal) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && router.back();
+    if (!onClose) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden"; // khoá cuộn trang phía sau
     window.addEventListener("keydown", onKey);
@@ -216,15 +254,15 @@ function Frame({ modal, children }: { modal: boolean; children: ReactNode }) {
       document.body.style.overflow = overflow;
       window.removeEventListener("keydown", onKey);
     };
-  }, [modal, router]);
+  }, [onClose]);
 
-  if (!modal) return <main className="flex flex-1 items-center justify-center p-4 md:p-8">{children}</main>;
+  if (!onClose) return <main className="flex flex-1 items-center justify-center p-4 md:p-8">{children}</main>;
   return (
     <div
       role="dialog"
       aria-modal
       className="fixed inset-0 z-50 flex overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8"
-      onClick={(e) => e.target === e.currentTarget && router.back()}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* m-auto thay cho căn giữa: hộp cao hơn màn hình vẫn cuộn được tới mép trên */}
       <div className="m-auto w-full max-w-4xl">{children}</div>
@@ -232,12 +270,11 @@ function Frame({ modal, children }: { modal: boolean; children: ReactNode }) {
   );
 }
 
-function CloseButton({ modal }: { modal: boolean }) {
-  const router = useRouter();
+function CloseButton({ onClose }: { onClose?: () => void }) {
   const className = "btn-icon absolute top-3 right-3 z-10 text-link";
-  if (modal) {
+  if (onClose) {
     return (
-      <button type="button" title="Đóng" className={className} onClick={() => router.back()}>
+      <button type="button" title="Đóng" className={className} onClick={onClose}>
         <X className="size-6" />
       </button>
     );

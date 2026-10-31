@@ -29,11 +29,22 @@ declare global {
 }
 
 /**
- * Nút "Tiếp tục với Google" (nút chính thức của Google) + "Đăng nhập với Apple" trên trang đăng nhập / đăng ký.
+ * Nút "Tiếp tục với Google" (nút chính thức của Google) + "Đăng nhập với Apple" ở đầu trang đăng nhập / đăng ký,
+ * bên dưới là đường kẻ "hoặc tiếp tục với email".
  * Lấy ID token ngay trên trình duyệt (popup) rồi gửi server action oauthLogin — cùng cách kiểm tra với app.
  * Client ID null = server chưa cấu hình → ẩn nút đó.
  */
-export default function SocialLogin({ google, apple, next }: { google: string | null; apple: string | null; next: string }) {
+export default function SocialLogin({
+  google,
+  apple,
+  next,
+  onDone,
+}: {
+  google: string | null;
+  apple: string | null;
+  next: string;
+  onDone?: () => void; // có = đăng nhập trong popup: xong thì gọi hàm này, ở lại trang đang xem
+}) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState<"google" | "apple" | null>(null);
   const [appleReady, setAppleReady] = useState(false);
@@ -43,10 +54,11 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
   const finish = async (provider: "google" | "apple", idToken: string, extra: { name?: string; code?: string } = {}) => {
     setPending(provider);
     setError("");
-    // Thành công → server chuyển trang; chỉ quay lại đây khi có lỗi
-    const err = await oauthLogin({ provider, idToken, next, ...extra });
-    setError(err ?? "");
+    // Thành công → server chuyển trang (popup: trả "" rồi đóng popup); không thì là lỗi
+    const err = await oauthLogin({ provider, idToken, next, stay: !!onDone, ...extra });
     setPending(null);
+    if (!err) return onDone?.();
+    setError(err);
   };
   const finishRef = useRef(finish);
   useEffect(() => {
@@ -97,19 +109,16 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3 text-xs font-bold text-muted uppercase">
-        <span className="h-px flex-1 bg-border" />
-        hoặc
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
       {google && (
         <>
           <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={initGoogle} />
           {/* Nút Google vẽ sẵn không đổi được kiểu cho hợp giao diện → hiện nút của mình,
               nút thật của Google nằm vô hình phủ lên trên (phóng to cho kín) để nhận cú bấm */}
           <div className={`group relative ${pending || !googleReady ? "pointer-events-none opacity-50" : ""}`}>
-            <div aria-hidden className="btn w-full py-3 text-[15px] group-focus-within:border-accent group-hover:border-accent">
+            <div
+              aria-hidden
+              className="btn w-full border-white bg-white py-3 text-[15px] text-neutral-900 group-focus-within:border-accent group-hover:border-accent"
+            >
               {pending === "google" ? <Loader2 className="size-5 animate-spin" /> : <GoogleLogo />}
               Tiếp tục với Google
             </div>
@@ -136,6 +145,12 @@ export default function SocialLogin({ google, apple, next }: { google: string | 
       )}
 
       {error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
+
+      <div className="mt-1 flex items-center gap-3 text-xs font-bold text-muted uppercase">
+        <span className="h-px flex-1 bg-border" />
+        hoặc tiếp tục với email
+        <span className="h-px flex-1 bg-border" />
+      </div>
     </div>
   );
 }

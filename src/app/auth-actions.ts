@@ -5,7 +5,7 @@ import { authenticate, createSession, destroySession } from "@/lib/auth";
 import { authConfigured, oauthSignIn, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
 import { allow, clientIp } from "@/lib/rate-limit";
 
-export type AuthState = { error?: string; email?: string; name?: string };
+export type AuthState = { error?: string; email?: string; name?: string; ok?: boolean };
 
 /** Chỉ cho quay lại đường dẫn nội bộ (chặn open redirect kiểu "//evil.com") */
 const safeNext = (v: FormDataEntryValue | null) => {
@@ -20,12 +20,14 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   const res = await authenticate(email, password);
   if (typeof res === "string") return { error: res, email };
   await createSession(res);
+  if (formData.get("stay")) return { ok: true }; // popup: ở lại trang đang xem (đặt cookie → trang tự render lại)
   redirect(safeNext(formData.get("next")));
 }
 
 /**
  * Đăng nhập / tự tạo tài khoản bằng Google hoặc Apple trên web: nút của Google / Apple trả ID token ngay trên trình duyệt,
- * server kiểm tra (như app, xem lib/oauth.ts) rồi đặt cookie phiên. Trả về lỗi; thành công thì chuyển tới `next`.
+ * server kiểm tra (như app, xem lib/oauth.ts) rồi đặt cookie phiên. Trả về lỗi; thành công thì chuyển tới `next`
+ * (`stay` = đăng nhập trong popup → trả "" và ở lại trang đang xem).
  */
 export async function oauthLogin(input: {
   provider: "google" | "apple";
@@ -33,6 +35,7 @@ export async function oauthLogin(input: {
   name?: string; // Apple chỉ gửi tên ở lần đăng nhập đầu
   code?: string; // Apple: authorization code để thu hồi quyền khi xoá tài khoản
   next?: string;
+  stay?: boolean;
 }): Promise<string> {
   if (!authConfigured()) return "Server chưa cấu hình AUTH_SECRET";
   if (input.provider !== "google" && input.provider !== "apple") return "Cách đăng nhập không hợp lệ";
@@ -52,6 +55,7 @@ export async function oauthLogin(input: {
   }
   if (typeof res === "string") return res;
   await createSession(res);
+  if (input.stay) return "";
   redirect(safeNext(input.next ?? null));
 }
 
@@ -72,6 +76,7 @@ export async function register(_: AuthState, formData: FormData): Promise<AuthSt
   });
   if (typeof res === "string") return { error: res, email, name };
   await createSession(res);
+  if (formData.get("stay")) return { ok: true };
   redirect(safeNext(formData.get("next")));
 }
 

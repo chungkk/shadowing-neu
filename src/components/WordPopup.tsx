@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
-import Link from "next/link";
+import { LoginLink } from "@/components/LoginDialog";
 import { usePathname } from "next/navigation";
 import { Bookmark, BookmarkMinus, Loader2, Lock, Play, Volume2, X } from "lucide-react";
 import { locatePhrase } from "@/lib/phrase-match";
@@ -204,9 +204,9 @@ export default function WordPopup({
               <Lock className="size-3.5 text-amber" /> Xem nghĩa của từ
             </div>
             <p className="text-sm leading-5 text-muted">Đăng nhập hoặc đăng ký miễn phí để xem nghĩa của từ trong câu và lưu từ vựng.</p>
-            <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary self-start">
+            <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary self-start">
               Đăng nhập / Đăng ký
-            </Link>
+            </LoginLink>
           </div>
         ) : (
           <>

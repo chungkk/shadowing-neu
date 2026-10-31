@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { LoginLink } from "./LoginDialog";
 import Sidebar from "./Sidebar";
 
 /** Thanh bên có thông tin người dùng (đọc cookie lúc request → đặt trong <Suspense>) */
@@ -14,12 +15,12 @@ export default async function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <Link href="/login" className="btn">
+        <LoginLink href="/login" className="btn">
           Đăng nhập
-        </Link>
-        <Link href="/register" className="btn btn-primary py-2">
+        </LoginLink>
+        <LoginLink href="/register" mode="register" className="btn btn-primary py-2">
           Đăng ký
-        </Link>
+        </LoginLink>
       </div>
     );
   }

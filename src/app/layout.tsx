@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist_Mono, Nunito } from "next/font/google";
 import { SidebarSkeleton } from "@/components/Sidebar";
+import LoginDialogSlot from "@/components/LoginDialogSlot";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
 import "./globals.css";
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
   description: "Luyện shadowing tiếng Đức với video YouTube",
 };
 
-export default function RootLayout({ children, auth }: LayoutProps<"/">) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="vi" className={`${nunito.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full">
@@ -41,8 +42,10 @@ export default function RootLayout({ children, auth }: LayoutProps<"/">) {
           </header>
           {children}
         </div>
-        {/* Popup đăng nhập / đăng ký (app/@auth) */}
-        {auth}
+        {/* Popup đăng nhập / đăng ký: bấm nút đăng nhập ở trang nào cũng hiện đè lên trang đó */}
+        <Suspense>
+          <LoginDialogSlot />
+        </Suspense>
       </body>
     </html>
   );

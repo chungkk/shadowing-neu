@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { LoginLink } from "@/components/LoginDialog";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import TrackSelect from "@/components/TrackSelect";
 import { RememberVideo } from "@/components/RecentVideos";
@@ -57,9 +58,9 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
               {!user && (
                 <>
                   {" "}
-                  <Link href={`/login?next=${encodeURIComponent(`/watch/${data.videoId}`)}`} className="underline">
+                  <LoginLink href={`/login?next=${encodeURIComponent(`/watch/${data.videoId}`)}`} className="underline">
                     Đăng nhập
-                  </Link>{" "}
+                  </LoginLink>{" "}
                   để tạo phụ đề tốt hơn bằng Whisper (AI).
                 </>
               )}

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { BookMarked, Captions, House, LogIn, LogOut, Settings, UserCog, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
+import { LoginLink } from "./LoginDialog";
 
 type Item = { href: string; label: string; icon: ComponentType<{ className?: string }> };
 
@@ -31,18 +32,21 @@ export default function Sidebar({ user }: { user: { name: string; role: string }
   const current = items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   const active = (href: string) => href === current;
 
-  const link = (it: Item) => (
-    <Link
-      key={it.href}
-      href={it.href}
-      title={it.label}
-      className={`flex size-12 items-center justify-center rounded-2xl transition ${
-        active(it.href) ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-link hover:bg-white/10"
-      }`}
-    >
-      <it.icon className="size-6" />
-    </Link>
-  );
+  const link = (it: Item) => {
+    const As = it.href === "/login" ? LoginLink : Link; // đăng nhập: mở popup tại trang đang xem
+    return (
+      <As
+        key={it.href}
+        href={it.href}
+        title={it.label}
+        className={`flex size-12 items-center justify-center rounded-2xl transition ${
+          active(it.href) ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-link hover:bg-white/10"
+        }`}
+      >
+        <it.icon className="size-6" />
+      </As>
+    );
+  };
 
   return (
     <SidebarFrame>
