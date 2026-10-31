@@ -67,7 +67,7 @@ function open() {
       word TEXT NOT NULL,
       meaning TEXT NOT NULL DEFAULT '',
       context TEXT NOT NULL DEFAULT '', -- câu chứa từ
-      source_url TEXT, -- /lesson/1, /watch/abc… (null = file trên máy)
+      source_url TEXT, -- /lesson/1, /watch/abc… (null = không rõ nguồn, vd. tự thêm vào sổ)
       source_title TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (user_id, word)

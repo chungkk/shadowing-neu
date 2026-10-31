@@ -15,7 +15,7 @@ async function LessonView({ params }: PageProps<"/lesson/[id]">) {
     <ShadowPlayer
       title={lesson.title}
       level={lesson.level}
-      media={{ kind: "youtube", videoId: lesson.videoId }}
+      videoId={lesson.videoId}
       segments={lesson.segments}
       loggedIn={!!user}
       sourceUrl={`/lesson/${lesson.id}`}

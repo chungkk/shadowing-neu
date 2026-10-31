@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Deutsch Shadowing",
-  description: "Luyện shadowing tiếng Đức từ YouTube hoặc file trên máy",
+  description: "Luyện shadowing tiếng Đức với video YouTube",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

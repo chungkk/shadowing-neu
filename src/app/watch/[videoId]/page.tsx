@@ -41,7 +41,7 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
       <RememberVideo videoId={data.videoId} title={data.title} />
       <ShadowPlayer
         title={data.title}
-        media={{ kind: "youtube", videoId: data.videoId }}
+        videoId={data.videoId}
         segments={data.segments}
         loggedIn={!!user}
         sourceUrl={`/watch/${data.videoId}`}

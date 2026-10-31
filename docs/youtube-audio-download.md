@@ -216,7 +216,6 @@ Không sửa gì: code tự quay về client `ANDROID`, chỉ tạo phụ đề 
 Người dùng vẫn còn:
 
 - Phụ đề YouTube (thủ công/tự động), vẫn lấy được qua `ANDROID`.
-- Mục **File trên máy** (`/local`): tải file audio/video lên, trình duyệt tách audio rồi gửi Whisper (không phụ thuộc YouTube).
 
 ## Lỗi khác
 

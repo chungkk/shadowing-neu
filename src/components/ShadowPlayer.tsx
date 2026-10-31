@@ -30,12 +30,9 @@ import { prefetchGerman } from "@/lib/speak";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
-import LocalPlayer from "./LocalPlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
 import WordPopup from "./WordPopup";
-
-export type Media = { kind: "youtube"; videoId: string } | { kind: "local"; src: string; isVideo: boolean };
 
 type Settings = {
   mode: "segment" | "free"; // dừng sau mỗi câu | phát liên tục
@@ -181,10 +178,9 @@ function SentenceText({
 export default function ShadowPlayer({
   title,
   level,
-  media,
+  videoId,
   segments: rawSegments,
   backHref = "/",
-  onBack,
   loggedIn = false,
   sourceUrl = null,
   allowDictation = false,
@@ -194,11 +190,10 @@ export default function ShadowPlayer({
   level?: string;
   loggedIn?: boolean; // đã đăng nhập → tra từ, cụm từ, lưu từ / đánh dấu câu, đồng bộ tiến độ
   sourceUrl?: string | null; // trang hiện tại (/lesson/1, /watch/…), lưu kèm từ vựng để mở lại
-  allowDictation?: boolean; // bài admin bật Chính tả; video tự dán / file trên máy chỉ Shadowing
-  media: Media;
+  allowDictation?: boolean; // bài admin bật Chính tả; video tự dán chỉ Shadowing
+  videoId: string;
   segments: Segment[];
   backHref?: string;
-  onBack?: () => void; // nếu có thì dùng thay cho backHref
   children?: ReactNode; // thông tin thêm hiển thị dưới video
 }) {
   // Đọc cài đặt qua useSyncExternalStore: server và lần hydrate đầu dùng DEFAULTS, không lệch HTML
@@ -756,25 +751,13 @@ export default function ShadowPlayer({
       </button>
     ));
 
-  const backLabel = (
-    <>
-      <ChevronLeft className="size-4" /> Quay lại
-    </>
-  );
-
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 p-4 md:p-6">
       {/* Dòng tiêu đề */}
       <div className="flex flex-wrap items-center gap-3">
-        {onBack ? (
-          <button onClick={onBack} className="btn shrink-0">
-            {backLabel}
-          </button>
-        ) : (
-          <Link href={backHref} className="btn shrink-0">
-            {backLabel}
-          </Link>
-        )}
+        <Link href={backHref} className="btn shrink-0">
+          <ChevronLeft className="size-4" /> Quay lại
+        </Link>
         <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-link">{title}</h1>
         {level && <LevelBadge level={level} />}
         {allowDictation && <Segmented options={PRACTICES} value={settings.practice} onChange={changePractice} />}
@@ -821,11 +804,7 @@ export default function ShadowPlayer({
             </span>
           </div>
           <div className={settings.hideMedia ? "h-0 overflow-hidden" : "overflow-hidden rounded-2xl"}>
-            {media.kind === "youtube" ? (
-              <YouTubePlayer videoId={media.videoId} onReady={onReady} />
-            ) : (
-              <LocalPlayer src={media.src} isVideo={media.isVideo} onReady={onReady} />
-            )}
+            <YouTubePlayer videoId={videoId} onReady={onReady} />
           </div>
           {settings.hideMedia && (
             <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>

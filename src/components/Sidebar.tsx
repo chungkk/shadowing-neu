@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, FileAudio, House, LogIn, LogOut, Settings, UserCog, Users } from "lucide-react";
+import { BookMarked, Captions, House, LogIn, LogOut, Settings, UserCog, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 
@@ -10,7 +10,6 @@ type Item = { href: string; label: string; icon: ComponentType<{ className?: str
 
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
-  { href: "/local", label: "File trên máy", icon: FileAudio },
 ];
 const USER_ITEMS: Item[] = [
   { href: "/vocab", label: "Sổ từ vựng", icon: BookMarked },

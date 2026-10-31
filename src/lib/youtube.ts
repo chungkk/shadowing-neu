@@ -151,7 +151,7 @@ class GeoBlockedError extends Error {
   constructor() {
     super(
       "Video này chỉ cho xem ở một số quốc gia (thường là video của đài truyền hình Đức như ARD, WDR, ZDF), " +
-        "server không lấy được phụ đề. Hãy tải video về máy rồi dùng mục “File trên máy”.",
+        "server không lấy được phụ đề. Hãy chọn video khác.",
     );
   }
 }
@@ -186,7 +186,7 @@ async function fetchRange(url: string, ua: string, a: number, b: number): Promis
   if (lastStatus === 403 || lastStatus === 400) {
     throw new Error(
       "YouTube chặn tải audio của video này. " +
-        "Hãy dùng phụ đề YouTube, hoặc tải file audio/video lên ở mục “File trên máy”.",
+        "Hãy dùng phụ đề YouTube của video.",
     );
   }
   throw new Error(`Không tải được audio${lastStatus ? ` (${lastStatus})` : " (hết thời gian chờ)"}`);
@@ -212,7 +212,7 @@ async function downloadAudio(videoId: string, player: PlayerResponse): Promise<{
     // Client ANDROID chỉ cho tải ~1–2MB đầu → báo luôn, khỏi tải dở
     throw new Error(
       "YouTube chặn tải audio của video này (hiện chỉ video ngắn dưới ~3 phút mới tải được). " +
-        "Hãy dùng phụ đề YouTube, hoặc tải file audio/video lên ở mục “File trên máy”.",
+        "Hãy dùng phụ đề YouTube của video.",
     );
   }
 
