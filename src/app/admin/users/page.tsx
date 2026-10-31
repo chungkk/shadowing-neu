@@ -20,12 +20,12 @@ async function Users() {
           const nextRole = u.role === "admin" ? "user" : "admin";
           return (
             <div key={u.id} className="flex flex-wrap items-center gap-3 p-3">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 max-sm:basis-full">
                 <div className="truncate font-medium">
                   {u.name} {u.id === me.id && <span className="text-xs text-muted">(bạn)</span>}
                 </div>
-                <div className="flex gap-2 text-xs text-muted">
-                  <span className="truncate">{u.email}</span>
+                <div className="flex flex-wrap gap-x-2 text-xs text-muted">
+                  <span className="min-w-0 truncate">{u.email}</span>
                   <span className={u.role === "admin" ? "font-semibold text-accent" : ""}>
                     {u.role === "admin" ? "Admin" : "Học viên"}
                   </span>

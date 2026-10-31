@@ -36,9 +36,9 @@ async function Continue() {
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-10 p-4 md:p-6">
-      <section className="flex flex-col gap-4">
-        <h1 className="text-2xl font-extrabold">Luyện nói tiếng Đức với video thật</h1>
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-4 md:gap-10 md:p-6">
+      <section className="flex flex-col gap-3 sm:gap-4">
+        <h1 className="text-xl font-extrabold sm:text-2xl">Luyện nói tiếng Đức với video thật</h1>
         <YouTubeUrlForm />
       </section>
 

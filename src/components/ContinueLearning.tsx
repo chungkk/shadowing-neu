@@ -31,7 +31,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
   if (!items.length) return null;
 
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-4 sm:gap-5">
       <SectionHeader title="Tiếp tục học" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {items.map(({ p, title, videoId }) => {
@@ -44,7 +44,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
               href={p.source}
               className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-accent"
             >
-              <div className="relative w-28 shrink-0 overflow-hidden rounded-lg bg-black">
+              <div className="relative w-24 shrink-0 overflow-hidden rounded-lg bg-black sm:w-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />
                 <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">

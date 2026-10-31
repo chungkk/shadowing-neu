@@ -46,13 +46,14 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
           <div className="flex gap-2">
             <input
               name="url"
-              className="input flex-1 text-foreground"
+              className="input min-w-0 flex-1 text-foreground"
               placeholder="https://www.youtube.com/watch?v=…"
+              inputMode="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required
             />
-            <button type="button" className="btn" disabled={!url || fetching} onClick={() => load()}>
+            <button type="button" className="btn shrink-0" disabled={!url || fetching} onClick={() => load()}>
               {fetching ? "Đang lấy…" : "Lấy phụ đề"}
             </button>
           </div>
@@ -121,7 +122,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         <textarea
           name="srt"
           rows={16}
-          className="input font-mono text-xs text-foreground"
+          className="input font-mono text-base text-foreground md:text-xs"
           value={srt}
           onChange={(e) => setSrt(e.target.value)}
           spellCheck={false}
@@ -130,8 +131,8 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
 
       {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
 
-      <div className="flex gap-2">
-        <button className="btn btn-primary" disabled={saving || fetching}>
+      <div className="flex gap-2 max-sm:*:flex-1">
+        <button className="btn btn-primary py-3 sm:py-2" disabled={saving || fetching}>
           {saving ? "Đang lưu…" : "Lưu bài học"}
         </button>
         <Link href="/admin" className="btn">

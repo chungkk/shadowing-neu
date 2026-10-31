@@ -111,12 +111,12 @@ function VocabCard({ v, now }: { v: VocabItem; now: number | null }) {
           target="_blank"
           rel="noreferrer"
           title="Tra dict.cc"
-          className="btn-icon size-8 text-link"
+          className="btn-icon size-9 text-link"
         >
           <BookOpen className="size-4" />
         </a>
         <form action={removeWord.bind(null, v.id)} onSubmit={(e) => !confirm(`Xoá “${v.word}”?`) && e.preventDefault()}>
-          <button title="Xoá" className="btn-icon size-8 text-red-400">
+          <button title="Xoá" className="btn-icon size-9 text-red-400">
             <Trash2 className="size-4" />
           </button>
         </form>
@@ -142,7 +142,7 @@ function VocabCard({ v, now }: { v: VocabItem; now: number | null }) {
           <Highlight text={v.context} word={v.word} />
         </p>
       )}
-      <div className="mt-auto flex items-center gap-2 text-xs text-muted">
+      <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
         {v.sourceUrl ? (
           <Link href={v.sourceUrl} className="inline-flex min-w-0 items-center gap-1 font-bold text-link hover:underline">
             <ExternalLink className="size-3.5 shrink-0" /> <span className="truncate">{v.sourceTitle || "Mở bài"}</span>
@@ -211,20 +211,23 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
             }}
           />
         </label>
-        <button
-          className="btn btn-primary"
-          title={`${due.length} từ đến hạn ôn · ${fresh.length} từ mới`}
-          onClick={() => setReview({ title: "Hôm nay", items: today })}
-          disabled={now == null}
-        >
-          <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
-        </button>
-        <button className="btn btn-amber" onClick={() => setReview({ title: "Tất cả", items })}>
-          <Brain className="size-4" /> Ôn tất cả
-        </button>
-        <button className="btn" onClick={() => downloadCsv(items)}>
-          <Download className="size-4" /> Tải CSV (Anki)
-        </button>
+        {/* Điện thoại: "Ôn hôm nay" chiếm cả hàng, 2 nút còn lại chia đôi hàng dưới */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+          <button
+            className="btn btn-primary col-span-2 py-3 sm:py-2"
+            title={`${due.length} từ đến hạn ôn · ${fresh.length} từ mới`}
+            onClick={() => setReview({ title: "Hôm nay", items: today })}
+            disabled={now == null}
+          >
+            <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
+          </button>
+          <button className="btn btn-amber" onClick={() => setReview({ title: "Tất cả", items })}>
+            <Brain className="size-4" /> Ôn tất cả
+          </button>
+          <button className="btn" onClick={() => downloadCsv(items)}>
+            <Download className="size-4" /> Tải CSV<span className="max-sm:hidden"> (Anki)</span>
+          </button>
+        </div>
       </div>
       {[...days].map(([day, list]) => {
         const room = limit - drawn;
@@ -232,14 +235,14 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
         drawn += list.length;
         return (
           <section key={day} className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
               <span className="text-sm text-muted">{list.length} từ</span>
               <button className="btn ml-auto px-3 py-1.5 text-xs" onClick={() => setReview({ title: dayLabel(day, local), items: list })}>
                 <Brain className="size-3.5 text-amber" /> Ôn tập
               </button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {list.slice(0, room).map((v) => (
                 <VocabCard key={v.id} v={v} now={now} />
               ))}

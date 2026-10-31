@@ -92,14 +92,14 @@ export default function DictationPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-2xl border border-border bg-background/60 p-4">
+      <div className="rounded-2xl border border-border bg-background/60 p-3 sm:p-4">
         <div className="mb-2 flex items-center justify-between">
           <span className="label text-link">Gõ những gì bạn nghe</span>
           <button
             className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
             onClick={onReplay}
           >
-            <RotateCcw className="size-3.5" /> Nghe lại (Tab)
+            <RotateCcw className="size-3.5" /> Nghe lại <span className="max-md:hidden">(Tab)</span>
           </button>
         </div>
         <textarea
@@ -168,12 +168,12 @@ export default function DictationPanel({
           ? result.done
             ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealedCount ? ` · xem ${revealedCount} từ` : ""}.${onWord ? " Bấm vào từ để tra nghĩa." : ""}`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
-          : "Bấm vào ô để xem từ (tính là lỗi). Enter để kiểm tra."}
+          : "Bấm vào ô để xem từ (tính là lỗi). Enter hoặc nút Kiểm tra để chấm."}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
           — cùng một hàng để "Kiểm tra" không bị đẩy xuống dưới màn hình */}
-      <div className="flex gap-3">
+      <div className="flex gap-2 sm:gap-3">
         <button className="btn btn-primary flex-[2] py-3.5 text-base" onClick={submit} disabled={result.done && !hasNext}>
           {result.done ? (
             <>

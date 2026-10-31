@@ -24,11 +24,11 @@ export default function TranscriptForm({
       </label>
       <label className="field card text-sm">
         Phụ đề (SRT) — sửa nội dung hoặc thời gian từng dòng
-        <textarea name="srt" rows={20} className="input font-mono text-xs text-foreground" defaultValue={srt} spellCheck={false} />
+        <textarea name="srt" rows={20} className="input font-mono text-base text-foreground md:text-xs" defaultValue={srt} spellCheck={false} />
       </label>
       {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
-      <div className="flex gap-2">
-        <button className="btn btn-primary" disabled={saving}>
+      <div className="flex gap-2 max-sm:*:flex-1">
+        <button className="btn btn-primary py-3 sm:py-2" disabled={saving}>
           {saving ? "Đang lưu…" : "Lưu phụ đề"}
         </button>
         <Link href="/admin/transcripts" className="btn">

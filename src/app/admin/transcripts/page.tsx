@@ -20,8 +20,8 @@ async function Transcripts() {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <h1 className="flex-1 text-2xl font-extrabold">Phụ đề đã lưu ({list.length} video)</h1>
+      <div className="flex items-start gap-2">
+        <h1 className="flex-1 text-xl font-extrabold sm:text-2xl">Phụ đề đã lưu ({list.length} video)</h1>
         <Link href="/admin" className="btn">
           Bài học
         </Link>

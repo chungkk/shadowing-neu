@@ -16,7 +16,7 @@ export function RecentVideos() {
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader title="Video bạn đã mở gần đây" count={recent.length} />
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         {recent.map((r) => (
           <Link
             key={r.videoId}

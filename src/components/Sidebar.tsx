@@ -39,7 +39,7 @@ export default function Sidebar({ user }: { user: { name: string; role: string }
         key={it.href}
         href={it.href}
         title={it.label}
-        className={`flex size-12 items-center justify-center rounded-2xl transition ${
+        className={`flex size-11 items-center justify-center rounded-2xl transition md:size-12 ${
           active(it.href) ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-link hover:bg-white/10"
         }`}
       >
@@ -55,7 +55,7 @@ export default function Sidebar({ user }: { user: { name: string; role: string }
       {user ? (
         <>
           <form action={logout}>
-            <button title="Đăng xuất" className="flex size-12 cursor-pointer items-center justify-center rounded-2xl text-red-400 hover:bg-white/10">
+            <button title="Đăng xuất" className="flex size-11 cursor-pointer md:size-12 items-center justify-center rounded-2xl text-red-400 hover:bg-white/10">
               <LogOut className="size-6" />
             </button>
           </form>
@@ -74,7 +74,7 @@ export default function Sidebar({ user }: { user: { name: string; role: string }
 }
 
 const NAV_CLASS =
-  "fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around gap-1 overflow-x-auto border-t border-border bg-sidebar px-2 *:shrink-0 md:sticky md:top-0 md:h-screen md:w-20 md:flex-col md:justify-start md:gap-3 md:border-t-0 md:border-r md:py-4";
+  "fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t border-border bg-sidebar px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:sticky md:top-0 md:h-screen md:w-20 md:flex-col md:justify-start md:gap-3 md:border-t-0 md:border-r md:py-4";
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (

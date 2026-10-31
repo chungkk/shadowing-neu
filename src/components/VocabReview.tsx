@@ -227,7 +227,7 @@ export default function VocabReview({
   const builtWord = built.map((i) => step?.tiles?.[i]).join("");
   const sentence = !!v && isSentence(v);
   // Câu dài → chữ nhỏ hơn từ lẻ
-  const headline = sentence ? "text-2xl leading-snug" : "text-4xl";
+  const headline = sentence ? "text-xl leading-snug sm:text-2xl" : "text-3xl sm:text-4xl";
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
   useEffect(() => {
@@ -695,7 +695,7 @@ export default function VocabReview({
       const ok = feedback.ok;
       return (
         <div className={`border-t-2 ${ok ? "border-accent/40 bg-accent/15" : "border-red/40 bg-red/15"}`}>
-          <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-6">
+          <div className="pb-safe mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:p-6">
             <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card sm:flex ${ok ? "text-accent" : "text-red-400"}`}>
               {ok ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}
             </div>
@@ -732,7 +732,7 @@ export default function VocabReview({
     }
     return (
       <div className="border-t-2 border-border">
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 p-4 sm:p-6">
+        <div className="pb-safe mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 pt-4 sm:p-6">
           {kind === "intro" ? (
             <button className="btn btn-primary ml-auto py-3 sm:min-w-40" onClick={next}>
               Đã nhớ, tiếp tục
@@ -780,7 +780,7 @@ export default function VocabReview({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Thanh trên: thoát · tiến độ · chuỗi đúng · âm thanh */}
-      <div className="mx-auto flex w-full max-w-2xl items-center gap-3 p-4">
+      <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:pb-4">
         <button title="Thoát (Esc)" className="btn-icon size-9 shrink-0 text-muted" onClick={() => onClose(changed)}>
           <X className="size-6" />
         </button>
@@ -809,7 +809,7 @@ export default function VocabReview({
           </button>
         </div>
       ) : done ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto p-6 text-center">
+        <div className="pb-safe flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 pt-6 text-center sm:p-6">
           <p className="text-6xl">{wrong.length ? "💪" : "🏆"}</p>
           <div>
             <p className="text-3xl font-extrabold text-amber">{practice ? "Luyện xong!" : "Hoàn thành bài ôn!"}</p>
@@ -860,15 +860,15 @@ export default function VocabReview({
       ) : (
         <>
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-6 px-4 py-4 sm:py-8">
+            <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-5 px-4 py-3 sm:gap-6 sm:py-8">
               <div className="flex items-center gap-2">
-                <h2 className="flex-1 text-2xl font-extrabold">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
+                <h2 className="flex-1 text-xl font-extrabold sm:text-2xl">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
                 {step.role === "retry" && <span className="pill text-xs text-red-400">Hỏi lại</span>}
                 {step.role === "graded" && kind !== "intro" && (
                   <span className={`text-xs font-bold ${stageInfo(v.stage).color}`}>{stageInfo(v.stage).label}</span>
                 )}
               </div>
-              <div className="flex flex-1 flex-col justify-center pb-6">{renderExercise()}</div>
+              <div className="flex flex-1 flex-col justify-center pb-4 sm:pb-6">{renderExercise()}</div>
               <p className="hidden text-center text-xs text-muted sm:block">
                 {title} · Enter: kiểm tra / tiếp tục
                 {choosing && " · 1–4: chọn"}

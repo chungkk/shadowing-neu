@@ -39,7 +39,7 @@ export function ForgotForm() {
 
   return (
     <main className="flex flex-1 items-center justify-center p-4 md:p-8">
-      <div className="flex w-full max-w-md flex-col gap-5 rounded-3xl border border-border bg-card p-8 shadow-2xl shadow-black/40 md:p-10">
+      <div className="flex w-full max-w-md flex-col gap-5 rounded-3xl border border-border bg-card p-5 shadow-2xl shadow-black/40 sm:p-8 md:p-10">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-accent text-white">
             <KeyRound className="size-7" />

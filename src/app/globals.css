@@ -44,6 +44,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  /* Điện thoại xoay ngang: chừa chỗ tai thỏ (viewport-fit=cover) */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Bỏ trễ chạm / zoom khi chạm 2 lần vào nút trên điện thoại */
+button,
+a,
+label,
+select {
+  touch-action: manipulation;
 }
 
 @layer components {
@@ -74,14 +86,15 @@ body {
   .btn-icon {
     @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40;
   }
+  /* Điện thoại: chữ 16px — nhỏ hơn thì Safari iOS tự phóng to trang khi bấm vào ô */
   .input {
-    @apply rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-accent;
+    @apply rounded-xl border border-border bg-background px-4 py-3 text-base outline-none placeholder:text-muted focus:border-accent md:text-sm;
   }
   .field {
     @apply flex flex-col gap-1 text-muted;
   }
   .field select {
-    @apply rounded-lg border border-border bg-background px-2 py-1.5 text-foreground;
+    @apply rounded-lg border border-border bg-background px-2 py-1.5 text-base text-foreground md:text-sm;
   }
   .check {
     @apply flex cursor-pointer items-center gap-2;
@@ -91,6 +104,14 @@ body {
   }
   .pill {
     @apply inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold;
+  }
+  /* Thanh cuộn ngang trên điện thoại (hàng nút, hàng lọc) — ẩn thanh cuộn */
+  .scroll-row {
+    @apply overflow-x-auto overscroll-x-contain [scrollbar-width:none] *:shrink-0 [&::-webkit-scrollbar]:hidden;
+  }
+  /* Nút bấm-giữ (nghe chậm): không bôi chọn chữ / hiện menu khi giữ lâu trên điện thoại */
+  .press {
+    @apply select-none [-webkit-touch-callout:none];
   }
   kbd {
     @apply rounded border border-border bg-card-2 px-1 font-mono text-[10px];
@@ -138,6 +159,10 @@ body {
     transform: translateY(16px) scale(0.97);
     opacity: 0;
   }
+}
+/* Khoảng chừa thanh home (iPhone) ở đáy popup / bảng trượt */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 @media (prefers-reduced-motion: reduce) {
   .sheet-fade,

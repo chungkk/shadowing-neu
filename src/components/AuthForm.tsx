@@ -191,12 +191,17 @@ export default function AuthForm({
 
   return (
     <Frame onClose={onClose}>
-      <div className="relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-black/40 md:grid-cols-2">
+      {/* Popup trên điện thoại: phủ kín màn hình (không viền / bo góc) thay cho hộp nhỏ giữa màn */}
+      <div
+        className={`relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-black/40 md:grid-cols-2 ${
+          onClose ? "max-sm:min-h-dvh max-sm:rounded-none max-sm:border-0" : ""
+        }`}
+      >
         <CloseButton onClose={onClose} />
 
-        <div className="flex flex-col gap-5 p-8 md:p-10">
+        <div className="flex flex-col gap-4 px-5 pt-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-8 md:p-10">
           <div className="text-center">
-            <h1 className="text-3xl font-extrabold">{isLogin ? "Chào mừng trở lại" : "Tạo tài khoản"}</h1>
+            <h1 className="text-2xl font-extrabold sm:text-3xl">{isLogin ? "Chào mừng trở lại" : "Tạo tài khoản"}</h1>
             <p className="mt-2 text-link">
               {isLogin ? "Tiếp tục hành trình luyện nói tiếng Đức của bạn" : "Miễn phí — bắt đầu luyện shadowing ngay"}
             </p>
@@ -261,7 +266,7 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
     <div
       role="dialog"
       aria-modal
-      className="fixed inset-0 z-50 flex overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8"
+      className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain bg-black/70 backdrop-blur-sm sm:p-4 md:p-8"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* m-auto thay cho căn giữa: hộp cao hơn màn hình vẫn cuộn được tới mép trên */}
@@ -271,7 +276,7 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
 }
 
 function CloseButton({ onClose }: { onClose?: () => void }) {
-  const className = "btn-icon absolute top-3 right-3 z-10 text-link";
+  const className = "btn-icon absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-10 text-link";
   if (onClose) {
     return (
       <button type="button" title="Đóng" className={className} onClick={onClose}>

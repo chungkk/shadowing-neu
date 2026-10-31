@@ -25,12 +25,16 @@ export default function YouTubeUrlForm() {
     >
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
-          className="input flex-1"
+          className="input min-w-0 flex-1"
           placeholder="Dán link YouTube… (https://www.youtube.com/watch?v=…)"
+          inputMode="url"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className="btn btn-primary px-6" disabled={pending}>
+        <button className="btn btn-primary px-6 py-3" disabled={pending}>
           {pending ? "Đang lấy phụ đề…" : "Bắt đầu"}
         </button>
       </div>

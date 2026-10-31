@@ -27,7 +27,7 @@ export default function SettingsForms({
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
-      <form action={profileAction} className="card flex flex-col gap-3 p-6">
+      <form action={profileAction} className="card flex flex-col gap-3 p-4 sm:p-6">
         <h2 className="flex items-center gap-2 text-lg font-extrabold">
           <UserRound className="size-5 text-link" /> Thông tin cá nhân
         </h2>
@@ -54,7 +54,7 @@ export default function SettingsForms({
       </form>
 
       {/* key: form tự xoá trắng sau khi đổi thành công */}
-      <form key={pw.ok} action={pwAction} className="card flex flex-col gap-3 p-6">
+      <form key={pw.ok} action={pwAction} className="card flex flex-col gap-3 p-4 sm:p-6">
         <h2 className="flex items-center gap-2 text-lg font-extrabold">
           <KeyRound className="size-5 text-link" /> {hasPassword ? "Đổi mật khẩu" : "Đặt mật khẩu"}
         </h2>

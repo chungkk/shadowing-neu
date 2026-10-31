@@ -15,10 +15,10 @@ export default async function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <LoginLink href="/login" className="btn">
+        <LoginLink href="/login" className="btn max-sm:px-3">
           Đăng nhập
         </LoginLink>
-        <LoginLink href="/register" mode="register" className="btn btn-primary py-2">
+        <LoginLink href="/register" mode="register" className="btn btn-primary py-2 max-sm:px-3">
           Đăng ký
         </LoginLink>
       </div>
@@ -26,9 +26,9 @@ export default async function UserMenu() {
   }
   return (
     <Link href="/settings" title="Cài đặt tài khoản" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-white/5">
-      {user.role === "admin" && <span className="pill bg-amber/15 text-amber">ADMIN</span>}
-      <span className="max-w-40 truncate font-bold">{user.name}</span>
-      <div className="flex size-10 items-center justify-center rounded-full bg-amber text-lg font-extrabold text-sidebar">
+      {user.role === "admin" && <span className="pill bg-amber/15 text-amber max-sm:hidden">ADMIN</span>}
+      <span className="max-w-40 truncate font-bold max-sm:max-w-28 max-[380px]:hidden">{user.name}</span>
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber text-lg font-extrabold text-sidebar sm:size-10">
         {user.name.trim()[0]?.toUpperCase() ?? "?"}
       </div>
     </Link>

@@ -47,16 +47,18 @@ export default function TranscriptList({ videos }: { videos: SavedVideo[] }) {
                 {v.updatedAt && <span>lưu {new Date(v.updatedAt).toLocaleDateString("vi-VN")}</span>}
               </div>
             </div>
-            <Link href={`/watch/${v.videoId}`} className="btn">
-              Xem
-            </Link>
-            <Link href={`/admin/transcripts/${v.videoId}`} className="btn">
-              Sửa
-            </Link>
-            <DeleteButton
-              action={removeTranscripts.bind(null, v.videoId)}
-              confirmText={`Xoá phụ đề đã lưu của “${v.title}”? Lần sau có người mở, app sẽ lấy lại từ YouTube / Whisper.`}
-            />
+            <div className="flex gap-2 max-sm:basis-full max-sm:justify-end">
+              <Link href={`/watch/${v.videoId}`} className="btn">
+                Xem
+              </Link>
+              <Link href={`/admin/transcripts/${v.videoId}`} className="btn">
+                Sửa
+              </Link>
+              <DeleteButton
+                action={removeTranscripts.bind(null, v.videoId)}
+                confirmText={`Xoá phụ đề đã lưu của “${v.title}”? Lần sau có người mở, app sẽ lấy lại từ YouTube / Whisper.`}
+              />
+            </div>
           </div>
         ))}
         {!shown.length && (

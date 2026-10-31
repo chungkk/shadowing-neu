@@ -17,7 +17,7 @@ export function SectionHeader({ title, count, children }: { title: string; count
         {title}
         {count !== undefined && <span className="text-base font-bold text-muted">{count}</span>}
       </h2>
-      {children && <div className="sm:ml-auto">{children}</div>}
+      {children && <div className="min-w-0 max-sm:w-full sm:ml-auto">{children}</div>}
     </div>
   );
 }
@@ -26,7 +26,7 @@ function LessonCard({ l }: { l: Item }) {
   return (
     <Link
       href={`/lesson/${l.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent active:scale-[0.99]"
     >
       <div className="relative aspect-video overflow-hidden bg-black">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -41,7 +41,7 @@ function LessonCard({ l }: { l: Item }) {
           <Headphones className="size-3.5" /> {l.sentences} câu
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
         <div className="flex items-start gap-2">
           <h3 className="line-clamp-2 flex-1 font-extrabold leading-snug">{l.title}</h3>
           <LevelBadge level={l.level} className="shrink-0" />
@@ -76,14 +76,15 @@ export default function LessonGrid({ lessons }: { lessons: Item[] }) {
   );
 
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-4 sm:gap-5">
       <SectionHeader title="Thư viện bài học" count={lessons.length}>
-        <div className="flex flex-wrap gap-2">
+        {/* Điện thoại: 1 hàng cuộn ngang sát mép màn hình thay vì xuống nhiều dòng */}
+        <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
           {chip(null, lessons.length)}
           {levels.map((g) => chip(g.level, g.count))}
         </div>
       </SectionHeader>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {shown.map((l) => (
           <LessonCard key={l.id} l={l} />
         ))}

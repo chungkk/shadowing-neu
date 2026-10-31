@@ -12,8 +12,8 @@ async function Dashboard() {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <h1 className="flex-1 text-2xl font-extrabold">Bài học ({lessons.length})</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="flex-1 text-2xl font-extrabold max-sm:basis-full">Bài học ({lessons.length})</h1>
         <Link href="/admin/transcripts" className="btn">
           Phụ đề đã lưu
         </Link>
@@ -27,7 +27,7 @@ async function Dashboard() {
 
       <div className="card divide-y divide-border p-0">
         {lessons.map((l) => (
-          <div key={l.id} className="flex items-center gap-3 p-3">
+          <div key={l.id} className="flex flex-wrap items-center gap-3 p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://i.ytimg.com/vi/${l.videoId}/default.jpg`} alt="" className="h-12 w-20 rounded-lg object-cover" />
             <div className="min-w-0 flex-1">
@@ -37,21 +37,24 @@ async function Dashboard() {
                 <span>{l.segmentCount} câu</span>
               </div>
             </div>
-            <form action={toggleLessonPublished.bind(null, l.id, !l.published)}>
-              <button
-                title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
-                className={`btn ${l.published ? "text-accent" : "text-muted"}`}
-              >
-                {l.published ? "● Đã đăng" : "○ Nháp"}
-              </button>
-            </form>
-            <Link href={`/lesson/${l.id}`} className="btn">
-              Xem
-            </Link>
-            <Link href={`/admin/${l.id}`} className="btn">
-              Sửa
-            </Link>
-            <DeleteButton action={removeLesson.bind(null, l.id)} />
+            {/* Điện thoại: các nút xuống hàng riêng dưới tiêu đề */}
+            <div className="flex flex-wrap gap-2 max-sm:basis-full max-sm:justify-end">
+              <form action={toggleLessonPublished.bind(null, l.id, !l.published)}>
+                <button
+                  title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
+                  className={`btn ${l.published ? "text-accent" : "text-muted"}`}
+                >
+                  {l.published ? "● Đã đăng" : "○ Nháp"}
+                </button>
+              </form>
+              <Link href={`/lesson/${l.id}`} className="btn">
+                Xem
+              </Link>
+              <Link href={`/admin/${l.id}`} className="btn">
+                Sửa
+              </Link>
+              <DeleteButton action={removeLesson.bind(null, l.id)} />
+            </div>
           </div>
         ))}
         {!lessons.length && <p className="p-6 text-center text-sm text-muted">Chưa có bài nào. Bấm “+ Bài mới”.</p>}

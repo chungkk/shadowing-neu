@@ -146,7 +146,13 @@ export default function WordPopup({
       }
     };
     window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
+    // Khoá cuộn trang phía sau (điện thoại: vuốt trong bảng không kéo theo trang)
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      document.body.style.overflow = overflow;
+    };
   }, [word, onClose]);
 
   if (!word) return null;
@@ -167,24 +173,24 @@ export default function WordPopup({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={word}>
       <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={close} aria-label="Đóng" />
-      <div className="sheet-up relative flex max-h-[85vh] w-full max-w-[640px] flex-col rounded-t-[28px] border-t border-border bg-card md:max-h-[80vh] md:rounded-[28px] md:border">
+      <div className="sheet-up relative flex max-h-[88dvh] w-full max-w-[640px] flex-col rounded-t-[28px] border-t border-border bg-card md:max-h-[80vh] md:rounded-[28px] md:border">
         <div className="mx-auto mt-2 h-1.5 w-9 rounded-full bg-border md:hidden" />
 
         {/* Từ + loa + đóng, nghĩa ngay bên dưới */}
         <div className="flex flex-col gap-1.5 border-b border-border px-5 pt-3 pb-3.5 md:pt-5">
           <div className="flex items-center gap-2.5">
-            <h2 className="min-w-0 flex-1 truncate text-[28px] font-extrabold tracking-tight text-amber">{word}</h2>
+            <h2 className="min-w-0 flex-1 truncate text-2xl font-extrabold tracking-tight text-amber sm:text-[28px]">{word}</h2>
             {saved && <span className="rounded-md bg-amber/15 px-2 py-0.5 text-xs font-bold text-amber">Đã lưu</span>}
             <button
               {...speakProps(word)}
               title="Nghe phát âm (giữ hoặc Shift + bấm để nghe chậm)"
-              className={`inline-flex size-[38px] shrink-0 cursor-pointer items-center justify-center rounded-full transition active:scale-90 ${
+              className={`press inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full transition active:scale-90 ${
                 speaking === word ? "bg-accent text-white" : "bg-accent/15 text-accent"
               }`}
             >
               <Volume2 className="size-4" />
             </button>
-            <button onClick={close} title="Đóng (Esc)" className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-card-2 text-muted hover:text-foreground">
+            <button onClick={close} title="Đóng (Esc)" className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-card-2 text-muted hover:text-foreground">
               <X className="size-3.5" strokeWidth={3} />
             </button>
           </div>
@@ -199,7 +205,7 @@ export default function WordPopup({
         </div>
 
         {!loggedIn ? (
-          <div className="m-5 flex flex-col gap-3 rounded-[18px] bg-card-2 p-4">
+          <div className="m-5 mb-[max(1.25rem,env(safe-area-inset-bottom))] flex flex-col gap-3 rounded-[18px] bg-card-2 p-4">
             <div className="flex items-center gap-2 font-extrabold">
               <Lock className="size-3.5 text-amber" /> Xem nghĩa của từ
             </div>
@@ -230,7 +236,7 @@ export default function WordPopup({
               ))}
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-3.5">
+            <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto overscroll-contain px-5 py-3.5">
               {tab === "examples" ? (
                 <>
                   {/* Câu trong video */}
@@ -267,7 +273,7 @@ export default function WordPopup({
                             {s.current && <span className="text-[11px] font-bold text-accent">Trong câu này</span>}
                           </div>
                           {!!s.use && <Rich text={s.use} className="text-sm font-semibold text-amber" />}
-                          <button {...speakProps(plain(s.de))} className="cursor-pointer text-left hover:opacity-80" title="Bấm để nghe · giữ để nghe chậm">
+                          <button {...speakProps(plain(s.de))} className="press cursor-pointer text-left hover:opacity-80" title="Bấm để nghe · giữ để nghe chậm">
                             <Rich text={s.de} className="text-[15px] leading-[22px]" />
                             {!!s.tr && <span className="block text-sm leading-5 text-muted">{s.tr}</span>}
                           </button>
@@ -306,7 +312,7 @@ export default function WordPopup({
                   )}
                   {/* Câu hay gặp với từ này (bấm để nghe) */}
                   {!!d.idiom && (
-                    <button {...speakProps(d.idiom.de)} className="flex cursor-pointer flex-col gap-1 rounded-xl border border-border bg-background p-3 text-left hover:border-accent/50">
+                    <button {...speakProps(d.idiom.de)} className="press flex cursor-pointer flex-col gap-1 rounded-xl border border-border bg-background p-3 text-left hover:border-accent/50">
                       <span className="text-xs font-bold tracking-wider text-muted uppercase">Câu hay gặp</span>
                       <span className="font-bold">„{d.idiom.de}“</span>
                       {!!d.idiom.note && <span className="text-sm leading-5 text-muted">{d.idiom.note}</span>}
@@ -322,7 +328,7 @@ export default function WordPopup({
             </div>
 
             {/* Lưu từ: chưa lưu → nút chính; đã lưu → Bỏ lưu (nút trung tính) */}
-            <div className="px-5 pt-1.5 pb-5">
+            <div className="px-5 pt-1.5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
               <button
                 onClick={save}
                 disabled={saving}
@@ -391,7 +397,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 /** 1 ví dụ: ▶ câu tiếng Đức (từ cần học tô vàng) + bản dịch; bấm để nghe, giữ để nghe chậm */
 function ExampleRow({ label, de, tr, playing, ...press }: { label?: string; de: string; tr?: string; playing: boolean } & ReturnType<typeof holdable>) {
   return (
-    <button {...press} className="flex cursor-pointer gap-2.5 text-left transition hover:opacity-80 active:opacity-60" title="Bấm để nghe · giữ để nghe chậm">
+    <button {...press} className="press flex cursor-pointer gap-2.5 text-left transition hover:opacity-80 active:opacity-60" title="Bấm để nghe · giữ để nghe chậm">
       <span className={label ? "pt-[22px]" : "pt-1"}>
         {playing ? <Volume2 className="size-3.5 text-accent" /> : <Play className="size-3 fill-accent text-accent" />}
       </span>
