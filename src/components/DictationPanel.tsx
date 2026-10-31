@@ -19,6 +19,7 @@ export type DictDraft = { input: string; revealed: number[] };
 /**
  * Nghe chép chính tả 1 câu. Gõ đúng từ nào hiện từ đó ngay; bấm "Kiểm tra" để xem từ sai / thiếu.
  * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
+ * Câu đã xong: bấm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
  */
 export default function DictationPanel({
   text,
@@ -30,6 +31,8 @@ export default function DictationPanel({
   draft,
   saved,
   onDraft,
+  onWord,
+  translation,
 }: {
   text: string;
   level: DictationLevel;
@@ -40,6 +43,8 @@ export default function DictationPanel({
   draft?: DictDraft;
   saved?: { correct: number; total: number };
   onDraft: (d: DictDraft | null) => void;
+  onWord?: (word: string) => void; // câu đã xong: bấm vào từ → bảng tra từ
+  translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
 }) {
   const [input, setInput] = useState(() => draft?.input ?? (saved ? text : ""));
   const [revealed, setRevealed] = useState<Set<number>>(() => new Set(draft?.revealed ?? []));
@@ -47,6 +52,8 @@ export default function DictationPanel({
   const [reported, setReported] = useState(!!saved);
   const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
+  // Số từ phải bấm xem — không tính từ đã gõ đúng ("Hiện tất cả" thêm cả chúng vào `revealed`)
+  const revealedCount = result.words.filter((w) => w.state === "revealed").length;
 
   const finish = (r = result) => {
     if (!reported) {
@@ -114,7 +121,7 @@ export default function DictationPanel({
         />
       </div>
 
-      {/* Ô từng từ: đúng → hiện từ; chưa đúng → gợi ý theo mức độ; 👁 để xem (tính là lỗi) */}
+      {/* Ô từng từ: đúng → hiện từ; chưa đúng → gợi ý theo mức độ; 👁 để xem (tính là lỗi); xong → bấm để tra từ */}
       <div className="flex flex-wrap gap-2">
         {result.words.map((w, k) => {
           const shown = w.state === "correct" || w.state === "revealed";
@@ -130,23 +137,34 @@ export default function DictationPanel({
                   <Eye className="size-4" />
                 </button>
               )}
-              <span
-                className={`min-w-10 rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]} ${
-                  shown ? "mt-5" : ""
-                }`}
-                title={checked && w.typed && !shown ? `Bạn gõ: ${w.typed}` : undefined}
-              >
-                {shown ? w.text : checked && w.typed ? w.typed : hintFor(w.text, level) || "   "}
-              </span>
+              {result.done && onWord ? (
+                <button
+                  className={`mt-5 min-w-10 cursor-pointer rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold transition hover:brightness-125 ${BOX[state]}`}
+                  title="Tra nghĩa từ này"
+                  onClick={() => onWord(w.text)}
+                >
+                  {w.text}
+                </button>
+              ) : (
+                <span
+                  className={`min-w-10 rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]} ${
+                    shown ? "mt-5" : ""
+                  }`}
+                  title={checked && w.typed && !shown ? `Bạn gõ: ${w.typed}` : undefined}
+                >
+                  {shown ? w.text : checked && w.typed ? w.typed : hintFor(w.text, level) || "   "}
+                </span>
+              )}
             </div>
           );
         })}
       </div>
       {checked && result.extra.length > 0 && <p className="text-sm text-red-400">Từ thừa: {result.extra.join(", ")}</p>}
+      {result.done && translation && <p className="text-[15px] leading-relaxed text-muted">{translation}</p>}
       <p className="text-xs text-muted">
         {checked
           ? result.done
-            ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealed.size ? ` · xem ${revealed.size} từ` : ""}.`
+            ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealedCount ? ` · xem ${revealedCount} từ` : ""}.${onWord ? " Bấm vào từ để tra nghĩa." : ""}`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
           : "Từ đã xem sẽ bị tính là lỗi. Enter để kiểm tra."}
       </p>

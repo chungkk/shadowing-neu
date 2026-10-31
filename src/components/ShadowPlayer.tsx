@@ -1,11 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  BookmarkCheck,
-  BookmarkPlus,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -20,20 +17,23 @@ import {
   RotateCcw,
   Settings2,
   Square,
+  Star,
   Volume2,
-  X,
   Zap,
 } from "lucide-react";
-import { saveWord } from "@/app/account-actions";
 import { formatTime, mergeIntoSentences, toSrt, type Segment } from "@/lib/subtitles";
+import { pickDictation, type DictationLevel } from "@/lib/dictation";
+import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
+import { clientApi } from "@/lib/client-api";
+import { prefetchGerman } from "@/lib/speak";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
 import LocalPlayer from "./LocalPlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
-import type { DictationLevel } from "@/lib/dictation";
+import WordPopup from "./WordPopup";
 
 export type Media = { kind: "youtube"; videoId: string } | { kind: "local"; src: string; isVideo: boolean };
 
@@ -70,6 +70,19 @@ const DEFAULTS: Settings = {
 const SETTINGS_KEY = "shadow-settings";
 const NO_SETTINGS: Partial<Settings> = {};
 const RATES = [0.5, 0.75, 0.85, 1, 1.25];
+const LANG = "vi"; // ngôn ngữ nghĩa cụm từ (giao diện web chỉ có tiếng Việt)
+
+type DictResult = { correct: number; total: number };
+/** Tiến độ 1 bài (GET /progress?source=…) — dùng chung với app */
+type Progress = {
+  idx: number;
+  mode: "shadow" | "dictation";
+  dictLevel: string;
+  dictDone: Record<string, DictResult>;
+  seen?: number[];
+  dictPick?: number[];
+};
+type VocabItem = { id: number; word: string; meaning: string };
 
 /** Nhóm nút chọn 1 trong nhiều (Shadowing/Chính tả, Dễ/Vừa/Khó…) */
 function Segmented<T extends string>({
@@ -119,6 +132,52 @@ const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, 
 /** "Guten Tag!" → "****** ***!" (chế độ ẩn chữ) */
 const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "*");
 
+/**
+ * 1 câu tách theo từ: cụm từ cố định tô xanh + gạch chân (bấm → bảng tra cả cụm), từ đã lưu tô vàng.
+ * Không truyền onWord → từ thường chỉ hiện chữ (bấm vào khung câu để phát).
+ */
+function SentenceText({
+  text,
+  phrases,
+  saved,
+  onWord,
+  onPhrase,
+}: {
+  text: string;
+  phrases: Phrase[];
+  saved?: Map<string, number>;
+  onWord?: (word: string) => void;
+  onPhrase?: (p: Phrase) => void;
+}) {
+  const tokens = tokenize(text, phrases);
+  return tokens.map(({ word: w, phrase: p }, k) => {
+    const joined = p >= 0 && tokens[k + 1]?.phrase === p; // gạch chân liền giữa các từ cùng cụm
+    const cw = cleanWord(w);
+    const cls =
+      p >= 0 ? "font-semibold text-phrase underline decoration-phrase/60 underline-offset-4" : saved?.has(cw.toLowerCase()) ? "text-amber" : "";
+    const click = p >= 0 ? onPhrase && (() => onPhrase(phrases[p])) : onWord && cw ? () => onWord(cw) : undefined;
+    return (
+      <Fragment key={k}>
+        {click ? (
+          <button
+            title={p >= 0 ? "Xem cụm từ" : "Tra từ / lưu từ"}
+            onClick={(e) => {
+              e.stopPropagation();
+              click();
+            }}
+            className={`cursor-pointer rounded px-0.5 transition hover:bg-accent/20 ${cls}`}
+          >
+            {w}
+          </button>
+        ) : (
+          <span className={cls}>{w}</span>
+        )}
+        {joined ? <span className={cls}> </span> : " "}
+      </Fragment>
+    );
+  });
+}
+
 export default function ShadowPlayer({
   title,
   level,
@@ -133,7 +192,7 @@ export default function ShadowPlayer({
 }: {
   title: string;
   level?: string;
-  loggedIn?: boolean; // đã đăng nhập → lưu được từ vựng
+  loggedIn?: boolean; // đã đăng nhập → tra từ, cụm từ, lưu từ / đánh dấu câu, đồng bộ tiến độ
   sourceUrl?: string | null; // trang hiện tại (/lesson/1, /watch/…), lưu kèm từ vựng để mở lại
   allowDictation?: boolean; // bài admin bật Chính tả; video tự dán / file trên máy chỉ Shadowing
   media: Media;
@@ -152,20 +211,29 @@ export default function ShadowPlayer({
     () => (settings.merge ? mergeIntoSentences(rawSegments) : rawSegments),
     [rawSegments, settings.merge],
   );
+  const texts = useMemo(() => segments.map((s) => s.text), [segments]);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
   const [panel, setPanel] = useState<"settings" | "keys" | null>(null);
-  const [pick, setPick] = useState<{ idx: number; word: string } | null>(null); // từ đang chọn để lưu / tra
-  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
-  const [dictDone, setDictDone] = useState<Record<number, { correct: number; total: number }>>({}); // câu chính tả đã xong
+  const [picked, setPicked] = useState<{ word: string; context: string; marks?: string[] } | null>(null); // bảng tra từ đang mở
+  const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ / câu đã lưu (chữ thường) → id trong sổ từ vựng
+  const [starFilter, setStarFilter] = useState(false); // Shadowing: chỉ hiện các câu ⭐
+  const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
+  const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
+  const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã xong
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã xem của từng câu (quay lại vẫn còn)
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả
+  const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép
   const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch tiếng Việt
   const [trShown, setTrShown] = useState<Set<number>>(new Set()); // câu bấm "Dịch câu này" khi chưa bật bản dịch
   const [trError, setTrError] = useState("");
   const trPending = useRef<Set<string>>(new Set());
+  const showPhr = loggedIn; // luôn tô sáng cụm từ cố định (AI phân tích, cần tài khoản)
+  const [phr, setPhr] = useState<Record<string, Phrase[]>>({}); // câu → cụm từ trong câu
+  const [phrError, setPhrError] = useState("");
+  const phrPending = useRef<Set<string>>(new Set());
   const recorder = useRecorder();
 
   const handleRef = useRef<PlayerHandle | null>(null);
@@ -174,10 +242,19 @@ export default function ShadowPlayer({
   const gapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const dictation = settings.practice === "dictation";
+  const starredOnly = starFilter && loggedIn && !dictation; // Chính tả luôn theo lượt ngẫu nhiên, không lọc câu ⭐
+  // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu · Chính tả: chỉ các câu của lượt đang làm
+  const starredIdx = useMemo(() => segments.flatMap((s, i) => (saved.has(s.text.toLowerCase()) ? [i] : [])), [segments, saved]);
+  const queue = starredOnly ? starredIdx : dictation ? dictPick : null; // null = mọi câu
+  const inQueue = useMemo(() => queue && new Set(queue), [queue]);
+  const nextIdx = queue ? queue.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
+  const prevIdx = queue ? queue.findLast((i) => i < idx) : idx > 0 ? idx - 1 : undefined;
+
   // Ref luôn giữ giá trị mới nhất để dùng trong interval/timer
-  const live = useRef({ settings, stored, segments, idx, recorder });
+  const live = useRef({ settings, stored, segments, idx, recorder, nextIdx, prevIdx, picked });
   useEffect(() => {
-    live.current = { settings, stored, segments, idx, recorder };
+    live.current = { settings, stored, segments, idx, recorder, nextIdx, prevIdx, picked };
   });
 
   const update = useCallback(
@@ -185,6 +262,11 @@ export default function ShadowPlayer({
     (patch: Partial<Settings>) => setStored({ ...live.current.stored, ...patch }),
     [setStored],
   );
+
+  // Câu vừa được phát → tính là đã nghe (chỉ chọn câu mà không phát thì không tính)
+  const markSeen = useCallback((i: number) => {
+    if (live.current.settings.practice !== "dictation") setSeen((s) => (s.has(i) ? s : new Set(s).add(i)));
+  }, []);
 
   const clearGap = useCallback(() => {
     if (gapTimerRef.current) clearTimeout(gapTimerRef.current);
@@ -200,6 +282,7 @@ export default function ShadowPlayer({
       if (!h || !s) return;
       clearGap();
       setIdx(i);
+      markSeen(i);
       live.current.idx = i;
       h.setRate(settings.rate);
       h.seek(s.start);
@@ -208,7 +291,7 @@ export default function ShadowPlayer({
       stopAtRef.current = settings.mode === "free" && settings.practice !== "dictation" ? null : s.end;
       setPlaying(true);
     },
-    [clearGap],
+    [clearGap, markSeen],
   );
 
   /** Người dùng chủ động chọn câu → reset bộ đếm lặp */
@@ -229,7 +312,7 @@ export default function ShadowPlayer({
 
   // Khi một câu phát xong: lặp lại / nghỉ để nói / sang câu tiếp
   const onSegmentEnd = useCallback(() => {
-    const { settings, segments, idx, recorder } = live.current;
+    const { settings, segments, idx, recorder, nextIdx } = live.current;
     const s = segments[idx];
     // Chính tả: chỉ lặp lại câu theo cài đặt, không nghỉ / ghi âm / tự sang câu (người học đang gõ)
     if (settings.practice === "dictation") {
@@ -245,9 +328,9 @@ export default function ShadowPlayer({
     if (repeatCountRef.current + 1 < settings.repeat) {
       repeatCountRef.current++;
       target = idx;
-    } else if (settings.autoNext && idx + 1 < segments.length) {
+    } else if (settings.autoNext && nextIdx !== undefined) {
       repeatCountRef.current = 0;
-      target = idx + 1;
+      target = nextIdx;
     }
 
     if (!gapMs) {
@@ -284,37 +367,34 @@ export default function ShadowPlayer({
       } else if (settings.mode === "free") {
         let i = segments.findIndex((s, k) => t >= s.start && t < (segments[k + 1]?.start ?? Infinity));
         if (i === -1) i = 0;
-        if (i !== idx) setIdx(i);
+        if (i !== idx) {
+          setIdx(i);
+          markSeen(i);
+        }
       }
     }, 40);
     return () => clearInterval(timer);
-  }, [onSegmentEnd]);
+  }, [onSegmentEnd, markSeen]);
 
   useEffect(() => clearGap, [clearGap]);
 
   /** Dịch câu i và ~20 câu kế tiếp (chỉ những câu chưa có / chưa đang dịch); server có kho bản dịch dùng chung */
   const translateFrom = useCallback(
     async (i: number) => {
-      const texts = segments
+      const list = segments
         .slice(i, i + 20)
         .map((s) => s.text)
         .filter((t) => !(t in tr) && !trPending.current.has(t));
-      if (!texts.length) return;
-      texts.forEach((t) => trPending.current.add(t));
+      if (!list.length) return;
+      list.forEach((t) => trPending.current.add(t));
       try {
-        const res = await fetch("/api/v1/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sentences: texts }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Không dịch được");
+        const data = await clientApi<{ translations: string[] }>("/translate", { method: "POST", body: { sentences: list } });
         setTrError("");
-        setTr((prev) => ({ ...prev, ...Object.fromEntries(texts.map((t, k) => [t, data.translations[k]])) }));
+        setTr((prev) => ({ ...prev, ...Object.fromEntries(list.map((t, k) => [t, data.translations[k]])) }));
       } catch (e) {
         setTrError((e as Error).message);
       } finally {
-        texts.forEach((t) => trPending.current.delete(t));
+        list.forEach((t) => trPending.current.delete(t));
       }
     },
     [segments, tr],
@@ -325,6 +405,32 @@ export default function ShadowPlayer({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- gọi API; setState chỉ chạy sau khi có kết quả
     if (settings.showTranslation) void translateFrom(idx);
   }, [settings.showTranslation, idx, translateFrom]);
+
+  /** Tìm cụm từ cố định cho câu i và ~30 câu kế tiếp (server phân tích 1 lần mỗi câu, dùng chung mọi người) */
+  const phrasesFrom = useCallback(
+    async (i: number) => {
+      const list = segments
+        .slice(i, i + 30)
+        .map((s) => s.text)
+        .filter((x) => !(x in phr) && !phrPending.current.has(x));
+      if (!list.length) return;
+      list.forEach((x) => phrPending.current.add(x));
+      try {
+        const r = await clientApi<{ phrases: Phrase[][] }>("/phrases", { method: "POST", body: { sentences: list, lang: LANG } });
+        setPhrError("");
+        setPhr((prev) => ({ ...prev, ...Object.fromEntries(list.map((x, k) => [x, r.phrases[k] ?? []])) }));
+      } catch (e) {
+        setPhrError((e as Error).message);
+      } finally {
+        list.forEach((x) => phrPending.current.delete(x));
+      }
+    },
+    [segments, phr],
+  );
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gọi API; setState chỉ chạy sau khi có kết quả
+    if (showPhr) void phrasesFrom(idx);
+  }, [showPhr, idx, phrasesFrom]);
 
   // Cuộn danh sách tới câu đang học
   useEffect(() => {
@@ -337,79 +443,215 @@ export default function ShadowPlayer({
       });
   }, [idx]);
 
-  // Phím tắt
+  const toggleHideText = useCallback(() => {
+    update({ hideText: !live.current.settings.hideText });
+    setRevealed(new Set());
+  }, [update]);
+
+  // Phím tắt (tắt khi đang mở bảng tra từ)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest("input, select, textarea")) return;
-      const { idx, segments, recorder } = live.current;
+      const { idx, recorder, nextIdx, prevIdx, picked } = live.current;
+      if (picked) return;
       if (e.code === "Space") {
         e.preventDefault();
         if (playing) pause();
         else go(idx);
-      } else if (e.key === "ArrowLeft") go(Math.max(0, idx - 1));
-      else if (e.key === "ArrowRight") go(Math.min(segments.length - 1, idx + 1));
-      else if (e.key === "r" || e.key === "R") {
+      } else if (e.key === "ArrowLeft") {
+        if (prevIdx !== undefined) go(prevIdx);
+      } else if (e.key === "ArrowRight") {
+        if (nextIdx !== undefined) go(nextIdx);
+      } else if (e.key === "r" || e.key === "R") {
         if (recorder.recordingKey !== null) recorder.stop();
         else void recorder.start(idx);
       } else if (e.key === "p" || e.key === "P") recorder.play(idx);
-      else if (e.key === "h" || e.key === "H") update({ hideText: !live.current.settings.hideText });
+      else if (e.key === "h" || e.key === "H") toggleHideText();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing, pause, go, update]);
+  }, [playing, pause, go, toggleHideText]);
 
   const onReady = useCallback((h: PlayerHandle) => {
     handleRef.current = h;
   }, []);
 
   const current = segments[idx];
-  const picked = pick && pick.idx === idx ? pick.word : null; // sang câu khác thì ẩn
-  const savePicked = async () => {
-    if (!picked || !current) return;
-    const res = await saveWord({
-      word: picked,
-      context: current.text,
-      sourceUrl,
-      sourceTitle: title,
-    });
-    if (res.ok) setSavedWords((s) => new Set(s).add(picked.toLowerCase()));
+
+  // ---- Bấm vào từ / cụm từ: bảng tra từ + lưu từ ----
+  const pickWord = (word: string, context = current?.text ?? "") => {
+    if (!word) return;
+    pause(); // dừng video để xem nghĩa / nghe phát âm; bấm ▶ để phát tiếp
+    setPicked({ word, context });
   };
+  const pickPhrase = (p: Phrase, context: string) => {
+    pause();
+    setPicked({ word: p.base, context, marks: p.parts });
+  };
+  const closePicked = useCallback(() => setPicked(null), []);
+
+  // Ở lại câu một chút → tải sẵn giọng đọc mọi từ / cụm bấm được trong câu, bấm vào là phát ngay
+  const curHidden = dictation ? !dictDone[idx] : settings.hideText && !revealed.has(idx);
+  const curPhrases = current && showPhr && !curHidden ? phr[current.text] : undefined;
+  useEffect(() => {
+    if (!loggedIn || !current || curHidden) return;
+    const timer = setTimeout(() => {
+      const phrases = curPhrases ?? [];
+      const words = tokenize(current.text, phrases).flatMap(({ word, phrase }) => (phrase >= 0 ? [] : [cleanWord(word)]));
+      new Set([...words, ...phrases.map((p) => p.base)]).forEach((w) => w && prefetchGerman(w));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [loggedIn, current, curHidden, curPhrases]);
+
+  // Mở bài → tải sổ từ vựng để tô màu từ đã lưu và hiện sao cho câu đã đánh dấu
+  useEffect(() => {
+    if (!loggedIn) return;
+    let alive = true;
+    clientApi<{ vocab: VocabItem[] }>("/vocab")
+      .then(({ vocab }) => alive && setSaved(new Map(vocab.map((v) => [v.word.toLowerCase(), v.id]))))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [loggedIn]);
+
+  const saveWord = async (word: string, context: string, meaning: string) => {
+    try {
+      const r = await clientApi<{ item?: VocabItem; vocab: VocabItem[] }>("/vocab", {
+        method: "POST",
+        body: { word, context, sourceUrl, sourceTitle: title },
+      });
+      const item = r.item ?? r.vocab.find((v) => v.word.toLowerCase() === word.toLowerCase());
+      if (item) setSaved((s) => new Map(s).set(word.toLowerCase(), item.id));
+      // Điền sẵn nghĩa AI vừa giải thích nếu từ chưa có nghĩa
+      if (item && !item.meaning && meaning) await clientApi(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
+    } catch (e) {
+      alert(`Không lưu được: ${(e as Error).message}`);
+    }
+  };
+  /** Bỏ từ / câu khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
+  const unsave = async (text: string) => {
+    const id = saved.get(text.toLowerCase());
+    if (id === undefined) return;
+    setSaved((s) => {
+      const m = new Map(s);
+      m.delete(text.toLowerCase());
+      return m;
+    });
+    await clientApi(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
+  };
+  // Sao trên mỗi câu: lưu nguyên câu (kèm bản dịch nếu có) vào sổ từ; bấm lại để bỏ
+  const toggleStar = (text: string) => (saved.has(text.toLowerCase()) ? unsave(text) : saveWord(text, "", tr[text] ?? ""));
+
+  /** Chọn câu `i` mà không phát (bấm ▶ để nghe) */
+  const select = (i: number) => {
+    pause();
+    setIdx(i);
+    if (segments[i]) handleRef.current?.seek(segments[i].start);
+  };
+  const prev = () => prevIdx !== undefined && go(prevIdx);
+  const next = () => nextIdx !== undefined && go(nextIdx);
+  /** Câu đang chọn không có sao → về câu ⭐ gần nhất */
+  const toNearestStarred = () => {
+    const i = starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1);
+    if (i !== undefined && i !== idx) select(i);
+  };
+  const toggleStarredOnly = () => {
+    setStarFilter(!starFilter);
+    if (!starFilter) toNearestStarred();
+  };
+
+  // ---- Lượt chính tả ----
+  /** Câu nên mở khi vào lượt: câu đang chọn nếu thuộc lượt, không thì câu đầu tiên chưa chép */
+  const roundStart = (round: number[]) => (round.includes(idx) ? idx : (round.find((k) => !dictDone[k]) ?? round[0]));
+  /** Lượt chính tả đang làm; chưa có → chọn lượt mới */
+  const ensureRound = () => {
+    if (dictPick.length) return dictPick;
+    const round = pickDictation(texts, dictDone);
+    setDictPick(round);
+    return round;
+  };
+  const newRound = () => {
+    const round = pickDictation(texts, dictDone);
+    setDictPick(round);
+    setDictDrafts({});
+    if (round.length) select(round[0]);
+  };
+  const changePractice = (p: Settings["practice"]) => {
+    pause();
+    update({ practice: p });
+    // Về Shadowing đang lọc câu ⭐ → về câu ⭐ gần nhất
+    if (p !== "dictation") return starFilter && toNearestStarred();
+    // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
+    const i = roundStart(ensureRound());
+    if (i !== undefined && i !== idx) select(i);
+  };
+
   // ---- Tiến độ học: lưu theo tài khoản, đồng bộ với app (chỉ khi gộp câu — app luôn gộp nên số câu mới khớp) ----
   const syncProgress = loggedIn && !!sourceUrl && settings.merge;
   const [resumed, setResumed] = useState<number | null>(null);
   const progressLoaded = useRef(false);
   const pendingSave = useRef<object | null>(null);
+  const loadKey = `${sourceUrl}|${segments.length}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const ready = !syncProgress || loadedKey === loadKey; // đã tải xong tiến độ (hoặc không cần tải)
 
   useEffect(() => {
     progressLoaded.current = false;
     if (!syncProgress || !segments.length) return;
     let alive = true;
-    fetch(`/api/v1/progress?source=${encodeURIComponent(sourceUrl!)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { progress: { idx: number; dictDone: Record<string, { correct: number; total: number }> } | null } | null) => {
-        const p = d?.progress;
+    clientApi<{ progress: Progress | null }>(`/progress?source=${encodeURIComponent(sourceUrl!)}`)
+      .then(({ progress: p }) => {
         if (!alive || !p) return;
-        const i = Math.min(p.idx, segments.length - 1);
         const done = Object.fromEntries(Object.entries(p.dictDone).filter(([k]) => Number(k) < segments.length));
+        const dict = allowDictation && p.mode === "dictation";
+        // Lượt chính tả đã lưu (chưa có mà đang ở Chính tả → chọn lượt mới)
+        const pick = (p.dictPick ?? []).filter((k) => k < segments.length);
+        const round = pick.length || !dict ? pick : pickDictation(texts, done);
+        let i = Math.min(p.idx, segments.length - 1);
+        if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
         setIdx(i);
+        setDictPick(round);
+        // Chế độ + mức chính tả học lần trước (trên web hay app) — 1 lần ghi để không đè nhau
+        const patch: Partial<Settings> = {};
+        if (allowDictation) patch.practice = p.mode;
+        if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") patch.dictLevel = p.dictLevel;
+        update(patch);
         setDictDone(done);
+        // Gộp (không ghi đè): có thể đã phát vài câu trong lúc chờ tải
+        setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
       })
       .catch(() => {})
       .finally(() => {
-        if (alive) progressLoaded.current = true;
+        if (!alive) return;
+        progressLoaded.current = true;
+        setLoadedKey(`${sourceUrl}|${segments.length}`);
       });
     return () => {
       alive = false;
     };
-  }, [syncProgress, sourceUrl, segments.length]);
+  }, [syncProgress, sourceUrl, segments.length, texts, allowDictation, update]);
+
+  // Mở bài đang ở Chính tả mà chưa có lượt → chọn lượt đầu tiên
+  const roundInit = useRef(false);
+  useEffect(() => {
+    if (!dictation || !ready || roundInit.current || dictPick.length) return;
+    roundInit.current = true;
+    const round = pickDictation(texts, dictDone);
+    /* eslint-disable react-hooks/set-state-in-effect -- chọn lượt 1 lần khi mở bài ở chế độ Chính tả */
+    setDictPick(round);
+    if (round.length && !round.includes(idx)) setIdx(round.find((k) => !dictDone[k]) ?? round[0]);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [dictation, ready, dictPick.length, texts, dictDone, idx]);
 
   const flushProgress = useCallback(() => {
     const b = pendingSave.current;
     pendingSave.current = null;
     // keepalive: vẫn gửi được khi đang đóng tab / chuyển trang
-    if (b) fetch("/api/v1/progress", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b), keepalive: true }).catch(() => {});
+    if (b) clientApi("/progress", { method: "PUT", body: b, keepalive: true }).catch(() => {});
   }, []);
+  // Lưu sau 1,5 giây kể từ thay đổi cuối (đổi câu, đổi chế độ, làm xong câu chính tả…)
   useEffect(() => {
     if (!syncProgress || !progressLoaded.current || !segments.length) return;
     pendingSave.current = {
@@ -420,10 +662,12 @@ export default function ShadowPlayer({
       mode: settings.practice,
       dictLevel: settings.dictLevel,
       dictDone,
+      seen: [...seen],
+      dictPick,
     };
     const id = setTimeout(flushProgress, 1500);
     return () => clearTimeout(id);
-  }, [syncProgress, sourceUrl, title, idx, segments.length, settings.practice, settings.dictLevel, dictDone, flushProgress]);
+  }, [syncProgress, sourceUrl, title, idx, segments.length, settings.practice, settings.dictLevel, dictDone, seen, dictPick, flushProgress]);
   useEffect(() => {
     window.addEventListener("pagehide", flushProgress);
     return () => {
@@ -431,24 +675,87 @@ export default function ShadowPlayer({
       flushProgress(); // rời trang trong app (chuyển route)
     };
   }, [flushProgress]);
+  // Thông báo "tiếp tục từ câu …" tự ẩn sau 8 giây
+  useEffect(() => {
+    if (resumed === null) return;
+    const id = setTimeout(() => setResumed(null), 8000);
+    return () => clearTimeout(id);
+  }, [resumed]);
 
   const restartProgress = () => {
+    pause();
     pendingSave.current = null;
-    fetch(`/api/v1/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => {});
-    setIdx(0);
+    if (syncProgress) clientApi(`/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => {});
+    const round = dictation ? pickDictation(texts, {}) : [];
+    setIdx(round.length ? round[0] : 0);
+    setSeen(new Set());
     setDictDone({});
+    setDictPick(round);
     setDictDrafts({});
     setDictEpoch((e) => e + 1);
     setResumed(null);
   };
 
   const isRecording = recorder.recordingKey !== null;
-  const dictation = settings.practice === "dictation";
   const doneCount = Object.keys(dictDone).length;
-  const progress = segments.length ? Math.round(((dictation ? doneCount : idx + 1) / segments.length) * 100) : 0;
-  const prev = () => go(Math.max(0, idx - 1));
-  const next = () => go(Math.min(segments.length - 1, idx + 1));
+  const seenCount = new Set(seen).add(idx).size; // server cũng tính câu đang học là đã nghe
+  const progress = segments.length ? Math.round(((dictation ? doneCount : seenCount) / segments.length) * 100) : 0;
   const togglePlay = () => (playing ? pause() : go(idx));
+  const trText = (text: string) =>
+    tr[text] || (text in tr ? "⚠ Chưa dịch được câu này." : trError ? `⚠ ${trError}` : "Đang dịch…");
+
+  // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
+  const roundDone = dictation && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
+  const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
+  const left = segments.length - doneCount;
+
+  const starButton = (text: string, size = "size-5") => {
+    const on = saved.has(text.toLowerCase());
+    return (
+      <button
+        title={on ? "Bỏ đánh dấu câu" : "Đánh dấu câu (lưu vào sổ từ vựng)"}
+        aria-pressed={on}
+        className={`cursor-pointer transition hover:scale-110 ${on ? "text-amber" : "text-muted hover:text-foreground"}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          void toggleStar(text);
+        }}
+      >
+        <Star className={`${size} ${on ? "fill-current" : ""}`} />
+      </button>
+    );
+  };
+  const revealButton = (i: number) => (
+    <button
+      title="Xem / ẩn chữ câu này"
+      className="cursor-pointer text-muted transition hover:text-foreground"
+      onClick={(e) => {
+        e.stopPropagation();
+        setRevealed((r) => {
+          const s = new Set(r);
+          if (!s.delete(i)) s.add(i);
+          return s;
+        });
+      }}
+    >
+      {revealed.has(i) ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+    </button>
+  );
+  /** Cụm từ trong câu: dạng từ điển — nghĩa; bấm để xem giải thích, ví dụ, lưu */
+  const phraseRows = (phrases: Phrase[], context: string, small = false) =>
+    phrases.map((p, k) => (
+      <button
+        key={k}
+        onClick={(e) => {
+          e.stopPropagation();
+          pickPhrase(p, context);
+        }}
+        className={`block cursor-pointer text-left text-muted hover:text-foreground ${small ? "text-xs" : "text-sm"}`}
+      >
+        <b className="text-phrase">{p.base}</b> — {p.meaning}
+      </button>
+    ));
+
   const backLabel = (
     <>
       <ChevronLeft className="size-4" /> Quay lại
@@ -470,25 +777,18 @@ export default function ShadowPlayer({
         )}
         <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold text-link">{title}</h1>
         {level && <LevelBadge level={level} />}
-        {allowDictation && (
-          <Segmented
-            options={PRACTICES}
-            value={settings.practice}
-            onChange={(p) => {
-              pause();
-              update({ practice: p });
-            }}
-          />
-        )}
-        <div className="flex gap-2">
+        {allowDictation && <Segmented options={PRACTICES} value={settings.practice} onChange={changePractice} />}
+        <div className="flex flex-wrap gap-2">
           <button className="btn" onClick={() => update({ hideMedia: !settings.hideMedia })}>
             {settings.hideMedia ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
             {settings.hideMedia ? "Hiện video" : "Ẩn video"}
           </button>
-          <button className="btn" onClick={() => update({ hideText: !settings.hideText })}>
-            {settings.hideText ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            {settings.hideText ? "Hiện chữ" : "Ẩn chữ"}
-          </button>
+          {!dictation && (
+            <button className={`btn ${settings.hideText ? "border-accent text-accent" : ""}`} onClick={toggleHideText} title="Ẩn chữ — chỉ nghe rồi nói theo (H)">
+              {settings.hideText ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+              {settings.hideText ? "Hiện chữ" : "Ẩn chữ"}
+            </button>
+          )}
           <button
             className={`btn ${settings.showTranslation ? "border-accent text-accent" : ""}`}
             onClick={() => update({ showTranslation: !settings.showTranslation })}
@@ -496,6 +796,15 @@ export default function ShadowPlayer({
           >
             <Languages className="size-4" /> Bản dịch
           </button>
+          {loggedIn && !dictation && (
+            <button
+              className={`btn ${starredOnly ? "border-accent text-accent" : ""}`}
+              onClick={toggleStarredOnly}
+              title="Chỉ hiện câu đã đánh dấu ⭐"
+            >
+              <Star className={`size-4 ${starredOnly ? "fill-current" : ""}`} /> Câu ⭐
+            </button>
+          )}
           <button className="btn" onClick={() => downloadSrt(title, segments)} title="Tải phụ đề .srt">
             <Download className="size-4" /> .srt
           </button>
@@ -546,7 +855,7 @@ export default function ShadowPlayer({
 
           {/* Thanh công cụ */}
           <div className="flex items-center gap-1 rounded-2xl border border-border bg-card-2/60 px-2 py-1.5">
-            <button className="btn-icon" title="Câu trước (←)" onClick={prev}>
+            <button className="btn-icon" title="Câu trước (←)" onClick={prev} disabled={prevIdx === undefined}>
               <ChevronLeft className="size-5" />
             </button>
             <button className="btn-icon" title="Phát lại câu" onClick={() => go(idx)}>
@@ -555,7 +864,7 @@ export default function ShadowPlayer({
             <button className="btn-icon" title="Phát / dừng (Space)" onClick={togglePlay}>
               {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
             </button>
-            <button className="btn-icon" title="Câu sau (→)" onClick={next}>
+            <button className="btn-icon" title="Câu sau (→)" onClick={next} disabled={nextIdx === undefined}>
               <ChevronRight className="size-5" />
             </button>
             <div className="flex-1" />
@@ -633,6 +942,10 @@ export default function ShadowPlayer({
                     pause();
                     setIdx(0);
                     setDictDone({});
+                    setDictPick([]);
+                    setSeen(new Set());
+                    setRevealed(new Set());
+                    roundInit.current = false;
                     update({ merge: e.target.checked });
                   }}
                 />
@@ -643,19 +956,36 @@ export default function ShadowPlayer({
           {panel === "keys" && (
             <p className="rounded-2xl border border-border bg-card-2/40 p-4 text-sm leading-7 text-muted">
               <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd>{" "}
-              nghe lại · <kbd>H</kbd> ẩn chữ. Nên đeo tai nghe khi ghi âm.
+              nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
             </p>
           )}
 
-          {dictation && current && (
+          {resumed !== null && (
+            <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
+              <span className="flex-1 font-semibold">
+                Tiếp tục từ câu {resumed + 1}/{segments.length}
+              </span>
+              <button className="cursor-pointer font-bold text-amber hover:underline" onClick={restartProgress}>
+                Học lại từ đầu
+              </button>
+              <button className="cursor-pointer text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng">
+                ✕
+              </button>
+            </div>
+          )}
+
+          {dictation && current && dictPick.length > 0 && (
             <>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <span className="label text-link">
-                  Câu {idx + 1}/{segments.length}
+                  {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
                 </span>
-                <span className="text-xs text-muted">
-                  Đã xong {doneCount}/{segments.length} câu
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted">
+                    Đã xong {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length} câu
+                  </span>
+                  {loggedIn && starButton(current.text, "size-[18px]")}
+                </div>
               </div>
               <DictationPanel
                 key={`${idx}-${settings.merge}-${dictEpoch}`}
@@ -664,9 +994,11 @@ export default function ShadowPlayer({
                 onReplay={() => go(idx)}
                 onNext={next}
                 onDone={(correct, total) => setDictDone((d) => ({ ...d, [idx]: { correct, total } }))}
-                hasNext={idx < segments.length - 1}
+                hasNext={nextIdx !== undefined}
                 draft={dictDrafts[idx]}
                 saved={dictDone[idx]}
+                onWord={(w) => pickWord(w)}
+                translation={settings.showTranslation ? trText(current.text) : undefined}
                 onDraft={(d) =>
                   setDictDrafts((prev) => {
                     const drafts = { ...prev };
@@ -679,75 +1011,63 @@ export default function ShadowPlayer({
             </>
           )}
 
+          {dictation && ready && (roundDone || !dictPick.length) && (
+            <div className="flex flex-col gap-2.5 rounded-2xl border border-accent/35 bg-accent/10 p-4">
+              {roundDone && (
+                <p className="text-base font-extrabold">
+                  🎉 Xong lượt {dictPick.length} câu — đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
+                </p>
+              )}
+              <p className="text-sm text-muted">
+                {left > 0
+                  ? `Cả bài: đã chép ${doneCount}/${segments.length} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.`
+                  : `Bạn đã chép hết ${segments.length} câu của bài này 👏`}
+              </p>
+              <button className="btn btn-primary py-3" onClick={left > 0 ? newRound : restartProgress}>
+                {left > 0 ? (
+                  <>
+                    Lượt mới <ChevronRight className="size-5" />
+                  </>
+                ) : (
+                  "Học lại từ đầu"
+                )}
+              </button>
+            </div>
+          )}
+
           {!dictation && (
             <>
-              {/* Câu hiện tại */}
+              {/* Câu hiện tại: bấm vào từ để tra / lưu, bấm cụm từ (xanh) để xem cả cụm */}
               <div className="flex min-h-48 flex-col gap-3 rounded-2xl border border-border bg-background/60 p-5">
-                <div className="flex items-center justify-between">
-                  <span className="label text-link">
-                    Câu {idx + 1}/{segments.length}
+                <div className="flex items-center gap-3">
+                  <span className="label flex-1 text-link">
+                    {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
                   </span>
                   {current && <span className="text-xs text-muted">{formatTime(current.start)}</span>}
+                  {current && settings.hideText && revealButton(idx)}
+                  {current && loggedIn && !curHidden && starButton(current.text)}
                 </div>
                 {current && (
                   <p
                     className={`text-2xl leading-relaxed font-bold transition ${
-                      settings.hideText ? "cursor-pointer blur-md select-none hover:blur-none" : ""
+                      curHidden ? "cursor-pointer blur-md select-none hover:blur-none" : ""
                     }`}
-                    title={settings.hideText ? "Di chuột để xem" : undefined}
+                    title={curHidden ? "Di chuột để xem · bấm 👁 để hiện câu này" : undefined}
                   >
-                    {current.text.split(" ").map((w, k) => {
-                      const cw = cleanWord(w);
-                      return (
-                        <span key={k}>
-                          <button
-                            title="Lưu từ / tra từ điển"
-                            onClick={() => cw && setPick({ idx, word: cw })}
-                            className={`cursor-pointer rounded px-0.5 transition hover:bg-accent/20 ${
-                              picked === cw ? "bg-accent/25" : ""
-                            } ${savedWords.has(cw.toLowerCase()) ? "text-amber" : ""}`}
-                          >
-                            {w}
-                          </button>{" "}
-                        </span>
-                      );
-                    })}
+                    <SentenceText
+                      text={current.text}
+                      phrases={curPhrases ?? []}
+                      saved={saved}
+                      onWord={(w) => pickWord(w)}
+                      onPhrase={(p) => pickPhrase(p, current.text)}
+                    />
                   </p>
                 )}
-                {picked && (
-                  <div className="flex flex-wrap items-center gap-2 rounded-xl bg-card-2 p-2">
-                    <span className="px-2 text-lg font-extrabold text-amber">{picked}</span>
-                    {!loggedIn ? (
-                      <Link href={`/login?next=${encodeURIComponent(sourceUrl ?? "/")}`} className="btn py-1.5">
-                        <BookmarkPlus className="size-4" /> Đăng nhập để lưu từ
-                      </Link>
-                    ) : savedWords.has(picked.toLowerCase()) ? (
-                      <Link href="/vocab" className="btn py-1.5 text-amber">
-                        <BookmarkCheck className="size-4" /> Đã lưu · xem sổ từ
-                      </Link>
-                    ) : (
-                      <button className="btn py-1.5" onClick={savePicked}>
-                        <BookmarkPlus className="size-4" /> Lưu từ
-                      </button>
-                    )}
-                    <a
-                      className="btn py-1.5"
-                      href={`https://www.dict.cc/?s=${encodeURIComponent(picked)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <BookOpen className="size-4" /> dict.cc
-                    </a>
-                    <button className="btn-icon ml-auto size-8" title="Đóng" onClick={() => setPick(null)}>
-                      <X className="size-4" />
-                    </button>
-                  </div>
+                {current && !curHidden && curPhrases && <div className="flex flex-col gap-1">{phraseRows(curPhrases, current.text)}</div>}
+                {current && !curHidden && showPhr && !curPhrases && (
+                  <p className="text-sm text-muted">{phrError ? `⚠ ${phrError}` : "Đang tìm cụm từ…"}</p>
                 )}
-                {current && (settings.showTranslation || trShown.has(idx)) && (
-                  <p className="text-base text-muted">
-                    {tr[current.text] || (current.text in tr ? "Chưa dịch được câu này." : trError ? "" : "Đang dịch…")}
-                  </p>
-                )}
+                {current && (settings.showTranslation || trShown.has(idx)) && <p className="text-base text-muted">{trText(current.text)}</p>}
                 <div className="mt-auto flex items-center gap-3">
                   {current && !settings.showTranslation && !trShown.has(idx) && (
                     <button
@@ -768,7 +1088,7 @@ export default function ShadowPlayer({
                       href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
                       title={trError}
                     >
-                      {trError || "Chưa dịch được."} Mở Google Dịch ↗
+                      Mở Google Dịch ↗
                     </a>
                   )}
                   <span className="ml-auto text-xs font-bold text-amber">
@@ -804,85 +1124,95 @@ export default function ShadowPlayer({
                 </button>
               </div>
 
-              <button className="btn btn-primary py-3.5 text-base" disabled={idx >= segments.length - 1} onClick={next}>
+              <button className="btn btn-primary py-3.5 text-base" disabled={nextIdx === undefined} onClick={next}>
                 Câu tiếp theo <ChevronRight className="size-5" />
               </button>
             </>
           )}
         </div>
 
-        {/* Cột 3: toàn bộ transcript */}
+        {/* Cột 3: toàn bộ transcript (Chính tả: chỉ các câu của lượt đang làm) */}
         <div className="card flex max-h-[80vh] flex-col gap-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
           <div className="flex items-center justify-between">
-            <span className="label">Transcript</span>
-            <span className="pill bg-card-2 px-3 py-1 text-sm">{progress}%</span>
+            <span className="label">{dictation ? "Lượt chính tả" : starredOnly ? "Câu đã đánh dấu ⭐" : "Transcript"}</span>
+            <span className="pill bg-card-2 px-3 py-1 text-sm" title={dictation ? "Số câu đã chép trong cả bài" : "Số câu đã nghe"}>
+              {progress}%
+            </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-card-2">
             <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
           </div>
-          {resumed !== null && (
-            <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
-              <span className="flex-1">
-                Tiếp tục từ câu {resumed + 1}/{segments.length}
-              </span>
-              <button className="font-bold text-amber hover:underline" onClick={restartProgress}>
-                Học lại từ đầu
-              </button>
-              <button className="text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng">
-                ✕
-              </button>
-            </div>
-          )}
           <div ref={listRef} className="relative -mx-1 flex flex-1 flex-col gap-3 overflow-y-auto px-1 py-1">
-            {segments.map((s, i) => (
-              <div
-                key={i}
-                data-idx={i}
-                onClick={() => go(i)}
-                className={`cursor-pointer rounded-2xl border-2 p-4 transition ${
-                  i === idx ? "border-accent bg-accent/10" : "border-border hover:border-accent/50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="pill bg-card-2 text-foreground">#{i + 1}</span>
-                  <span className="font-mono text-xs text-muted">{formatTime(s.start)}</span>
-                  {dictation && dictDone[i] && (
-                    <span className="pill bg-accent/15 text-accent">
-                      ✓ {dictDone[i].correct}/{dictDone[i].total}
-                    </span>
-                  )}
-                  {recorder.recordings[i] && (
-                    <button
-                      className="ml-auto cursor-pointer text-link hover:text-foreground"
-                      title="Nghe bản ghi của bạn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        recorder.play(i);
-                      }}
-                    >
-                      <Volume2 className="size-5" />
-                    </button>
+            {segments.map((s, i) => {
+              if (inQueue && !inQueue.has(i)) return null;
+              // Chính tả: câu chưa làm thì che chữ; Shadowing: theo nút "Ẩn chữ" (bấm 👁 để xem từng câu)
+              const hidden = dictation ? !dictDone[i] : settings.hideText && !revealed.has(i);
+              const phrases = showPhr && !hidden ? (phr[s.text] ?? []) : [];
+              return (
+                <div
+                  key={i}
+                  data-idx={i}
+                  onClick={() => go(i)}
+                  className={`cursor-pointer rounded-2xl border-2 p-4 transition ${
+                    i === idx ? "border-accent bg-accent/10" : "border-border hover:border-accent/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="pill bg-card-2 text-foreground">#{i + 1}</span>
+                    <span className="font-mono text-xs text-muted">{formatTime(s.start)}</span>
+                    {dictation && dictDone[i] && (
+                      <span className="pill bg-accent/15 text-accent">
+                        ✓ {dictDone[i].correct}/{dictDone[i].total}
+                      </span>
+                    )}
+                    <span className="flex-1" />
+                    {recorder.recordings[i] && (
+                      <button
+                        className="cursor-pointer text-link hover:text-foreground"
+                        title="Nghe bản ghi của bạn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          recorder.play(i);
+                        }}
+                      >
+                        <Volume2 className="size-5" />
+                      </button>
+                    )}
+                    {!dictation && settings.hideText && revealButton(i)}
+                    {loggedIn && !hidden && starButton(s.text, "size-[18px]")}
+                  </div>
+                  <p className={`mt-2 text-sm leading-relaxed ${hidden ? "font-mono tracking-wider text-muted" : ""}`}>
+                    {hidden ? (
+                      mask(s.text)
+                    ) : (
+                      <SentenceText text={s.text} phrases={phrases} saved={i === idx ? saved : undefined} onPhrase={(p) => pickPhrase(p, s.text)} />
+                    )}
+                  </p>
+                  {phrases.length > 0 && <div className="mt-1 flex flex-col gap-0.5">{phraseRows(phrases, s.text, true)}</div>}
+                  {/* Bản dịch: ẩn chữ (Shadowing) vẫn cho xem nghĩa; Chính tả chưa chép thì không lộ */}
+                  {settings.showTranslation && tr[s.text] && !(dictation && hidden) && (
+                    <span className="mt-1 block text-xs text-muted">{tr[s.text]}</span>
                   )}
                 </div>
-                {/* Chính tả: câu chưa làm thì che chữ; shadowing: theo nút "Ẩn chữ" */}
-                {(() => {
-                  const hidden = dictation ? !dictDone[i] : settings.hideText;
-                  return (
-                    <p
-                      className={`mt-2 text-sm leading-relaxed ${hidden ? "font-mono tracking-wider text-muted" : ""}`}
-                    >
-                      {hidden ? mask(s.text) : s.text}
-                      {!hidden && settings.showTranslation && tr[s.text] && (
-                        <span className="mt-1 block text-xs text-muted">{tr[s.text]}</span>
-                      )}
-                    </p>
-                  );
-                })()}
-              </div>
-            ))}
+              );
+            })}
+            {starredOnly && !starredIdx.length && (
+              <p className="mt-6 text-center text-sm text-muted">Chưa có câu nào được đánh dấu ⭐ trong bài này.</p>
+            )}
           </div>
         </div>
       </div>
+
+      <WordPopup
+        word={picked?.word ?? null}
+        context={picked?.context ?? ""}
+        marks={picked?.marks}
+        loggedIn={loggedIn}
+        saved={!!picked && saved.has(picked.word.toLowerCase())}
+        onSave={(meaning) => (picked ? saveWord(picked.word, picked.context, meaning) : Promise.resolve())}
+        onRemove={() => (picked ? unsave(picked.word) : Promise.resolve())}
+        onClose={closePicked}
+      />
     </div>
   );
 }
