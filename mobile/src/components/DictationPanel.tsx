@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
+import { SymbolView } from "expo-symbols";
 import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@shared/dictation";
 import { GEM, Gem, PointBurst } from "./Points";
 import { Button } from "./ui";
@@ -16,6 +17,8 @@ const BOX: Record<WordState | "hint", { border: string; bg: string; fg: string }
   hint: { border: C.border, bg: C.background, fg: C.muted },
 };
 
+const UMLAUTS = ["ä", "ö", "ü", "ß"];
+
 /** Bản nháp 1 câu: chữ đã gõ + các từ đã bấm xem — giữ lại khi chuyển sang câu khác rồi quay về */
 export type DictDraft = { input: string; revealed: number[] };
 
@@ -25,6 +28,7 @@ export type DictDraft = { input: string; revealed: number[] };
  * Câu đã làm xong (`saved`, kể cả lưu trên server từ lần trước) → hiện đủ câu + điểm, có nút "Làm lại";
  * chạm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
  * `onDone` trả về true = câu này được +2 điểm (chép đúng hết lần đầu) → hiệu ứng +2.
+ * Đang gõ: hàng phím ä ö ü ß chèn vào đúng chỗ con trỏ. `autoFocus`: sang câu mới khi bàn phím đang mở → gõ tiếp luôn.
  */
 export function DictationPanel({
   text,
@@ -39,6 +43,7 @@ export function DictationPanel({
   onHint,
   onWord,
   translation,
+  autoFocus,
 }: {
   text: string;
   level: DictationLevel;
@@ -52,6 +57,7 @@ export function DictationPanel({
   onHint?: (n: number) => void; // vừa chạm xem n từ → trừ điểm (chỉ khi có tài khoản)
   onWord: (word: string) => void; // câu đã xong: chạm vào từ → bảng tra từ
   translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
+  autoFocus?: boolean;
 }) {
   const { t } = useI18n();
   const { tablet } = useLayout();
@@ -67,6 +73,10 @@ export function DictationPanel({
   const [burst, setBurst] = useState(false); // hiệu ứng +2 đang chạy
   // Số từ đã bấm xem
   const revealedCount = result.words.filter((w) => w.state === "revealed").length;
+  const [focused, setFocused] = useState(!!autoFocus);
+  // Vị trí con trỏ (để chèn ä ö ü ß đúng chỗ); forceSel: đặt lại con trỏ ngay sau chữ vừa chèn
+  const sel = useRef({ start: input.length, end: input.length });
+  const [forceSel, setForceSel] = useState<{ start: number; end: number }>();
 
   const change = (nextInput: string, nextRevealed: Set<number>) => {
     setInput(nextInput);
@@ -100,6 +110,14 @@ export function DictationPanel({
     change(input, new Set([...revealed, ...fresh]));
     onHint?.(fresh.length);
   };
+  const insert = (ch: string) => {
+    const { start, end } = sel.current;
+    const a = Math.min(start, input.length);
+    const b = Math.min(end, input.length);
+    change(input.slice(0, a) + ch + input.slice(b), revealed);
+    sel.current = { start: a + ch.length, end: a + ch.length };
+    setForceSel(sel.current);
+  };
   const check = () => setChecked(true);
   const submit = () => (result.done ? onNext() : check());
 
@@ -116,6 +134,14 @@ export function DictationPanel({
           value={input}
           onChangeText={(v) => change(v, revealed)}
           onSubmitEditing={submit}
+          autoFocus={autoFocus}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          selection={forceSel}
+          onSelectionChange={(e) => {
+            sel.current = e.nativeEvent.selection;
+            if (forceSel) setForceSel(undefined);
+          }}
           submitBehavior="submit"
           returnKeyType={result.done ? "next" : "done"}
           placeholder={t("dict.placeholder")}
@@ -126,6 +152,31 @@ export function DictationPanel({
           multiline
           style={{ color: C.text, fontSize: 18, minHeight: 60 }}
         />
+        {/* Đang gõ: phím chữ Đức (bàn phím tiếng Việt / tiếng Anh không có sẵn) */}
+        {focused && !result.done && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            {UMLAUTS.map((ch) => (
+              <Pressable
+                key={ch}
+                onPress={() => insert(ch)}
+                accessibilityLabel={ch}
+                style={({ pressed }) => ({
+                  width: 40,
+                  height: 34,
+                  borderRadius: 9,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: pressed ? C.border : C.card2,
+                })}
+              >
+                <Text style={{ color: C.text, fontSize: 17, fontWeight: "700" }}>{ch}</Text>
+              </Pressable>
+            ))}
+            <Text style={{ flex: 1, color: C.muted, fontSize: 12, textAlign: "right" }} numberOfLines={1}>
+              {t("dict.umlautTip")}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -133,16 +184,31 @@ export function DictationPanel({
         {result.words.map((w, k) => {
           const shown = w.state === "correct" || w.state === "revealed";
           const b = BOX[shown || checked ? w.state : "hint"];
+          const label = shown ? w.text : checked && w.typed ? w.typed : hintFor(w.text, level);
           return (
             <Pressable
               key={k}
               disabled={shown && !result.done}
               onPress={() => (result.done ? onWord(w.text) : reveal([k]))}
-              style={{ borderColor: b.border, backgroundColor: b.bg, borderWidth: 2, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}
+              accessibilityLabel={label || t("dict.hiddenWord")}
+              style={{
+                borderColor: b.border,
+                backgroundColor: b.bg,
+                borderWidth: 2,
+                borderRadius: 10,
+                paddingHorizontal: 8,
+                minHeight: 32,
+                minWidth: 40,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <Text style={{ color: b.fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>
-                {shown ? w.text : checked && w.typed ? w.typed : hintFor(w.text, level) || "👁"}
-              </Text>
+              {label ? (
+                <Text style={{ color: b.fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>
+              ) : (
+                // Khó: không gợi ý gì — chỉ biểu tượng "chạm để xem"
+                <SymbolView name="eye" size={15} tintColor={C.muted} />
+              )}
             </Pressable>
           );
         })}

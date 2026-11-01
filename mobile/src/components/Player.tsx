@@ -116,6 +116,40 @@ function Chip({ icon, iconOn, on, onPress, label, hint }: { icon: SFSymbol; icon
     </Pressable>
   );
 }
+/** Nhóm chọn 1 trong n cùng kiểu Chip: icon + các lựa chọn, lựa chọn đang chọn có nền xanh */
+function ChipGroup<T extends string>({
+  icon,
+  hint,
+  options,
+  value,
+  onChange,
+}: {
+  icon: SFSymbol;
+  hint: string;
+  options: readonly (readonly [T, string])[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View
+      accessibilityLabel={hint}
+      style={{ height: 34, borderRadius: 17, borderWidth: 1, borderColor: C.border, backgroundColor: C.card2, flexDirection: "row", alignItems: "center", paddingLeft: 10, paddingRight: 2, gap: 2 }}
+    >
+      <SymbolView name={icon} size={14} tintColor={C.amber} weight="semibold" style={{ marginRight: 4 }} />
+      {options.map(([v, label]) => (
+        <Pressable
+          key={v}
+          onPress={() => onChange(v)}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: v === value }}
+          style={{ height: 28, paddingHorizontal: 11, borderRadius: 14, justifyContent: "center", backgroundColor: v === value ? C.accent : "transparent" }}
+        >
+          <Text style={{ color: v === value ? "#fff" : C.muted, fontSize: 14, fontWeight: "700" }}>{label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 const mask = (s: string) => s.replace(/[\p{L}\p{N}]/gu, "*");
 const cleanWord = (w: string) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 
@@ -201,8 +235,10 @@ export default function Player({
     if (!live.current.dictation) setSeen((s) => (s.has(i) ? s : new Set(s).add(i)));
   }, []);
 
+  // Chính tả luôn dừng ở cuối câu: phát lố sang câu sau là lộ đáp án, và câu đang chép không được nhảy theo video
+  const stopsAtEnd = autoStop || dictation;
   const playSegment = useCallback(
-    (i: number, stop = autoStop) => {
+    (i: number, stop = stopsAtEnd) => {
       const s = segments[i];
       if (!s) return;
       setIdx(i);
@@ -211,14 +247,14 @@ export default function Player({
       stopAt.current = stop ? s.end : null;
       setPlaying(true);
     },
-    [segments, autoStop, markSeen],
+    [segments, stopsAtEnd, markSeen],
   );
   // Giữ stopAt: phát tiếp sẽ dừng đúng cuối câu đang dở
   const pause = () => setPlaying(false);
   // Đang dở câu → phát tiếp từ chỗ dừng; đã hết câu → phát lại câu hiện tại
   const togglePlay = () => {
     if (playing) pause();
-    else if (stopAt.current !== null || !autoStop) {
+    else if (stopAt.current !== null || !stopsAtEnd) {
       markSeen(idx);
       setPlaying(true);
     } else playSegment(idx);
@@ -677,35 +713,53 @@ export default function Player({
   // Tuỳ chọn hiển thị (ẩn chữ · bản dịch · tự dừng · câu đã lưu): cố định dưới video, không cuộn theo danh sách câu.
   // Cùng 1 kiểu nút có chữ; màn hẹp / chữ dài thì cuộn ngang
   const modeBar = (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      style={{ flexGrow: 0, backgroundColor: C.background, borderBottomWidth: 1, borderBottomColor: C.border }}
-      contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}
-    >
-      {/* Shadowing: ẩn chữ tiếng Đức — nghe rồi nói theo, bấm 👁 trên từng câu để xem */}
-      {!dictation && (
-        <Chip
-          icon="eye.slash"
-          on={hideText}
-          label={t("player.chipHide")}
-          hint={t("player.hideText")}
-          onPress={() => {
-            setHideText((v) => !v);
-            setRevealed(new Set());
-          }}
-        />
-      )}
-      {/* Bản dịch dưới mỗi câu */}
-      <Chip icon="translate" on={showTr} label={t("player.translation")} hint={t("player.translation")} onPress={toggleTranslation} />
-      {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video */}
-      <Chip icon="pause.circle" iconOn="pause.circle.fill" on={autoStop} label={t("player.chipAutoStop")} hint={t("player.autoStop")} onPress={toggleAutoStop} />
-      {/* Shadowing: chỉ hiện các câu đã đánh dấu ⭐ */}
-      {!!user && !dictation && (
-        <Chip icon="star" iconOn="star.fill" on={starredOnly} label={t("player.chipStarred")} hint={t("player.starredOnly")} onPress={toggleStarredOnly} />
-      )}
-    </ScrollView>
+    <View style={{ backgroundColor: C.background, borderBottomWidth: 1, borderBottomColor: C.border }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        style={{ flexGrow: 0, flexShrink: 0 }}
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10, alignItems: "center" }}
+      >
+        {/* Shadowing: ẩn chữ tiếng Đức — nghe rồi nói theo, bấm 👁 trên từng câu để xem */}
+        {!dictation && (
+          <Chip
+            icon="eye.slash"
+            on={hideText}
+            label={t("player.chipHide")}
+            hint={t("player.hideText")}
+            onPress={() => {
+              setHideText((v) => !v);
+              setRevealed(new Set());
+            }}
+          />
+        )}
+        {/* Chính tả: mức gợi ý trong các ô từ (Dễ: chữ đầu · Vừa: số chữ · Khó: không gợi ý) */}
+        {dictation && (
+          <ChipGroup
+            icon="lightbulb"
+            hint={t("player.hintLevel")}
+            options={[
+              ["easy", t("player.easy")],
+              ["normal", t("player.normal")],
+              ["hard", t("player.hard")],
+            ]}
+            value={dictLevel}
+            onChange={setDictLevel}
+          />
+        )}
+        {/* Bản dịch dưới mỗi câu (Chính tả: hiện sau khi chép xong câu) */}
+        <Chip icon="translate" on={showTr} label={t("player.translation")} hint={t("player.translation")} onPress={toggleTranslation} />
+        {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video. Chính tả luôn tự dừng */}
+        {!dictation && (
+          <Chip icon="pause.circle" iconOn="pause.circle.fill" on={autoStop} label={t("player.chipAutoStop")} hint={t("player.autoStop")} onPress={toggleAutoStop} />
+        )}
+        {/* Shadowing: chỉ hiện các câu đã đánh dấu ⭐ */}
+        {!!user && !dictation && (
+          <Chip icon="star" iconOn="star.fill" on={starredOnly} label={t("player.chipStarred")} hint={t("player.starredOnly")} onPress={toggleStarredOnly} />
+        )}
+      </ScrollView>
+    </View>
   );
 
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
@@ -741,19 +795,14 @@ export default function Player({
           onLayout={(e) => (dictPanelY.current.block = e.nativeEvent.layout.y)}
           style={{ gap: 14, transform: [{ translateX: swipeX }] }}
         >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Label color={C.amber}>
-              {queue?.includes(idx)
-                ? t("player.roundOf", { i: queue.indexOf(idx) + 1, n: queue.length, k: idx + 1 })
-                : t("player.sentenceOf", { i: idx + 1, n: segments.length })}
-            </Label>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Label color={C.amber}>
+                {queue?.includes(idx) ? t("player.roundOf", { i: queue.indexOf(idx) + 1, n: queue.length }) : t("player.sentenceOf", { i: idx + 1, n: segments.length })}
+              </Label>
+              <Text style={{ color: C.muted, fontSize: 12 }}>#{idx + 1}</Text>
+              <View style={{ flex: 1 }} />
               {points !== null && <PointsPill total={points} />}
-              <Text style={{ color: C.muted, fontSize: 12 }}>
-                {queue
-                  ? t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })
-                  : t("player.doneOf", { d: doneCount, n: segments.length })}
-              </Text>
               {/* Đánh dấu câu đang chép (giống sao trên từng câu ở Shadowing) */}
               {!!user && (
                 <Pressable
@@ -770,19 +819,25 @@ export default function Player({
                 </Pressable>
               )}
             </View>
+            {/* Tiến độ lượt: mỗi câu 1 vạch — xanh: đúng hết · vàng: còn lỗi · trắng: câu đang chép. Chạm để nghe câu đó */}
+            {!!queue?.includes(idx) && (
+              <View style={{ flexDirection: "row", gap: 4 }} accessibilityLabel={t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })}>
+                {queue.map((k) => {
+                  const r = dictDone[k];
+                  const color = r ? (r.correct === r.total ? C.accent : C.amber) : k === idx ? C.text : C.border;
+                  return (
+                    <Pressable key={k} onPress={() => k !== idx && playSegment(k)} hitSlop={{ top: 10, bottom: 10 }} style={{ flex: 1, paddingVertical: 2 }}>
+                      <View style={{ height: 5, borderRadius: 3, backgroundColor: color, opacity: k === idx && !r ? 1 : 0.9 }} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </View>
-          <Segmented
-            options={[
-              ["easy", t("player.easy")],
-              ["normal", t("player.normal")],
-              ["hard", t("player.hard")],
-            ]}
-            value={dictLevel}
-            onChange={setDictLevel}
-          />
           <View onLayout={(e) => (dictPanelY.current.panel = e.nativeEvent.layout.y)}>
             <DictationPanel
               key={`${idx}-${dictEpoch}`}
+              autoFocus={kbOpen}
               text={current.text}
               level={dictLevel}
               onReplay={() => playSegment(idx)}
