@@ -58,13 +58,15 @@ async function squareJpeg(file: File): Promise<Blob> {
 
 const joined = (createdAt: string) => createdAt.slice(0, 10).split("-").reverse().join("/");
 
-/** Trang cài đặt: hồ sơ + ảnh đại diện · thông tin · mật khẩu · đăng xuất / xoá tài khoản */
+/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · đăng xuất / xoá tài khoản */
 export default function SettingsForms({
   user,
   fixedAdmin,
+  stats,
 }: {
   user: { id: number; name: string; email: string; admin: boolean; createdAt: string; avatarAt: number | null; hasPassword: boolean };
   fixedAdmin: boolean; // admin chính: email + mật khẩu lấy từ biến môi trường
+  stats?: ReactNode; // khung thành tích học tập (kim cương, sổ từ…)
 }) {
   const { hasPassword } = user;
   const [profile, profileAction, savingProfile] = useActionState(updateProfile, {});
@@ -138,6 +140,8 @@ export default function SettingsForms({
           {avatarError && <p className="text-sm text-red-400">{avatarError}</p>}
         </div>
       </section>
+
+      {stats}
 
       {/* Thông tin cá nhân */}
       <form action={profileAction}>
