@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -5,7 +6,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { ErrorText, styles } from "@/components/ui";
-import { api, getVocabVersion, type DeckSummary } from "@/lib/api";
+import { api, deckCover, getVocabVersion, type DeckSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -77,6 +78,42 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
       ) : (
         <SymbolView name="chevron.right" size={15} tintColor={C.muted} />
       )}
+    </Pressable>
+  );
+}
+
+/** Thẻ game từ vựng (Mưa từ vựng · Đào vàng) → màn chơi /game/<variant> */
+const GAMES = [
+  { variant: "rain", bg: "linear-gradient(to bottom, #0a1622, #0c2033, #0b2a40)", art: ["1f327-fe0f", "26f5"], tone: "#67e8f9" },
+  { variant: "gold", bg: "linear-gradient(to bottom, #2a3442 0%, #2a3442 34%, #6b4520 34%, #2e1c0b 100%)", art: ["1f477", "1fa99"], tone: C.amber },
+] as const;
+
+function GameCard({ game, width }: { game: (typeof GAMES)[number]; width: number }) {
+  const { t } = useI18n();
+  const emoji = (code: string) => ({ uri: deckCover(`/emoji/${code}.webp`) });
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: "/game/[variant]", params: { variant: game.variant } })}
+      accessibilityRole="button"
+      accessibilityLabel={t(`games.${game.variant}.title`)}
+      style={({ pressed }) => ({ width, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: pressed ? C.card2 : C.card, overflow: "hidden" })}
+    >
+      <View style={{ height: 84, backgroundImage: game.bg, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <Image source={emoji(game.art[0])} style={{ width: 52, height: 52 }} />
+        <Image source={emoji(game.art[1])} style={{ width: 34, height: 34, marginTop: 24 }} />
+      </View>
+      <View style={{ padding: 10, gap: 4 }}>
+        <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }} numberOfLines={1}>
+          {t(`games.${game.variant}.title`)}
+        </Text>
+        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 17, minHeight: 51 }} numberOfLines={3}>
+          {t(`games.${game.variant}.desc`)}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+          <SymbolView name="play.fill" size={11} tintColor={game.tone} />
+          <Text style={{ color: game.tone, fontSize: 13, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 }}>{t("games.play")}</Text>
+        </View>
+      </View>
     </Pressable>
   );
 }
@@ -194,6 +231,18 @@ export default function VocabTab() {
           )}
         </View>
         <NotebookBanner notebook={notebook} loggedIn={!!user} />
+        {/* Trò chơi luyện từ (chơi được cả khi chưa đăng nhập) */}
+        <View style={{ gap: 12, marginTop: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <SymbolView name="gamecontroller.fill" size={20} tintColor={C.amber} />
+            <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>{t("games.title")}</Text>
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: GAP }}>
+            {GAMES.map((g) => (
+              <GameCard key={g.variant} game={g} width={cardW} />
+            ))}
+          </View>
+        </View>
         <ErrorText>{error}</ErrorText>
         {sections.map((s) => (
           <View key={s.title} style={{ gap: 12, marginTop: 8 }}>

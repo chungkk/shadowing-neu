@@ -21,10 +21,30 @@ import {
 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { fullWord } from "@/lib/deck-study";
-import { shuffle } from "@/lib/review";
+import {
+  MILESTONE_GOAL,
+  REEL,
+  RULES,
+  backspace,
+  newGame,
+  nextMilestone,
+  press,
+  reelAt,
+  scoreHit,
+  snapshot,
+  step,
+  untarget,
+  type Drop,
+  type Game,
+  type GameWord,
+  type Phase,
+  type Topic,
+  type Variant,
+  type View,
+} from "@/lib/falling-words";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { DeckMenu, GameHeader, ScreenKeyboard, sameLetter, useCoarsePointer, type DeckOption, type GameWord, type Tone, type Topic } from "./GameParts";
+import { DeckMenu, GameHeader, ScreenKeyboard, useCoarsePointer, type DeckOption, type Tone } from "./GameParts";
 
 /**
  * Game chữ rơi, 2 biến thể:
@@ -38,44 +58,27 @@ import { DeckMenu, GameHeader, ScreenKeyboard, sameLetter, useCoarsePointer, typ
  * chỉ chữ đúng mới được ghi — gõ sai thì giọt rung, không phải xoá. Sai 2 lần cùng chỗ → lộ chữ kế tiếp.
  */
 
-export type Variant = "rain" | "gold";
+export type { Variant };
 
-const REEL = 1.5; // giây "gold": móc thả xuống (REEL_OUT phần đầu) rồi kéo cục vàng lên tới ròng rọc
-const REEL_OUT = 0.3;
-
+/** Luật chơi (lib/falling-words, dùng chung với app) + phần hiển thị của từng biến thể */
 const CONFIG = {
   rain: {
-    store: "wordrain", // tiền tố khoá localStorage
+    ...RULES.rain, // store: tiền tố khoá localStorage
     title: "Mưa từ vựng",
     subtitle: "Đọc nghĩa đang rơi, nhớ lại từ tiếng Đức và gõ nó",
     icon: CloudRain,
     tone: "cyan",
-    listen: false,
-    lives: 4,
-    slower: 1, // hệ số thời gian rơi
-    spawnBase: 3.6, // giây giữa 2 giọt ở cấp 1
-    spawnMin: 1.6,
-    drops: (level: number) => Math.min(2 + level, 6), // số giọt tối đa trên sân
     dropW: "min(15rem, 70%)",
-    fade: 0.85, // giây hiệu ứng nổ / chạm đáy trước khi xoá giọt (đủ cho .rain-hit, .rain-miss)
   },
   gold: {
-    store: "spellingbee", // giữ khoá cũ (game từng tên "Ong đánh vần") → không mất kỷ lục, tiến độ mốc
+    ...RULES.gold,
     title: "Đào vàng",
     subtitle: "Nghe từ, gõ đúng chính tả để quăng móc kéo vàng lên",
     icon: Pickaxe,
     tone: "amber",
-    listen: true,
-    lives: 3,
-    slower: 1.4, // phải nghe rồi mới gõ → rơi chậm hơn, thưa hơn
-    spawnBase: 6,
-    spawnMin: 3.5,
-    drops: (level: number) => (level < 3 ? 1 : level < 6 ? 2 : 3), // cấp 1–2: từng từ một
     dropW: "min(11rem, 60%)",
-    fade: REEL, // móc thả xuống + kéo lên
   },
-} satisfies Record<Variant, { store: string; title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; listen: boolean; lives: number; slower: number; spawnBase: number; spawnMin: number; drops: (level: number) => number; dropW: string; fade: number }>;
-type Config = (typeof CONFIG)[Variant];
+} satisfies Record<Variant, (typeof RULES)[Variant] & { title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; dropW: string }>;
 
 /** Màu của từng biến thể (giọt, ô chữ, HUD, lớp phủ) */
 const THEME = {
@@ -109,46 +112,6 @@ const THEME = {
 } satisfies Record<Variant, Record<string, string>>;
 type Theme = (typeof THEME)[Variant];
 
-type Drop = { id: number; w: GameWord; x: number /* 0 = sát trái, 1 = sát phải */; y: number; speed: number; state: "fall" | "hit" | "miss" | "gone"; at: number; points: number };
-type Game = {
-  cfg: Config;
-  words: GameWord[];
-  topics: Topic[];
-  milestone: number; // chỉ số chủ đề đang chơi
-  mHits: number; // số từ đã bắn trong mốc này
-  goal: number; // số từ phải bắn để qua mốc này
-  queue: GameWord[];
-  drops: Drop[];
-  fresh: Drop | null; // giọt vừa thả (để đọc to ở biến thể "gold")
-  time: number;
-  nextSpawn: number;
-  lives: number;
-  score: number;
-  combo: number;
-  hits: number;
-  missed: GameWord[];
-  best: number; // kỷ lục trước ván này
-  targetId: number | null; // giọt đang gõ
-  typed: string; // phần đã gõ đúng của giọt đó (theo chữ của từ: gõ "a" cho "ä" thì lưu "ä")
-  wrong: number; // số lần gõ sai liên tiếp ở chữ hiện tại
-};
-type View = Omit<Game, "cfg" | "words" | "queue" | "fresh">;
-type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
-
-const HITS_PER_LEVEL = 10;
-const MILESTONE_GOAL = 10; // số từ phải bắn để qua 1 mốc (chủ đề ít từ hơn → bằng số từ của chủ đề)
-
-const levelOf = (hits: number) => Math.min(1 + Math.floor(hits / HITS_PER_LEVEL), 12);
-/**
- * Thời gian rơi tới đáy (giây): cấp 1 ≈ 24 giây, mỗi cấp nhanh thêm 1 giây, nhanh nhất 13 giây (× cfg.slower).
- * Từ dài cần gõ lâu hơn → rơi chậm hơn (từ 4 chữ ×0.9, 12 chữ ×1.2, tối đa ×1.4)
- */
-const fallTime = (cfg: Config, level: number, word: string) => cfg.slower * Math.max(13, 25 - level) * Math.min(Math.max(0.75 + 0.04 * word.length, 0.85), 1.4);
-const spawnEvery = (cfg: Config, level: number) => Math.max(cfg.spawnMin, cfg.spawnBase - 0.2 * (level - 1));
-
-const topicWords = (g: Pick<Game, "words" | "topics">, m: number) => g.words.filter((w) => w.topic === g.topics[m].id);
-const goalOf = (g: Pick<Game, "words" | "topics">, m: number) => Math.min(MILESTONE_GOAL, topicWords(g, m).length);
-
 /** Màu theo giống — như trang bộ từ: der xanh dương · die đỏ · das xanh lá */
 const GENDER_TEXT: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
 
@@ -176,128 +139,6 @@ const PEBBLES = Array.from({ length: 40 }, (_, i) => ({
   op: 0.15 + rand(i, 15) * 0.25,
 }));
 const GEMS = Array.from({ length: 6 }, (_, i) => ({ left: 4 + rand(i, 16) * 88, top: 20 + rand(i, 17) * 70, code: i % 2 ? "1f48e" : "1faa8" }));
-
-let nextId = 1;
-
-/** Bỏ chọn giọt đang gõ */
-const untarget = (g: Game) => Object.assign(g, { targetId: null, typed: "", wrong: 0 });
-
-/**
- * 1 phím chữ (thường): ưu tiên giọt đang gõ, không khớp thì giọt thấp nhất có cùng phần đã gõ + chữ này.
- * → giọt vừa gõ xong (bắn) · "ok" (đúng, chưa xong) · "wrong" (không ghi gì)
- */
-function press(g: Game, key: string): Drop | "ok" | "wrong" {
-  const n = g.typed.length;
-  const fits = (d: Drop) => d.state === "fall" && n < d.w.word.length && d.w.word.slice(0, n).toLowerCase() === g.typed.toLowerCase() && sameLetter(key, d.w.word[n]);
-  const d = g.drops.find((d) => d.id === g.targetId && fits(d)) ?? g.drops.filter(fits).sort((a, b) => b.y - a.y)[0];
-  if (!d) {
-    g.wrong++;
-    g.combo = 0;
-    return "wrong";
-  }
-  let typed = d.w.word.slice(0, n + 1);
-  while (typed.length < d.w.word.length && !/\p{L}/u.test(d.w.word[typed.length])) typed += d.w.word[typed.length]; // gạch nối tự điền
-  Object.assign(g, { targetId: d.id, typed, wrong: 0 });
-  return typed.length >= d.w.word.length ? d : "ok";
-}
-
-/** Xoá chữ cuối của giọt đang gõ (kèm gạch nối tự điền) — hết chữ thì bỏ chọn */
-function backspace(g: Game) {
-  g.typed = g.typed.slice(0, -1).replace(/[^\p{L}]+$/u, "");
-  g.wrong = 0;
-  if (!g.typed) untarget(g);
-}
-
-function newGame(cfg: Config, words: GameWord[], topics: Topic[], milestone: number, best: number): Game {
-  const g: Game = {
-    cfg,
-    words,
-    topics,
-    milestone,
-    mHits: 0,
-    goal: 0,
-    queue: [],
-    drops: [],
-    fresh: null,
-    time: 0,
-    nextSpawn: 0,
-    lives: cfg.lives,
-    score: 0,
-    combo: 0,
-    hits: 0,
-    missed: [],
-    best,
-    targetId: null,
-    typed: "",
-    wrong: 0,
-  };
-  g.queue = shuffle(topicWords(g, milestone));
-  g.goal = goalOf(g, milestone);
-  return g;
-}
-
-const snapshot = (g: Game): View => ({
-  topics: g.topics,
-  milestone: g.milestone,
-  mHits: g.mHits,
-  goal: g.goal,
-  drops: g.drops.map((d) => ({ ...d })),
-  time: g.time,
-  nextSpawn: g.nextSpawn,
-  lives: g.lives,
-  score: g.score,
-  combo: g.combo,
-  hits: g.hits,
-  missed: [...g.missed],
-  best: g.best,
-  targetId: g.targetId,
-  typed: g.typed,
-  wrong: g.wrong,
-});
-
-/** Từ kế tiếp của mốc — tránh từ đang rơi trên sân */
-function nextWord(g: Game): GameWord {
-  const onField = new Set(g.drops.filter((d) => d.state === "fall").map((d) => d.w.word.toLowerCase()));
-  for (let i = 0; i < 6; i++) {
-    if (!g.queue.length) g.queue = shuffle(topicWords(g, g.milestone));
-    const w = g.queue.pop()!;
-    if (!onField.has(w.word.toLowerCase())) return w;
-  }
-  return g.queue.pop() ?? topicWords(g, g.milestone)[0];
-}
-
-function spawn(g: Game) {
-  const level = levelOf(g.hits);
-  // Chọn cột không đè lên giọt mới rơi gần đó
-  const recent = g.drops.filter((d) => d.state === "fall" && d.y < 0.3);
-  let x = Math.random();
-  for (let i = 0; i < 8 && recent.some((d) => Math.abs(d.x - x) < 0.35); i++) x = Math.random();
-  const w = nextWord(g);
-  const d: Drop = { id: nextId++, w, x, y: 0, speed: (0.92 + Math.random() * 0.16) / fallTime(g.cfg, level, w.word), state: "fall", at: 0, points: 0 };
-  g.drops.push(d);
-  g.fresh = d;
-  g.nextSpawn = g.time + spawnEvery(g.cfg, level);
-}
-
-/** 1 khung hình: rơi, chạm đáy, xoá giọt đã nổ, thả giọt mới */
-function step(g: Game, dt: number) {
-  g.time += dt;
-  for (const d of g.drops) {
-    if (d.state !== "fall") continue;
-    d.y += d.speed * dt;
-    if (d.y >= 1) {
-      Object.assign(d, { y: 1, state: "miss", at: g.time });
-      if (d.id === g.targetId) untarget(g);
-      g.lives--;
-      g.combo = 0;
-      g.missed.push(d.w);
-    }
-  }
-  g.drops = g.drops.filter((d) => d.state === "fall" || g.time - d.at < g.cfg.fade);
-  const falling = g.drops.filter((d) => d.state === "fall").length;
-  if (!falling) g.nextSpawn = Math.min(g.nextSpawn, g.time + 1); // sân trống → khỏi chờ lâu
-  if (g.time >= g.nextSpawn && falling < g.cfg.drops(levelOf(g.hits))) spawn(g);
-}
 
 /** Gợi ý: chữ đầu + ô trống; giọt đang gõ thì hiện phần đã gõ đúng, hint = lộ chữ kế tiếp */
 function Slots({ word, typed, hint, theme }: { word: string; typed: string | null; hint: boolean; theme: Theme }) {
@@ -561,30 +402,15 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       return;
     }
     flash(`Vượt mốc ${done}: ${g.topics[g.milestone].title} ✓ — +1 mạng`, "ok");
-    for (const d of g.drops) if (d.state === "fall") Object.assign(d, { state: "gone", at: g.time });
-    untarget(g);
-    g.milestone = done;
-    g.mHits = 0;
-    g.goal = goalOf(g, done);
-    g.queue = shuffle(topicWords(g, done));
-    g.lives = Math.min(cfg.lives, g.lives + 1);
-    g.nextSpawn = g.time + 1.8;
+    nextMilestone(g);
   }
 
   /** Bắn trúng giọt vừa gõ xong */
   function hit(g: Game, d: Drop) {
-    untarget(g);
-    g.combo++;
-    g.hits++;
-    g.mHits++;
-    d.points = 10 * levelOf(g.hits - 1) + 2 * Math.min(g.combo - 1, 10);
-    g.score += d.points;
-    Object.assign(d, { state: "hit", at: g.time });
-    g.nextSpawn = Math.max(g.nextSpawn, g.time + 1.2); // nghỉ chút sau khi bắn trúng
+    const { milestone, levelUp: level } = scoreHit(g, d);
     if (sound) speakGerman(fullWord(d.w));
-    const level = levelOf(g.hits);
-    if (g.mHits >= g.goal) clearMilestone(g);
-    else if (level > levelOf(g.hits - 1))
+    if (milestone) clearMilestone(g);
+    else if (level)
       flash(
         cfg.drops(level) > cfg.drops(level - 1)
           ? `Lên cấp ${level} — thêm 1 ${variant === "gold" ? "cục vàng" : "từ rơi"} cùng lúc!`
@@ -707,14 +533,8 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       ? v.drops
           .filter((d) => d.state === "hit")
           .map((d) => {
-            const t = Math.min((v.time - d.at) / REEL, 1);
             const from = { x: (area.w - dropPx) * d.x + dropPx / 2, y: d.y * (area.h - DROP_H) + DROP_H / 2 };
-            const ease = (u: number) => u * u * (3 - 2 * u);
-            const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, u: number) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
-            // Thả móc xuống (cục vàng đứng yên) → kéo lên (cục vàng theo móc), gần tới ròng rọc thì nhỏ lại, mờ đi
-            const pull = Math.max(0, (t - REEL_OUT) / (1 - REEL_OUT));
-            const tip = t < REEL_OUT ? lerp(pulley, from, ease(t / REEL_OUT)) : lerp(from, pulley, ease(pull));
-            return { id: d.id, tip, at: t < REEL_OUT ? from : tip, scale: 1 - 0.45 * pull, opacity: pull > 0.85 ? (1 - pull) / 0.15 : 1 };
+            return { id: d.id, ...reelAt(Math.min((v.time - d.at) / REEL, 1), from, pulley) };
           })
       : [];
   const reelOf = new Map(reels.map((r) => [r.id, r]));

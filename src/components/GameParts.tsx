@@ -4,13 +4,11 @@ import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Delete, Play, RotateCcw } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import type { StudyWord } from "@/lib/deck-study";
+export { sameLetter, type GameWord, type Topic } from "@/lib/falling-words";
 
 /** Phần dùng chung của các game từ vựng (/games): tiêu đề, màn chọn bộ từ, bàn phím trên màn hình */
 
 export type DeckOption = { slug: string; title: string; level: string; wordCount: number; topicCount: number };
-export type GameWord = StudyWord & { topic: string };
-export type Topic = { id: string; title: string; icon: string };
 /** Màu chủ đạo của từng game */
 export type Tone = "cyan" | "amber";
 
@@ -40,10 +38,6 @@ const TONE = {
 /** Nút bấm chính kiểu "nổi" theo màu game */
 const toneButton = (tone: Tone) =>
   `btn px-5 py-2.5 tracking-wide uppercase hover:brightness-110 active:translate-y-0.5 ${TONE[tone].button}`;
-
-/** Bàn phím không có umlaut: gõ a/o/u/s thay ä/ö/ü/ß (key: chữ thường) */
-const BASE: Record<string, string> = { ä: "a", ö: "o", ü: "u", ß: "s" };
-export const sameLetter = (key: string, want: string) => key === want.toLowerCase() || BASE[want.toLowerCase()] === key;
 
 /** Ô bộ từ: màu theo nhóm trình độ (như DeckCover) */
 const LEVEL_TILE: Record<string, string> = { A: "bg-emerald-200 text-emerald-900", B: "bg-sky-200 text-sky-900", C: "bg-violet-200 text-violet-900" };

@@ -25,6 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="vocab-add" options={{ title: "", presentation: "modal" }} />
             <Stack.Screen name="notebook" options={{ title: "" }} />
             <Stack.Screen name="deck/[slug]" options={{ title: "" }} />
+            <Stack.Screen name="game/[variant]" options={{ headerShown: false }} />
             <Stack.Screen name="privacy" options={{ title: "" }} />
             <Stack.Screen name="feedback" options={{ title: "", presentation: "modal" }} />
           </Stack>
