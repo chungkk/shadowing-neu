@@ -9,6 +9,18 @@ import goetheA1HK from "@/content/decks/goethe-a1-h-k.json";
 import goetheA1LO from "@/content/decks/goethe-a1-l-o.json";
 import goetheA1PS from "@/content/decks/goethe-a1-p-s.json";
 import goetheA1TZ from "@/content/decks/goethe-a1-t-z.json";
+import goetheA2NhomChuDe from "@/content/decks/goethe-a2-nhom-chu-de.json";
+import goetheA2A from "@/content/decks/goethe-a2-a.json";
+import goetheA2BC from "@/content/decks/goethe-a2-b-c.json";
+import goetheA2DE from "@/content/decks/goethe-a2-d-e.json";
+import goetheA2FG from "@/content/decks/goethe-a2-f-g.json";
+import goetheA2HJ from "@/content/decks/goethe-a2-h-j.json";
+import goetheA2KL from "@/content/decks/goethe-a2-k-l.json";
+import goetheA2MO from "@/content/decks/goethe-a2-m-o.json";
+import goetheA2PR from "@/content/decks/goethe-a2-p-r.json";
+import goetheA2S from "@/content/decks/goethe-a2-s.json";
+import goetheA2TV from "@/content/decks/goethe-a2-t-v.json";
+import goetheA2WZ from "@/content/decks/goethe-a2-w-z.json";
 
 /**
  * Kho bộ từ vựng (tab Từ vựng của app): mỗi bộ 1 file JSON trong src/content/decks/, build kèm server.
@@ -25,6 +37,19 @@ const RAW: RawDeck[] = [
   goetheA1LO,
   goetheA1PS,
   goetheA1TZ,
+  // Wortliste Goethe-Zertifikat A2: nhóm chủ đề + chia theo vần
+  goetheA2NhomChuDe,
+  goetheA2A,
+  goetheA2BC,
+  goetheA2DE,
+  goetheA2FG,
+  goetheA2HJ,
+  goetheA2KL,
+  goetheA2MO,
+  goetheA2PR,
+  goetheA2S,
+  goetheA2TV,
+  goetheA2WZ,
 ];
 
 type RawDeck = {
