@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, Easing, Text, View } from "react-native";
-import { C } from "@/lib/theme";
 
 /** Điểm chính tả (bản di động của PointsBadge / hiệu ứng +1 trên web): chép đúng hết 1 câu → +1, mỗi câu chỉ tính 1 lần */
 
@@ -15,54 +15,18 @@ function useReduceMotion() {
   return on;
 }
 
-/** Đồng xu điểm: tròn vàng viền đậm, viên hình thoi 2 mặt cắt ở giữa (như bản web) */
-export function Coin({ size = 20 }: { size?: number }) {
-  const d = size * 0.32; // cạnh hình vuông → hình thoi rộng ~0,45 đồng xu, như bản web
-  const f = d * 1.5; // mặt cắt: hình vuông lớn hơn, xoay ngược lại cho thẳng hàng với màn hình
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: C.amber,
-        borderWidth: Math.max(1.5, size / 11),
-        borderColor: "#a16207",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {/* Hình vuông xoay 45° = hình thoi; nửa phải (chia dọc) tô đậm hơn làm mặt cắt */}
-      <View
-        style={{
-          width: d,
-          height: d,
-          borderRadius: size * 0.03,
-          backgroundColor: "#fffbeb",
-          overflow: "hidden",
-          transform: [{ rotate: "45deg" }],
-        }}
-      >
-        <View
-          style={{
-            position: "absolute",
-            left: (d - f) / 2,
-            top: (d - f) / 2,
-            width: f,
-            height: f,
-            backgroundColor: "#fde68a",
-            transform: [{ rotate: "-45deg" }, { translateX: f / 2 }],
-          }}
-        />
-      </View>
-    </View>
-  );
+/** Kim cương điểm — cùng hình với bản web (assets/images/gem.svg) */
+export function Gem({ size = 20 }: { size?: number }) {
+  return <Image source={require("@/assets/images/gem.svg")} style={{ width: size, height: size }} />;
 }
+
+/** Màu điểm: xanh kim cương (chữ, viền) */
+export const GEM = "#38bdf8";
 
 const SPARKS = Array.from({ length: 12 }, (_, k) => {
   const a = ((k * 30 + (k % 2 ? 12 : 0)) * Math.PI) / 180;
   const d = k % 2 ? 46 : 72;
-  return { x: Math.cos(a) * d, y: Math.sin(a) * d, c: k % 3 === 0 ? C.accent : k % 3 === 1 ? C.amber : "#fff7d6" };
+  return { x: Math.cos(a) * d, y: Math.sin(a) * d, c: k % 3 === 0 ? GEM : k % 3 === 1 ? "#f9a8d4" : "#f0f9ff" };
 });
 const BURST_MS = 1100;
 
@@ -95,13 +59,13 @@ export function PointBurst({ onEnd }: { onEnd: () => void }) {
         <>
           <Animated.View
             style={[
-              { position: "absolute", left: -48, top: -48, width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: C.amber },
+              { position: "absolute", left: -48, top: -48, width: 96, height: 96, borderRadius: 48, borderWidth: 3, borderColor: GEM },
               ring(0),
             ]}
           />
           <Animated.View
             style={[
-              { position: "absolute", left: -48, top: -48, width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: C.accent },
+              { position: "absolute", left: -48, top: -48, width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: "#f9a8d4" },
               ring(0.08),
             ]}
           />
@@ -146,13 +110,13 @@ export function PointBurst({ onEnd }: { onEnd: () => void }) {
               ],
         }}
       >
-        <Coin size={30} />
+        <Gem size={30} />
         <Text
           style={{
-            color: C.amber,
+            color: GEM,
             fontSize: 30,
             fontWeight: "900",
-            textShadowColor: "rgba(250,204,21,0.6)",
+            textShadowColor: "rgba(56,189,248,0.6)",
             textShadowRadius: 14,
             textShadowOffset: { width: 0, height: 0 },
           }}
@@ -165,7 +129,7 @@ export function PointBurst({ onEnd }: { onEnd: () => void }) {
 }
 
 /**
- * Huy hiệu tổng điểm. Điểm tăng → chờ "+1" trong ô chép bay lên (~0,5 giây) rồi đồng xu nảy, số mới hiện;
+ * Huy hiệu tổng điểm. Điểm tăng → chờ "+1" trong ô chép bay lên (~0,5 giây) rồi kim cương nảy, số mới hiện;
  * giảm (server sửa lại) → đổi số ngay.
  */
 export function PointsPill({ total }: { total: number }) {
@@ -201,14 +165,14 @@ export function PointsPill({ total }: { total: number }) {
         paddingVertical: 3,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "rgba(250,204,21,0.35)",
-        backgroundColor: "rgba(250,204,21,0.1)",
+        borderColor: "rgba(56,189,248,0.35)",
+        backgroundColor: "rgba(56,189,248,0.1)",
       }}
     >
       <Animated.View style={{ transform: [{ scale }, { rotate }] }}>
-        <Coin size={20} />
+        <Gem size={20} />
       </Animated.View>
-      <Text style={{ color: C.amber, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{shown}</Text>
+      <Text style={{ color: GEM, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{shown}</Text>
     </View>
   );
 }

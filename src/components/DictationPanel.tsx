@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
 import { checkDictation, hintFor, type DictationLevel, type WordState } from "@/lib/dictation";
 import { emitPoints } from "@/lib/points";
-import { Coin } from "./PointsBadge";
+import { Gem } from "./PointsBadge";
 
 const BOX: Record<WordState | "hint", string> = {
   correct: "border-accent bg-accent/15 text-foreground",
@@ -19,7 +19,7 @@ const BOX: Record<WordState | "hint", string> = {
 const SPARKS = Array.from({ length: 12 }, (_, k) => ({
   a: `${k * 30 + (k % 2 ? 12 : 0)}deg`,
   d: `${k % 2 ? 46 : 72}px`,
-  c: k % 3 === 0 ? "var(--accent)" : k % 3 === 1 ? "var(--amber)" : "#fff7d6",
+  c: k % 3 === 0 ? "var(--gem)" : k % 3 === 1 ? "#f9a8d4" : "#f0f9ff",
 }));
 
 /** Hiệu ứng +1 điểm: vòng sáng lan ra, tia lấp lánh, "+1" bật lên rồi bay lên mờ dần (globals.css) */
@@ -32,7 +32,7 @@ function PointBurst({ onEnd }: { onEnd: () => void }) {
         <span key={k} className="pt-spark" style={{ "--a": p.a, "--d": p.d, "--spark": p.c } as CSSProperties} />
       ))}
       <span className="pt-plus" onAnimationEnd={onEnd}>
-        <Coin className="size-8" />
+        <Gem className="size-8" />
         +1
       </span>
     </div>
@@ -46,7 +46,7 @@ export type DictDraft = { input: string; revealed: number[] };
  * Nghe chép chính tả 1 câu. Gõ đúng từ nào hiện từ đó ngay; bấm "Kiểm tra" để xem từ sai / thiếu.
  * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
  * Câu đã xong: bấm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
- * `onDone` trả về true = câu này được +1 điểm (chép đúng hết lần đầu) → hiệu ứng +1, đồng xu bay lên huy hiệu điểm.
+ * `onDone` trả về true = câu này được +1 điểm (chép đúng hết lần đầu) → hiệu ứng +1, kim cương bay lên huy hiệu điểm.
  */
 export default function DictationPanel({
   text,
@@ -95,7 +95,7 @@ export default function DictationPanel({
       if (onDone(r.correct, r.total) === true) {
         setWon(true);
         setBurst(true);
-        // Đồng xu bay từ giữa hàng ô từ lên huy hiệu điểm
+        // Kim cương bay từ giữa hàng ô từ lên huy hiệu điểm
         const b = wordsRef.current?.getBoundingClientRect();
         emitPoints({ delta: 1, from: b && { x: b.left + b.width / 2, y: b.top + b.height / 2 } });
       }
@@ -204,8 +204,8 @@ export default function DictationPanel({
       {result.done && translation && <p className="text-[15px] leading-relaxed text-muted">{translation}</p>}
       <p className="text-xs text-muted">
         {won && (
-          <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-amber/15 px-2 py-0.5 font-extrabold text-amber">
-            <Coin className="size-3.5" /> +1 điểm
+          <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-gem/15 px-2 py-0.5 font-extrabold text-gem">
+            <Gem className="size-3.5" /> +1 điểm
           </span>
         )}
         {checked

@@ -34,7 +34,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
-import { Coin } from "./PointsBadge";
+import { Gem } from "./PointsBadge";
 import WordPopup from "./WordPopup";
 
 type Settings = {
@@ -1074,8 +1074,8 @@ export default function ShadowPlayer({
                 </p>
               )}
               {roundDone && roundPoints > 0 && (
-                <p className="inline-flex items-center gap-2 self-start rounded-full border border-amber/35 bg-amber/10 py-1 pr-3 pl-1.5 text-sm font-extrabold text-amber">
-                  <Coin className="size-6" /> +{roundPoints} điểm lượt này
+                <p className="inline-flex items-center gap-2 self-start rounded-full border border-gem/35 bg-gem/10 py-1 pr-3 pl-1.5 text-sm font-extrabold text-gem">
+                  <Gem className="size-6" /> +{roundPoints} điểm lượt này
                 </p>
               )}
               <p className="text-sm text-muted">
@@ -1230,7 +1230,7 @@ export default function ShadowPlayer({
                     )}
                     {dictation && pointIdx.has(i) && (
                       <span title="Câu này đã được tính điểm">
-                        <Coin className="size-4" />
+                        <Gem className="size-4" />
                       </span>
                     )}
                     <span className="flex-1" />

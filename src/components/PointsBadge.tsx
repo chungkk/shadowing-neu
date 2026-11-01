@@ -3,22 +3,27 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { POINTS_EVENT, type PointsEvent } from "@/lib/points";
 
-/** Đồng xu điểm (vàng, viên hình thoi 2 mặt cắt ở giữa) — dùng ở huy hiệu, đồng xu bay và hiệu ứng +1 */
-export function Coin({ className = "size-5" }: { className?: string }) {
-  const id = useId(); // mỗi đồng xu 1 id gradient riêng
+/** Kim cương điểm (xanh, có mặt cắt, vệt sáng và 1 tia lấp lánh) — dùng ở huy hiệu, kim cương bay và hiệu ứng +1.
+ *  Bản app dùng cùng hình: mobile/assets/images/gem.svg */
+export function Gem({ className = "size-5" }: { className?: string }) {
+  const id = useId(); // mỗi viên 1 id gradient riêng
+  const outline = "M7.2 3.5h9.6l4.7 5.6L12 21 2.5 9.1z";
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#fef08a" />
-          <stop offset="0.55" stopColor="#facc15" />
-          <stop offset="1" stopColor="#d97706" />
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#7dd3fc" />
+          <stop offset="1" stopColor="#0ea5e9" />
         </linearGradient>
       </defs>
-      <circle cx="12" cy="12" r="11" fill="#a16207" />
-      <circle cx="12" cy="11.4" r="10.2" fill={`url(#${id})`} />
-      <path d="M12 6.2 17.2 11.4 12 16.6 6.8 11.4z" fill="#fffbeb" />
-      <path d="M12 6.2 17.2 11.4 12 16.6z" fill="#fde68a" />
+      <path d={outline} fill={`url(#${id})`} />
+      <path d="M7.2 3.5h9.6l4.7 5.6H2.5z" fill="#bae6fd" />
+      <path d="M9.6 9.1 12 3.5l2.4 5.6z" fill="#f0f9ff" />
+      <path d="M9.6 9.1h4.8L12 21z" fill="#7dd3fc" />
+      <path d="M14.4 9.1h7.1L12 21z" fill="#0284c7" fillOpacity="0.45" />
+      <path d={outline} fill="none" stroke="#0369a1" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M5.6 8.2 7.7 5.6" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M20.6 1.2c.25 1.1.6 1.45 1.7 1.7-1.1.25-1.45.6-1.7 1.7-.25-1.1-.6-1.45-1.7-1.7 1.1-.25 1.45-.6 1.7-1.7z" fill="#fff" />
     </svg>
   );
 }
@@ -30,12 +35,12 @@ const FLIGHT_DELAY = 380; // chờ "+1" trong ô chính tả bật lên xong m�
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
- * Tổng điểm chính tả ở thanh trên cùng. Được điểm (emitPoints) → đồng xu bay từ ô chính tả vào đây,
- * chạm tới thì huy hiệu nảy lên và số mới lăn vào. Huy hiệu khuất màn hình / giảm chuyển động → chỉ đổi số.
+ * Tổng điểm chính tả ở thanh trên cùng. Được điểm (emitPoints) → kim cương bay từ ô chính tả vào đây,
+ * bay tới thì huy hiệu nảy lên và số mới lăn vào. Huy hiệu khuất màn hình / giảm chuyển động → chỉ đổi số.
  */
 export default function PointsBadge({ initial }: { initial: number }) {
   const [total, setTotal] = useState(initial); // số điểm (tạm tính ngay khi làm đúng, server trả về thì sửa lại)
-  const [shown, setShown] = useState(initial); // số đang hiện — chỉ đổi khi không còn đồng xu đang bay
+  const [shown, setShown] = useState(initial); // số đang hiện — chỉ đổi khi không còn kim cương đang bay
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const [bump, setBump] = useState(0); // đổi → chạy lại hiệu ứng nảy
   const coinRef = useRef<HTMLSpanElement>(null);
@@ -85,10 +90,10 @@ export default function PointsBadge({ initial }: { initial: number }) {
     <>
       <span
         title="Điểm chính tả — mỗi câu chép đúng hết +1"
-        className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-amber/35 bg-amber/10 pr-3 pl-1.5 font-extrabold text-amber tabular-nums select-none sm:h-10"
+        className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-gem/35 bg-gem/10 pr-3 pl-1.5 font-extrabold text-gem tabular-nums select-none sm:h-10"
       >
         <span key={`c${bump}`} ref={coinRef} className={bump ? "points-bump" : undefined}>
-          <Coin className="size-6 sm:size-7" />
+          <Gem className="size-6 sm:size-7" />
         </span>
         <span className="relative overflow-hidden leading-none">
           <span key={`n${shown}`} className={`block ${bump ? "points-roll" : ""}`}>
@@ -101,10 +106,10 @@ export default function PointsBadge({ initial }: { initial: number }) {
         <span
           key={f.id}
           ref={(el) => launch(el, f)}
-          className="pointer-events-none fixed z-[70] drop-shadow-[0_4px_12px_rgba(250,204,21,0.55)]"
+          className="pointer-events-none fixed z-[70] drop-shadow-[0_4px_12px_rgba(56,189,248,0.6)]"
           style={{ left: f.from.x, top: f.from.y, opacity: 0 }}
         >
-          <Coin className="size-8" />
+          <Gem className="size-8" />
         </span>
       ))}
     </>

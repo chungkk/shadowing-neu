@@ -26,7 +26,7 @@ import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-nativ
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { DictationPanel, type DictDraft } from "./DictationPanel";
-import { Coin, PointsPill } from "./Points";
+import { GEM, Gem, PointsPill } from "./Points";
 import { WordSheet } from "./WordSheet";
 import { Button, Label, Segmented } from "./ui";
 import { api, type DictResult, type Points, type Progress, type VocabItem } from "@/lib/api";
@@ -739,8 +739,8 @@ export default function Player({
       )}
       {roundDone && roundPoints > 0 && (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Coin size={22} />
-          <Text style={{ color: C.amber, fontSize: 15, fontWeight: "800" }}>{t("dict.roundPoints", { n: roundPoints })}</Text>
+          <Gem size={22} />
+          <Text style={{ color: GEM, fontSize: 15, fontWeight: "800" }}>{t("dict.roundPoints", { n: roundPoints })}</Text>
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 14 }}>

@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { Coin } from "@/components/Points";
+import { GEM, Gem } from "@/components/Points";
 import { ErrorText, styles } from "@/components/ui";
 import { api, type Rate, type Stats } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -172,8 +172,8 @@ export default function StatsScreen() {
             </View>
             {s.points && (
               <Tile
-                icon={<Coin size={24} />}
-                color={C.amber}
+                icon={<Gem size={24} />}
+                color={GEM}
                 value={`${s.points.total}`}
                 label={`${t("stats.points")}${s.points.today ? ` · ${t("stats.pointsToday", { n: s.points.today })}` : ""}`}
               />

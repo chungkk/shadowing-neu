@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { checkDictation, hintFor, type DictationLevel, type WordState } from "@shared/dictation";
-import { Coin, PointBurst } from "./Points";
+import { GEM, Gem, PointBurst } from "./Points";
 import { Button } from "./ui";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -151,11 +151,11 @@ export function DictationPanel({
             paddingRight: 9,
             paddingVertical: 2,
             borderRadius: 999,
-            backgroundColor: "rgba(250,204,21,0.15)",
+            backgroundColor: "rgba(56,189,248,0.15)",
           }}
         >
-          <Coin size={16} />
-          <Text style={{ color: C.amber, fontWeight: "800", fontSize: 12 }}>{t("dict.point")}</Text>
+          <Gem size={16} />
+          <Text style={{ color: GEM, fontWeight: "800", fontSize: 12 }}>{t("dict.point")}</Text>
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 12 }}>
