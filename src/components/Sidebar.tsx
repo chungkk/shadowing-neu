@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 import { BookMarked, Captions, ChevronDown, House, ListVideo, LogIn, LogOut, Settings, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
+import Avatar, { type AvatarUser } from "./Avatar";
 import { LoginLink } from "./LoginDialog";
 
 type Item = { href: string; label: string; icon: ComponentType<{ className?: string }> };
-type NavUser = { name: string; role: string };
+type NavUser = AvatarUser & { role: string };
 
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
@@ -31,8 +32,6 @@ function useCurrent(items: Item[]) {
     href === "/" ? pathname === "/" || /^\/(lesson|watch)\//.test(pathname) : pathname === href || pathname.startsWith(href + "/");
   return items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }
-
-const initial = (name: string) => name.trim()[0]?.toUpperCase() ?? "?";
 
 /** Thanh icon dưới đáy — chỉ trên điện thoại (máy tính dùng menu thả xuống ở avatar) */
 export default function Sidebar({ user }: { user: NavUser | null }) {
@@ -129,9 +128,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
     <>
       {admin && <span className="pill bg-amber/15 text-amber max-sm:hidden">ADMIN</span>}
       <span className="max-w-40 truncate font-bold max-sm:max-w-28 max-[380px]:hidden">{user.name}</span>
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber text-lg font-extrabold text-sidebar sm:size-10">
-        {initial(user.name)}
-      </span>
+      <Avatar user={user} className="size-9 text-lg sm:size-10" />
     </>
   );
 
@@ -169,9 +166,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
           <div className="absolute top-full right-0 z-50 w-64 pt-2">
             <div role="menu" className="sheet-fade flex flex-col gap-0.5 rounded-2xl border border-border bg-card p-2 shadow-2xl shadow-black/50">
               <div className="mb-1 flex items-center gap-3 border-b border-border px-2 pt-1 pb-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber text-lg font-extrabold text-sidebar">
-                  {initial(user.name)}
-                </span>
+                <Avatar user={user} className="size-10 text-lg" />
                 <div className="min-w-0">
                   <p className="truncate font-bold">{user.name}</p>
                   <p className="text-xs text-muted">{admin ? "Quản trị viên" : "Học viên"}</p>

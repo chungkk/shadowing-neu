@@ -1,9 +1,11 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { changePassword, getCurrentUser, requireUser } from "@/lib/auth";
-import { addWord, aiWordMeaning, editProfile } from "@/lib/account";
-import { deleteVocab, reviewVocab, updateVocabMeaning } from "@/lib/db";
+import { redirect } from "next/navigation";
+import { changePassword, destroySession, envAdminEmail, getCurrentUser, requireUser, verifyPassword } from "@/lib/auth";
+import { addWord, aiWordMeaning, editProfile, removeAccount } from "@/lib/account";
+import { AVATAR_MAX_BYTES, imageType, removeAvatar, saveAvatar } from "@/lib/avatar";
+import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
 
 export type FormResult = { error?: string; ok?: string };
 
@@ -27,6 +29,38 @@ export async function updatePassword(_: FormResult, formData: FormData): Promise
   if (next !== String(formData.get("confirm") ?? "")) return { error: "Mật khẩu nhập lại không khớp" };
   const error = await changePassword(user, current, next);
   return error ? { error } : { ok: "Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất." };
+}
+
+/** Đổi ảnh đại diện (trường "file": JPEG / PNG / WebP ≤ 1 MB — trình duyệt đã cắt vuông + thu nhỏ) */
+export async function uploadAvatar(formData: FormData): Promise<{ error?: string }> {
+  const user = await requireUser("/settings");
+  const file = formData.get("file");
+  if (!(file instanceof Blob) || !file.size) return { error: "Thiếu ảnh" };
+  if (file.size > AVATAR_MAX_BYTES) return { error: "Ảnh quá lớn (tối đa 1 MB)" };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!imageType(bytes)) return { error: "Chỉ nhận ảnh JPEG, PNG hoặc WebP" };
+  saveAvatar(user.id, bytes);
+  refresh();
+  return {};
+}
+
+/** Xoá ảnh đại diện → quay về chữ cái đầu tên */
+export async function deleteAvatar() {
+  const user = await requireUser("/settings");
+  removeAvatar(user.id);
+  refresh();
+}
+
+/** Xoá vĩnh viễn tài khoản + sổ từ vựng. Tài khoản Google / Apple chưa đặt mật khẩu: không hỏi mật khẩu. */
+export async function deleteAccount(_: FormResult, formData: FormData): Promise<FormResult> {
+  const user = await requireUser("/settings");
+  if (user.email === envAdminEmail()) return { error: "Không thể xoá tài khoản admin chính." };
+  const u = getUserWithHash({ id: user.id });
+  if (!u || (u.hasPassword && !(await verifyPassword(String(formData.get("password") ?? ""), u.passwordHash))))
+    return { error: "Mật khẩu không đúng" };
+  await removeAccount(user.id);
+  await destroySession();
+  redirect("/");
 }
 
 // ---- Sổ từ vựng ----
