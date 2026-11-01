@@ -21,6 +21,9 @@ async function Dashboard() {
         <Link href="/admin/users" className="btn">
           Người dùng
         </Link>
+        <Link href="/admin/lock" className="btn">
+          Khoá bài học
+        </Link>
         <Link href="/admin/new" className="btn btn-primary">
           + Bài mới
         </Link>

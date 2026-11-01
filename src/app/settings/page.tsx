@@ -1,9 +1,7 @@
 import { Suspense } from "react";
 import { envAdminEmail, requireUser } from "@/lib/auth";
-import { getStats, listLessons, listProgress } from "@/lib/db";
-import { lockSettings } from "@/lib/access";
+import { getStats, listProgress } from "@/lib/db";
 import AccountStats from "@/components/AccountStats";
-import LessonLockSettings from "@/components/LessonLockSettings";
 import SettingsForms from "@/components/SettingsForms";
 import { SettingsSkeleton } from "@/components/Skeleton";
 
@@ -12,7 +10,6 @@ async function Settings() {
   // Múi giờ chỉ ảnh hưởng "hôm nay" / chuỗi ngày — AccountStats tự tải lại theo giờ máy
   const s = getStats(user.id, 0);
   const progress = listProgress(user.id);
-  const lock = user.role === "admin" ? lockSettings() : null;
   return (
     <SettingsForms
       user={{
@@ -36,15 +33,6 @@ async function Settings() {
             sentences: progress.reduce((n, p) => n + Object.keys(p.dictDone).length, 0),
           }}
         />
-      }
-      admin={
-        lock && (
-          <LessonLockSettings
-            enabled={lock.enabled}
-            free={lock.free}
-            lessons={listLessons().map((l) => ({ id: l.id, title: l.title, level: l.level }))}
-          />
-        )
       }
     />
   );

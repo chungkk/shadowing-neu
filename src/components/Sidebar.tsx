@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, ChevronDown, House, ListVideo, LogIn, LogOut, Settings, Users } from "lucide-react";
+import { BookMarked, Captions, ChevronDown, House, ListVideo, Lock, LogIn, LogOut, Settings, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -23,6 +23,7 @@ const ADMIN_ITEMS: Item[] = [
   { href: "/admin", label: "Quản lý bài học", icon: ListVideo },
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
+  { href: "/admin/lock", label: "Khoá bài học", icon: Lock },
 ];
 
 /** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */

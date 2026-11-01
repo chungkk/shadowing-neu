@@ -2,10 +2,10 @@
 
 import { useActionState, useState } from "react";
 import { Lock } from "lucide-react";
-import { saveLessonLock } from "@/app/admin/actions";
+import { saveLessonLock } from "../actions";
 import { FREE_LESSONS, FREE_PICKS, LESSON_PRICE } from "@/lib/lesson-lock";
-import LevelBadge from "./LevelBadge";
-import { Section, Status } from "./SettingsForms";
+import LevelBadge from "@/components/LevelBadge";
+import { Section, Status } from "@/components/SettingsForms";
 
 /** Admin: bật / tắt khoá bài học và chọn tối đa FREE_LESSONS bài miễn phí (khách cũng học được) */
 export default function LessonLockSettings({
@@ -32,7 +32,7 @@ export default function LessonLockSettings({
     <form action={action}>
       <Section
         icon={Lock}
-        title="Khoá bài học"
+        title="Cài đặt"
         desc={`Khách chỉ học được ${FREE_LESSONS} bài miễn phí. Người đã đăng nhập tự chọn thêm ${FREE_PICKS} bài, sau đó mỗi bài ${LESSON_PRICE.toLocaleString("vi-VN")} kim cương. Bài ai đang học dở lúc bật vẫn học tiếp được.`}
         footer={
           <button className="btn btn-primary" disabled={saving}>

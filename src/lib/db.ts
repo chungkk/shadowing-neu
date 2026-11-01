@@ -874,6 +874,16 @@ export function addLessonUnlock(userId: number, lessonId: number, kind: UnlockKi
   );
 }
 
+/** Thống kê cho trang admin Khoá bài học: số lượt mở theo loại, số người đã mở, tổng điểm đã tiêu */
+export function lessonUnlockStats(): { pick: number; buy: number; legacy: number; users: number; spent: number } {
+  return conn()
+    .prepare(
+      `SELECT COALESCE(SUM(kind = 'pick'), 0) AS pick, COALESCE(SUM(kind = 'buy'), 0) AS buy, COALESCE(SUM(kind = 'legacy'), 0) AS legacy,
+              COUNT(DISTINCT user_id) AS users, COALESCE(SUM(cost), 0) AS spent FROM lesson_unlocks`,
+    )
+    .get() as { pick: number; buy: number; legacy: number; users: number; spent: number };
+}
+
 /** Bật khoá bài: ai đã có tiến độ bài nào thì giữ quyền học tiếp bài đó (không tốn lượt chọn / điểm) */
 export function unlockLessonsWithProgress() {
   conn()
