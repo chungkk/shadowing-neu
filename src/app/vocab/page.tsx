@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { listVocab } from "@/lib/db";
 import VocabList from "@/components/VocabList";
+import { VocabSkeleton } from "@/components/Skeleton";
 
 async function Vocab() {
   const user = await requireUser("/vocab");
@@ -22,7 +23,7 @@ async function Vocab() {
 export default function VocabPage() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
-      <Suspense fallback={<p className="text-muted">Đang tải…</p>}>
+      <Suspense fallback={<VocabSkeleton />}>
         <Vocab />
       </Suspense>
     </main>

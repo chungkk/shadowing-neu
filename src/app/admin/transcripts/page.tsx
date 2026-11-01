@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { listSavedTranscripts } from "@/lib/db";
 import TranscriptList, { type SavedVideo } from "./TranscriptList";
+import { ListSkeleton } from "@/components/Skeleton";
 
 async function Transcripts() {
   await requireAdmin();
@@ -38,7 +39,7 @@ async function Transcripts() {
 export default function TranscriptsPage() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 md:p-6">
-      <Suspense fallback={<p className="text-muted">Đang tải…</p>}>
+      <Suspense fallback={<ListSkeleton thumb />}>
         <Transcripts />
       </Suspense>
     </main>

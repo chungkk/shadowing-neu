@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/auth";
 import LessonForm from "../LessonForm";
+import { FormSkeleton } from "@/components/Skeleton";
 
 async function Guard({ children }: { children: React.ReactNode }) {
   await requireAdmin();
@@ -11,7 +12,7 @@ export default function NewLessonPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
       <h1 className="text-2xl font-extrabold">Bài học mới</h1>
-      <Suspense fallback={<p className="text-muted">Đang tải…</p>}>
+      <Suspense fallback={<FormSkeleton />}>
         <Guard>
           <LessonForm />
         </Guard>

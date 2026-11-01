@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import { getLessonBySlug } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { PlayerSkeleton } from "@/components/Skeleton";
 
 /** Trang bài học: ckk.pro/<slug> (link cũ /lesson/<id> chuyển hướng 308 về đây) */
 async function LessonView({ params }: PageProps<"/[slug]">) {
@@ -55,7 +56,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">): Promis
 
 export default function Page(props: PageProps<"/[slug]">) {
   return (
-    <Suspense fallback={<p className="p-10 text-center text-muted">Đang tải bài học…</p>}>
+    <Suspense fallback={<PlayerSkeleton />}>
       <LessonView {...props} />
     </Suspense>
   );

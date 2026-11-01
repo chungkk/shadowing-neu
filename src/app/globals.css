@@ -113,6 +113,10 @@ select {
   .press {
     @apply select-none [-webkit-touch-callout:none];
   }
+  /* Khối xám nhấp nháy giữ chỗ trong lúc chờ dữ liệu (Skeleton.tsx) */
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-card-2 motion-reduce:animate-none;
+  }
   kbd {
     @apply rounded border border-border bg-card-2 px-1 font-mono text-[10px];
   }

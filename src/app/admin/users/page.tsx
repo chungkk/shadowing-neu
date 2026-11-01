@@ -5,6 +5,7 @@ import { listUsers } from "@/lib/db";
 import { changeUserRole, removeUser } from "../actions";
 import DeleteButton from "../DeleteButton";
 import PasswordButton from "./PasswordButton";
+import { ListSkeleton } from "@/components/Skeleton";
 
 async function Users() {
   const me = await requireAdmin();
@@ -56,7 +57,7 @@ export default function UsersPage() {
       <Link href="/admin" className="text-sm text-muted hover:underline">
         ← Quản trị
       </Link>
-      <Suspense fallback={<p className="text-muted">Đang tải…</p>}>
+      <Suspense fallback={<ListSkeleton />}>
         <Users />
       </Suspense>
     </main>

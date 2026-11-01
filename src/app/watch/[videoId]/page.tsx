@@ -6,6 +6,7 @@ import TrackSelect from "@/components/TrackSelect";
 import { RememberVideo } from "@/components/RecentVideos";
 import { extractVideoId, getYouTubeTranscript, WHISPER } from "@/lib/youtube";
 import { getCurrentUser } from "@/lib/auth";
+import { PlayerSkeleton } from "@/components/Skeleton";
 
 async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
   const { videoId: rawId } = await params;
@@ -78,10 +79,11 @@ export default function Page(props: PageProps<"/watch/[videoId]">) {
   return (
     <Suspense
       fallback={
-        <div className="p-10 text-center text-muted">
-          <p>Đang lấy phụ đề…</p>
-          <p className="mt-1 text-xs">Nếu video không có phụ đề, Whisper (AI) sẽ tạo — có thể mất tới 1 phút.</p>
-        </div>
+        <PlayerSkeleton>
+          <p className="text-xs text-muted">
+            Đang lấy phụ đề… Nếu video không có phụ đề, Whisper (AI) sẽ tạo — có thể mất tới 1 phút.
+          </p>
+        </PlayerSkeleton>
       }
     >
       <Watch {...props} />

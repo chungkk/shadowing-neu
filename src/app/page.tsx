@@ -6,6 +6,7 @@ import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
 import ContinueLearning from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
+import { LessonGridSkeleton } from "@/components/Skeleton";
 
 const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
 
@@ -47,7 +48,7 @@ export default function Home() {
         <Continue />
       </Suspense>
 
-      <Suspense fallback={<p className="text-sm text-muted">Đang tải bài học…</p>}>
+      <Suspense fallback={<LessonGridSkeleton />}>
         <Lessons />
       </Suspense>
     </main>

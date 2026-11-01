@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getLesson } from "@/lib/db";
 import { mergeIntoSentences, toSrt } from "@/lib/subtitles";
 import LessonForm from "../LessonForm";
+import { FormSkeleton } from "@/components/Skeleton";
 
 async function Edit({ params }: PageProps<"/admin/[id]">) {
   await requireAdmin();
@@ -31,7 +32,7 @@ export default function EditLessonPage(props: PageProps<"/admin/[id]">) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
       <h1 className="text-2xl font-extrabold">Sửa bài học</h1>
-      <Suspense fallback={<p className="text-muted">Đang tải…</p>}>
+      <Suspense fallback={<FormSkeleton />}>
         <Edit {...props} />
       </Suspense>
     </main>

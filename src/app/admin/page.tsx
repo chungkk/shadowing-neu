@@ -5,6 +5,7 @@ import { listLessons } from "@/lib/db";
 import { removeLesson, toggleLessonPublished } from "./actions";
 import DeleteButton from "./DeleteButton";
 import LevelBadge from "@/components/LevelBadge";
+import { ListSkeleton } from "@/components/Skeleton";
 
 async function Dashboard() {
   await requireAdmin();
@@ -66,7 +67,7 @@ async function Dashboard() {
 export default function AdminPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
-      <Suspense fallback={<p className="text-muted">Đang tải…</p>}>
+      <Suspense fallback={<ListSkeleton thumb />}>
         <Dashboard />
       </Suspense>
     </main>
