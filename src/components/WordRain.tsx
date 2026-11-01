@@ -58,14 +58,17 @@ type View = Omit<Game, "words" | "queue">;
 type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
 
 const LIVES = 4;
-const HITS_PER_LEVEL = 8;
+const HITS_PER_LEVEL = 10;
 const MILESTONE_GOAL = 10; // số từ phải bắn để qua 1 mốc (chủ đề ít từ hơn → bằng số từ của chủ đề)
 const FADE = 0.7; // giây hiệu ứng nổ / chạm nước trước khi xoá giọt (khớp .rain-hit / .rain-miss)
 
 const levelOf = (hits: number) => Math.min(1 + Math.floor(hits / HITS_PER_LEVEL), 12);
-/** Tốc độ rơi (phần chiều cao sân / giây): cấp 1 ≈ 14 giây chạm nước */
-const fallSpeed = (level: number) => 0.07 + 0.01 * (level - 1);
-const spawnEvery = (level: number) => Math.max(1.2, 3.2 - 0.22 * (level - 1));
+/**
+ * Thời gian rơi tới mặt nước (giây): cấp 1 ≈ 24 giây, mỗi cấp nhanh thêm 1 giây, nhanh nhất 13 giây.
+ * Từ dài cần gõ lâu hơn → rơi chậm hơn (từ 4 chữ ×0.9, 12 chữ ×1.2, tối đa ×1.4)
+ */
+const fallTime = (level: number, word: string) => Math.max(13, 25 - level) * Math.min(Math.max(0.75 + 0.04 * word.length, 0.85), 1.4);
+const spawnEvery = (level: number) => Math.max(1.6, 3.6 - 0.2 * (level - 1));
 const maxDrops = (level: number) => Math.min(2 + level, 6);
 
 const topicWords = (g: Pick<Game, "words" | "topics">, m: number) => g.words.filter((w) => w.topic === g.topics[m].id);
@@ -134,7 +137,8 @@ function spawn(g: Game) {
   const recent = g.drops.filter((d) => d.state === "fall" && d.y < 0.3);
   let x = Math.random();
   for (let i = 0; i < 8 && recent.some((d) => Math.abs(d.x - x) < 0.35); i++) x = Math.random();
-  g.drops.push({ id: nextId++, w: nextWord(g), x, y: 0, speed: fallSpeed(level) * (0.85 + Math.random() * 0.3), state: "fall", at: 0, points: 0 });
+  const w = nextWord(g);
+  g.drops.push({ id: nextId++, w, x, y: 0, speed: (0.92 + Math.random() * 0.16) / fallTime(level, w.word), state: "fall", at: 0, points: 0 });
   g.nextSpawn = g.time + spawnEvery(level);
 }
 
