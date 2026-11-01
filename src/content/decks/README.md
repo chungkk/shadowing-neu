@@ -2,7 +2,7 @@
 
 Mỗi bộ từ là 1 file JSON ở thư mục này. Thêm bộ mới:
 
-1. Tạo `<slug>.json` theo mẫu dưới (xem `a1-gia-dinh.json`).
+1. Tạo `<slug>.json` theo mẫu dưới (xem `goethe-a1.json`).
 2. Thêm 1 dòng `import` + đưa vào mảng `RAW` trong `src/lib/decks.ts`.
 3. (Không bắt buộc) ảnh bìa: đặt vào `public/decks/<slug>.jpg` rồi ghi `"cover": "/decks/<slug>.jpg"`. Không có ảnh → app tự vẽ bìa theo trình độ.
 4. Deploy lại server. App tự thấy bộ mới, không cần cập nhật app.
@@ -10,9 +10,9 @@ Mỗi bộ từ là 1 file JSON ở thư mục này. Thêm bộ mới:
 ```json
 {
   "slug": "a2-mua-sam",              // duy nhất, chỉ a-z 0-9 -
-  "title": "Mua sắm",
+  "title": "Từ vựng Goethe B1",
   "description": "Mô tả ngắn hiện ở trang bộ từ",
-  "category": "Trình độ A2",          // các bộ cùng category nằm chung 1 mục trên app
+  "category": "Bộ sách Goethe",       // các bộ cùng category nằm chung 1 mục trên app
   "level": "A2",                      // A1…C2 — màu bìa + nhãn trình độ
   "order": 10,                        // thứ tự: mục xếp theo bộ có order nhỏ nhất, trong mục xếp theo order
   "cover": "/decks/a2-mua-sam.jpg",   // không bắt buộc

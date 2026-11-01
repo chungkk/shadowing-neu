@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { Button, ErrorText, LevelBadge, styles } from "@/components/ui";
@@ -15,6 +15,8 @@ import { speakGerman, stopSpeaking } from "@/lib/speak";
 
 /** Màu mạo từ theo giống — như sổ từ: der xanh dương · die đỏ · das xanh lá */
 const GENDER: Record<string, string> = { der: C.phrase, die: C.redText, das: C.accent };
+/** Thêm nhiều hơn chừng này từ 1 lần → hỏi lại (sổ đầy từ mới, lịch ôn dồn dập) */
+const CONFIRM_OVER = 100;
 const hasArticle = (g: DeckWord["gender"]): g is "der" | "die" | "das" => g === "der" || g === "die" || g === "das";
 
 function WordRow({
@@ -147,9 +149,18 @@ export default function DeckScreen() {
       });
     }
   };
-  /** Thêm mọi từ chưa có trong sổ */
-  const addAll = async () => {
+  /** Thêm mọi từ chưa có trong sổ (nhiều từ → hỏi lại trước) */
+  const addAll = () => {
     if (!deck || busy === "all") return;
+    const n = deck.words.filter((w) => !w.saved).length;
+    if (n <= CONFIRM_OVER) return doAddAll();
+    Alert.alert(t("decks.addAllConfirm", { n }), t("decks.addAllHint"), [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("decks.addAll", { n }), onPress: doAddAll },
+    ]);
+  };
+  const doAddAll = async () => {
+    if (!deck) return;
     const rest = deck.words.filter((w) => !w.saved).map((w) => w.word);
     setBusy("all");
     try {
@@ -172,7 +183,7 @@ export default function DeckScreen() {
       <Stack.Screen options={{ title: deck?.title ?? "" }} />
       <FlatList
         data={words}
-        keyExtractor={(w) => w.word}
+        keyExtractor={(w, i) => `${i}`} // từ đồng âm ("die Bank" ngân hàng / ghế băng) → không dùng từ làm khoá
         style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
         contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 60 }}
         ListHeaderComponent={

@@ -14,9 +14,15 @@ type Word = DeckWord & { saved: boolean };
 const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
 const article = (w: DeckWord) => (w.gender === "der" || w.gender === "die" || w.gender === "das" ? w.gender : "");
 
+// Bộ cả nghìn từ vẽ hết 1 lần thì trang rất nặng → hiện dần
+const PAGE = 100;
+// Thêm nhiều hơn chừng này từ 1 lần → hỏi lại (sổ đầy từ mới, lịch ôn dồn dập)
+const CONFIRM_OVER = 100;
+
 /** Danh sách từ của 1 bộ + thêm vào sổ (cả bộ / từng từ) */
 export default function DeckWords({ slug, words: initial, loggedIn }: { slug: string; words: Word[]; loggedIn: boolean }) {
   const [words, setWords] = useState(initial);
+  const [limit, setLimit] = useState(PAGE);
   const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // từ đang thêm · "all" = đang thêm cả bộ
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [, startTransition] = useTransition();
@@ -24,6 +30,7 @@ export default function DeckWords({ slug, words: initial, loggedIn }: { slug: st
   const left = words.filter((w) => !w.saved);
 
   const add = (list: string[], all: boolean) => {
+    if (all && list.length > CONFIRM_OVER && !confirm(`Thêm cả ${list.length} từ vào sổ? Có thể thêm từng từ bằng nút + ở mỗi dòng.`)) return;
     setMsg({});
     setBusy(all ? "all" : (b) => new Set(b === "all" ? [] : b).add(list[0]));
     startTransition(async () => {
@@ -68,11 +75,11 @@ export default function DeckWords({ slug, words: initial, loggedIn }: { slug: st
       </div>
 
       <ul className="card divide-y divide-border p-0">
-        {words.map((w) => {
+        {words.slice(0, limit).map((w, i) => {
           const a = article(w);
           const adding = busy === "all" ? !w.saved : busy.has(w.word);
           return (
-            <li key={w.word} className="flex items-center gap-2 py-2.5 pr-2 pl-4">
+            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-4">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:grid sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-x-4">
                 <p className="text-lg font-bold">
                   {a && <span className={GENDER[a]}>{a} </span>}
@@ -104,6 +111,11 @@ export default function DeckWords({ slug, words: initial, loggedIn }: { slug: st
           );
         })}
       </ul>
+      {words.length > limit && (
+        <button className="btn self-center" onClick={() => setLimit((n) => n + PAGE * 3)}>
+          Xem thêm ({words.length - limit} từ)
+        </button>
+      )}
     </div>
   );
 }
