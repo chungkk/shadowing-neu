@@ -196,3 +196,24 @@ export function FormSkeleton({ fields = 4 }: { fields?: number }) {
     </div>
   );
 }
+
+/** Trang Từ vựng (kho bộ từ) — khớp src/app/vocab/page.tsx */
+export function DecksSkeleton() {
+  return (
+    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Đang tải bộ từ vựng">
+      <Bone className="h-[5.5rem] w-full rounded-2xl" />
+      <section className="flex flex-col gap-3">
+        <Bone className="h-7 w-44" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-2.5 sm:p-3">
+              <Bone className="aspect-[16/10] w-full rounded-xl" />
+              <Bone className="h-5 w-3/4" />
+              <Bone className="h-4 w-12" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

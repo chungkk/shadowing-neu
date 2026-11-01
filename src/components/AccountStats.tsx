@@ -94,9 +94,9 @@ export default function AccountStats({ stats }: { stats: AccountStatsData }) {
           label="Sổ từ vựng"
           value={fmt(stats.words)}
           sub={`Đã thuộc ${fmt(stats.mastered)}`}
-          href="/vocab"
+          href="/vocab/notebook"
         />
-        <Tile icon={<CalendarClock className="size-4 text-link" />} label="Cần ôn hôm nay" value={fmt(stats.due)} href="/vocab" />
+        <Tile icon={<CalendarClock className="size-4 text-link" />} label="Cần ôn hôm nay" value={fmt(stats.due)} href="/vocab/notebook" />
         <Tile icon={<PlayCircle className="size-4 text-accent" />} label="Bài đã học" value={fmt(stats.lessons)} />
         <Tile icon={<PenLine className="size-4 text-accent" />} label="Câu đã chép" value={fmt(stats.sentences)} />
       </div>

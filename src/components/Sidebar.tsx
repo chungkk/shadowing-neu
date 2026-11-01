@@ -14,9 +14,9 @@ type NavUser = AvatarUser & { role: string };
 
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
+  { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
 ];
 const USER_ITEMS: Item[] = [
-  { href: "/vocab", label: "Sổ từ vựng", icon: BookMarked },
   { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },
 ];
 const ADMIN_ITEMS: Item[] = [

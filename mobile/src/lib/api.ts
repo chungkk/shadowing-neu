@@ -109,6 +109,30 @@ export type VocabItem = {
 };
 export type VocabExample = { id: number; context: string; sourceUrl: string | null; sourceTitle: string };
 
+/** Bộ từ vựng có sẵn (GET /vocab/decks) — saved = số từ của bộ đã có trong sổ (chỉ khi đăng nhập) */
+export type DeckSummary = {
+  slug: string;
+  title: string;
+  description: string;
+  category: string; // các bộ cùng category hiện chung 1 mục
+  level: string;
+  cover: string | null; // "/decks/…" trên server hoặc URL đầy đủ; null = app tự vẽ bìa
+  order: number;
+  wordCount: number;
+  saved?: number;
+};
+export type DeckWord = {
+  word: string; // không kèm mạo từ
+  gender: "der" | "die" | "das" | "-" | "";
+  plural: string;
+  meaning: string;
+  example: string;
+  saved: boolean; // đã có trong sổ
+};
+export type Deck = Omit<DeckSummary, "wordCount" | "saved"> & { words: DeckWord[] };
+/** Ảnh bìa bộ từ → URL đầy đủ */
+export const deckCover = (cover: string) => (/^https?:\/\//.test(cover) ? cover : API_URL + cover);
+
 let token: string | null = null;
 export const setApiToken = (t: string | null) => {
   token = t;

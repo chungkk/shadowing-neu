@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X, Zap } from "lucide-react";
 import { gradeWord } from "@/app/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import {
   buildQueue,
   canCloze,
@@ -24,29 +25,7 @@ import {
 import { stageInfo } from "@/lib/srs";
 import type { VocabItem } from "@/lib/db";
 
-// ---- Âm thanh: giọng đọc tiếng Đức của trình duyệt + tiếng báo đúng / sai ----
-
-const voiceStore = {
-  subscribe(cb: () => void) {
-    if (typeof speechSynthesis === "undefined") return () => {};
-    speechSynthesis.addEventListener("voiceschanged", cb);
-    return () => speechSynthesis.removeEventListener("voiceschanged", cb);
-  },
-  /** Chrome nạp danh sách giọng không đồng bộ → lúc đầu có thể chưa có */
-  germanVoice: () => (typeof speechSynthesis === "undefined" ? undefined : speechSynthesis.getVoices().find((v) => v.lang.startsWith("de"))),
-};
-const useHasGermanVoice = () => useSyncExternalStore(voiceStore.subscribe, () => !!voiceStore.germanVoice(), () => false);
-
-function speak(text: string, rate = 0.9) {
-  const voice = voiceStore.germanVoice();
-  if (!voice) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.voice = voice;
-  u.lang = voice.lang;
-  u.rate = rate;
-  speechSynthesis.speak(u);
-}
+// ---- Âm thanh: tiếng báo đúng / sai (giọng đọc tiếng Đức: @/lib/german-voice) ----
 
 let audioCtx: AudioContext | null = null;
 /** Đúng: 2 nốt đi lên · sai: 2 nốt trầm */

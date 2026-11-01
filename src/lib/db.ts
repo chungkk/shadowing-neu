@@ -933,6 +933,50 @@ export function setVocabNoun(userId: number, id: number, n: { gender: NounGender
   conn().prepare("UPDATE vocab SET gender = ?, singular = ?, plural = ? WHERE id = ? AND user_id = ?").run(n.gender, n.singular, n.plural, id, userId);
 }
 
+/** Từ đã có trong sổ (chữ thường) + số mục / số mục đến hạn ôn (không tính câu ⭐ — như tab Từ vựng) */
+export function vocabOverview(userId: number, now = Date.now()): { words: Set<string>; total: number; due: number } {
+  const rows = conn().prepare("SELECT word, context, srs_stage, due_at FROM vocab WHERE user_id = ?").all(userId) as {
+    word: string;
+    context: string;
+    srs_stage: number;
+    due_at: number | null;
+  }[];
+  const notes = rows.filter((r) => !isSentence(r));
+  return {
+    words: new Set(rows.map((r) => r.word.toLowerCase())),
+    total: notes.length,
+    due: notes.filter((r) => isDue({ stage: r.srs_stage, dueAt: r.due_at }, now)).length,
+  };
+}
+
+/**
+ * Thêm các từ của 1 bộ từ vào sổ (1 giao dịch). Từ đã có thì giữ mục cũ (saveVocab); mục chưa có nghĩa / chưa biết mạo từ
+ * thì điền theo bộ từ. → số mục mới thêm
+ */
+export function addDeckWords(
+  userId: number,
+  words: { word: string; gender: NounGender; plural: string; meaning: string; example: string }[],
+  sourceTitle: string,
+): number {
+  const db = conn();
+  const before = vocabOverview(userId).words;
+  db.exec("BEGIN");
+  try {
+    let added = 0;
+    for (const w of words) {
+      if (!before.has(w.word.toLowerCase())) added++;
+      const item = saveVocab(userId, { word: w.word, context: w.example, sourceUrl: null, sourceTitle });
+      if (!item.meaning && w.meaning) updateVocabMeaning(userId, item.id, w.meaning);
+      if (!item.gender && w.gender) setVocabNoun(userId, item.id, { gender: w.gender, singular: w.gender === "-" ? "" : w.word, plural: w.plural });
+    }
+    db.exec("COMMIT");
+    return added;
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
 // ---- Cài đặt chung ----
 
 export function getSetting<T>(key: string): T | null {

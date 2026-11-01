@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { changePassword, destroySession, envAdminEmail, getCurrentUser, requireUser, verifyPassword } from "@/lib/auth";
 import { addWord, aiWordMeaning, editProfile, removeAccount } from "@/lib/account";
 import { AVATAR_MAX_BYTES, imageType, removeAvatar, saveAvatar } from "@/lib/avatar";
-import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
+import { addDeckWords, deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
+import { getDeck } from "@/lib/decks";
 
 export type FormResult = { error?: string; ok?: string };
 
@@ -80,13 +81,13 @@ export async function saveWord(input: {
 }
 
 export async function setWordMeaning(id: number, meaning: string) {
-  const user = await requireUser("/vocab");
+  const user = await requireUser("/vocab/notebook");
   updateVocabMeaning(user.id, id, meaning.trim().slice(0, 500));
 }
 
 /** AI ghi nghĩa cho từ (lưu luôn) */
 export async function aiMeaning(id: number): Promise<{ meaning: string } | { error: string }> {
-  const user = await requireUser("/vocab");
+  const user = await requireUser("/vocab/notebook");
   try {
     return await aiWordMeaning(user, id);
   } catch (e) {
@@ -96,7 +97,7 @@ export async function aiMeaning(id: number): Promise<{ meaning: string } | { err
 
 /** Chấm 1 lần ôn từ (lặp lại ngắt quãng) → mức nhớ + hạn ôn mới */
 export async function gradeWord(id: number, correct: boolean) {
-  const user = await requireUser("/vocab");
+  const user = await requireUser("/vocab/notebook");
   return reviewVocab(user.id, id, {
     grade: correct ? "good" : "again",
     mode: "duolingo",
@@ -108,7 +109,21 @@ export async function gradeWord(id: number, correct: boolean) {
 }
 
 export async function removeWord(id: number) {
-  const user = await requireUser("/vocab");
+  const user = await requireUser("/vocab/notebook");
   deleteVocab(user.id, id);
   refresh();
+}
+
+/** Thêm các từ của 1 bộ từ (không truyền words = cả bộ) vào sổ để ôn. Chưa đăng nhập → { error: "login" } */
+export async function addDeck(slug: string, words?: string[]): Promise<{ added: number } | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "login" };
+  const deck = getDeck(slug);
+  if (!deck) return { error: "Không tìm thấy bộ từ" };
+  const pick = words ? new Set(words) : null;
+  const list = pick ? deck.words.filter((w) => pick.has(w.word)) : deck.words;
+  if (!list.length) return { error: "Chưa chọn từ nào" };
+  const added = addDeckWords(user.id, list, deck.title);
+  refresh();
+  return { added };
 }
