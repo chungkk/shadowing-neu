@@ -6,6 +6,7 @@ import { Headphones, Lock } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
 import { Gem } from "./PointsBadge";
+import UnlockDialog from "./UnlockDialog";
 
 type Item = {
   id: number;
@@ -34,10 +35,16 @@ export function SectionHeader({ title, count, children }: { title: string; count
   );
 }
 
-function LessonCard({ l }: { l: Item }) {
+/** onLocked: bấm thẻ bài đang khoá → mở popup mở khoá tại chỗ (mở tab mới / Ctrl+bấm → vẫn sang trang bài) */
+function LessonCard({ l, onLocked }: { l: Item; onLocked?: (l: Item) => void }) {
   return (
     <Link
       href={`/${l.slug}`}
+      onClick={(e) => {
+        if (l.access !== "locked" || !onLocked || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        onLocked(l);
+      }}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent active:scale-[0.99]"
     >
       <div className="relative aspect-video overflow-hidden bg-black">
@@ -100,6 +107,7 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
 /** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ */
 export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
   const [level, setLevel] = useState<string | null>(null);
+  const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
 
   if (!lessons.length) return <p className="text-sm text-muted">Chưa có bài học nào.</p>;
 
@@ -132,9 +140,11 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
       {lock?.enabled && <LockNote lock={lock} admin={admin} />}
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {shown.map((l) => (
-          <LessonCard key={l.id} l={l} />
+          // Admin học được mọi bài → bấm thẻ khoá vẫn vào thẳng bài
+          <LessonCard key={l.id} l={l} onLocked={lock?.enabled && !admin ? setOpening : undefined} />
         ))}
       </div>
+      {opening && lock && <UnlockDialog lesson={opening} lock={lock} onClose={() => setOpening(null)} />}
     </section>
   );
 }
