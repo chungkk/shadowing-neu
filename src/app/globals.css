@@ -356,7 +356,29 @@ select {
   }
 }
 
+/* Vệt mưa nền + thuyền / chim nhấp nhô trên mặt nước */
+.rain-streak {
+  animation: rain-fall linear infinite;
+}
+@keyframes rain-fall {
+  to {
+    transform: translateY(110vh);
+  }
+}
+.bob {
+  animation: bob 2.4s ease-in-out infinite;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-4px) rotate(-3deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .rain-streak {
+    display: none;
+  }
+  .bob,
   .shake,
   .sheet-fade,
   .sheet-up,
