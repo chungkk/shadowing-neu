@@ -71,7 +71,7 @@ export default function AccountStats({ stats }: { stats: AccountStatsData }) {
       </div>
 
       <div className="flex items-center gap-4 rounded-xl border border-gem/35 bg-gem/10 p-4">
-        <Gem className="size-12 shrink-0" />
+        <Gem className="size-9 shrink-0" />
         <div className="min-w-0">
           <p className="text-xs font-bold text-gem/80">Kim cương</p>
           <p className="text-3xl leading-tight font-extrabold text-gem tabular-nums">{fmt(points)}</p>
