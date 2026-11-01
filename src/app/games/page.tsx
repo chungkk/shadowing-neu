@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CloudRain, Volume2 } from "lucide-react";
+import { ArrowRight, CloudRain, Pickaxe, Volume2 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
 export const metadata: Metadata = {
@@ -28,31 +28,29 @@ const RainArt = () => (
   </div>
 );
 
-const BeeArt = () => (
-  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_15%_0%,#6b5018_0%,#2c1e09_55%,#150d04_100%)]">
-    {Array.from({ length: 16 }, (_, i) => (
-      <span key={i} className="absolute size-1 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)]" style={{ left: `${(i * 41) % 100}%`, top: `${(i * 29) % 75}%`, opacity: 0.4 + (i % 3) * 0.25 }} />
+const GoldArt = () => (
+  <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#0e1a26_0,#2a3442_3.5rem,#6b4520_3.5rem,#3d2612_70%,#170d05_100%)]">
+    <div className="absolute inset-x-0 top-14 h-1 border-t-2 border-lime-700/70 bg-[#8b6a3a]" />
+    {Array.from({ length: 14 }, (_, i) => (
+      <span key={i} className="absolute rounded-full bg-black/25" style={{ left: `${(i * 41) % 100}%`, top: `${40 + ((i * 29) % 55)}%`, width: 6 + (i % 4) * 4, height: 4 + (i % 3) * 3 }} />
     ))}
-    <span className="absolute top-5 left-[14%] flex flex-col items-center gap-0.5 rounded-lg border border-amber/60 bg-[#3a2a10]/90 px-2.5 py-1 transition group-hover:-translate-y-1">
+    <span className="absolute top-6 left-1/2 h-8 w-1 origin-top rotate-[22deg] rounded-full bg-[#7a4e25]" />
+    <span className="absolute top-6 left-1/2 h-8 w-1 origin-top -rotate-[22deg] rounded-full bg-[#7a4e25]" />
+    <Emoji code="1f477" className="top-14 left-1/2 -ml-16 size-10 -translate-y-full" />
+    {/* dây móc chéo xuống cục vàng bên phải */}
+    <span className="absolute top-6 left-1/2 h-0.5 w-[34%] origin-left rotate-[35deg] bg-amber-100/80 transition group-hover:rotate-[30deg]" />
+    <span className="absolute top-24 right-[10%] flex flex-col items-center gap-0.5 rounded-[0.8rem_1.2rem_0.9rem_1.3rem] border border-yellow-300 bg-gradient-to-br from-[#7a5a18]/95 to-[#3d2a0e]/95 px-2.5 py-1 shadow-[0_0_14px_rgba(250,204,21,0.5)]">
+      <Volume2 className="size-3.5 animate-pulse text-amber" />
+      <span className="font-mono text-xs font-extrabold tracking-[0.18em] text-white">
+        Gol<span className="text-amber-200/60">_</span>
+      </span>
+    </span>
+    <span className="absolute top-[6.5rem] left-[12%] flex flex-col items-center gap-0.5 rounded-[0.8rem_1.2rem_0.9rem_1.3rem] border border-yellow-400/60 bg-gradient-to-br from-[#5c4314]/95 to-[#2e1f0b]/95 px-2.5 py-1">
       <Volume2 className="size-3.5 text-amber" />
-      <span className="font-mono text-xs font-extrabold tracking-[0.18em] text-amber-200/60">
+      <span className="font-mono text-xs font-extrabold tracking-[0.18em] text-amber-200/50">
         <span className="text-amber">H</span>___
       </span>
     </span>
-    <span className="absolute top-12 right-[16%] flex flex-col items-center gap-0.5 rounded-lg border border-amber bg-[#4d3712]/95 px-2.5 py-1 shadow-[0_0_14px_rgba(250,204,21,0.45)]">
-      <Volume2 className="size-3.5 animate-pulse text-amber" />
-      <span className="font-mono text-xs font-extrabold tracking-[0.18em] text-white">
-        Bie<span className="text-amber-200/60">__</span>
-      </span>
-    </span>
-    <div className="absolute inset-x-0 bottom-0 h-8 border-t-2 border-lime-300/50 bg-gradient-to-b from-[#4d7c1f] to-[#1a330a] [border-radius:50%_50%_0_0/10px_10px_0_0]" />
-    {Array.from({ length: 12 }, (_, i) => (
-      <span key={i} className={`absolute bottom-6 text-[10px] ${["text-pink-300", "text-amber", "text-violet-300"][i % 3]}`} style={{ left: `${4 + i * 8}%` }}>
-        ✿
-      </span>
-    ))}
-    <Emoji code="1f426" className="bottom-4 left-4 size-10" />
-    <Emoji code="1f41d" className="bob bottom-3 left-1/2 size-10 -translate-x-1/2" />
   </div>
 );
 
@@ -66,10 +64,10 @@ const GAMES: { href: string; title: string; description: string; icon: Component
   },
   {
     href: "/games/spelling-bee",
-    title: "Ong đánh vần",
-    description: "Từ rơi xuống kèm phát âm — nghe rồi gõ lại đúng chính tả trước khi chạm cỏ.",
-    icon: Volume2,
-    art: <BeeArt />,
+    title: "Đào vàng",
+    description: "Mỗi cục vàng là 1 từ kèm phát âm — nghe, gõ đúng chính tả để quăng móc kéo vàng lên trước khi chìm mất.",
+    icon: Pickaxe,
+    art: <GoldArt />,
   },
 ];
 

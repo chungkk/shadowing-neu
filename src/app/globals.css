@@ -374,67 +374,29 @@ select {
   }
 }
 
-/* Ong đánh vần: ngòi ong bay từ con ong tới ô (--fx/--fy → --tx/--ty), ô vỡ thành mảnh, ong giật lên khi bắn */
-.bee-sting {
-  position: absolute;
-  width: 6px;
-  height: 16px;
-  margin: -8px 0 0 -3px;
-  border-radius: 9999px;
-  background: linear-gradient(#fef08a, #f59e0b);
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.9);
-  animation: bee-sting 220ms ease-in forwards;
+/* Đào vàng: móc treo đung đưa ở ròng rọc, thợ mỏ nhún người khi kéo */
+.hook-swing {
+  animation: hook-swing 2.6s ease-in-out infinite;
 }
-@keyframes bee-sting {
-  from {
-    left: var(--fx);
-    top: var(--fy);
-  }
-  90% {
-    opacity: 1;
-  }
-  to {
-    left: var(--tx);
-    top: var(--ty);
-    opacity: 0;
-  }
-}
-.bee-hit {
-  animation: bee-hit 600ms ease-out 200ms forwards;
-}
-@keyframes bee-hit {
-  20% {
-    transform: scale(1.12);
-  }
+@keyframes hook-swing {
+  0%,
   100% {
-    transform: scale(0.5);
-    opacity: 0;
+    transform: rotate(14deg);
+  }
+  50% {
+    transform: rotate(-14deg);
   }
 }
-.bee-shard {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 14px;
-  height: 10px;
-  margin: -5px 0 0 -7px;
-  border-radius: 3px;
-  background: linear-gradient(135deg, #fef08a, #f59e0b);
-  box-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
-  opacity: 0;
-  animation: pt-spark 600ms cubic-bezier(0.1, 0.8, 0.3, 1) 220ms forwards;
+.gold-pull {
+  animation: gold-pull 0.35s ease-in-out infinite;
 }
-.bee-fire {
-  display: inline-block;
-  animation: bee-fire 300ms ease-out;
-}
-@keyframes bee-fire {
-  40% {
-    transform: translateY(-8px) scale(1.2);
+@keyframes gold-pull {
+  50% {
+    transform: translateY(3px) rotate(-8deg);
   }
 }
 
-/* Đom đóm nền game Ong đánh vần */
+/* Sao trời nền game Đào vàng */
 .twinkle {
   animation: twinkle 3s ease-in-out infinite;
 }
@@ -450,14 +412,8 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bee-sting,
-  .bee-shard {
-    display: none;
-  }
-  .bee-hit {
-    animation: pt-fade 700ms ease-out forwards;
-  }
-  .bee-fire {
+  .hook-swing,
+  .gold-pull {
     animation: none;
   }
   .twinkle {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, type ComponentType, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState, type ComponentType, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import {
   BookmarkPlus,
   CloudRain,
@@ -11,6 +11,7 @@ import {
   Maximize2,
   Minimize2,
   Pause,
+  Pickaxe,
   Play,
   RotateCcw,
   Trophy,
@@ -28,8 +29,8 @@ import { DeckMenu, GameHeader, ScreenKeyboard, sameLetter, useCoarsePointer, typ
 /**
  * Game chữ rơi, 2 biến thể:
  * - "rain" (Mưa từ vựng): giọt hiện nghĩa tiếng Việt, gõ từ tiếng Đức trước khi chạm nước.
- * - "bee" (Ong đánh vần): giọt chỉ phát âm (đọc khi xuất hiện, bấm vào giọt / Space để nghe lại), gõ lại đúng chính tả trước khi chạm cỏ.
- *   Bắt đầu chỉ 1 giọt mỗi lúc, lên cấp mới thêm giọt; gõ xong thì ong bắn ngòi làm vỡ ô.
+ * - "gold" (Đào vàng): cục vàng chỉ phát âm (đọc khi lộ ra, bấm vào / Space để nghe lại), chìm dần xuống lòng đất — gõ lại đúng chính tả
+ *   trước khi chìm tới đáy. Bắt đầu chỉ 1 cục mỗi lúc, lên cấp mới thêm; gõ xong thì thợ mỏ quăng móc kéo cục vàng lên.
  * Mỗi chủ đề của bộ từ là 1 mốc: bắn đủ số từ của mốc thì sang chủ đề kế (+1 mạng); tiến độ mốc lưu theo bộ.
  * Chạm đáy mất 1 mạng, hết mạng là thua. Từ trượt hiện lại cuối ván, lưu được vào sổ để ôn.
  *
@@ -37,7 +38,10 @@ import { DeckMenu, GameHeader, ScreenKeyboard, sameLetter, useCoarsePointer, typ
  * chỉ chữ đúng mới được ghi — gõ sai thì giọt rung, không phải xoá. Sai 2 lần cùng chỗ → lộ chữ kế tiếp.
  */
 
-export type Variant = "rain" | "bee";
+export type Variant = "rain" | "gold";
+
+const REEL = 1.5; // giây "gold": móc thả xuống (REEL_OUT phần đầu) rồi kéo cục vàng lên tới ròng rọc
+const REEL_OUT = 0.3;
 
 const CONFIG = {
   rain: {
@@ -53,12 +57,13 @@ const CONFIG = {
     spawnMin: 1.6,
     drops: (level: number) => Math.min(2 + level, 6), // số giọt tối đa trên sân
     dropW: "min(15rem, 70%)",
+    fade: 0.85, // giây hiệu ứng nổ / chạm đáy trước khi xoá giọt (đủ cho .rain-hit, .rain-miss)
   },
-  bee: {
-    store: "spellingbee",
-    title: "Ong đánh vần",
-    subtitle: "Nghe từ đang rơi và gõ lại đúng chính tả",
-    icon: Volume2,
+  gold: {
+    store: "spellingbee", // giữ khoá cũ (game từng tên "Ong đánh vần") → không mất kỷ lục, tiến độ mốc
+    title: "Đào vàng",
+    subtitle: "Nghe từ, gõ đúng chính tả để quăng móc kéo vàng lên",
+    icon: Pickaxe,
     tone: "amber",
     listen: true,
     lives: 3,
@@ -67,8 +72,9 @@ const CONFIG = {
     spawnMin: 3.5,
     drops: (level: number) => (level < 3 ? 1 : level < 6 ? 2 : 3), // cấp 1–2: từng từ một
     dropW: "min(11rem, 60%)",
+    fade: REEL, // móc thả xuống + kéo lên
   },
-} satisfies Record<Variant, { store: string; title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; listen: boolean; lives: number; slower: number; spawnBase: number; spawnMin: number; drops: (level: number) => number; dropW: string }>;
+} satisfies Record<Variant, { store: string; title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; listen: boolean; lives: number; slower: number; spawnBase: number; spawnMin: number; drops: (level: number) => number; dropW: string; fade: number }>;
 type Config = (typeof CONFIG)[Variant];
 
 /** Màu của từng biến thể (giọt, ô chữ, HUD, lớp phủ) */
@@ -86,11 +92,12 @@ const THEME = {
     note: "bg-cyan-500 text-white",
     overlay: "bg-[#06121c]/85",
   },
-  bee: {
-    field: "bg-[radial-gradient(ellipse_at_15%_0%,#5c4415_0%,#2c1e09_45%,#150d04_100%)]",
-    drop: "border-amber/50 bg-[#3a2a10]/90",
-    dropTarget: "border-amber bg-[#4d3712]/95 shadow-[0_0_18px_rgba(250,204,21,0.45)]",
-    gone: "rain-miss border-amber/40 bg-[#3a2a10]/90",
+  gold: {
+    // trời chạng vạng ở trên, mặt đất ở 7rem, càng xuống sâu đất càng tối
+    field: "bg-[linear-gradient(to_bottom,#0e1a26_0,#2a3442_7rem,#6b4520_7rem,#4a2e14_35%,#2e1c0b_70%,#120a04_100%)]",
+    drop: "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-400/60 bg-gradient-to-br from-[#5c4314]/95 to-[#2e1f0b]/95",
+    dropTarget: "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-300 bg-gradient-to-br from-[#7a5a18]/95 to-[#3d2a0e]/95 shadow-[0_0_18px_rgba(250,204,21,0.5)]",
+    gone: "rain-miss rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-400/40 bg-[#3a2a10]/90",
     cursor: "text-amber-200",
     empty: "text-amber-200/40",
     accent: "text-amber",
@@ -112,7 +119,7 @@ type Game = {
   goal: number; // số từ phải bắn để qua mốc này
   queue: GameWord[];
   drops: Drop[];
-  fresh: Drop | null; // giọt vừa thả (để đọc to ở biến thể "bee")
+  fresh: Drop | null; // giọt vừa thả (để đọc to ở biến thể "gold")
   time: number;
   nextSpawn: number;
   lives: number;
@@ -130,7 +137,6 @@ type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
 
 const HITS_PER_LEVEL = 10;
 const MILESTONE_GOAL = 10; // số từ phải bắn để qua 1 mốc (chủ đề ít từ hơn → bằng số từ của chủ đề)
-const FADE = 0.85; // giây hiệu ứng nổ / chạm đáy trước khi xoá giọt (đủ cho .rain-hit, .rain-miss, .bee-hit)
 
 const levelOf = (hits: number) => Math.min(1 + Math.floor(hits / HITS_PER_LEVEL), 12);
 /**
@@ -155,15 +161,21 @@ const STREAKS = Array.from({ length: 70 }, (_, i) => ({
   h: 12 + rand(i, 4) * 20,
   op: 0.12 + rand(i, 5) * 0.3,
 }));
-const FIREFLIES = Array.from({ length: 45 }, (_, i) => ({
+const STARS = Array.from({ length: 24 }, (_, i) => ({
   left: rand(i, 6) * 100,
-  top: rand(i, 7) * 85,
-  size: 2 + rand(i, 8) * 2,
+  top: 4 + rand(i, 7) * 50, // % của dải trời (7rem)
+  size: 1.5 + rand(i, 8) * 1.5,
   dur: 2 + rand(i, 9) * 3,
   delay: -rand(i, 10) * 4,
 }));
-const FLOWER_COLORS = ["text-pink-300", "text-amber", "text-violet-300", "text-orange-300", "text-rose-300"];
-const FLOWERS = Array.from({ length: 30 }, (_, i) => ({ left: 2 + i * 3.3 + rand(i, 11) * 1.5, bottom: 30 + rand(i, 12) * 10, color: FLOWER_COLORS[i % FLOWER_COLORS.length] }));
+const PEBBLES = Array.from({ length: 40 }, (_, i) => ({
+  left: rand(i, 11) * 100,
+  top: 10 + rand(i, 12) * 85, // % của phần đất
+  w: 6 + rand(i, 13) * 14,
+  h: 4 + rand(i, 14) * 8,
+  op: 0.15 + rand(i, 15) * 0.25,
+}));
+const GEMS = Array.from({ length: 6 }, (_, i) => ({ left: 4 + rand(i, 16) * 88, top: 20 + rand(i, 17) * 70, code: i % 2 ? "1f48e" : "1faa8" }));
 
 let nextId = 1;
 
@@ -281,7 +293,7 @@ function step(g: Game, dt: number) {
       g.missed.push(d.w);
     }
   }
-  g.drops = g.drops.filter((d) => d.state === "fall" || g.time - d.at < FADE);
+  g.drops = g.drops.filter((d) => d.state === "fall" || g.time - d.at < g.cfg.fade);
   const falling = g.drops.filter((d) => d.state === "fall").length;
   if (!falling) g.nextSpawn = Math.min(g.nextSpawn, g.time + 1); // sân trống → khỏi chờ lâu
   if (g.time >= g.nextSpawn && falling < g.cfg.drops(levelOf(g.hits))) spawn(g);
@@ -318,9 +330,9 @@ const RoundBtn = ({ title, onClick, children, on, theme }: { title: string; onCl
   </button>
 );
 
-const Emoji = ({ code, className }: { code: string; className: string }) => (
+const Emoji = ({ code, className, style }: { code: string; className: string; style?: CSSProperties }) => (
   // eslint-disable-next-line @next/next/no-img-element
-  <img src={`/emoji/${code}.webp`} alt="" className={`pointer-events-none ${className}`} />
+  <img src={`/emoji/${code}.webp`} alt="" className={`pointer-events-none ${className}`} style={style} />
 );
 
 /** Nền "rain": mây, mưa · đáy: mặt nước, thuyền (kèm nhãn), chim cánh cụt */
@@ -349,34 +361,41 @@ function RainScenery({ label }: { label: ReactNode }) {
   );
 }
 
-/** Nền "bee": đêm mật ong có đom đóm · đáy: thảm cỏ hoa, con ong (kèm nhãn), chú chim */
-function BeeScenery({ label, fired }: { label: ReactNode; fired: number }) {
+/** Nền "gold": trời sao, mặt đất có giàn ròng rọc + thợ mỏ, lòng đất sỏi đá tối dần · đáy: nhãn bộ từ */
+function GoldScenery({ label, reeling }: { label: ReactNode; reeling: boolean }) {
   return (
     <>
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-16 h-72 w-[55%] rounded-full bg-amber/10 blur-3xl" />
-        {FIREFLIES.map((f, i) => (
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28">
+        {STARS.map((f, i) => (
           <span
             key={i}
-            className="twinkle absolute rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)]"
+            className="twinkle absolute rounded-full bg-amber-100"
             style={{ left: `${f.left}%`, top: `${f.top}%`, width: f.size, height: f.size, animationDuration: `${f.dur}s`, animationDelay: `${f.delay}s` }}
           />
         ))}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 border-t-2 border-lime-300/50 bg-gradient-to-b from-[#4d7c1f] to-[#1a330a] [border-radius:50%_50%_0_0/14px_14px_0_0]" />
-      {FLOWERS.map((f, i) => (
-        <span key={i} className={`pointer-events-none absolute text-xs leading-none ${f.color}`} style={{ left: `${f.left}%`, bottom: f.bottom }}>
-          ✿
-        </span>
-      ))}
-      <Emoji code="1f426" className="bob absolute bottom-7 left-4 size-12" />
-      <div className="pointer-events-none absolute bottom-1.5 left-1/2 flex -translate-x-1/2 flex-col items-center">
-        {/* fired đổi → dựng lại để giật lên mỗi lần bắn */}
-        <span key={fired} className={fired ? "bee-fire" : ""}>
-          <Emoji code="1f41d" className="bob size-11 [animation-delay:-1s]" />
-        </span>
-        {label}
+      <div className="pointer-events-none absolute inset-x-0 top-28 bottom-0">
+        {PEBBLES.map((p, i) => (
+          <span key={i} className="absolute rounded-full bg-black" style={{ left: `${p.left}%`, top: `${p.top}%`, width: p.w, height: p.h, opacity: p.op }} />
+        ))}
+        {GEMS.map((g, i) => (
+          <Emoji key={i} code={g.code} className="absolute size-5 opacity-40" style={{ left: `${g.left}%`, top: `${g.top}%` }} />
+        ))}
+        <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-b from-transparent to-black/70" />
       </div>
+      {/* Mặt đất (7rem) + giàn ròng rọc ở giữa (ròng rọc ở 4.25rem) + thợ mỏ đứng cạnh */}
+      <div className="pointer-events-none absolute inset-x-0 top-28 h-1.5 border-t-2 border-lime-700/70 bg-[#8b6a3a]" />
+      <div className="pointer-events-none absolute top-[4.25rem] left-1/2 h-[2.9rem] w-1.5 origin-top -translate-x-1/2 rotate-[22deg] rounded-full bg-[#7a4e25]" />
+      <div className="pointer-events-none absolute top-[4.25rem] left-1/2 h-[2.9rem] w-1.5 origin-top -translate-x-1/2 -rotate-[22deg] rounded-full bg-[#7a4e25]" />
+      <div className="pointer-events-none absolute top-[3.85rem] left-1/2 size-3.5 -translate-x-1/2 rounded-full border-2 border-[#3b2410] bg-amber-200" />
+      {!reeling && (
+        <div className="hook-swing pointer-events-none absolute top-[4.25rem] left-1/2 flex origin-top -translate-x-1/2 flex-col items-center">
+          <span className="h-[4.5rem] w-0.5 bg-amber-100/70" />
+          <Emoji code="1fa9d" className="-mt-1 size-5" />
+        </div>
+      )}
+      <Emoji code="1f477" className={`absolute top-28 left-1/2 -ml-[4.75rem] size-12 -translate-y-full ${reeling ? "gold-pull" : "bob"}`} />
+      <div className="pointer-events-none absolute bottom-1.5 left-1/2 flex -translate-x-1/2 flex-col items-center">{label}</div>
     </>
   );
 }
@@ -394,8 +413,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const [note, setNote] = useState<{ text: string; tone: "ok" | "warn" } | null>(null);
   const [bad, setBad] = useState<{ key: string; n: number } | null>(null); // phím vừa gõ sai (n: để rung lại mỗi lần sai)
   const [speakingId, setSpeakingId] = useState<number | null>(null); // giọt đang được đọc to
-  const [shots, setShots] = useState<{ id: number; x: number; y: number }[]>([]); // ngòi ong đang bay tới giọt vừa gõ xong
-  const [fired, setFired] = useState(0);
+  const [area, setArea] = useState({ w: 0, h: 0 }); // cỡ vùng rơi (px) — "gold" tính đường dây móc
   const [error, setError] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -412,6 +430,13 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const nativeKeyboard = coarse && !keyboard; // màn cảm ứng tắt bàn phím trên màn hình → cần ô nhập ẩn để bật bàn phím hệ thống
   const playing = phase === "play" || phase === "pause";
 
+  const measure = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setArea({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     const onFull = () => setFull(document.fullscreenElement === field.current);
     document.addEventListener("fullscreenchange", onFull);
@@ -423,7 +448,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
     };
   }, []);
 
-  /** Đọc to từ của 1 giọt (biến thể "bee": khi xuất hiện, khi bấm vào, Space) */
+  /** Đọc to từ của 1 giọt (biến thể "gold": khi xuất hiện, khi bấm vào, Space) */
   const sayDrop = (d: Pick<Drop, "id" | "w">) => {
     setSpeakingId(d.id);
     void speakGerman(fullWord(d.w), { onEnd: () => setSpeakingId((id) => (id === d.id ? null : id)) });
@@ -557,15 +582,15 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
     Object.assign(d, { state: "hit", at: g.time });
     g.nextSpawn = Math.max(g.nextSpawn, g.time + 1.2); // nghỉ chút sau khi bắn trúng
     if (sound) speakGerman(fullWord(d.w));
-    if (variant === "bee") {
-      setShots((s) => [...s, { id: d.id, x: d.x, y: d.y }]);
-      setFired((n) => n + 1);
-      setTimeout(() => setShots((s) => s.filter((x) => x.id !== d.id)), 400);
-    }
     const level = levelOf(g.hits);
     if (g.mHits >= g.goal) clearMilestone(g);
     else if (level > levelOf(g.hits - 1))
-      flash(cfg.drops(level) > cfg.drops(level - 1) ? `Lên cấp ${level} — thêm 1 từ rơi cùng lúc!` : `Lên cấp ${level} — rơi nhanh hơn!`, "ok");
+      flash(
+        cfg.drops(level) > cfg.drops(level - 1)
+          ? `Lên cấp ${level} — thêm 1 ${variant === "gold" ? "cục vàng" : "từ rơi"} cùng lúc!`
+          : `Lên cấp ${level} — ${variant === "gold" ? "chìm" : "rơi"} nhanh hơn!`,
+        "ok",
+      );
   }
 
   /** 1 phím (bàn phím thật / trên màn hình / hệ thống) → true nếu game dùng phím đó */
@@ -650,7 +675,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
           icon={cfg.icon}
           intro={
             cfg.listen
-              ? `Mỗi chủ đề là một mốc — đánh vần đúng ${MILESTONE_GOAL} từ để vượt mốc. Từ được đọc khi rơi xuống; bấm vào giọt hoặc Space để nghe lại. ${typing}`
+              ? `Mỗi chủ đề là một mốc — đánh vần đúng ${MILESTONE_GOAL} từ để vượt mốc. Từ được đọc khi cục vàng lộ ra; gõ đúng thì thợ mỏ quăng móc kéo nó lên trước khi chìm tới đáy. Bấm vào cục vàng hoặc Space để nghe lại. ${typing}`
               : `Mỗi chủ đề là một mốc — bắn đủ ${MILESTONE_GOAL} từ để vượt mốc. ${typing}`
           }
           decks={decks}
@@ -672,6 +697,26 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const topic = v.topics[v.milestone];
   const target = v.drops.find((d) => d.id === v.targetId && d.state === "fall") ?? null;
   const missed = [...new Map(v.missed.map((w) => [w.word, w])).values()];
+  // "gold": vị trí dây móc / cục vàng đang kéo (px trong vùng rơi). Ròng rọc ở giữa, cao hơn vùng rơi 3.75rem
+  const pulley = { x: area.w / 2, y: -60 };
+  const dropPx = Math.min(176, area.w * 0.6); // = cfg.dropW "min(11rem, 60%)"
+  const DROP_H = 60; // chiều cao ước chừng của cục vàng
+  const reels =
+    variant === "gold"
+      ? v.drops
+          .filter((d) => d.state === "hit")
+          .map((d) => {
+            const t = Math.min((v.time - d.at) / REEL, 1);
+            const from = { x: (area.w - dropPx) * d.x + dropPx / 2, y: d.y * (area.h - DROP_H) + DROP_H / 2 };
+            const ease = (u: number) => u * u * (3 - 2 * u);
+            const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, u: number) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
+            // Thả móc xuống (cục vàng đứng yên) → kéo lên (cục vàng theo móc), gần tới ròng rọc thì nhỏ lại, mờ đi
+            const pull = Math.max(0, (t - REEL_OUT) / (1 - REEL_OUT));
+            const tip = t < REEL_OUT ? lerp(pulley, from, ease(t / REEL_OUT)) : lerp(from, pulley, ease(pull));
+            return { id: d.id, tip, at: t < REEL_OUT ? from : tip, scale: 1 - 0.45 * pull, opacity: pull > 0.85 ? (1 - pull) / 0.15 : 1 };
+          })
+      : [];
+  const reelOf = new Map(reels.map((r) => [r.id, r]));
   const label = (
     <span className="-mt-1 max-w-48 truncate rounded-full border border-white/10 bg-black/60 px-2.5 py-0.5 text-[11px] font-bold text-white">
       {bad ? <span className="text-red-300">✕ {bad.key}</span> : current?.title}
@@ -688,27 +733,34 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
           full ? "" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
         }`}
       >
-        {variant === "bee" ? <BeeScenery label={label} fired={fired} /> : <RainScenery label={label} />}
+        {variant === "gold" ? <GoldScenery label={label} reeling={!!reels.length} /> : <RainScenery label={label} />}
 
-        {/* Vùng rơi: dưới HUD, chừa cột nút bên phải; đáy = mặt nước / thảm cỏ */}
-        <div className="absolute top-14 right-14 bottom-12 left-2">
+        {/* Vùng rơi: dưới HUD (gold: dưới mặt đất), chừa cột nút bên phải; đáy = mặt nước / đáy mỏ */}
+        <div ref={measure} className={`absolute right-14 left-2 ${variant === "gold" ? "top-32 bottom-9" : "top-14 bottom-12"}`}>
           {v.drops.map((d) => {
             const isTarget = d.id === target?.id;
+            const reel = reelOf.get(d.id);
             const done = d.state === "hit" || d.state === "miss";
             return (
               <div
                 key={d.id}
                 className="absolute"
-                style={{ width: cfg.dropW, left: `calc((100% - ${cfg.dropW}) * ${d.x})`, top: `${d.y * 100}%`, transform: `translateY(${-d.y * 100}%)` }}
+                style={
+                  reel
+                    ? { width: cfg.dropW, left: reel.at.x, top: reel.at.y, transform: `translate(-50%, -50%) scale(${reel.scale})`, opacity: reel.opacity, zIndex: 1 }
+                    : { width: cfg.dropW, left: `calc((100% - ${cfg.dropW}) * ${d.x})`, top: `${d.y * 100}%`, transform: `translateY(${-d.y * 100}%)` }
+                }
               >
                 <div
                   key={isTarget && bad ? bad.n : 0} // gõ sai → dựng lại để rung lần nữa
-                  onClick={cfg.listen && d.state === "fall" ? () => sayDrop(d) : undefined} // "bee": bấm vào giọt → nghe lại
+                  onClick={cfg.listen && d.state === "fall" ? () => sayDrop(d) : undefined} // "gold": bấm vào cục vàng → nghe lại
                   onPointerDown={cfg.listen ? (e) => e.stopPropagation() : undefined}
                   title={cfg.listen && d.state === "fall" ? "Bấm để nghe lại" : undefined}
                   className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} ${cfg.listen && d.state === "fall" ? "cursor-pointer hover:brightness-125" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
                     d.state === "hit"
-                      ? `${variant === "bee" ? "bee-hit" : "rain-hit"} border-accent bg-accent/20`
+                      ? variant === "gold"
+                        ? "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-200 bg-gradient-to-br from-[#8a6514]/95 to-[#4a3310]/95 shadow-[0_0_24px_rgba(250,204,21,0.7)]"
+                        : "rain-hit border-accent bg-accent/20"
                       : d.state === "miss"
                         ? "rain-miss border-red bg-red/20"
                         : d.state === "gone"
@@ -737,31 +789,25 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
                     <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
                   )}
                   {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gem">+{d.points}</span>}
-                  {/* "bee": ô vỡ thành mảnh khi ngòi ong tới */}
-                  {d.state === "hit" &&
-                    variant === "bee" &&
-                    Array.from({ length: 10 }, (_, i) => (
-                      <span key={i} className="bee-shard" style={{ "--a": `${i * 36 + 10}deg`, "--d": `${60 + (i % 3) * 24}px` } as CSSProperties} />
-                    ))}
                 </div>
               </div>
             );
           })}
-          {/* Ngòi ong bay từ con ong (giữa đáy sân) tới tâm giọt vừa gõ xong — chiều cao giọt ≈ 4rem */}
-          {shots.map((s) => (
-            <span
-              key={s.id}
-              className="bee-sting"
-              style={
-                {
-                  "--fx": "calc(50% + 1.5rem)",
-                  "--fy": "calc(100% + 1rem)",
-                  "--tx": `calc((100% - ${cfg.dropW}) * ${s.x} + ${cfg.dropW} / 2)`,
-                  "--ty": `calc(${s.y * 100}% + ${(0.5 - s.y) * 4}rem)`,
-                } as CSSProperties
-              }
-            />
-          ))}
+          {/* Dây móc: từ ròng rọc thả xuống cục vàng vừa gõ xong rồi kéo nó lên */}
+          {reels.map(({ id, tip }) => {
+            // móc nằm ở mép trên cục vàng (cách tâm 1.5rem)
+            const dx = tip.x - pulley.x;
+            const dy = tip.y - 24 - pulley.y;
+            return (
+              <div key={id} className="pointer-events-none absolute z-[2]" style={{ left: pulley.x, top: pulley.y }}>
+                <span
+                  className="absolute top-0 left-0 h-0.5 origin-left bg-amber-100/80"
+                  style={{ width: Math.hypot(dx, dy), transform: `rotate(${Math.atan2(dy, dx)}rad)` }}
+                />
+                <Emoji code="1fa9d" className="absolute size-6 max-w-none -translate-x-1/2 -translate-y-1/2" style={{ left: dx, top: dy }} />
+              </div>
+            );
+          })}
         </div>
 
         {/* HUD: điểm · mốc · mạng */}
@@ -855,7 +901,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
                     <p className="text-sm text-muted">Kỷ lục: {best}</p>
                   )}
                   <p className="text-sm text-muted">
-                    {cfg.listen ? "Đánh vần đúng" : "Bắn trúng"} {v.hits} từ ·{" "}
+                    {cfg.listen ? `Kéo được ${v.hits} cục vàng` : `Bắn trúng ${v.hits} từ`} ·{" "}
                     {phase === "win" ? `qua cả ${v.topics.length} mốc` : `dừng ở mốc ${v.milestone + 1}/${v.topics.length}`}
                   </p>
                   {!!missed.length && (
@@ -916,7 +962,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       </div>
 
       {/* Bàn phím trên màn hình (QWERTZ) */}
-      {keyboard && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: "Chọn giọt khác" }} />}
+      {keyboard && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: variant === "gold" ? "Chọn cục vàng khác" : "Chọn giọt khác" }} />}
     </div>
   );
 }
