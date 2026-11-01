@@ -313,6 +313,12 @@ function sentenceCount(id: number): number {
   return n;
 }
 
+/** Số câu (sau khi gộp) của bài đã đăng — null = không có bài / bài nháp. Giới hạn idx khi cộng điểm chính tả */
+export function publishedSentenceCount(id: number): number | null {
+  const r = conn().prepare("SELECT published FROM lessons WHERE id = ?").get(id) as { published: number } | undefined;
+  return r?.published ? sentenceCount(id) : null;
+}
+
 export function getLesson(id: number): Lesson | null {
   const r = conn().prepare("SELECT * FROM lessons WHERE id = ?").get(id) as Row | undefined;
   if (!r) return null;
@@ -1038,6 +1044,15 @@ export function getPointIdx(userId: number, source: string): number[] {
   return (conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? ORDER BY idx").all(userId, source) as { idx: number }[]).map(
     (r) => r.idx,
   );
+}
+
+/** Điểm chính tả kiếm được từ video YouTube (/watch/…) kể từ `since` (ms) */
+export function watchPointsSince(userId: number, since: number): number {
+  return (
+    conn().prepare("SELECT COALESCE(SUM(pts), 0) AS n FROM dict_points WHERE user_id = ? AND source LIKE '/watch/%' AND at >= ?").get(userId, since) as {
+      n: number;
+    }
+  ).n;
 }
 
 /** +POINTS_CORRECT cho câu idx (câu đã tính rồi → awarded = false, không cộng) */
