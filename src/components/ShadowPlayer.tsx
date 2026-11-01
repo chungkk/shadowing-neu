@@ -820,44 +820,7 @@ export default function ShadowPlayer({
           {mediaHidden && (
             <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
           )}
-          {/* Chính tả đã có thanh công cụ + "Nghe lại (Tab)" ở cột giữa → bỏ khối này cho đỡ trùng.
-              Màn hẹp: thanh công cụ ngay bên dưới đã có Phát / Phát lại → cũng bỏ */}
-          {!dictation && (
-            <div className="hidden flex-col gap-4 lg:flex">
-              <span className="label text-link">Điều khiển</span>
-              <div className="grid grid-cols-2 gap-3">
-                <button className="btn btn-primary py-3 text-base" onClick={togglePlay}>
-                  {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
-                  {playing ? "Dừng" : "Phát"}
-                </button>
-                <button className="btn py-3 text-base uppercase" onClick={() => go(idx)}>
-                  <RotateCcw className="size-5" /> Phát lại
-                </button>
-              </div>
-            </div>
-          )}
-          {children}
-        </div>
-
-        {/* Cột 2: luyện tập câu hiện tại */}
-        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
-          <div className="flex justify-center">
-            {dictation ? (
-              <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
-            ) : (
-              // 1 nút bật/tắt thay cho cặp "Từng câu / Liên tục" (như nút "Tự dừng sau mỗi câu" của app)
-              <button
-                className={`btn ${settings.mode === "segment" ? "border-accent text-accent" : ""}`}
-                aria-pressed={settings.mode === "segment"}
-                title={settings.mode === "segment" ? "Đang dừng sau mỗi câu — bấm để phát liên tục" : "Đang phát liên tục — bấm để dừng sau mỗi câu"}
-                onClick={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
-              >
-                <CirclePause className="size-4" /> Tự dừng sau mỗi câu
-              </button>
-            )}
-          </div>
-
-          {/* Thanh công cụ */}
+          {/* Thanh công cụ ngay dưới video (cả Shadowing lẫn Chính tả) */}
           <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-card-2/60 px-1.5 py-1.5 sm:gap-1 sm:px-2">
             <button className="btn-icon" title="Câu trước (←)" onClick={prev} disabled={prevIdx === undefined}>
               <ChevronLeft className="size-5" />
@@ -964,6 +927,27 @@ export default function ShadowPlayer({
               nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
             </p>
           )}
+
+          {children}
+        </div>
+
+        {/* Cột 2: luyện tập câu hiện tại */}
+        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
+          <div className="flex justify-center">
+            {dictation ? (
+              <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
+            ) : (
+              // 1 nút bật/tắt thay cho cặp "Từng câu / Liên tục" (như nút "Tự dừng sau mỗi câu" của app)
+              <button
+                className={`btn ${settings.mode === "segment" ? "border-accent text-accent" : ""}`}
+                aria-pressed={settings.mode === "segment"}
+                title={settings.mode === "segment" ? "Đang dừng sau mỗi câu — bấm để phát liên tục" : "Đang phát liên tục — bấm để dừng sau mỗi câu"}
+                onClick={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
+              >
+                <CirclePause className="size-4" /> Tự dừng sau mỗi câu
+              </button>
+            )}
+          </div>
 
           {resumed !== null && (
             <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
