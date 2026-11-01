@@ -119,17 +119,29 @@ export type DeckSummary = {
   cover: string | null; // "/decks/…" trên server hoặc URL đầy đủ; null = app tự vẽ bìa
   order: number;
   wordCount: number;
+  topicCount?: number; // > 0: bấm vào bộ ra danh sách chủ đề
   saved?: number;
 };
+/** Chủ đề trong bộ ("an-uong" · "Ăn uống" · "🍽️") kèm số từ / số từ đã có trong sổ */
+export type DeckTopic = { id: string; title: string; icon: string; wordCount: number; saved: number };
 export type DeckWord = {
   word: string; // không kèm mạo từ
   gender: "der" | "die" | "das" | "-" | "";
   plural: string;
   meaning: string;
   example: string;
+  topic: string;
   saved: boolean; // đã có trong sổ
 };
-export type Deck = Omit<DeckSummary, "wordCount" | "saved"> & { words: DeckWord[] };
+/**
+ * GET /vocab/decks/<slug>[?topic=<id>] — bộ chia chủ đề: chưa có từ (words rỗng) tới khi chọn chủ đề;
+ * có ?topic → chỉ từ của chủ đề đó
+ */
+export type Deck = Omit<DeckSummary, "topicCount"> & {
+  topics: DeckTopic[];
+  topic: Omit<DeckTopic, "wordCount" | "saved"> | null;
+  words: DeckWord[];
+};
 /** Ảnh bìa bộ từ → URL đầy đủ */
 export const deckCover = (cover: string) => (/^https?:\/\//.test(cover) ? cover : API_URL + cover);
 

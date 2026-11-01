@@ -21,8 +21,12 @@ type RawDeck = {
   level?: string;
   cover?: string; // "/decks/<file>" trong public/, hoặc URL đầy đủ — không có thì app tự vẽ bìa
   order?: number;
-  words: { word: string; meaning: string; example?: string; plural?: string }[];
+  topics?: DeckTopic[]; // có thì trang bộ từ hiện danh sách chủ đề, bấm vào mới ra từ
+  words: { word: string; meaning: string; example?: string; plural?: string; topic?: string }[];
 };
+
+/** Chủ đề trong 1 bộ ("an-uong" · "Ăn uống" · "🍽️") */
+export type DeckTopic = { id: string; title: string; icon: string };
 
 export type DeckWord = {
   word: string; // không kèm mạo từ ("Hund")
@@ -30,6 +34,7 @@ export type DeckWord = {
   plural: string;
   meaning: string;
   example: string;
+  topic: string; // id chủ đề ("" = bộ không chia chủ đề)
 };
 export type Deck = {
   slug: string;
@@ -39,9 +44,10 @@ export type Deck = {
   level: string;
   cover: string | null;
   order: number;
+  topics: DeckTopic[];
   words: DeckWord[];
 };
-export type DeckSummary = Omit<Deck, "words"> & { wordCount: number };
+export type DeckSummary = Omit<Deck, "words" | "topics"> & { wordCount: number; topicCount: number };
 
 function toWord(w: RawDeck["words"][number]): DeckWord {
   const raw = w.word.trim();
@@ -49,7 +55,14 @@ function toWord(w: RawDeck["words"][number]): DeckWord {
   const m = raw.match(/^(der|die|das) (\p{Lu}[^,/()]*)$/u);
   // Danh từ tiếng Đức luôn viết hoa → viết thường / nhiều từ thì không phải danh từ
   const gender: NounGender = m ? (m[1] as NounGender) : /\s/.test(raw) || raw[0] !== raw[0].toUpperCase() ? "-" : "";
-  return { word: m ? m[2] : raw, gender, plural: w.plural?.trim() ?? "", meaning: w.meaning.trim(), example: w.example?.trim() ?? "" };
+  return {
+    word: m ? m[2] : raw,
+    gender,
+    plural: w.plural?.trim() ?? "",
+    meaning: w.meaning.trim(),
+    example: w.example?.trim() ?? "",
+    topic: w.topic ?? "",
+  };
 }
 
 const DECKS: Deck[] = RAW.map((d) => ({
@@ -60,9 +73,18 @@ const DECKS: Deck[] = RAW.map((d) => ({
   level: d.level ?? "",
   cover: d.cover ?? null,
   order: d.order ?? 0,
+  topics: d.topics ?? [],
   words: d.words.map(toWord),
 })).sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 
-export const listDecks = (): DeckSummary[] => DECKS.map(({ words, ...d }) => ({ ...d, wordCount: words.length }));
+export const listDecks = (): DeckSummary[] =>
+  DECKS.map(({ words, topics, ...d }) => ({ ...d, wordCount: words.length, topicCount: topics.length }));
+
+/** Chủ đề của bộ kèm số từ + số từ đã có trong sổ (saved: tập từ chữ thường trong sổ) */
+export const deckTopics = (deck: Deck, saved: Set<string>) =>
+  deck.topics.map((t) => {
+    const words = deck.words.filter((w) => w.topic === t.id);
+    return { ...t, wordCount: words.length, saved: words.filter((w) => saved.has(w.word.toLowerCase())).length };
+  });
 
 export const getDeck = (slug: string): Deck | null => DECKS.find((d) => d.slug === slug) ?? null;
