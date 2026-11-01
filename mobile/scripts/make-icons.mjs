@@ -1,4 +1,6 @@
-// Tạo icon app + ảnh khởi động từ SVG. Chạy: node mobile/scripts/make-icons.mjs (từ thư mục gốc repo, cần sharp của web)
+// Tạo icon app + ảnh khởi động từ SVG, kèm favicon/icon của web (src/app) cho đồng bộ.
+// Chạy: node mobile/scripts/make-icons.mjs (từ thư mục gốc repo, cần sharp của web)
+import { writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +8,7 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(path.join(process.cwd(), "package.json"));
 const sharp = require("sharp");
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "images");
+const WEB_OUT = path.join(process.cwd(), "src", "app");
 
 const BG_HI = "#1f2a24";
 const BG_LO = "#070b09";
@@ -58,6 +61,9 @@ const svg = (body, bg = "") => `<svg xmlns="http://www.w3.org/2000/svg" width="1
 </svg>`;
 
 const DARK_BG = `<rect width="1024" height="1024" fill="url(#bg)"/>`;
+// Favicon web: góc bo như icon app, dấu phóng to cho dễ nhìn ở 16px
+const WEB_BG = `<rect width="1024" height="1024" rx="225" fill="url(#bg)"/>`;
+const WEB_MARK = mark({ scale: 1.2 });
 
 const png = (name, s, opts = {}) => {
   let img = sharp(Buffer.from(s));
@@ -66,9 +72,30 @@ const png = (name, s, opts = {}) => {
   if (opts.resize) img = img.resize(opts.resize);
   return img
     .png()
-    .toFile(path.join(OUT, name))
+    .toFile(path.resolve(OUT, name))
     .then(() => console.log("✓", name));
 };
+
+/** Gói nhiều PNG vuông vào một file .ico (định dạng ICO cho phép nhúng PNG nguyên khối). */
+async function ico(file, s, sizes) {
+  const pngs = await Promise.all(sizes.map((n) => sharp(Buffer.from(s)).resize(n).png().toBuffer()));
+  const head = Buffer.alloc(6 + 16 * pngs.length);
+  head.writeUInt16LE(1, 2);
+  head.writeUInt16LE(pngs.length, 4);
+  let offset = head.length;
+  pngs.forEach((buf, i) => {
+    const e = 6 + 16 * i;
+    head.writeUInt8(sizes[i] % 256, e);
+    head.writeUInt8(sizes[i] % 256, e + 1);
+    head.writeUInt16LE(1, e + 4);
+    head.writeUInt16LE(32, e + 6);
+    head.writeUInt32LE(buf.length, e + 8);
+    head.writeUInt32LE(offset, e + 12);
+    offset += buf.length;
+  });
+  await writeFile(file, Buffer.concat([head, ...pngs]));
+  console.log("✓", path.relative(process.cwd(), file));
+}
 
 await Promise.all([
   // Icon chính (iOS + mặc định) 1024×1024, không trong suốt
@@ -86,4 +113,9 @@ await Promise.all([
   png("android-icon-background.png", svg("", DARK_BG), { flatten: BG_LO }),
   png("android-icon-monochrome.png", svg(mark({ scale: 0.75, front: "#fff", mid: "none", back: "none" }))),
   png("favicon.png", svg(mark(), DARK_BG), { flatten: BG_LO, resize: 48 }),
+  // Web (Next.js file conventions trong src/app)
+  writeFile(path.join(WEB_OUT, "icon.svg"), svg(WEB_MARK, WEB_BG)).then(() => console.log("✓ src/app/icon.svg")),
+  ico(path.join(WEB_OUT, "favicon.ico"), svg(WEB_MARK, WEB_BG), [16, 32, 48]),
+  // iOS tự bo góc → nền vuông, không trong suốt
+  png(path.join(WEB_OUT, "apple-icon.png"), svg(mark(), DARK_BG), { flatten: BG_LO, resize: 180 }),
 ]);
