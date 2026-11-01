@@ -18,6 +18,7 @@ import {
   Settings2,
   Square,
   Star,
+  VideoOff,
   Volume2,
   Zap,
 } from "lucide-react";
@@ -82,6 +83,40 @@ type Progress = {
   dictPick?: number[];
 };
 type VocabItem = { id: number; word: string; meaning: string };
+
+/** Nút bật/tắt: nhãn cố định + công tắc gạt (điện thoại: bỏ công tắc cho gọn, bật thì viền xanh) */
+function Toggle({
+  on,
+  onToggle,
+  icon: Icon,
+  label,
+  title,
+  disabled,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  icon: typeof Star;
+  label: ReactNode;
+  title?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      className={`btn ${on ? "max-sm:border-accent max-sm:text-accent" : ""}`}
+      onClick={onToggle}
+      disabled={disabled}
+      title={title}
+    >
+      <Icon className={`size-4 ${on ? "fill-accent/20 text-accent" : "text-muted"}`} />
+      {label}
+      <span className={`relative ml-1 h-5 w-9 shrink-0 rounded-full transition-colors max-sm:hidden ${on ? "bg-accent" : "bg-white/15"}`}>
+        <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : ""}`} />
+      </span>
+    </button>
+  );
+}
 
 /** Nhóm nút chọn 1 trong nhiều (Shadowing/Chính tả, Dễ/Vừa/Khó…) */
 function Segmented<T extends string>({
@@ -767,39 +802,38 @@ export default function ShadowPlayer({
           <Segmented options={PRACTICES} value={settings.practice} onChange={changePractice} className="max-sm:w-full max-sm:*:flex-1" />
         )}
         <div className="scroll-row flex gap-2 max-sm:-mx-3 max-sm:basis-full max-sm:px-3 max-sm:*:px-3 max-sm:*:py-1.5 sm:flex-wrap">
-          <button
-            className="btn"
-            onClick={() => update(dictation ? { dictHideMedia: !mediaHidden } : { hideMedia: !mediaHidden })}
-          >
-            {mediaHidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            {mediaHidden ? "Hiện video" : "Ẩn video"}
-          </button>
+          <Toggle
+            on={mediaHidden}
+            onToggle={() => update(dictation ? { dictHideMedia: !mediaHidden } : { hideMedia: !mediaHidden })}
+            icon={VideoOff}
+            label="Ẩn video"
+            title="Ẩn video — chỉ nghe tiếng"
+          />
           {/* Ẩn chữ / Câu ⭐ chỉ dùng cho Shadowing — Chính tả vẫn giữ nút (mờ) để các nút không nhảy chỗ khi đổi chế độ */}
-          <button
-            className={`btn ${settings.hideText && !dictation ? "border-accent text-accent" : ""}`}
-            onClick={toggleHideText}
+          <Toggle
+            on={settings.hideText && !dictation}
+            onToggle={toggleHideText}
+            icon={EyeOff}
+            label="Ẩn chữ"
             disabled={dictation}
             title={dictation ? "Chỉ dùng ở chế độ Shadowing" : "Ẩn chữ — chỉ nghe rồi nói theo (H)"}
-          >
-            {settings.hideText && !dictation ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            {settings.hideText && !dictation ? "Hiện chữ" : "Ẩn chữ"}
-          </button>
-          <button
-            className={`btn ${settings.showTranslation ? "border-accent text-accent" : ""}`}
-            onClick={() => update({ showTranslation: !settings.showTranslation })}
+          />
+          <Toggle
+            on={settings.showTranslation}
+            onToggle={() => update({ showTranslation: !settings.showTranslation })}
+            icon={Languages}
+            label="Bản dịch"
             title="Hiện bản dịch tiếng Việt dưới mỗi câu"
-          >
-            <Languages className="size-4" /> Bản dịch
-          </button>
+          />
           {loggedIn && (
-            <button
-              className={`btn ${starredOnly ? "border-accent text-accent" : ""}`}
-              onClick={toggleStarredOnly}
+            <Toggle
+              on={starredOnly}
+              onToggle={toggleStarredOnly}
+              icon={Star}
+              label="Câu ⭐"
               disabled={dictation}
               title={dictation ? "Chỉ dùng ở chế độ Shadowing" : "Chỉ hiện câu đã đánh dấu ⭐"}
-            >
-              <Star className={`size-4 ${starredOnly ? "fill-current" : ""}`} /> Câu ⭐
-            </button>
+            />
           )}
         </div>
       </div>
@@ -938,14 +972,13 @@ export default function ShadowPlayer({
               <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
             ) : (
               // 1 nút bật/tắt thay cho cặp "Từng câu / Liên tục" (như nút "Tự dừng sau mỗi câu" của app)
-              <button
-                className={`btn ${settings.mode === "segment" ? "border-accent text-accent" : ""}`}
-                aria-pressed={settings.mode === "segment"}
+              <Toggle
+                on={settings.mode === "segment"}
+                onToggle={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
+                icon={CirclePause}
+                label="Tự dừng sau mỗi câu"
                 title={settings.mode === "segment" ? "Đang dừng sau mỗi câu — bấm để phát liên tục" : "Đang phát liên tục — bấm để dừng sau mỗi câu"}
-                onClick={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
-              >
-                <CirclePause className="size-4" /> Tự dừng sau mỗi câu
-              </button>
+              />
             )}
           </div>
 
