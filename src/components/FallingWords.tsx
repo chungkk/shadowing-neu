@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, type ComponentType, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ComponentType, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import {
   BookmarkPlus,
   CloudRain,
@@ -28,7 +28,8 @@ import { DeckMenu, GameHeader, ScreenKeyboard, sameLetter, useCoarsePointer, typ
 /**
  * Game chữ rơi, 2 biến thể:
  * - "rain" (Mưa từ vựng): giọt hiện nghĩa tiếng Việt, gõ từ tiếng Đức trước khi chạm nước.
- * - "bee" (Ong đánh vần): giọt chỉ phát âm (đọc khi xuất hiện, bấm vào / Space để nghe lại), gõ lại đúng chính tả trước khi chạm cỏ.
+ * - "bee" (Ong đánh vần): giọt chỉ phát âm (đọc khi xuất hiện, bấm vào giọt / Space để nghe lại), gõ lại đúng chính tả trước khi chạm cỏ.
+ *   Bắt đầu chỉ 1 giọt mỗi lúc, lên cấp mới thêm giọt; gõ xong thì ong bắn ngòi làm vỡ ô.
  * Mỗi chủ đề của bộ từ là 1 mốc: bắn đủ số từ của mốc thì sang chủ đề kế (+1 mạng); tiến độ mốc lưu theo bộ.
  * Chạm đáy mất 1 mạng, hết mạng là thua. Từ trượt hiện lại cuối ván, lưu được vào sổ để ôn.
  *
@@ -50,7 +51,7 @@ const CONFIG = {
     slower: 1, // hệ số thời gian rơi
     spawnBase: 3.6, // giây giữa 2 giọt ở cấp 1
     spawnMin: 1.6,
-    maxDrops: 6,
+    drops: (level: number) => Math.min(2 + level, 6), // số giọt tối đa trên sân
     dropW: "min(15rem, 70%)",
   },
   bee: {
@@ -61,13 +62,13 @@ const CONFIG = {
     tone: "amber",
     listen: true,
     lives: 3,
-    slower: 1.25, // phải nghe rồi mới gõ → rơi chậm hơn, thưa hơn
-    spawnBase: 5,
-    spawnMin: 3,
-    maxDrops: 3,
+    slower: 1.4, // phải nghe rồi mới gõ → rơi chậm hơn, thưa hơn
+    spawnBase: 6,
+    spawnMin: 3.5,
+    drops: (level: number) => (level < 3 ? 1 : level < 6 ? 2 : 3), // cấp 1–2: từng từ một
     dropW: "min(11rem, 60%)",
   },
-} satisfies Record<Variant, { store: string; title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; listen: boolean; lives: number; slower: number; spawnBase: number; spawnMin: number; maxDrops: number; dropW: string }>;
+} satisfies Record<Variant, { store: string; title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; listen: boolean; lives: number; slower: number; spawnBase: number; spawnMin: number; drops: (level: number) => number; dropW: string }>;
 type Config = (typeof CONFIG)[Variant];
 
 /** Màu của từng biến thể (giọt, ô chữ, HUD, lớp phủ) */
@@ -129,7 +130,7 @@ type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
 
 const HITS_PER_LEVEL = 10;
 const MILESTONE_GOAL = 10; // số từ phải bắn để qua 1 mốc (chủ đề ít từ hơn → bằng số từ của chủ đề)
-const FADE = 0.7; // giây hiệu ứng nổ / chạm đáy trước khi xoá giọt (khớp .rain-hit / .rain-miss)
+const FADE = 0.85; // giây hiệu ứng nổ / chạm đáy trước khi xoá giọt (đủ cho .rain-hit, .rain-miss, .bee-hit)
 
 const levelOf = (hits: number) => Math.min(1 + Math.floor(hits / HITS_PER_LEVEL), 12);
 /**
@@ -138,7 +139,6 @@ const levelOf = (hits: number) => Math.min(1 + Math.floor(hits / HITS_PER_LEVEL)
  */
 const fallTime = (cfg: Config, level: number, word: string) => cfg.slower * Math.max(13, 25 - level) * Math.min(Math.max(0.75 + 0.04 * word.length, 0.85), 1.4);
 const spawnEvery = (cfg: Config, level: number) => Math.max(cfg.spawnMin, cfg.spawnBase - 0.2 * (level - 1));
-const maxDrops = (cfg: Config, level: number) => Math.min(2 + level, cfg.maxDrops);
 
 const topicWords = (g: Pick<Game, "words" | "topics">, m: number) => g.words.filter((w) => w.topic === g.topics[m].id);
 const goalOf = (g: Pick<Game, "words" | "topics">, m: number) => Math.min(MILESTONE_GOAL, topicWords(g, m).length);
@@ -283,7 +283,8 @@ function step(g: Game, dt: number) {
   }
   g.drops = g.drops.filter((d) => d.state === "fall" || g.time - d.at < FADE);
   const falling = g.drops.filter((d) => d.state === "fall").length;
-  if (g.time >= g.nextSpawn && falling < maxDrops(g.cfg, levelOf(g.hits))) spawn(g);
+  if (!falling) g.nextSpawn = Math.min(g.nextSpawn, g.time + 1); // sân trống → khỏi chờ lâu
+  if (g.time >= g.nextSpawn && falling < g.cfg.drops(levelOf(g.hits))) spawn(g);
 }
 
 /** Gợi ý: chữ đầu + ô trống; giọt đang gõ thì hiện phần đã gõ đúng, hint = lộ chữ kế tiếp */
@@ -349,7 +350,7 @@ function RainScenery({ label }: { label: ReactNode }) {
 }
 
 /** Nền "bee": đêm mật ong có đom đóm · đáy: thảm cỏ hoa, con ong (kèm nhãn), chú chim */
-function BeeScenery({ label }: { label: ReactNode }) {
+function BeeScenery({ label, fired }: { label: ReactNode; fired: number }) {
   return (
     <>
       <div className="pointer-events-none absolute inset-0">
@@ -370,7 +371,10 @@ function BeeScenery({ label }: { label: ReactNode }) {
       ))}
       <Emoji code="1f426" className="bob absolute bottom-7 left-4 size-12" />
       <div className="pointer-events-none absolute bottom-1.5 left-1/2 flex -translate-x-1/2 flex-col items-center">
-        <Emoji code="1f41d" className="bob size-11 [animation-delay:-1s]" />
+        {/* fired đổi → dựng lại để giật lên mỗi lần bắn */}
+        <span key={fired} className={fired ? "bee-fire" : ""}>
+          <Emoji code="1f41d" className="bob size-11 [animation-delay:-1s]" />
+        </span>
         {label}
       </div>
     </>
@@ -390,6 +394,8 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const [note, setNote] = useState<{ text: string; tone: "ok" | "warn" } | null>(null);
   const [bad, setBad] = useState<{ key: string; n: number } | null>(null); // phím vừa gõ sai (n: để rung lại mỗi lần sai)
   const [speakingId, setSpeakingId] = useState<number | null>(null); // giọt đang được đọc to
+  const [shots, setShots] = useState<{ id: number; x: number; y: number }[]>([]); // ngòi ong đang bay tới giọt vừa gõ xong
+  const [fired, setFired] = useState(0);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -549,8 +555,17 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
     d.points = 10 * levelOf(g.hits - 1) + 2 * Math.min(g.combo - 1, 10);
     g.score += d.points;
     Object.assign(d, { state: "hit", at: g.time });
+    g.nextSpawn = Math.max(g.nextSpawn, g.time + 1.2); // nghỉ chút sau khi bắn trúng
     if (sound) speakGerman(fullWord(d.w));
+    if (variant === "bee") {
+      setShots((s) => [...s, { id: d.id, x: d.x, y: d.y }]);
+      setFired((n) => n + 1);
+      setTimeout(() => setShots((s) => s.filter((x) => x.id !== d.id)), 400);
+    }
+    const level = levelOf(g.hits);
     if (g.mHits >= g.goal) clearMilestone(g);
+    else if (level > levelOf(g.hits - 1))
+      flash(cfg.drops(level) > cfg.drops(level - 1) ? `Lên cấp ${level} — thêm 1 từ rơi cùng lúc!` : `Lên cấp ${level} — rơi nhanh hơn!`, "ok");
   }
 
   /** 1 phím (bàn phím thật / trên màn hình / hệ thống) → true nếu game dùng phím đó */
@@ -673,7 +688,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
           full ? "" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
         }`}
       >
-        {variant === "bee" ? <BeeScenery label={label} /> : <RainScenery label={label} />}
+        {variant === "bee" ? <BeeScenery label={label} fired={fired} /> : <RainScenery label={label} />}
 
         {/* Vùng rơi: dưới HUD, chừa cột nút bên phải; đáy = mặt nước / thảm cỏ */}
         <div className="absolute top-14 right-14 bottom-12 left-2">
@@ -688,9 +703,12 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
               >
                 <div
                   key={isTarget && bad ? bad.n : 0} // gõ sai → dựng lại để rung lần nữa
-                  className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
+                  onClick={cfg.listen && d.state === "fall" ? () => sayDrop(d) : undefined} // "bee": bấm vào giọt → nghe lại
+                  onPointerDown={cfg.listen ? (e) => e.stopPropagation() : undefined}
+                  title={cfg.listen && d.state === "fall" ? "Bấm để nghe lại" : undefined}
+                  className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} ${cfg.listen && d.state === "fall" ? "cursor-pointer hover:brightness-125" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
                     d.state === "hit"
-                      ? "rain-hit border-accent bg-accent/20"
+                      ? `${variant === "bee" ? "bee-hit" : "rain-hit"} border-accent bg-accent/20`
                       : d.state === "miss"
                         ? "rain-miss border-red bg-red/20"
                         : d.state === "gone"
@@ -709,14 +727,9 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
                   ) : done ? (
                     <span className="w-full truncate text-xs text-amber-100/80">{d.w.meaning}</span>
                   ) : (
-                    <button
-                      title="Nghe lại"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={() => sayDrop(d)}
-                      className={`flex h-6 w-full cursor-pointer items-center justify-center rounded-md bg-black/25 transition hover:bg-black/40 ${speakingId === d.id ? "text-amber" : "text-amber-100/80"}`}
-                    >
+                    <span className={`flex h-6 w-full items-center justify-center rounded-md bg-black/25 ${speakingId === d.id ? "text-amber" : "text-amber-100/80"}`}>
                       <Volume2 className={`size-4 ${speakingId === d.id ? "animate-pulse" : ""}`} />
-                    </button>
+                    </span>
                   )}
                   {done ? (
                     <span className={`font-extrabold ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
@@ -724,14 +737,36 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
                     <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
                   )}
                   {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gem">+{d.points}</span>}
+                  {/* "bee": ô vỡ thành mảnh khi ngòi ong tới */}
+                  {d.state === "hit" &&
+                    variant === "bee" &&
+                    Array.from({ length: 10 }, (_, i) => (
+                      <span key={i} className="bee-shard" style={{ "--a": `${i * 36 + 10}deg`, "--d": `${60 + (i % 3) * 24}px` } as CSSProperties} />
+                    ))}
                 </div>
               </div>
             );
           })}
+          {/* Ngòi ong bay từ con ong (giữa đáy sân) tới tâm giọt vừa gõ xong — chiều cao giọt ≈ 4rem */}
+          {shots.map((s) => (
+            <span
+              key={s.id}
+              className="bee-sting"
+              style={
+                {
+                  "--fx": "calc(50% + 1.5rem)",
+                  "--fy": "calc(100% + 1rem)",
+                  "--tx": `calc((100% - ${cfg.dropW}) * ${s.x} + ${cfg.dropW} / 2)`,
+                  "--ty": `calc(${s.y * 100}% + ${(0.5 - s.y) * 4}rem)`,
+                } as CSSProperties
+              }
+            />
+          ))}
         </div>
 
         {/* HUD: điểm · mốc · mạng */}
-        <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+        {/* pointer-events-none: khung HUD rộng cả sân, không được chặn cú bấm vào giọt bên dưới */}
+        <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 *:pointer-events-auto">
           <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-sm font-extrabold text-white backdrop-blur">
             <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
             {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
