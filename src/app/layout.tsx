@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Nunito } from "next/font/google";
 import { SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
+import ShareBar from "@/components/ShareBar";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -56,8 +57,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </Suspense>
             </div>
           </header>
-          {children}
+          {/* share-gutter: chừa lề phải khi thanh chia sẻ đang mở (globals.css) */}
+          <div className="share-gutter flex min-w-0 flex-1 flex-col">{children}</div>
         </div>
+        <Suspense>
+          <ShareBar />
+        </Suspense>
         {/* Popup đăng nhập / đăng ký: bấm nút đăng nhập ở trang nào cũng hiện đè lên trang đó */}
         <Suspense>
           <LoginDialogSlot />

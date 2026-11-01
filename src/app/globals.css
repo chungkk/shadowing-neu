@@ -160,6 +160,12 @@ select {
     opacity: 0;
   }
 }
+/* Thanh chia sẻ đang mở (máy tính): chừa lề phải để thanh nổi không che nội dung */
+@media (min-width: 48rem) {
+  body:has([data-share-open]) .share-gutter {
+    padding-right: 4rem;
+  }
+}
 /* Khoảng chừa thanh home (iPhone) ở đáy popup / bảng trượt */
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
