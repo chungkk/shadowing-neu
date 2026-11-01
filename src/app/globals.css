@@ -328,7 +328,7 @@ select {
   }
 }
 
-/* ---- Game Mưa từ vựng (WordRain): giọt bị bắn nổ bay lên, giọt chạm đất mờ dần, gõ sai rung ô gõ ---- */
+/* ---- Game chữ rơi (FallingWords): giọt bị bắn nổ bay lên, giọt chạm đáy mờ dần, gõ sai thì rung ---- */
 .rain-hit {
   animation: rain-hit 700ms ease-out forwards;
 }
@@ -356,15 +356,6 @@ select {
   }
 }
 
-/* Nền tổ ong (game Ong đánh vần): lớp hoa văn lục giác mờ chồng lên màu nền */
-.honeycomb::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0 32L0 82V66l28 16 28-16v16L28 98z' fill='none' stroke='%23fbbf24' stroke-opacity='0.14' stroke-width='1.5'/%3E%3C/svg%3E");
-}
-
 /* Vệt mưa nền + thuyền / chim nhấp nhô trên mặt nước */
 .rain-streak {
   animation: rain-fall linear infinite;
@@ -383,7 +374,26 @@ select {
   }
 }
 
+/* Đom đóm nền game Ong đánh vần */
+.twinkle {
+  animation: twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .twinkle {
+    animation: none;
+    opacity: 0.5;
+  }
   .rain-streak {
     display: none;
   }

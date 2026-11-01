@@ -29,19 +29,30 @@ const RainArt = () => (
 );
 
 const BeeArt = () => (
-  <div className="honeycomb absolute inset-0 bg-[radial-gradient(ellipse_at_top,#9a4d0c_0%,#3a1c05_60%,#1c0e03_100%)]">
-    <Emoji code="1f41d" className="bob top-5 left-[8%] size-16" />
-    <Emoji code="1f50a" className="top-4 left-1/2 size-16 -translate-x-1/2 transition group-hover:scale-110" />
-    <Emoji code="1f36f" className="bob top-6 right-[8%] size-14 [animation-delay:-1.2s]" />
-    <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-1.5">
-      {[0, 1, 2, 3].map((i) => (
-        <span key={i} className="flex h-9 w-8 items-center justify-center rounded-md bg-white text-lg font-black text-stone-300 shadow-[0_3px_0_#a8a29e]">
-          _
-        </span>
-      ))}
-    </div>
-    <Emoji code="1f33b" className="-bottom-2 -left-2 size-12" />
-    <Emoji code="1f338" className="-right-1 -bottom-1 size-10" />
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_15%_0%,#6b5018_0%,#2c1e09_55%,#150d04_100%)]">
+    {Array.from({ length: 16 }, (_, i) => (
+      <span key={i} className="absolute size-1 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)]" style={{ left: `${(i * 41) % 100}%`, top: `${(i * 29) % 75}%`, opacity: 0.4 + (i % 3) * 0.25 }} />
+    ))}
+    <span className="absolute top-5 left-[14%] flex flex-col items-center gap-0.5 rounded-lg border border-amber/60 bg-[#3a2a10]/90 px-2.5 py-1 transition group-hover:-translate-y-1">
+      <Volume2 className="size-3.5 text-amber" />
+      <span className="font-mono text-xs font-extrabold tracking-[0.18em] text-amber-200/60">
+        <span className="text-amber">H</span>___
+      </span>
+    </span>
+    <span className="absolute top-12 right-[16%] flex flex-col items-center gap-0.5 rounded-lg border border-amber bg-[#4d3712]/95 px-2.5 py-1 shadow-[0_0_14px_rgba(250,204,21,0.45)]">
+      <Volume2 className="size-3.5 animate-pulse text-amber" />
+      <span className="font-mono text-xs font-extrabold tracking-[0.18em] text-white">
+        Bie<span className="text-amber-200/60">__</span>
+      </span>
+    </span>
+    <div className="absolute inset-x-0 bottom-0 h-8 border-t-2 border-lime-300/50 bg-gradient-to-b from-[#4d7c1f] to-[#1a330a] [border-radius:50%_50%_0_0/10px_10px_0_0]" />
+    {Array.from({ length: 12 }, (_, i) => (
+      <span key={i} className={`absolute bottom-6 text-[10px] ${["text-pink-300", "text-amber", "text-violet-300"][i % 3]}`} style={{ left: `${4 + i * 8}%` }}>
+        ✿
+      </span>
+    ))}
+    <Emoji code="1f426" className="bottom-4 left-4 size-10" />
+    <Emoji code="1f41d" className="bob bottom-3 left-1/2 size-10 -translate-x-1/2" />
   </div>
 );
 
@@ -56,7 +67,7 @@ const GAMES: { href: string; title: string; description: string; icon: Component
   {
     href: "/games/spelling-bee",
     title: "Ong đánh vần",
-    description: "Nghe phát âm rồi gõ lại từ tiếng Đức đúng chính tả, từng chữ cái.",
+    description: "Từ rơi xuống kèm phát âm — nghe rồi gõ lại đúng chính tả trước khi chạm cỏ.",
     icon: Volume2,
     art: <BeeArt />,
   },

@@ -38,7 +38,7 @@ const TONE = {
 } satisfies Record<Tone, Record<string, string>>;
 
 /** Nút bấm chính kiểu "nổi" theo màu game */
-export const toneButton = (tone: Tone) =>
+const toneButton = (tone: Tone) =>
   `btn px-5 py-2.5 tracking-wide uppercase hover:brightness-110 active:translate-y-0.5 ${TONE[tone].button}`;
 
 /** Bàn phím không có umlaut: gõ a/o/u/s thay ä/ö/ü/ß (key: chữ thường) */
