@@ -10,8 +10,8 @@ async function Vocab() {
     <>
       <div>
         <h1 className="text-2xl font-extrabold">Sổ từ vựng</h1>
-        <p className="text-sm text-muted">
-          {items.length} từ đã lưu · {items.filter((v) => v.stage >= 5).length} từ thuộc lâu · ôn đúng hẹn mỗi ngày để nhớ lâu
+        <p className="text-sm text-muted" title="Ôn đúng hẹn mỗi ngày để nhớ lâu">
+          {items.length} từ đã lưu · {items.filter((v) => v.stage >= 5).length} từ thuộc lâu
         </p>
       </div>
       <VocabList items={items} />

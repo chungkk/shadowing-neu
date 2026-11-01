@@ -67,14 +67,18 @@ function Stage({ v, now }: { v: VocabItem; now: number | null }) {
     when = days <= 0 ? "đến hạn ôn" : days === 1 ? "ôn lại ngày mai" : `ôn lại sau ${days} ngày`;
   }
   return (
-    <span className="ml-auto inline-flex shrink-0 items-center gap-1.5">
+    <p className="text-xs text-muted">
       <span className={`font-bold ${color}`}>● {label}</span>
-      {when && <span>· {when}</span>}
-    </span>
+      {when && <span> · {when}</span>}
+    </p>
   );
 }
 
-function VocabCard({ v, now }: { v: VocabItem; now: number | null }) {
+/**
+ * 1 hàng trong danh sách. Điện thoại: từ + nút trên cùng, nghĩa và câu ví dụ xếp dưới.
+ * Màn rộng: từ · nghĩa · câu ví dụ · nút nằm cùng 1 hàng.
+ */
+function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
   const [meaning, setMeaning] = useState(v.meaning);
   const [saved, setSaved] = useState(v.meaning);
   const [pending, start] = useTransition();
@@ -103,56 +107,59 @@ function VocabCard({ v, now }: { v: VocabItem; now: number | null }) {
     });
 
   return (
-    <div className="card flex flex-col gap-3">
-      <div className="flex items-start gap-2">
-        <h3 className="min-w-0 flex-1 text-xl font-extrabold wrap-anywhere">{v.word}</h3>
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 px-4 py-3 lg:grid-cols-[13rem_15rem_minmax(0,1fr)_auto] lg:items-start">
+      <div className="min-w-0">
+        <h3 className="text-lg leading-tight font-extrabold wrap-anywhere">{v.word}</h3>
+        <Stage v={v} now={now} />
+      </div>
+      <div className="col-start-2 row-start-1 flex items-center text-muted lg:col-start-4">
         <a
           href={`https://www.dict.cc/?s=${encodeURIComponent(v.word)}`}
           target="_blank"
           rel="noreferrer"
           title="Tra dict.cc"
-          className="btn-icon size-9 text-link"
+          className="btn-icon size-8 text-muted hover:text-link"
         >
           <BookOpen className="size-4" />
         </a>
+        <button title="Dịch nghĩa bằng AI" className="btn-icon size-8 text-muted hover:text-amber" onClick={ai} disabled={aiPending}>
+          <Sparkles className={`size-4 ${aiPending ? "animate-pulse text-amber" : ""}`} />
+        </button>
         <form action={removeWord.bind(null, v.id)} onSubmit={(e) => !confirm(`Xoá “${v.word}”?`) && e.preventDefault()}>
-          <button title="Xoá" className="btn-icon size-9 text-red-400">
+          <button title="Xoá" className="btn-icon size-8 text-muted hover:text-red-400">
             <Trash2 className="size-4" />
           </button>
         </form>
       </div>
-      <div className="flex gap-2">
+      <div className="col-span-2 min-w-0 lg:col-span-1">
+        {/* Ô nhập không viền — trông như chữ thường, rê chuột / bấm vào mới hiện khung */}
         <input
-          className="input min-w-0 flex-1 py-2"
-          placeholder="Ghi nghĩa tiếng Việt…"
+          className="-mx-2 w-[calc(100%+1rem)] rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-bold text-amber outline-none placeholder:font-normal placeholder:text-muted hover:border-border focus:border-accent focus:bg-background md:text-sm"
+          placeholder="+ Ghi nghĩa tiếng Việt…"
           value={meaning}
           onChange={(e) => setMeaning(e.target.value)}
           onBlur={save}
           onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
           maxLength={500}
         />
-        <button title="Dịch nghĩa bằng AI" className="btn-icon size-10 shrink-0 text-amber" onClick={ai} disabled={aiPending}>
-          <Sparkles className={`size-4 ${aiPending ? "animate-pulse" : ""}`} />
-        </button>
+        {(pending || aiPending) && <p className="text-xs text-muted">{aiPending ? "AI đang dịch…" : "Đang lưu…"}</p>}
+        {aiError && <p className="text-xs text-red-400">{aiError}</p>}
       </div>
-      {(pending || aiPending) && <span className="-mt-2 text-xs text-muted">{aiPending ? "AI đang dịch…" : "Đang lưu…"}</span>}
-      {aiError && <span className="-mt-2 text-xs text-red-400">{aiError}</span>}
-      {v.context && (
-        <p className="rounded-xl bg-background/60 p-3 text-sm leading-relaxed text-muted wrap-anywhere">
-          <Highlight text={v.context} word={v.word} />
-        </p>
-      )}
-      <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+      <div className="col-span-2 min-w-0 text-sm lg:col-span-1">
+        {v.context && (
+          <p className="line-clamp-2 leading-relaxed text-muted wrap-anywhere" title={v.context}>
+            <Highlight text={v.context} word={v.word} />
+          </p>
+        )}
         {v.sourceUrl ? (
-          <Link href={v.sourceUrl} className="inline-flex min-w-0 items-center gap-1 font-bold text-link hover:underline">
-            <ExternalLink className="size-3.5 shrink-0" /> <span className="truncate">{v.sourceTitle || "Mở bài"}</span>
+          <Link href={v.sourceUrl} className="mt-0.5 flex min-w-0 items-center gap-1 text-xs font-bold text-link hover:underline">
+            <ExternalLink className="size-3 shrink-0" /> <span className="truncate">{v.sourceTitle || "Mở bài"}</span>
           </Link>
         ) : (
-          <span className="truncate">{v.sourceTitle}</span>
+          v.sourceTitle && <p className="mt-0.5 truncate text-xs text-muted">{v.sourceTitle}</p>
         )}
-        <Stage v={v} now={now} />
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -197,12 +204,12 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="input flex flex-1 items-center gap-2 py-2.5">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap gap-2">
+        <label className="input flex h-11 w-full items-center gap-2 py-0 sm:w-auto sm:flex-1">
           <Search className="size-4 text-muted" />
           <input
-            className="flex-1 bg-transparent outline-none"
+            className="min-w-0 flex-1 bg-transparent outline-none"
             placeholder="Tìm từ hoặc nghĩa…"
             value={q}
             onChange={(e) => {
@@ -211,42 +218,42 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
             }}
           />
         </label>
-        {/* Điện thoại: "Ôn hôm nay" chiếm cả hàng, 2 nút còn lại chia đôi hàng dưới */}
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-          <button
-            className="btn btn-primary col-span-2 py-3 sm:py-2"
-            title={`${due.length} từ đến hạn ôn · ${fresh.length} từ mới`}
-            onClick={() => setReview({ title: "Hôm nay", items: today })}
-            disabled={now == null}
-          >
-            <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
-          </button>
-          <button className="btn btn-amber" onClick={() => setReview({ title: "Tất cả", items })}>
-            <Brain className="size-4" /> Ôn tất cả
-          </button>
-          <button className="btn" onClick={() => downloadCsv(items)}>
-            <Download className="size-4" /> Tải CSV<span className="max-sm:hidden"> (Anki)</span>
-          </button>
-        </div>
+        <button
+          className="btn btn-primary h-11 flex-1 sm:flex-none"
+          title={`${due.length} từ đến hạn ôn · ${fresh.length} từ mới`}
+          onClick={() => setReview({ title: "Hôm nay", items: today })}
+          disabled={now == null}
+        >
+          <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
+        </button>
+        <button className="btn h-11" onClick={() => setReview({ title: "Tất cả", items })}>
+          <Brain className="size-4 text-amber" /> Ôn tất cả
+        </button>
+        <button className="btn h-11 px-3" title="Tải CSV (nhập vào Anki)" onClick={() => downloadCsv(items)}>
+          <Download className="size-4" />
+        </button>
       </div>
       {[...days].map(([day, list]) => {
         const room = limit - drawn;
         if (room <= 0) return null;
         drawn += list.length;
         return (
-          <section key={day} className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 sm:gap-3">
+          <section key={day} className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
               <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
-              <span className="text-sm text-muted">{list.length} từ</span>
-              <button className="btn ml-auto px-3 py-1.5 text-xs" onClick={() => setReview({ title: dayLabel(day, local), items: list })}>
-                <Brain className="size-3.5 text-amber" /> Ôn tập
+              <span className="text-sm text-muted">· {list.length} từ</span>
+              <button
+                className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-muted transition hover:bg-white/5 hover:text-foreground"
+                onClick={() => setReview({ title: dayLabel(day, local), items: list })}
+              >
+                <Brain className="size-3.5 text-amber" /> Ôn ngày này
               </button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            <ul className="card divide-y divide-border p-0">
               {list.slice(0, room).map((v) => (
-                <VocabCard key={v.id} v={v} now={now} />
+                <VocabRow key={v.id} v={v} now={now} />
               ))}
-            </div>
+            </ul>
           </section>
         );
       })}
