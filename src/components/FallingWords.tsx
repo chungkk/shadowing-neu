@@ -697,8 +697,9 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const topic = v.topics[v.milestone];
   const target = v.drops.find((d) => d.id === v.targetId && d.state === "fall") ?? null;
   const missed = [...new Map(v.missed.map((w) => [w.word, w])).values()];
-  // "gold": vị trí dây móc / cục vàng đang kéo (px trong vùng rơi). Ròng rọc ở giữa, cao hơn vùng rơi 3.75rem
-  const pulley = { x: area.w / 2, y: -60 };
+  // "gold": vị trí dây móc / cục vàng đang kéo (px trong vùng rơi). Ròng rọc ở giữa SÂN (vùng rơi lệch: left-2, right-14
+  // → giữa sân = giữa vùng rơi + (56 - 8) / 2 px), cao hơn vùng rơi 3.75rem
+  const pulley = { x: area.w / 2 + 24, y: -60 };
   const dropPx = Math.min(176, area.w * 0.6); // = cfg.dropW "min(11rem, 60%)"
   const DROP_H = 60; // chiều cao ước chừng của cục vàng
   const reels =
