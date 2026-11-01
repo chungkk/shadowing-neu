@@ -178,8 +178,8 @@ select {
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
-/* ---- Điểm chính tả: hiệu ứng +1 khi chép đúng hết câu (DictationPanel) và huy hiệu điểm (PointsBadge) ---- */
-/* Vòng sáng lan ra + tia lấp lánh + "+1" bật lên rồi bay lên mờ dần */
+/* ---- Điểm chính tả: hiệu ứng +2 khi chép đúng hết câu (DictationPanel) và huy hiệu điểm (PointsBadge) ---- */
+/* Vòng sáng lan ra + tia lấp lánh + "+2" bật lên rồi bay lên mờ dần */
 .pt-burst {
   position: absolute;
   pointer-events: none;
@@ -343,7 +343,7 @@ select {
   .pt-spark {
     display: none;
   }
-  /* "+1" vẫn hiện (chỉ mờ dần, không bay) để biết vừa được điểm */
+  /* "+2" vẫn hiện (chỉ mờ dần, không bay) để biết vừa được điểm */
   .pt-plus {
     animation: pt-fade 1100ms ease-out forwards;
     transform: translate(-50%, -50%);

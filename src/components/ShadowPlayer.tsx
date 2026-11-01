@@ -23,7 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
-import { pickDictation, type DictationLevel } from "@/lib/dictation";
+import { pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
 import { clientApi } from "@/lib/client-api";
@@ -260,6 +260,7 @@ export default function ShadowPlayer({
   const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép
   const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
   const [earned, setEarned] = useState<Set<number>>(new Set()); // câu được điểm trong lần mở bài này (điểm của lượt)
+  const [spent, setSpent] = useState<Record<number, number>>({}); // số từ đã bấm xem của từng câu trong lần mở bài này (điểm bị trừ)
   const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch tiếng Việt
   const [trShown, setTrShown] = useState<Set<number>>(new Set()); // câu bấm "Dịch câu này" khi chưa bật bản dịch
   const [trError, setTrError] = useState("");
@@ -668,7 +669,7 @@ export default function ShadowPlayer({
     };
   }, [syncProgress, sourceUrl, segments.length, texts, allowDictation, update]);
 
-  // ---- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +1, mỗi câu chỉ tính 1 lần (cần tài khoản, như tiến độ) ----
+  // ---- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 (cần tài khoản, như tiến độ) ----
   useEffect(() => {
     if (!syncProgress) return;
     let alive = true;
@@ -679,7 +680,7 @@ export default function ShadowPlayer({
       alive = false;
     };
   }, [syncProgress, sourceUrl]);
-  /** Làm xong câu chính tả → lưu kết quả; đúng hết lần đầu thì +1 điểm (hiện ngay, gửi server sau) → true */
+  /** Làm xong câu chính tả → lưu kết quả; đúng hết lần đầu thì +2 điểm (hiện ngay, gửi server sau) → true */
   const dictFinished = (i: number, correct: number, total: number) => {
     setDictDone((d) => ({ ...d, [i]: { correct, total } }));
     if (!syncProgress || correct !== total || pointIdx.has(i)) return false;
@@ -691,9 +692,22 @@ export default function ShadowPlayer({
         // Chưa lưu được → bỏ điểm tạm tính, lần sau làm đúng câu này vẫn được điểm
         setPointIdx((s) => new Set([...s].filter((k) => k !== i)));
         setEarned((s) => new Set([...s].filter((k) => k !== i)));
-        emitPoints({ delta: -1 });
+        emitPoints({ delta: -POINTS_CORRECT });
       });
     return true;
+  };
+  /** Bấm xem n từ của câu i → trừ điểm ngay, gửi server sau */
+  const dictHint = (i: number, n: number) => {
+    const cost = n * POINTS_HINT;
+    setSpent((s) => ({ ...s, [i]: (s[i] ?? 0) + n }));
+    emitPoints({ delta: -cost });
+    clientApi<{ total: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, hints: n, tz: new Date().getTimezoneOffset() } })
+      .then((r) => emitPoints({ total: r.total }))
+      .catch(() => {
+        // Chưa lưu được → trả lại điểm tạm trừ
+        setSpent((s) => ({ ...s, [i]: (s[i] ?? 0) - n }));
+        emitPoints({ delta: cost });
+      });
   };
 
   // Mở bài đang ở Chính tả mà chưa có lượt → chọn lượt đầu tiên
@@ -770,7 +784,7 @@ export default function ShadowPlayer({
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
   const roundDone = dictation && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
   const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
-  const roundPoints = dictPick.filter((k) => earned.has(k)).length;
+  const roundPoints = dictPick.reduce((p, k) => p + (earned.has(k) ? POINTS_CORRECT : 0) - (spent[k] ?? 0) * POINTS_HINT, 0);
   const left = segments.length - doneCount;
 
   const starButton = (text: string, size = "size-5") => {
@@ -1049,6 +1063,7 @@ export default function ShadowPlayer({
                 onReplay={() => go(idx)}
                 onNext={next}
                 onDone={(correct, total) => dictFinished(idx, correct, total)}
+                onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
                 hasNext={nextIdx !== undefined}
                 draft={dictDrafts[idx]}
                 saved={dictDone[idx]}
@@ -1073,9 +1088,9 @@ export default function ShadowPlayer({
                   🎉 Xong lượt {dictPick.length} câu — đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
                 </p>
               )}
-              {roundDone && roundPoints > 0 && (
+              {roundDone && roundPoints !== 0 && (
                 <p className="inline-flex items-center gap-2 self-start rounded-full border border-gem/35 bg-gem/10 py-1 pr-3 pl-1.5 text-sm font-extrabold text-gem">
-                  <Gem className="size-6" /> +{roundPoints} điểm lượt này
+                  <Gem className="size-6" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} điểm lượt này
                 </p>
               )}
               <p className="text-sm text-muted">

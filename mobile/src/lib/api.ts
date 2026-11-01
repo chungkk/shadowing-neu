@@ -61,7 +61,7 @@ export type Stats = {
   forgotten: { id: number; word: string; meaning: string; lapses: number }[];
   points?: Points; // server cũ không gửi
 };
-/** Điểm chính tả (GET/POST /points): chép đúng hết 1 câu → +1, mỗi câu chỉ tính 1 lần · today theo giờ máy */
+/** Điểm chính tả (GET/POST /points): chép đúng hết 1 câu → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 · today theo giờ máy (có thể âm) */
 export type Points = { total: number; today: number };
 
 export type Track = { languageCode: string; name: string; auto: boolean };

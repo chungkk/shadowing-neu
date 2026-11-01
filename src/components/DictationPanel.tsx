@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
-import { checkDictation, hintFor, type DictationLevel, type WordState } from "@/lib/dictation";
+import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@/lib/dictation";
 import { emitPoints } from "@/lib/points";
 import { Gem } from "./PointsBadge";
 
@@ -15,14 +15,14 @@ const BOX: Record<WordState | "hint", string> = {
   hint: "border-border bg-background/60 text-muted",
 };
 
-/** Tia lấp lánh quanh "+1": góc · độ xa · màu */
+/** Tia lấp lánh quanh "+2": góc · độ xa · màu */
 const SPARKS = Array.from({ length: 12 }, (_, k) => ({
   a: `${k * 30 + (k % 2 ? 12 : 0)}deg`,
   d: `${k % 2 ? 46 : 72}px`,
   c: k % 3 === 0 ? "var(--gem)" : k % 3 === 1 ? "#f9a8d4" : "#f0f9ff",
 }));
 
-/** Hiệu ứng +1 điểm: vòng sáng lan ra, tia lấp lánh, "+1" bật lên rồi bay lên mờ dần (globals.css) */
+/** Hiệu ứng được điểm: vòng sáng lan ra, tia lấp lánh, "+2" bật lên rồi bay lên mờ dần (globals.css) */
 function PointBurst({ onEnd }: { onEnd: () => void }) {
   return (
     <div className="pt-burst top-1/2 left-1/2 z-10" aria-hidden>
@@ -32,8 +32,7 @@ function PointBurst({ onEnd }: { onEnd: () => void }) {
         <span key={k} className="pt-spark" style={{ "--a": p.a, "--d": p.d, "--spark": p.c } as CSSProperties} />
       ))}
       <span className="pt-plus" onAnimationEnd={onEnd}>
-        <Gem className="size-8" />
-        +1
+        <Gem className="size-8" />+{POINTS_CORRECT}
       </span>
     </div>
   );
@@ -46,7 +45,8 @@ export type DictDraft = { input: string; revealed: number[] };
  * Nghe chép chính tả 1 câu. Gõ đúng từ nào hiện từ đó ngay; bấm "Kiểm tra" để xem từ sai / thiếu.
  * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
  * Câu đã xong: bấm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
- * `onDone` trả về true = câu này được +1 điểm (chép đúng hết lần đầu) → hiệu ứng +1, kim cương bay lên huy hiệu điểm.
+ * `onDone` trả về true = câu này được +2 điểm (chép đúng hết lần đầu) → hiệu ứng +2, kim cương bay lên huy hiệu điểm.
+ * `onHint(n)`: vừa bấm xem n từ (mỗi từ −1 điểm) — chỉ truyền khi có tài khoản (được tính điểm).
  */
 export default function DictationPanel({
   text,
@@ -58,6 +58,7 @@ export default function DictationPanel({
   draft,
   saved,
   onDraft,
+  onHint,
   onWord,
   translation,
 }: {
@@ -65,11 +66,12 @@ export default function DictationPanel({
   level: DictationLevel;
   onReplay: () => void;
   onNext: () => void;
-  onDone: (correct: number, total: number) => boolean | void; // true = được +1 điểm
+  onDone: (correct: number, total: number) => boolean | void; // true = được +2 điểm
   hasNext: boolean;
   draft?: DictDraft;
   saved?: { correct: number; total: number };
   onDraft: (d: DictDraft | null) => void;
+  onHint?: (n: number) => void; // vừa bấm xem n từ → trừ điểm
   onWord?: (word: string) => void; // câu đã xong: bấm vào từ → bảng tra từ
   translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
 }) {
@@ -79,14 +81,14 @@ export default function DictationPanel({
   const [reported, setReported] = useState(!!saved);
   const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
-  const [won, setWon] = useState(false); // vừa được +1 điểm ở câu này → các ô từ nảy, chữ báo điểm
-  const [burst, setBurst] = useState(false); // hiệu ứng +1 đang chạy
+  const [won, setWon] = useState(false); // vừa được điểm ở câu này → các ô từ nảy, chữ báo điểm
+  const [burst, setBurst] = useState(false); // hiệu ứng +2 đang chạy
   const wordsRef = useRef<HTMLDivElement>(null);
   // Mở câu → con trỏ vào ô gõ luôn, nhưng không cuộn trang (autoFocus kéo cả trang tới ô gõ, các phần khác nhảy theo)
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
-  // Số từ phải bấm xem — không tính từ đã gõ đúng ("Hiện tất cả" thêm cả chúng vào `revealed`)
-  const revealedCount = result.words.filter((w) => w.state === "revealed").length;
+  const revealedCount = result.words.filter((w) => w.state === "revealed").length; // số từ đã bấm xem
+  const hintCost = onHint ? `−${POINTS_HINT} điểm` : "tính là lỗi";
 
   const finish = (r = result) => {
     if (!reported) {
@@ -97,7 +99,7 @@ export default function DictationPanel({
         setBurst(true);
         // Kim cương bay từ giữa hàng ô từ lên huy hiệu điểm
         const b = wordsRef.current?.getBoundingClientRect();
-        emitPoints({ delta: 1, from: b && { x: b.left + b.width / 2, y: b.top + b.height / 2 } });
+        emitPoints({ delta: POINTS_CORRECT, from: b && { x: b.left + b.width / 2, y: b.top + b.height / 2 } });
       }
     }
   };
@@ -115,7 +117,14 @@ export default function DictationPanel({
     if (result.done) finish();
   };
   const submit = () => (result.done ? onNext() : check());
-  const revealAll = () => change(input, new Set(result.words.map((_, k) => k)));
+  /** Bấm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
+  const reveal = (ks: number[]) => {
+    const fresh = ks.filter((k) => !revealed.has(k) && result.words[k].state !== "correct");
+    if (!fresh.length) return;
+    change(input, new Set([...revealed, ...fresh]));
+    onHint?.(fresh.length);
+  };
+  const revealAll = () => reveal(result.words.map((_, k) => k));
   /** Làm lại câu này từ đầu (kết quả mới ghi đè khi làm xong) */
   const retry = () => {
     setInput("");
@@ -192,8 +201,8 @@ export default function DictationPanel({
             <button
               key={k}
               className={`${box} cursor-pointer transition hover:border-amber hover:text-amber`}
-              title={`${checked && w.typed ? `Bạn gõ: ${w.typed} · ` : ""}Bấm để xem từ này (tính là lỗi)`}
-              onClick={() => change(input, new Set(revealed).add(k))}
+              title={`${checked && w.typed ? `Bạn gõ: ${w.typed} · ` : ""}Bấm để xem từ này (${hintCost})`}
+              onClick={() => reveal([k])}
             >
               {hint || <Eye className="mx-auto size-4" />}
             </button>
@@ -205,14 +214,14 @@ export default function DictationPanel({
       <p className="text-xs text-muted">
         {won && (
           <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-gem/15 px-2 py-0.5 font-extrabold text-gem">
-            <Gem className="size-3.5" /> +1 điểm
+            <Gem className="size-3.5" /> +{POINTS_CORRECT} điểm
           </span>
         )}
         {checked
           ? result.done
             ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealedCount ? ` · xem ${revealedCount} từ` : ""}.${onWord ? " Bấm vào từ để tra nghĩa." : ""}`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
-          : "Bấm vào ô để xem từ (tính là lỗi). Enter hoặc nút Kiểm tra để chấm."}
+          : `Bấm vào ô để xem từ (${hintCost}). Enter hoặc nút Kiểm tra để chấm.`}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
@@ -232,7 +241,7 @@ export default function DictationPanel({
             <RotateCcw className="size-4" /> Làm lại
           </button>
         ) : (
-          <button className="btn flex-1 py-3" onClick={revealAll} title="Hiện cả câu (các từ chưa gõ đúng tính là lỗi)">
+          <button className="btn flex-1 py-3" onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
             <Eye className="size-4" /> Hiện tất cả
           </button>
         )}

@@ -5,6 +5,10 @@
 
 export type DictationLevel = "easy" | "normal" | "hard";
 
+/** Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 */
+export const POINTS_CORRECT = 2;
+export const POINTS_HINT = 1;
+
 export type WordState =
   | "correct" // gõ đúng
   | "close" // sai 1–2 ký tự (lỗi gõ)
@@ -138,8 +142,9 @@ export function checkDictation(reference: string, input: string, revealed: Reado
     pj = mv.j + mv.dj;
   }
 
+  // Từ đã xem luôn tính là lỗi, kể cả khi gõ lại đúng sau đó (xem rồi chép lại không được điểm)
   revealed.forEach((k) => {
-    if (words[k] && words[k].state !== "correct") words[k] = { text: words[k].text, state: "revealed" };
+    if (words[k]) words[k] = { text: words[k].text, state: "revealed" };
   });
   const correct = words.filter((w) => w.state === "correct").length;
   return {

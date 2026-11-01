@@ -175,7 +175,7 @@ export default function StatsScreen() {
                 icon={<Gem size={24} />}
                 color={GEM}
                 value={`${s.points.total}`}
-                label={`${t("stats.points")}${s.points.today ? ` · ${t("stats.pointsToday", { n: s.points.today })}` : ""}`}
+                label={`${t("stats.points")}${s.points.today ? ` · ${t("stats.pointsToday", { n: s.points.today > 0 ? `+${s.points.today}` : `−${-s.points.today}` })}` : ""}`}
               />
             )}
 

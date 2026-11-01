@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { POINTS_EVENT, type PointsEvent } from "@/lib/points";
 
-/** Kim cương điểm (xanh, có mặt cắt, vệt sáng và 1 tia lấp lánh) — dùng ở huy hiệu, kim cương bay và hiệu ứng +1.
+/** Kim cương điểm (xanh, có mặt cắt, vệt sáng và 1 tia lấp lánh) — dùng ở huy hiệu, kim cương bay và hiệu ứng +2.
  *  Bản app dùng cùng hình: mobile/assets/images/gem.svg */
 export function Gem({ className = "size-5" }: { className?: string }) {
   const id = useId(); // mỗi viên 1 id gradient riêng
@@ -30,7 +30,7 @@ export function Gem({ className = "size-5" }: { className?: string }) {
 
 type Flyer = { id: number; from: { x: number; y: number } };
 const FLIGHT_MS = 720;
-const FLIGHT_DELAY = 380; // chờ "+1" trong ô chính tả bật lên xong mới bay
+const FLIGHT_DELAY = 380; // chờ "+2" trong ô chính tả bật lên xong mới bay
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -89,7 +89,7 @@ export default function PointsBadge({ initial }: { initial: number }) {
   return (
     <>
       <span
-        title="Điểm chính tả — mỗi câu chép đúng hết +1"
+        title="Điểm chính tả — mỗi câu chép đúng hết +2, mỗi từ bấm xem −1"
         className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-gem/35 bg-gem/10 pr-3 pl-1.5 font-extrabold text-gem tabular-nums select-none sm:h-10"
       >
         <span key={`c${bump}`} ref={coinRef} className={bump ? "points-bump" : undefined}>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { checkDictation, hintFor, type DictationLevel, type WordState } from "@shared/dictation";
+import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@shared/dictation";
 import { GEM, Gem, PointBurst } from "./Points";
 import { Button } from "./ui";
 import { C } from "@/lib/theme";
@@ -21,10 +21,10 @@ export type DictDraft = { input: string; revealed: number[] };
 
 /**
  * Nghe chép chính tả 1 câu (bản di động của components/DictationPanel.tsx trên web).
- * Gõ đúng từ nào hiện từ đó; "Kiểm tra" để xem từ sai / thiếu; chạm 👁 để xem từ (tính là lỗi).
+ * Gõ đúng từ nào hiện từ đó; "Kiểm tra" để xem từ sai / thiếu; chạm 👁 để xem từ (tính là lỗi, có tài khoản thì −1 điểm: `onHint`).
  * Câu đã làm xong (`saved`, kể cả lưu trên server từ lần trước) → hiện đủ câu + điểm, có nút "Làm lại";
  * chạm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
- * `onDone` trả về true = câu này được +1 điểm (chép đúng hết lần đầu) → hiệu ứng +1.
+ * `onDone` trả về true = câu này được +2 điểm (chép đúng hết lần đầu) → hiệu ứng +2.
  */
 export function DictationPanel({
   text,
@@ -36,6 +36,7 @@ export function DictationPanel({
   draft,
   saved,
   onDraft,
+  onHint,
   onWord,
   translation,
 }: {
@@ -43,11 +44,12 @@ export function DictationPanel({
   level: DictationLevel;
   onReplay: () => void;
   onNext: () => void;
-  onDone: (correct: number, total: number) => boolean | void; // true = được +1 điểm
+  onDone: (correct: number, total: number) => boolean | void; // true = được +2 điểm
   hasNext: boolean;
   draft?: DictDraft; // bản nháp lần trước (trong phiên học này)
   saved?: { correct: number; total: number }; // kết quả đã lưu của câu này
   onDraft: (d: DictDraft | null) => void;
+  onHint?: (n: number) => void; // vừa chạm xem n từ → trừ điểm (chỉ khi có tài khoản)
   onWord: (word: string) => void; // câu đã xong: chạm vào từ → bảng tra từ
   translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
 }) {
@@ -61,9 +63,9 @@ export function DictationPanel({
   // Điểm hiển thị: lần làm này (nếu vừa làm xong) hoặc điểm đã lưu
   const [score, setScore] = useState(saved);
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
-  const [won, setWon] = useState(false); // vừa được +1 điểm ở câu này
-  const [burst, setBurst] = useState(false); // hiệu ứng +1 đang chạy
-  // Số từ phải bấm xem — không tính từ đã gõ đúng (bấm "Hiện tất cả" thêm cả chúng vào `revealed`)
+  const [won, setWon] = useState(false); // vừa được điểm ở câu này
+  const [burst, setBurst] = useState(false); // hiệu ứng +2 đang chạy
+  // Số từ đã bấm xem
   const revealedCount = result.words.filter((w) => w.state === "revealed").length;
 
   const change = (nextInput: string, nextRevealed: Set<number>) => {
@@ -90,6 +92,13 @@ export function DictationPanel({
     setScore(undefined);
     setWon(false);
     onDraft(null);
+  };
+  /** Chạm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
+  const reveal = (ks: number[]) => {
+    const fresh = ks.filter((k) => !revealed.has(k) && result.words[k].state !== "correct");
+    if (!fresh.length) return;
+    change(input, new Set([...revealed, ...fresh]));
+    onHint?.(fresh.length);
   };
   const check = () => setChecked(true);
   const submit = () => (result.done ? onNext() : check());
@@ -128,7 +137,7 @@ export function DictationPanel({
             <Pressable
               key={k}
               disabled={shown && !result.done}
-              onPress={() => (result.done ? onWord(w.text) : change(input, new Set(revealed).add(k)))}
+              onPress={() => (result.done ? onWord(w.text) : reveal([k]))}
               style={{ borderColor: b.border, backgroundColor: b.bg, borderWidth: 2, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}
             >
               <Text style={{ color: b.fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>
@@ -155,7 +164,7 @@ export function DictationPanel({
           }}
         >
           <Gem size={16} />
-          <Text style={{ color: GEM, fontWeight: "800", fontSize: 12 }}>{t("dict.point")}</Text>
+          <Text style={{ color: GEM, fontWeight: "800", fontSize: 12 }}>{t("dict.point", { n: POINTS_CORRECT })}</Text>
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 12 }}>
@@ -169,7 +178,9 @@ export function DictationPanel({
               " " +
               t("dict.tapWord")
             : t("dict.partial", { c: result.correct, n: result.total })
-          : t("dict.tapHint")}
+          : onHint
+            ? t("dict.tapHintCost", { n: POINTS_HINT })
+            : t("dict.tapHint")}
       </Text>
 
       {/* Nút chính (Kiểm tra / Câu tiếp) đứng trước; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ. iPad: 2 nút cạnh nhau, nút chính rộng hơn */}
@@ -187,7 +198,7 @@ export function DictationPanel({
           <Button
             title={t("dict.showAll")}
             variant="plain"
-            onPress={() => change(input, new Set(result.words.map((_, k) => k)))}
+            onPress={() => reveal(result.words.map((_, k) => k))}
             style={tablet ? { flex: 1 } : undefined}
           />
         )}

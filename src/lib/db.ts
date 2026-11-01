@@ -2,6 +2,7 @@ import "server-only";
 import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { POINTS_CORRECT, POINTS_HINT } from "./dictation";
 import { isSentence } from "./review";
 import { isReservedSlug, slugify } from "./slug";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
@@ -97,15 +98,26 @@ function open() {
       updated_at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, source, idx)
     );
-    -- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +1 điểm. Mỗi câu chỉ tính 1 lần (làm lại / học lại từ đầu
+    -- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +POINTS_CORRECT. Mỗi câu chỉ tính 1 lần (làm lại / học lại từ đầu
     -- không cộng thêm) và giữ vĩnh viễn (không bị xoá theo progress)
     CREATE TABLE IF NOT EXISTS dict_points (
       user_id INTEGER NOT NULL,
       source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>"
       idx INTEGER NOT NULL, -- câu (sau khi gộp câu)
       at INTEGER NOT NULL, -- ms
+      pts INTEGER NOT NULL DEFAULT 1, -- điểm được cộng (câu được điểm trước khi lên +2 giữ +1)
       PRIMARY KEY (user_id, source, idx)
     );
+    -- Điểm chính tả bị trừ: mỗi lần bấm xem từ (n từ) → −n × POINTS_HINT. Không giới hạn số lần, giữ vĩnh viễn như dict_points
+    CREATE TABLE IF NOT EXISTS dict_hints (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      idx INTEGER NOT NULL,
+      n INTEGER NOT NULL, -- số từ xem ("Hiện tất cả" xem nhiều từ 1 lần)
+      at INTEGER NOT NULL -- ms
+    );
+    CREATE INDEX IF NOT EXISTS dict_hints_user ON dict_hints (user_id, at);
     -- Lịch sử ôn: mỗi lần ôn 1 dòng (không ghi đè) → đo độ chính xác nhớ lại, còn nhớ sau 7/30 ngày, hiệu quả từng dạng bài
     CREATE TABLE IF NOT EXISTS review_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -193,6 +205,9 @@ function open() {
       fill.run(JSON.stringify(Array.from({ length: r.idx + 1 }, (_, i) => i)), r.user_id, r.source);
     db.exec("COMMIT");
   }
+  // Điểm chính tả theo câu (trước đây mỗi câu đúng luôn +1)
+  const pointCols = db.prepare("PRAGMA table_info(dict_points)").all() as { name: string }[];
+  if (!pointCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_points ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
   // Chính tả: các câu của lượt đang làm (app chọn ngẫu nhiên 5–10 câu / lượt)
   if (!progressCols.some((c) => c.name === "dict_pick")) db.exec("ALTER TABLE progress ADD COLUMN dict_pick TEXT NOT NULL DEFAULT '[]'"); // [3, 17, 42, …]
   // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
@@ -514,6 +529,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM dict_hints WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
   rmSync(path.join(AVATAR_DIR, String(id)), { force: true }); // ảnh đại diện
@@ -936,14 +952,19 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
 
 // ---- Điểm chính tả ----
 
-export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học)
+export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học) — có thể âm
 
-/** tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
+/** Điểm = cộng của các câu đúng − điểm trừ khi xem từ · tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
 export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Points {
   const dayStart = Date.parse(new Date(now - tzOffset * 60_000).toISOString().slice(0, 10)) + tzOffset * 60_000;
   const r = conn()
-    .prepare("SELECT COUNT(*) AS total, COALESCE(SUM(at >= ?), 0) AS today FROM dict_points WHERE user_id = ?")
-    .get(dayStart, userId) as Points;
+    .prepare(
+      `SELECT COALESCE(SUM(pts), 0) AS total, COALESCE(SUM(CASE WHEN at >= ? THEN pts END), 0) AS today FROM (
+         SELECT pts, at FROM dict_points WHERE user_id = ?
+         UNION ALL SELECT -n * ${POINTS_HINT}, at FROM dict_hints WHERE user_id = ?
+       )`,
+    )
+    .get(dayStart, userId, userId) as Points;
   return { total: r.total, today: r.today };
 }
 
@@ -954,10 +975,18 @@ export function getPointIdx(userId: number, source: string): number[] {
   );
 }
 
-/** +1 điểm cho câu idx (câu đã tính rồi → awarded = false, không cộng) */
+/** +POINTS_CORRECT cho câu idx (câu đã tính rồi → awarded = false, không cộng) */
 export function awardDictPoint(userId: number, source: string, idx: number, tzOffset = 0): Points & { awarded: boolean } {
-  const r = conn().prepare("INSERT OR IGNORE INTO dict_points (user_id, source, idx, at) VALUES (?, ?, ?, ?)").run(userId, source, idx, Date.now());
+  const r = conn()
+    .prepare("INSERT OR IGNORE INTO dict_points (user_id, source, idx, at, pts) VALUES (?, ?, ?, ?, ?)")
+    .run(userId, source, idx, Date.now(), POINTS_CORRECT);
   return { ...getPoints(userId, tzOffset), awarded: r.changes > 0 };
+}
+
+/** Xem n từ của câu idx → −n × POINTS_HINT */
+export function chargeDictHints(userId: number, source: string, idx: number, n: number, tzOffset = 0): Points {
+  conn().prepare("INSERT INTO dict_hints (user_id, source, idx, n, at) VALUES (?, ?, ?, ?, ?)").run(userId, source, idx, n, Date.now());
+  return getPoints(userId, tzOffset);
 }
 
 // ---- Thống kê học tập (màn Thống kê trên app) ----

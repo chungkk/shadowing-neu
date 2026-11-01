@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, Easing, Text, View } from "react-native";
+import { POINTS_CORRECT } from "@shared/dictation";
 
-/** Điểm chính tả (bản di động của PointsBadge / hiệu ứng +1 trên web): chép đúng hết 1 câu → +1, mỗi câu chỉ tính 1 lần */
+/** Điểm chính tả (bản di động của PointsBadge / hiệu ứng +2 trên web): chép đúng hết 1 câu → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 */
 
 /** Hệ thống đang bật "Giảm chuyển động" */
 function useReduceMotion() {
@@ -31,8 +32,8 @@ const SPARKS = Array.from({ length: 12 }, (_, k) => {
 const BURST_MS = 1100;
 
 /**
- * Hiệu ứng +1 điểm, đặt giữa khung cha (position absolute, không nhận chạm):
- * vòng sáng lan ra, tia lấp lánh bắn ra, "+1" bật lên rồi bay lên mờ dần. Giảm chuyển động → chỉ "+1" hiện rồi mờ.
+ * Hiệu ứng được điểm, đặt giữa khung cha (position absolute, không nhận chạm):
+ * vòng sáng lan ra, tia lấp lánh bắn ra, "+2" bật lên rồi bay lên mờ dần. Giảm chuyển động → chỉ "+2" hiện rồi mờ.
  */
 export function PointBurst({ onEnd }: { onEnd: () => void }) {
   const reduce = useReduceMotion();
@@ -121,7 +122,7 @@ export function PointBurst({ onEnd }: { onEnd: () => void }) {
             textShadowOffset: { width: 0, height: 0 },
           }}
         >
-          +1
+          +{POINTS_CORRECT}
         </Text>
       </Animated.View>
     </View>
@@ -129,7 +130,7 @@ export function PointBurst({ onEnd }: { onEnd: () => void }) {
 }
 
 /**
- * Huy hiệu tổng điểm. Điểm tăng → chờ "+1" trong ô chép bay lên (~0,5 giây) rồi kim cương nảy, số mới hiện;
+ * Huy hiệu tổng điểm. Điểm tăng → chờ "+2" trong ô chép bay lên (~0,5 giây) rồi kim cương nảy, số mới hiện;
  * giảm (server sửa lại) → đổi số ngay.
  */
 export function PointsPill({ total }: { total: number }) {
