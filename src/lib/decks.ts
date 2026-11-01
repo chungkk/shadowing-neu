@@ -2,15 +2,17 @@ import "server-only";
 import type { NounGender } from "./db";
 import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";
+import goetheB1 from "@/content/decks/goethe-b1.json";
 
 /**
  * Kho bộ từ vựng (tab Từ vựng của app): mỗi bộ 1 file JSON trong src/content/decks/, build kèm server.
  * Thêm bộ mới: tạo file JSON (xem src/content/decks/README.md) rồi thêm 1 dòng vào RAW bên dưới.
  */
 const RAW: RawDeck[] = [
-  // Wortliste Goethe-Zertifikat A1 (Start Deutsch 1) / A2 — mỗi trình độ 1 bộ
+  // Wortliste Goethe-Zertifikat A1 (Start Deutsch 1) / A2 / B1 — mỗi trình độ 1 bộ
   goetheA1,
   goetheA2,
+  goetheB1,
 ];
 
 type RawDeck = {
