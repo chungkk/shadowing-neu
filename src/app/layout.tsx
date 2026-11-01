@@ -5,6 +5,7 @@ import { Geist_Mono, Nunito } from "next/font/google";
 import { SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -18,8 +19,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Deutsch Shadowing",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "Deutsch Shadowing", template: "%s · Deutsch Shadowing" },
   description: "Luyện shadowing tiếng Đức với video YouTube",
+  openGraph: { siteName: "Deutsch Shadowing", locale: "vi_VN" },
 };
 
 // viewport-fit=cover: thanh dưới đáy (điện thoại) kéo xuống sát mép, chừa chỗ thanh home bằng env(safe-area-inset-*)

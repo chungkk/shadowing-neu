@@ -8,6 +8,7 @@ import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/you
 import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount } from "@/lib/account";
+import { slugify } from "@/lib/slug";
 
 export type FormState = { error?: string };
 
@@ -47,6 +48,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   const id = Number(formData.get("id")) || null;
   const url = String(formData.get("url") ?? "");
   let title = String(formData.get("title") ?? "").trim();
+  const slug = slugify(String(formData.get("slug") ?? ""));
   const description = String(formData.get("description") ?? "").trim();
   const level = String(formData.get("level")) as Level;
   const published = formData.get("published") === "on";
@@ -71,7 +73,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   if (!segments.length) return { error: "Phụ đề trống hoặc sai định dạng SRT" };
   if (!title) return { error: "Nhập tiêu đề bài học" };
 
-  const lesson = { title, videoId, description, level, published, dictation, segments };
+  const lesson = { title, slug, videoId, description, level, published, dictation, segments };
   if (id) updateLesson(id, lesson);
   else createLesson(lesson);
   prewarmPhrases(segments);

@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
+import { slugify } from "@/lib/slug";
 import { fetchSubtitles, saveLesson, type FetchResult } from "./actions";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -10,6 +11,7 @@ export type LessonFormValues = {
   id?: number;
   url: string;
   title: string;
+  slug?: string;
   description: string;
   level: string;
   published: boolean;
@@ -22,6 +24,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
   const [fetching, startFetch] = useTransition();
   const [url, setUrl] = useState(initial?.url ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
+  const [slug, setSlug] = useState(initial?.slug ?? "");
   const [srt, setSrt] = useState(initial?.srt ?? "");
   const [info, setInfo] = useState<Extract<FetchResult, { srt: string }> | null>(null);
   const [fetchError, setFetchError] = useState("");
@@ -96,6 +99,25 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
               <option key={l}>{l}</option>
             ))}
           </select>
+        </label>
+        <label className="field text-sm sm:col-span-2">
+          Đường dẫn (SEO)
+          <div className="input flex items-center p-0 focus-within:border-accent">
+            <span className="shrink-0 pl-4 text-muted">ckk.pro/</span>
+            <input
+              name="slug"
+              className="min-w-0 flex-1 bg-transparent py-3 pr-4 text-foreground outline-none placeholder:text-muted/60"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              onBlur={() => setSlug(slugify(slug))}
+              placeholder={slugify(title) || "tu-tao-tu-tieu-de"}
+            />
+          </div>
+          <span className="text-xs">
+            {initial?.id
+              ? "Đổi đường dẫn thì link cũ (đã chia sẻ / Google đã lưu) sẽ không mở được — chỉ đổi khi thật cần."
+              : "Để trống sẽ tự tạo từ tiêu đề (bỏ dấu, nối bằng dấu gạch)."}
+          </span>
         </label>
         <label className="field text-sm sm:col-span-2">
           Mô tả / ghi chú cho người học

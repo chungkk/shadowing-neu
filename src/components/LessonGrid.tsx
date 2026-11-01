@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Headphones } from "lucide-react";
 import LevelBadge from "./LevelBadge";
 
-type Item = { id: number; title: string; videoId: string; level: string; description: string; sentences: number; isNew: boolean };
+type Item = { id: number; title: string; slug: string; videoId: string; level: string; description: string; sentences: number; isNew: boolean };
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -25,7 +25,7 @@ export function SectionHeader({ title, count, children }: { title: string; count
 function LessonCard({ l }: { l: Item }) {
   return (
     <Link
-      href={`/lesson/${l.id}`}
+      href={`/${l.slug}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent active:scale-[0.99]"
     >
       <div className="relative aspect-video overflow-hidden bg-black">

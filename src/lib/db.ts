@@ -3,6 +3,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isSentence } from "./review";
+import { isReservedSlug, slugify } from "./slug";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import { mergeIntoSentences, type Segment } from "./subtitles";
 
@@ -12,6 +13,7 @@ export type Level = (typeof LEVELS)[number];
 export type Lesson = {
   id: number;
   title: string;
+  slug: string; // đường dẫn ckk.pro/<slug> — tạo từ tiêu đề, giữ nguyên khi sửa tiêu đề (link cũ không gãy)
   videoId: string;
   description: string;
   level: Level;
@@ -165,6 +167,12 @@ function open() {
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
+  // Đường dẫn đẹp cho SEO (ckk.pro/<slug>); bài chưa có slug → tạo từ tiêu đề
+  if (!lessonCols.some((c) => c.name === "slug")) db.exec("ALTER TABLE lessons ADD COLUMN slug TEXT");
+  const setSlug = db.prepare("UPDATE lessons SET slug = ? WHERE id = ?");
+  for (const r of db.prepare("SELECT id, title FROM lessons WHERE slug IS NULL OR slug = '' ORDER BY id").all() as { id: number; title: string }[])
+    setSlug.run(uniqueSlug(db, r.title, r.id), r.id);
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS lessons_slug ON lessons (slug)");
   // Tiến độ: các câu đã thực sự nghe (% tính theo số này, không theo câu đang mở).
   // Tiến độ cũ chỉ có câu đang học → coi mọi câu tới đó là đã nghe, để % đang hiện không bị tụt
   const progressCols = db.prepare("PRAGMA table_info(progress)").all() as { name: string }[];
@@ -198,6 +206,16 @@ function open() {
   return db;
 }
 
+/** Slug chưa bài nào dùng: "tieu-de", trùng thì "tieu-de-2", "tieu-de-3"… (exceptId: bài đang sửa) */
+function uniqueSlug(db: DatabaseSync, text: string, exceptId: number | null): string {
+  const base = slugify(text) || "bai-hoc";
+  const taken = db.prepare("SELECT 1 FROM lessons WHERE slug = ? AND id IS NOT ?");
+  for (let n = 1; ; n++) {
+    const slug = n === 1 ? base : `${base}-${n}`;
+    if (!isReservedSlug(slug) && !taken.get(slug, exceptId)) return slug;
+  }
+}
+
 // Giữ 1 kết nối duy nhất (kể cả khi dev server hot-reload).
 // Mở lúc dùng lần đầu, không mở lúc import (lúc build nhiều worker import cùng lúc → "database is locked").
 const g = globalThis as unknown as { __db?: DatabaseSync };
@@ -206,6 +224,7 @@ const conn = () => (g.__db ??= open());
 type Row = {
   id: number;
   title: string;
+  slug: string;
   video_id: string;
   description: string;
   level: Level;
@@ -219,6 +238,7 @@ type Row = {
 const toSummary = (r: Row): LessonSummary => ({
   id: r.id,
   title: r.title,
+  slug: r.slug,
   videoId: r.video_id,
   description: r.description,
   level: r.level,
@@ -231,7 +251,7 @@ const toSummary = (r: Row): LessonSummary => ({
 export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
   const rows = conn()
     .prepare(
-      `SELECT id, title, video_id, description, level, published, dictation, created_at,
+      `SELECT id, title, slug, video_id, description, level, published, dictation, created_at,
               json_array_length(segments) AS segment_count
        FROM lessons ${includeDrafts ? "" : "WHERE published = 1"}
        ORDER BY created_at DESC, id DESC`,
@@ -263,21 +283,30 @@ export function getLesson(id: number): Lesson | null {
   return { ...rest, segments: JSON.parse(r.segments!) };
 }
 
-export type LessonInput = Omit<Lesson, "id" | "createdAt">;
+export function getLessonBySlug(slug: string): Lesson | null {
+  const r = conn().prepare("SELECT id FROM lessons WHERE slug = ?").get(slug) as { id: number } | undefined;
+  return r ? getLesson(r.id) : null;
+}
+
+/** slug: admin tự đặt (chuẩn hoá lại + tránh trùng); bỏ trống → tạo bài mới thì lấy từ tiêu đề, sửa bài thì giữ slug cũ */
+export type LessonInput = Omit<Lesson, "id" | "createdAt" | "slug"> & { slug?: string };
 
 export function createLesson(l: LessonInput): number {
-  const res = conn()
+  const db = conn();
+  const res = db
     .prepare(
-      "INSERT INTO lessons (title, video_id, description, level, segments, published, dictation) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO lessons (title, slug, video_id, description, level, segments, published, dictation) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0);
+    .run(l.title, uniqueSlug(db, l.slug || l.title, null), l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0);
   return Number(res.lastInsertRowid);
 }
 
 export function updateLesson(id: number, l: LessonInput) {
-  conn().prepare(
+  const db = conn();
+  db.prepare(
     "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ?, dictation = ? WHERE id = ?",
   ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0, id);
+  if (l.slug) db.prepare("UPDATE lessons SET slug = ? WHERE id = ?").run(uniqueSlug(db, l.slug, id), id);
   sentenceCounts.delete(id);
 }
 

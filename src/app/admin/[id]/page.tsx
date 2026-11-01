@@ -16,6 +16,7 @@ async function Edit({ params }: PageProps<"/admin/[id]">) {
         id: lesson.id,
         url: `https://www.youtube.com/watch?v=${lesson.videoId}`,
         title: lesson.title,
+        slug: lesson.slug,
         description: lesson.description,
         level: lesson.level,
         published: lesson.published,

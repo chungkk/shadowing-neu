@@ -24,7 +24,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
       const [, kind, id] = p.source.split("/");
       const lesson = kind === "lesson" ? lessons.get(id) : undefined;
       // Bài đã bị xoá / chuyển về nháp → bỏ qua
-      return { p, title: lesson?.title ?? p.title, videoId: kind === "watch" ? id : lesson?.videoId };
+      return { p, href: lesson ? `/${lesson.slug}` : p.source, title: lesson?.title ?? p.title, videoId: kind === "watch" ? id : lesson?.videoId };
     })
     .filter((x): x is typeof x & { videoId: string } => !!x.videoId)
     .slice(0, SHOWN);
@@ -34,14 +34,14 @@ export default function ContinueLearning({ userId }: { userId: number }) {
     <section className="flex flex-col gap-4 sm:gap-5">
       <SectionHeader title="Tiếp tục học" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {items.map(({ p, title, videoId }) => {
+        {items.map(({ p, href, title, videoId }) => {
           const n = percent(p);
           const dictCount = Object.keys(p.dictDone).length;
           const at = p.mode === "dictation" && dictCount ? `Chính tả ${dictCount}/${p.total}` : `Câu ${p.idx + 1}/${p.total}`;
           return (
             <Link
               key={p.source}
-              href={p.source}
+              href={href}
               className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-accent"
             >
               <div className="relative w-24 shrink-0 overflow-hidden rounded-lg bg-black sm:w-28">

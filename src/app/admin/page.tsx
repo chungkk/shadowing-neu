@@ -47,7 +47,7 @@ async function Dashboard() {
                   {l.published ? "● Đã đăng" : "○ Nháp"}
                 </button>
               </form>
-              <Link href={`/lesson/${l.id}`} className="btn">
+              <Link href={`/${l.slug}`} className="btn">
                 Xem
               </Link>
               <Link href={`/admin/${l.id}`} className="btn">

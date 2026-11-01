@@ -15,6 +15,7 @@ function lessonItems() {
   return listLessons().map((l) => ({
     id: l.id,
     title: l.title,
+    slug: l.slug,
     videoId: l.videoId,
     level: l.level,
     description: l.description,
