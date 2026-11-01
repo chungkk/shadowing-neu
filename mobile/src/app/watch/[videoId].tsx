@@ -73,6 +73,8 @@ export default function WatchScreen() {
     loadTranscript(videoId, !!user, setStep)
       .then(setData)
       .catch((e: Error) => {
+        // Video của bài đang khoá (admin bật khoá bài học) → sang màn bài học để mở khoá
+        if (e instanceof ApiError && e.data.locked && typeof e.data.lessonId === "number") return router.replace(`/lesson/${e.data.lessonId}`);
         setError(e.message);
         setNeedLogin(e instanceof GuestNoSubtitles);
       });

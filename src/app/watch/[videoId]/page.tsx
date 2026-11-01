@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LoginLink } from "@/components/LoginDialog";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import TrackSelect from "@/components/TrackSelect";
 import { RememberVideo } from "@/components/RecentVideos";
 import { extractVideoId, getYouTubeTranscript, WHISPER } from "@/lib/youtube";
 import { getCurrentUser } from "@/lib/auth";
+import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 
 async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
@@ -13,6 +15,9 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
   const { lang } = await searchParams;
   const user = await getCurrentUser();
   const opts = { whisper: !!user }; // chỉ người đã đăng nhập mới được chạy Whisper (tốn tiền API)
+  // Video của bài đang khoá → sang trang bài (màn mở khoá), không cho học lách qua link YouTube
+  const locked = lockedLessonOfVideo(user, extractVideoId(rawId) ?? "");
+  if (locked) redirect(`/${locked.slug}`);
 
   let data: Awaited<ReturnType<typeof getYouTubeTranscript>>;
   let notice = "";

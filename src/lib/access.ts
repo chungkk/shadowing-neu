@@ -1,6 +1,16 @@
 import "server-only";
 import type { User } from "./auth";
-import { addLessonUnlock, getLesson, getPoints, getSetting, lessonPicksUsed, setSetting, unlockedLessonIds, unlockLessonsWithProgress } from "./db";
+import {
+  addLessonUnlock,
+  getLesson,
+  getPoints,
+  getSetting,
+  lessonPicksUsed,
+  publishedLessonsByVideo,
+  setSetting,
+  unlockedLessonIds,
+  unlockLessonsWithProgress,
+} from "./db";
 import { FREE_LESSONS, FREE_PICKS, LESSON_PRICE, type LessonAccess, type LockInfo } from "./lesson-lock";
 
 /** Quyền học từng bài khi admin bật khoá bài (quy tắc: lib/lesson-lock.ts) */
@@ -36,10 +46,21 @@ export function lockInfo(user: User | null): LockInfo {
   };
 }
 
-/** Bài học (source "/lesson/<id>") đang bị khoá với người này → không lưu tiến độ / điểm. Video YouTube luôn mở */
+/**
+ * Video YouTube là video của bài đang khoá với người này (mọi bài dùng video đó đều khoá) → bài để chuyển sang mở khoá.
+ * Không thì null (video tự do luôn mở). Chặn lách khoá bằng cách dán link video vào /watch.
+ */
+export function lockedLessonOfVideo(user: User | null, videoId: string): { id: number; slug: string } | null {
+  const lessons = publishedLessonsByVideo(videoId);
+  const access = accessOf(user);
+  return lessons.length > 0 && lessons.every((l) => access(l.id) === "locked") ? lessons[0] : null;
+}
+
+/** Bài học / video của bài đang bị khoá với người này → không lưu tiến độ / điểm */
 export function lockedSource(user: User | null, source: string): boolean {
-  const m = /^\/lesson\/(\d+)$/.exec(source);
-  return !!m && accessOf(user)(Number(m[1])) === "locked";
+  const [, kind, id] = source.split("/");
+  if (kind === "lesson") return /^\d+$/.test(id) && accessOf(user)(Number(id)) === "locked";
+  return kind === "watch" && !!lockedLessonOfVideo(user, id);
 }
 
 /**

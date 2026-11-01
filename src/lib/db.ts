@@ -327,6 +327,11 @@ export function getLesson(id: number): Lesson | null {
   return { ...rest, segments: JSON.parse(r.segments!) };
 }
 
+/** Các bài đã đăng dùng video này (để khoá bài không bị lách qua /watch/<videoId>) */
+export function publishedLessonsByVideo(videoId: string): { id: number; slug: string }[] {
+  return conn().prepare("SELECT id, slug FROM lessons WHERE video_id = ? AND published = 1 ORDER BY id").all(videoId) as { id: number; slug: string }[];
+}
+
 export function getLessonBySlug(slug: string): Lesson | null {
   const r = conn().prepare("SELECT id FROM lessons WHERE slug = ?").get(slug) as { id: number } | undefined;
   return r ? getLesson(r.id) : null;
