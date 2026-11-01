@@ -3,6 +3,7 @@ import type { NounGender } from "./db";
 import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";
 import goetheB1 from "@/content/decks/goethe-b1.json";
+import nomenVerb from "@/content/decks/nomen-verb-verbindungen.json";
 
 /**
  * Kho bộ từ vựng (tab Từ vựng của app): mỗi bộ 1 file JSON trong src/content/decks/, build kèm server.
@@ -13,6 +14,8 @@ const RAW: RawDeck[] = [
   goetheA1,
   goetheA2,
   goetheB1,
+  // Nomen-Verb-Verbindungen (Hans Witzlinger, „Deutsch – Aber Hallo!“) — chủ đề theo vần A–Z
+  nomenVerb,
 ];
 
 type RawDeck = {
