@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, ChevronDown, House, ListVideo, LogIn, LogOut, MessageSquare, Mic, Settings, Users } from "lucide-react";
+import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogIn, LogOut, MessageSquare, Mic, Settings, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -16,6 +16,7 @@ const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
   { href: "/sprechen", label: "Luyện nói", icon: Mic },
+  { href: "/games", label: "Game", icon: Gamepad2 },
 ];
 const USER_ITEMS: Item[] = [
   { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },

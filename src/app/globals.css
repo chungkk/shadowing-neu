@@ -328,7 +328,36 @@ select {
   }
 }
 
+/* ---- Game Mưa từ vựng (WordRain): giọt bị bắn nổ bay lên, giọt chạm đất mờ dần, gõ sai rung ô gõ ---- */
+.rain-hit {
+  animation: rain-hit 700ms ease-out forwards;
+}
+@keyframes rain-hit {
+  25% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1.05) translateY(-28px);
+    opacity: 0;
+  }
+}
+.rain-miss {
+  animation: pt-fade 700ms ease-in forwards;
+}
+.shake {
+  animation: shake 300ms;
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .shake,
   .sheet-fade,
   .sheet-up,
   .pt-ring,
@@ -344,6 +373,9 @@ select {
     display: none;
   }
   /* "+2" vẫn hiện (chỉ mờ dần, không bay) để biết vừa được điểm */
+  .rain-hit {
+    animation: pt-fade 700ms ease-out forwards;
+  }
   .pt-plus {
     animation: pt-fade 1100ms ease-out forwards;
     transform: translate(-50%, -50%);
