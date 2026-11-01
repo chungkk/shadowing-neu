@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   BookmarkPlus,
@@ -22,8 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
-import { checkGuess, fullWord, type StudyWord } from "@/lib/deck-study";
-import { norm, shuffle } from "@/lib/review";
+import { fullWord, type StudyWord } from "@/lib/deck-study";
+import { shuffle } from "@/lib/review";
 import { speakGerman } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -31,6 +31,9 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
  * Game "Mưa từ vựng": nghĩa tiếng Việt rơi từ trên xuống, gõ đúng từ tiếng Đức để bắn trước khi chạm nước.
  * Mỗi chủ đề của bộ từ là 1 mốc: bắn đủ số từ của mốc thì sang chủ đề kế (+1 mạng); tiến độ mốc lưu theo bộ.
  * Chạm nước mất 1 mạng, hết mạng là thua. Từ trượt hiện lại cuối ván, lưu được vào sổ để ôn.
+ *
+ * Gõ kiểu "khoá mục tiêu": bắt từng phím (không có ô nhập → bộ gõ tiếng Việt không chen vào), phím đầu chọn giọt,
+ * chỉ chữ đúng mới được ghi — gõ sai thì giọt rung, không phải xoá. Sai 2 lần cùng chỗ → lộ chữ kế tiếp.
  */
 
 type DeckOption = { slug: string; title: string; level: string; wordCount: number; topicCount: number };
@@ -53,6 +56,9 @@ type Game = {
   hits: number;
   missed: GameWord[];
   best: number; // kỷ lục trước ván này
+  targetId: number | null; // giọt đang gõ
+  typed: string; // phần đã gõ đúng của giọt đó (theo chữ của từ: gõ "a" cho "ä" thì lưu "ä")
+  wrong: number; // số lần gõ sai liên tiếp ở chữ hiện tại
 };
 type View = Omit<Game, "words" | "queue">;
 type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
@@ -94,11 +100,41 @@ const OSK_ROWS = ["qwertzuiopü", "asdfghjklöä", "yxcvbnmß"];
 
 let nextId = 1;
 
-/** Phần người chơi gõ, bỏ mạo từ đứng đầu ("die Kat" → "Kat") */
-const typedWord = (s: string) => s.replace(/^\s*(der|die|das)\s+/i, "").trimStart();
+/** Bàn phím không có umlaut: gõ a/o/u/s thay ä/ö/ü/ß cũng được */
+const BASE: Record<string, string> = { ä: "a", ö: "o", ü: "u", ß: "s" };
+const sameLetter = (key: string, want: string) => key === want.toLowerCase() || BASE[want.toLowerCase()] === key;
+
+/** Bỏ chọn giọt đang gõ */
+const untarget = (g: Game) => Object.assign(g, { targetId: null, typed: "", wrong: 0 });
+
+/**
+ * 1 phím chữ (thường): ưu tiên giọt đang gõ, không khớp thì giọt thấp nhất có cùng phần đã gõ + chữ này.
+ * → giọt vừa gõ xong (bắn) · "ok" (đúng, chưa xong) · "wrong" (không ghi gì)
+ */
+function press(g: Game, key: string): Drop | "ok" | "wrong" {
+  const n = g.typed.length;
+  const fits = (d: Drop) => d.state === "fall" && n < d.w.word.length && d.w.word.slice(0, n).toLowerCase() === g.typed.toLowerCase() && sameLetter(key, d.w.word[n]);
+  const d = g.drops.find((d) => d.id === g.targetId && fits(d)) ?? g.drops.filter(fits).sort((a, b) => b.y - a.y)[0];
+  if (!d) {
+    g.wrong++;
+    g.combo = 0;
+    return "wrong";
+  }
+  let typed = d.w.word.slice(0, n + 1);
+  while (typed.length < d.w.word.length && !/\p{L}/u.test(d.w.word[typed.length])) typed += d.w.word[typed.length]; // gạch nối tự điền
+  Object.assign(g, { targetId: d.id, typed, wrong: 0 });
+  return typed.length >= d.w.word.length ? d : "ok";
+}
+
+/** Xoá chữ cuối của giọt đang gõ (kèm gạch nối tự điền) — hết chữ thì bỏ chọn */
+function backspace(g: Game) {
+  g.typed = g.typed.slice(0, -1).replace(/[^\p{L}]+$/u, "");
+  g.wrong = 0;
+  if (!g.typed) untarget(g);
+}
 
 function newGame(words: GameWord[], topics: Topic[], milestone: number, best: number): Game {
-  const g: Game = { words, topics, milestone, mHits: 0, goal: 0, queue: [], drops: [], time: 0, nextSpawn: 0, lives: LIVES, score: 0, combo: 0, hits: 0, missed: [], best };
+  const g: Game = { words, topics, milestone, mHits: 0, goal: 0, queue: [], drops: [], time: 0, nextSpawn: 0, lives: LIVES, score: 0, combo: 0, hits: 0, missed: [], best, targetId: null, typed: "", wrong: 0 };
   g.queue = shuffle(topicWords(g, milestone));
   g.goal = goalOf(g, milestone);
   return g;
@@ -118,6 +154,9 @@ const snapshot = (g: Game): View => ({
   hits: g.hits,
   missed: [...g.missed],
   best: g.best,
+  targetId: g.targetId,
+  typed: g.typed,
+  wrong: g.wrong,
 });
 
 /** Từ kế tiếp của mốc — tránh từ đang rơi trên sân */
@@ -150,6 +189,7 @@ function step(g: Game, dt: number) {
     d.y += d.speed * dt;
     if (d.y >= 1) {
       Object.assign(d, { y: 1, state: "miss", at: g.time });
+      if (d.id === g.targetId) untarget(g);
       g.lives--;
       g.combo = 0;
       g.missed.push(d.w);
@@ -160,28 +200,18 @@ function step(g: Game, dt: number) {
   if (g.time >= g.nextSpawn && falling < maxDrops(levelOf(g.hits))) spawn(g);
 }
 
-/** Giọt người chơi đang gõ: giọt thấp nhất có từ bắt đầu bằng phần đã gõ */
-function targetOf(drops: Drop[], input: string) {
-  const t = norm(typedWord(input));
-  if (!t) return null;
-  return drops.filter((d) => d.state === "fall" && norm(d.w.word).startsWith(t)).sort((a, b) => b.y - a.y)[0] ?? null;
-}
-
-/** Gợi ý dưới nghĩa: chữ đầu + ô trống; giọt đang gõ thì điền chữ đã gõ (sai chữ nào đỏ chữ đó) */
-function Slots({ word, typed }: { word: string; typed: string | null }) {
+/** Gợi ý dưới nghĩa: chữ đầu + ô trống; giọt đang gõ thì hiện phần đã gõ đúng, hint = lộ chữ kế tiếp */
+function Slots({ word, typed, hint }: { word: string; typed: string | null; hint: boolean }) {
+  const n = typed?.length ?? 0;
   return (
     <span className="flex justify-center font-mono text-base font-extrabold tracking-[0.18em]">
       {[...word].map((c, i) => {
+        if (i < n) return <span key={i} className="text-white">{c}</span>;
         if (!/\p{L}/u.test(c)) return <span key={i}>{c}</span>;
-        if (typed && i < typed.length)
-          return (
-            <span key={i} className={typed[i].toLowerCase() === c.toLowerCase() ? "text-white" : "text-red-400"}>
-              {typed[i]}
-            </span>
-          );
+        if (i === 0 || (hint && i === n)) return <span key={i} className="text-amber">{c}</span>;
         return (
-          <span key={i} className={i === 0 ? "text-amber" : "text-sky-300/50"}>
-            {i === 0 ? c : "_"}
+          <span key={i} className={typed && i === n ? "text-cyan-200" : "text-sky-300/50"}>
+            _
           </span>
         );
       })}
@@ -252,9 +282,8 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
   const [cleared, setCleared] = useLocalStorage(`wordrain-milestone-${deck}`, 0);
   const [phase, setPhase] = useState<Phase>("menu");
   const [view, setView] = useState<View | null>(null);
-  const [input, setInput] = useState("");
   const [note, setNote] = useState<{ text: string; tone: "ok" | "warn" } | null>(null);
-  const [shake, setShake] = useState(false);
+  const [bad, setBad] = useState<{ key: string; n: number } | null>(null); // phím vừa gõ sai (n: để rung lại mỗi lần sai)
   const [error, setError] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -265,8 +294,10 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const field = useRef<HTMLDivElement>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const badTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const current = decks.find((d) => d.slug === deck) ?? decks[0];
   const keyboard = osk ?? coarse; // bàn phím trên màn hình: mặc định bật trên màn cảm ứng
+  const nativeKeyboard = coarse && !keyboard; // màn cảm ứng tắt bàn phím trên màn hình → cần ô nhập ẩn để bật bàn phím hệ thống
   const playing = phase === "play" || phase === "pause";
 
   useEffect(() => {
@@ -280,8 +311,22 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
       mq.removeEventListener("change", sync);
       document.removeEventListener("fullscreenchange", onFull);
       clearTimeout(noteTimer.current);
+      clearTimeout(badTimer.current);
     };
   }, []);
+
+  // Phím thật: bắt ở cả trang (không có ô nhập → bộ gõ tiếng Việt không đổi "fa" thành "fấ")
+  const onWindowKey = useEffectEvent((e: globalThis.KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.isComposing || (e.target as HTMLElement).tagName === "INPUT") return;
+    if (e.key === "Escape") return setPhase("pause");
+    if (handleKey(e.key)) e.preventDefault();
+  });
+  useEffect(() => {
+    if (phase !== "play") return;
+    const on = (e: globalThis.KeyboardEvent) => onWindowKey(e);
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [phase]);
 
   // Vòng lặp game
   useEffect(() => {
@@ -316,6 +361,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
     noteTimer.current = setTimeout(() => setNote(null), 2200);
   };
 
+  /** Màn cảm ứng dùng bàn phím hệ thống: focus ô nhập ẩn để bàn phím hiện lên */
   const focusInput = () => requestAnimationFrame(() => inputRef.current?.focus());
 
   /** Vào ván: từ mốc đã lưu (from) — hết mốc rồi thì chơi lại từ đầu */
@@ -336,7 +382,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
     }
     game.current = newGame(data.words, data.topics, from < data.topics.length ? from : 0, best);
     setView(snapshot(game.current));
-    setInput("");
+    setBad(null);
     setNote(null);
     setSaved(null);
     setPhase("play");
@@ -365,6 +411,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
     }
     flash(`Vượt mốc ${done}: ${g.topics[g.milestone].title} ✓ — +1 mạng`, "ok");
     for (const d of g.drops) if (d.state === "fall") Object.assign(d, { state: "gone", at: g.time });
+    untarget(g);
     g.milestone = done;
     g.mHits = 0;
     g.goal = goalOf(g, done);
@@ -373,44 +420,48 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
     g.nextSpawn = g.time + 1.8;
   }
 
-  /** Bắn giọt thấp nhất khớp câu gõ. submit = bấm Enter: chấp nhận cả sai 1–2 chữ / sai mạo từ */
-  function shoot(value: string, submit: boolean) {
-    const g = game.current;
-    if (!g || phase !== "play" || !value.trim()) return false;
-    const falling = g.drops.filter((d) => d.state === "fall").sort((a, b) => b.y - a.y);
-    for (const d of falling) {
-      const r = checkGuess(value, d.w);
-      if (r !== "ok" && !(submit && r !== "wrong")) continue;
-      g.combo++;
-      g.hits++;
-      g.mHits++;
-      const level = levelOf(g.hits - 1);
-      d.points = 10 * level + 2 * Math.min(g.combo - 1, 10);
-      g.score += d.points;
-      Object.assign(d, { state: "hit", at: g.time });
-      if (sound) speakGerman(fullWord(d.w));
-      if (r === "almost") flash(`Gần đúng — viết là: ${fullWord(d.w)}`, "warn");
-      else if (r === "article") flash(`Đúng từ, sai mạo từ: ${fullWord(d.w)}`, "warn");
-      if (g.mHits >= g.goal) clearMilestone(g);
-      return true;
-    }
-    return false;
+  /** Bắn trúng giọt vừa gõ xong */
+  function hit(g: Game, d: Drop) {
+    untarget(g);
+    g.combo++;
+    g.hits++;
+    g.mHits++;
+    d.points = 10 * levelOf(g.hits - 1) + 2 * Math.min(g.combo - 1, 10);
+    g.score += d.points;
+    Object.assign(d, { state: "hit", at: g.time });
+    if (sound) speakGerman(fullWord(d.w));
+    if (g.mHits >= g.goal) clearMilestone(g);
   }
 
-  const type = (v: string) => setInput(shoot(v, false) ? "" : v);
+  /** 1 phím (bàn phím thật / trên màn hình / hệ thống) → true nếu game dùng phím đó */
+  function handleKey(key: string) {
+    const g = game.current;
+    if (!g || phase !== "play") return false;
+    if (key === "Backspace") backspace(g);
+    else if (key === "Enter") untarget(g); // bỏ giọt đang gõ để chọn giọt khác
+    else if (key.length === 1 && /\p{L}/u.test(key)) {
+      const r = press(g, key.toLowerCase());
+      clearTimeout(badTimer.current);
+      if (r === "wrong") {
+        setBad((b) => ({ key, n: (b?.n ?? 0) + 1 }));
+        badTimer.current = setTimeout(() => setBad(null), 700);
+      } else {
+        setBad(null);
+        if (r !== "ok") hit(g, r);
+      }
+    } else return false;
+    setView(snapshot(g));
+    return true;
+  }
 
-  const submit = () => {
-    if (shoot(input, true)) return setInput("");
-    if (!input.trim() || !game.current) return;
-    game.current.combo = 0;
-    setShake(true);
-  };
-
-  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") return setPhase("pause");
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    submit();
+  /** Ô nhập ẩn (bàn phím hệ thống): lấy từng chữ rồi để trống lại */
+  const onNativeInput = (v: string) => [...v].forEach(handleKey);
+  const onNativeKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") setPhase("pause");
+    else if (e.key === "Backspace" || e.key === "Enter") {
+      e.preventDefault();
+      handleKey(e.key);
+    }
   };
 
   const toggleFull = () => {
@@ -472,7 +523,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
           </span>
           <div>
             <p className="font-extrabold">Chọn bộ từ</p>
-            <p className="text-sm text-cyan-300/80">Mỗi chủ đề là một mốc — bắn đủ {MILESTONE_GOAL} từ để vượt mốc. Gõ không cần mạo từ, gõ ae thay ä cũng được.</p>
+            <p className="text-sm text-cyan-300/80">Mỗi chủ đề là một mốc — bắn đủ {MILESTONE_GOAL} từ để vượt mốc. Gõ từng chữ — gõ sai không bị ghi nên khỏi phải xoá; gõ a/o/u/s thay ä/ö/ü/ß cũng được.</p>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -515,8 +566,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
   // ---- Màn chơi ----
   const v = view!;
   const topic = v.topics[v.milestone];
-  const target = targetOf(v.drops, input);
-  const typed = typedWord(input);
+  const target = v.drops.find((d) => d.id === v.targetId && d.state === "fall") ?? null;
   const missed = [...new Map(v.missed.map((w) => [w.word, w])).values()];
 
   return (
@@ -524,11 +574,10 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
       {header}
       <div
         ref={field}
-        onPointerDown={() => phase === "play" && focusInput()}
+        onPointerDown={() => phase === "play" && nativeKeyboard && focusInput()}
         className={`relative overflow-hidden bg-gradient-to-b from-[#0a1622] via-[#0c2033] to-[#0b2a40] select-none ${
           full ? "" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
-        } ${shake ? "shake" : ""}`}
-        onAnimationEnd={(e) => e.target === e.currentTarget && setShake(false)}
+        }`}
       >
         {/* Mây & mưa */}
         <div className="pointer-events-none absolute inset-0">
@@ -555,7 +604,8 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
                 style={{ left: `calc((100% - min(15rem, 70%)) * ${d.x})`, top: `${d.y * 100}%`, transform: `translateY(${-d.y * 100}%)` }}
               >
                 <div
-                  className={`relative flex flex-col gap-0.5 rounded-xl border px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
+                  key={isTarget && bad ? bad.n : 0} // gõ sai → dựng lại để rung lần nữa
+                  className={`relative flex flex-col gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
                     d.state === "hit"
                       ? "rain-hit border-accent bg-accent/20"
                       : d.state === "miss"
@@ -575,7 +625,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
                   {d.state === "hit" || d.state === "miss" ? (
                     <span className={`font-extrabold ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
                   ) : (
-                    <Slots word={d.w.word} typed={isTarget ? typed : null} />
+                    <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} />
                   )}
                   {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gem">+{d.points}</span>}
                 </div>
@@ -647,7 +697,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/emoji/26f5.webp" alt="" className="bob size-12 [animation-delay:-1s]" />
           <span className="-mt-1 max-w-48 truncate rounded-full border border-white/10 bg-black/60 px-2.5 py-0.5 text-[11px] font-bold text-white">
-            {input ? <span className={target ? "text-cyan-200" : "text-red-300"}>{input}</span> : current?.title}
+            {bad ? <span className="text-red-300">✕ {bad.key}</span> : current?.title}
           </span>
         </div>
 
@@ -716,23 +766,24 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
           </div>
         )}
 
-        {/* Ô gõ ẩn: nhận phím từ bàn phím thật / bàn phím hệ thống */}
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => type(e.target.value)}
-          onKeyDown={onKey}
-          disabled={phase !== "play"}
-          inputMode={keyboard ? "none" : "text"}
-          lang="de"
+        {/* Ô nhập ẩn: chỉ để bật bàn phím hệ thống trên màn cảm ứng (luôn để trống, chữ chuyển ngay cho game) */}
+        {nativeKeyboard && (
+          <input
+            ref={inputRef}
+            value=""
+            onChange={(e) => onNativeInput(e.target.value)}
+            onKeyDown={onNativeKey}
+            disabled={phase !== "play"}
+            lang="de"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="send"
-          aria-label="Gõ từ tiếng Đức"
-          className="pointer-events-none absolute bottom-0 left-0 size-px opacity-0"
-        />
+            aria-label="Gõ từ tiếng Đức"
+            className="pointer-events-none absolute bottom-0 left-0 size-px opacity-0"
+          />
+        )}
       </div>
 
       {/* Bàn phím trên màn hình (QWERTZ) */}
@@ -741,18 +792,18 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
           {OSK_ROWS.map((row, r) => (
             <div key={row} className="flex justify-center gap-1">
               {r === 2 && (
-                <button className="btn h-11 flex-[1.5] px-0" disabled={phase !== "play"} onClick={() => setInput(input.slice(0, -1))} title="Xoá">
+                <button className="btn h-11 flex-[1.5] px-0" disabled={phase !== "play"} onClick={() => handleKey("Backspace")} title="Xoá">
                   <Delete className="size-5" />
                 </button>
               )}
               {[...row].map((ch) => (
-                <button key={ch} className="btn h-11 max-w-12 flex-1 px-0 text-base" disabled={phase !== "play"} onClick={() => type(input + ch)}>
+                <button key={ch} className="btn h-11 max-w-12 flex-1 px-0 text-base" disabled={phase !== "play"} onClick={() => handleKey(ch)}>
                   {ch}
                 </button>
               ))}
               {r === 2 && (
-                <button className="btn h-11 flex-[1.5] border-cyan-400 bg-cyan-500 px-0 text-white" disabled={phase !== "play"} onClick={submit}>
-                  ↵
+                <button className="btn h-11 flex-[1.5] px-0 text-xs" disabled={phase !== "play"} onClick={() => handleKey("Enter")} title="Chọn giọt khác">
+                  Bỏ chọn
                 </button>
               )}
             </div>
