@@ -3,11 +3,19 @@ import { createLesson, LEVELS, listLessons, type Level } from "@/lib/db";
 import { extractVideoId, getSavedTranscript, getYouTubeTranscript } from "@/lib/youtube";
 import { apiAdmin, body, fail, str } from "@/lib/api";
 import { prewarmPhrases } from "@/lib/phrases";
+import { accessOf, lockInfo } from "@/lib/access";
 
-/** GET → danh sách bài đã đăng (admin thấy cả bản nháp), không kèm phụ đề */
+/**
+ * GET → danh sách bài đã đăng (admin thấy cả bản nháp), không kèm phụ đề.
+ * Mỗi bài kèm access ("open" | "free" | "unlocked" | "locked") · lock: lượt chọn miễn phí còn lại, giá mở khoá, điểm hiện có
+ */
 export async function GET() {
   const user = await getCurrentUser();
-  return Response.json({ lessons: listLessons({ includeDrafts: user?.role === "admin" }) });
+  const access = accessOf(user);
+  return Response.json({
+    lessons: listLessons({ includeDrafts: user?.role === "admin" }).map((l) => ({ ...l, access: access(l.id) })),
+    lock: lockInfo(user),
+  });
 }
 
 /**

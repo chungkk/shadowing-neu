@@ -29,7 +29,11 @@ export type LessonSummary = {
   createdAt: string;
   segmentCount: number; // số dòng phụ đề thô
   sentenceCount?: number; // số câu sau khi gộp, như màn học đếm (server cũ không gửi → dùng segmentCount)
+  // Khoá bài học (admin bật trên web): open = không khoá · free = bài miễn phí · unlocked = đã mở · locked (server cũ không gửi)
+  access?: "open" | "free" | "unlocked" | "locked";
 };
+/** Tình trạng khoá bài của người đang dùng (GET /lessons, 403 của GET /lessons/<id>, POST /lessons/<id>/unlock) */
+export type LockInfo = { enabled: boolean; loggedIn: boolean; picksLeft: number; price: number; points: number };
 export type Lesson = Omit<LessonSummary, "segmentCount"> & { segments: Segment[] };
 
 /** Tiến độ học 1 bài (GET/PUT /progress) — source: "/lesson/3" | "/watch/<videoId>" */

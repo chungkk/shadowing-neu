@@ -446,6 +446,20 @@ const vi = {
   "acc.viewStats": "Xem thống kê học tập",
   "acc.version": "Phiên bản {v}",
 
+  // Khoá bài học
+  "lock.title": "Bài này đang khoá",
+  "lock.guest": "Đăng nhập để mở khoá. Tài khoản mới được tự chọn thêm {n} bài để học miễn phí.",
+  "lock.picks": "Bạn còn {n} lượt chọn bài miễn phí — mở rồi thì học mãi.",
+  "lock.pickAction": "Mở bài này miễn phí",
+  "lock.pickConfirm": "Dùng 1 lượt chọn miễn phí (còn {n}) để mở bài này?",
+  "lock.price": "Mở khoá bài này với {price} điểm. Bạn đang có {points} điểm.",
+  "lock.short": "Chép chính tả đúng hết 1 câu được +2 — luyện thêm ở các bài đã mở để đủ điểm.",
+  "lock.buyAction": "Mở khoá · {price} điểm",
+  "lock.buyConfirm": "Mở bài này với {price} điểm? Bạn đang có {points}.",
+  "lock.needMore": "Cần thêm {n} điểm",
+  "lock.unlock": "Mở khoá",
+  "lock.free": "Miễn phí",
+
   // Lỗi mạng
   "api.noConnection": "Không kết nối được. Kiểm tra mạng rồi thử lại.",
   "api.serverError": "Lỗi server ({status})",
@@ -880,6 +894,20 @@ const de: Dict = {
   "acc.tileDue": "Heute fällig",
   "acc.viewStats": "Lernstatistik ansehen",
   "acc.version": "Version {v}",
+
+  "lock.title": "Diese Lektion ist gesperrt",
+  "lock.guest": "Melde dich an, um sie freizuschalten. Neue Konten wählen {n} weitere Lektionen kostenlos aus.",
+  "lock.picks": "Du kannst noch {n} Lektionen kostenlos freischalten — einmal freigeschaltet, für immer.",
+  "lock.picks_one": "Du kannst noch {n} Lektion kostenlos freischalten — einmal freigeschaltet, für immer.",
+  "lock.pickAction": "Kostenlos freischalten",
+  "lock.pickConfirm": "Eine kostenlose Freischaltung (noch {n}) für diese Lektion verwenden?",
+  "lock.price": "Schalte diese Lektion für {price} Punkte frei. Du hast {points} Punkte.",
+  "lock.short": "Jeder komplett richtig geschriebene Diktatsatz bringt +2 — übe in freigeschalteten Lektionen weiter.",
+  "lock.buyAction": "Freischalten · {price} Punkte",
+  "lock.buyConfirm": "Diese Lektion für {price} Punkte freischalten? Du hast {points}.",
+  "lock.needMore": "Noch {n} Punkte nötig",
+  "lock.unlock": "Freischalten",
+  "lock.free": "Gratis",
 
   "api.noConnection": "Keine Verbindung. Prüfe dein Internet und versuche es erneut.",
   "api.serverError": "Serverfehler ({status})",

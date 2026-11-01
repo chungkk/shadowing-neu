@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { addCrazyRep, getCrazyReps, getCrazyVocabReps } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
+import { lockedSource } from "@/lib/access";
 import { allow } from "@/lib/rate-limit";
 
 /**
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
   const b = await body<{ source: string; idx: number; passed: boolean }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
+  if (lockedSource(user, source)) return fail("Bài này chưa mở khoá", 403);
   if (typeof b.idx !== "number" || !Number.isInteger(b.idx) || b.idx < 0 || b.idx >= 10000) return fail("idx không hợp lệ");
   return Response.json({ rep: addCrazyRep(user.id, source, b.idx, b.passed === true) });
 }

@@ -3,12 +3,23 @@ import { getCurrentUser } from "@/lib/auth";
 import { deleteLesson, getLesson, LEVELS, updateLesson, type Level } from "@/lib/db";
 import { apiAdmin, body, fail, str } from "@/lib/api";
 import { prewarmPhrases } from "@/lib/phrases";
+import { accessOf, lockInfo } from "@/lib/access";
 
-/** GET → 1 bài kèm phụ đề (segments thô; app tự gộp câu như web) */
+/**
+ * GET → 1 bài kèm phụ đề (segments thô; app tự gộp câu như web).
+ * Bài đang bị khoá → 403 { error, locked: true, lesson (không có phụ đề), lock } — mở bằng POST /lessons/<id>/unlock
+ */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/v1/lessons/[id]">) {
   const user = await getCurrentUser();
   const lesson = getLesson(Number((await ctx.params).id));
   if (!lesson || (!lesson.published && user?.role !== "admin")) return fail("Không tìm thấy bài học", 404);
+  if (accessOf(user)(lesson.id) === "locked") {
+    const { segments, ...summary } = lesson;
+    return Response.json(
+      { error: user ? "Bài này chưa mở khoá" : "Đăng nhập để mở khoá bài này", locked: true, lesson: { ...summary, segmentCount: segments.length }, lock: lockInfo(user) },
+      { status: 403 },
+    );
+  }
   prewarmPhrases(lesson.segments); // bài tạo trước khi có tính năng này: phân tích nốt (câu đã có trong kho thì bỏ qua)
   return Response.json({ lesson });
 }

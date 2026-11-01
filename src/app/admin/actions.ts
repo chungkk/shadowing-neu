@@ -9,6 +9,7 @@ import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount } from "@/lib/account";
 import { slugify } from "@/lib/slug";
+import { saveLockSettings } from "@/lib/access";
 
 export type FormState = { error?: string };
 
@@ -111,6 +112,17 @@ export async function resetUserPassword(id: number, _: FormState & { ok?: string
 export async function removeUser(id: number) {
   if (await editableUser(id)) await removeAccount(id);
   refresh();
+}
+
+/** Cài đặt khoá bài học (trang Cài đặt của admin): bật / tắt + các bài miễn phí */
+export async function saveLessonLock(_: FormState & { ok?: string }, formData: FormData): Promise<FormState & { ok?: string }> {
+  await requireAdmin();
+  const enabled = formData.get("enabled") === "on";
+  const free = formData.getAll("free").map(Number).filter((id) => Number.isInteger(id) && id > 0);
+  if (enabled && !free.length) return { error: "Chọn ít nhất 1 bài miễn phí trước khi bật khoá" };
+  saveLockSettings({ enabled, free });
+  refresh();
+  return { ok: enabled ? "Đã bật khoá bài học" : "Đã lưu — khoá bài học đang tắt, mọi bài đều mở" };
 }
 
 export async function toggleLessonPublished(id: number, published: boolean) {

@@ -174,6 +174,20 @@ function open() {
       PRIMARY KEY (provider, subject)
     );
     CREATE INDEX IF NOT EXISTS oauth_accounts_user ON oauth_accounts (user_id);
+    -- Cài đặt chung admin chỉnh trên web (vd. khoá bài học) — giá trị dạng JSON
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+    -- Bài người dùng đã mở khoá (khi admin bật khoá bài học). cost trừ thẳng vào điểm (getPoints) → xoá dòng = hoàn điểm
+    CREATE TABLE IF NOT EXISTS lesson_unlocks (
+      user_id INTEGER NOT NULL,
+      lesson_id INTEGER NOT NULL,
+      kind TEXT NOT NULL, -- 'pick' (lượt chọn miễn phí) | 'buy' (trả điểm) | 'legacy' (đã học trước khi bật khoá)
+      cost INTEGER NOT NULL DEFAULT 0, -- điểm đã trả
+      at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, lesson_id)
+    );
   `);
   // Phụ đề YouTube trước đây chỉ lưu 7 ngày → giờ lưu vĩnh viễn
   db.exec("UPDATE transcript_cache SET expires_at = NULL WHERE key LIKE 'ytp:%' AND expires_at IS NOT NULL");
@@ -339,6 +353,7 @@ export function deleteLesson(id: number) {
   conn().prepare("DELETE FROM lessons WHERE id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE source = ?").run(`/lesson/${id}`);
   conn().prepare("DELETE FROM crazy_reps WHERE source = ?").run(`/lesson/${id}`);
+  conn().prepare("DELETE FROM lesson_unlocks WHERE lesson_id = ?").run(id); // ai đã trả điểm mở bài này được hoàn lại
 }
 
 export function getCached<T>(key: string): T | null {
@@ -531,6 +546,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_hints WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM lesson_unlocks WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
   rmSync(path.join(AVATAR_DIR, String(id)), { force: true }); // ảnh đại diện
 }
@@ -816,6 +832,52 @@ export function setVocabNoun(userId: number, id: number, n: { gender: NounGender
   conn().prepare("UPDATE vocab SET gender = ?, singular = ?, plural = ? WHERE id = ? AND user_id = ?").run(n.gender, n.singular, n.plural, id, userId);
 }
 
+// ---- Cài đặt chung ----
+
+export function getSetting<T>(key: string): T | null {
+  const r = conn().prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined;
+  return r ? JSON.parse(r.value) : null;
+}
+
+export function setSetting(key: string, value: unknown) {
+  conn().prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, JSON.stringify(value));
+}
+
+// ---- Bài đã mở khoá ----
+
+export type UnlockKind = "pick" | "buy" | "legacy";
+
+/** Các bài người này đã mở khoá */
+export function unlockedLessonIds(userId: number): Set<number> {
+  return new Set(
+    (conn().prepare("SELECT lesson_id FROM lesson_unlocks WHERE user_id = ?").all(userId) as { lesson_id: number }[]).map((r) => r.lesson_id),
+  );
+}
+
+/** Số lượt chọn bài miễn phí đã dùng */
+export function lessonPicksUsed(userId: number): number {
+  return (conn().prepare("SELECT COUNT(*) AS n FROM lesson_unlocks WHERE user_id = ? AND kind = 'pick'").get(userId) as { n: number }).n;
+}
+
+/** false = bài này đã mở khoá rồi (không trừ điểm lần 2) */
+export function addLessonUnlock(userId: number, lessonId: number, kind: UnlockKind, cost: number): boolean {
+  return (
+    conn()
+      .prepare("INSERT OR IGNORE INTO lesson_unlocks (user_id, lesson_id, kind, cost, at) VALUES (?, ?, ?, ?, ?)")
+      .run(userId, lessonId, kind, cost, Date.now()).changes > 0
+  );
+}
+
+/** Bật khoá bài: ai đã có tiến độ bài nào thì giữ quyền học tiếp bài đó (không tốn lượt chọn / điểm) */
+export function unlockLessonsWithProgress() {
+  conn()
+    .prepare(
+      `INSERT OR IGNORE INTO lesson_unlocks (user_id, lesson_id, kind, cost, at)
+       SELECT p.user_id, l.id, 'legacy', 0, ? FROM progress p JOIN lessons l ON p.source = '/lesson/' || l.id`,
+    )
+    .run(Date.now());
+}
+
 export function setLessonPublished(id: number, published: boolean) {
   conn().prepare("UPDATE lessons SET published = ? WHERE id = ?").run(published ? 1 : 0, id);
 }
@@ -954,7 +1016,9 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
 
 export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học) — có thể âm
 
-/** Điểm = cộng của các câu đúng − điểm trừ khi xem từ · tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
+/**
+ * Điểm = cộng của các câu đúng − điểm trừ khi xem từ − điểm đã trả để mở khoá bài (không tính vào "hôm nay":
+ * hôm nay chỉ đo điểm kiếm được) · tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
 export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Points {
   const dayStart = Date.parse(new Date(now - tzOffset * 60_000).toISOString().slice(0, 10)) + tzOffset * 60_000;
   const r = conn()
@@ -962,9 +1026,10 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
       `SELECT COALESCE(SUM(pts), 0) AS total, COALESCE(SUM(CASE WHEN at >= ? THEN pts END), 0) AS today FROM (
          SELECT pts, at FROM dict_points WHERE user_id = ?
          UNION ALL SELECT -n * ${POINTS_HINT}, at FROM dict_hints WHERE user_id = ?
+         UNION ALL SELECT -cost, NULL FROM lesson_unlocks WHERE user_id = ?
        )`,
     )
-    .get(dayStart, userId, userId) as Points;
+    .get(dayStart, userId, userId, userId) as Points;
   return { total: r.total, today: r.today };
 }
 

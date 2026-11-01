@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { awardDictPoint, chargeDictHints, getPointIdx, getPoints } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
+import { lockedSource } from "@/lib/access";
 import { allow } from "@/lib/rate-limit";
 
 /**
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
   const b = await body<{ source: string; idx: number; hints?: number; tz: number }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
+  if (lockedSource(user, source)) return fail("Bài này chưa mở khoá", 403);
   if (typeof b.idx !== "number" || !Number.isInteger(b.idx) || b.idx < 0 || b.idx >= 10000) return fail("idx không hợp lệ");
   if (b.hints !== undefined) {
     if (typeof b.hints !== "number" || !Number.isInteger(b.hints) || b.hints < 1 || b.hints > 200) return fail("hints không hợp lệ");

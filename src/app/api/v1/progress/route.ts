@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { deleteProgress, getProgress, listProgress, saveProgress, type DictResult } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
+import { lockedSource } from "@/lib/access";
 
 /**
  * Tiến độ học của người đang đăng nhập — đồng bộ giữa web và app.
@@ -35,6 +36,7 @@ export async function PUT(req: Request) {
   const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown; dictPick: unknown }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
+  if (lockedSource(user, source)) return fail("Bài này chưa mở khoá", 403);
   const total = int(b.total);
   const idx = int(b.idx);
   if (total === null || total > 10000 || idx === null) return fail("Tiến độ không hợp lệ");

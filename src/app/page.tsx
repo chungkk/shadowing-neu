@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { listLessons } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, type User } from "@/lib/auth";
+import { accessOf, lockInfo } from "@/lib/access";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
 import ContinueLearning from "@/components/ContinueLearning";
@@ -11,8 +12,9 @@ import { LessonGridSkeleton } from "@/components/Skeleton";
 const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
 
 /** Dữ liệu thẻ bài: chỉ gửi xuống trình duyệt những gì thẻ cần */
-function lessonItems() {
+function lessonItems(user: User | null) {
   const now = Date.now();
+  const access = accessOf(user);
   return listLessons().map((l) => ({
     id: l.id,
     title: l.title,
@@ -22,12 +24,14 @@ function lessonItems() {
     description: l.description,
     sentences: l.sentenceCount ?? l.segmentCount,
     isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
+    access: access(l.id),
   }));
 }
 
 async function Lessons() {
   await connection(); // đọc DB lúc request, không prerender
-  return <LessonGrid lessons={lessonItems()} />;
+  const user = await getCurrentUser();
+  return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(user)} />;
 }
 
 /** Đã đăng nhập: bài đang học dở (lưu trên server) · khách: video đã mở trong trình duyệt này */

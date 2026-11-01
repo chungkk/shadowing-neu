@@ -141,6 +141,24 @@ function NewBadge() {
   );
 }
 
+/** Phủ lên ảnh bìa khi admin bật khoá bài: ổ khoá (chưa mở) / nhãn "Miễn phí" */
+function AccessBadge({ l, size }: { l: LessonSummary; size: number }) {
+  const { t } = useI18n();
+  if (l.access === "locked")
+    return (
+      <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }} pointerEvents="none">
+        <SymbolView name="lock.fill" size={size} tintColor="#fff" />
+      </View>
+    );
+  if (l.access === "free")
+    return (
+      <View style={{ position: "absolute", top: 4, right: 4, backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6 }} pointerEvents="none">
+        <Text style={{ color: "#fff", fontWeight: "800", fontSize: 11 }}>{t("lock.free")}</Text>
+      </View>
+    );
+  return null;
+}
+
 /** Hàng gọn: ảnh nhỏ bên trái, tên + cấp độ + số câu bên phải */
 function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
   const { t } = useI18n();
@@ -170,6 +188,7 @@ function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
         />
         <View style={{ position: "absolute", inset: 0, borderRadius: 10, overflow: "hidden" }} pointerEvents="none">
           <ProgressBar p={p} />
+          <AccessBadge l={l} size={20} />
         </View>
         {!l.published && (
           <View style={{ position: "absolute", bottom: 4, left: 4, backgroundColor: C.amber, borderRadius: 6, paddingHorizontal: 6 }}>
@@ -214,6 +233,7 @@ function LessonCard({ l, width, p }: { l: LessonSummary; width: number; p?: Prog
         {/* Thẻ rộng ~300pt (~600px trên Retina) → ảnh 480px cho đỡ mờ */}
         <Image source={thumb(l.videoId, "hq")} alt="" style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: C.card2 }} contentFit="cover" transition={150} />
         <ProgressBar p={p} />
+        <AccessBadge l={l} size={30} />
         {!l.published && (
           <View style={{ position: "absolute", bottom: 8, left: 8, backgroundColor: C.amber, borderRadius: 6, paddingHorizontal: 6 }}>
             <Text style={{ fontWeight: "800", fontSize: 12 }}>{t("lessons.draft")}</Text>

@@ -6,14 +6,14 @@ import { deleteAccount, deleteAvatar, updatePassword, updateProfile, uploadAvata
 import { logout } from "@/app/auth-actions";
 import Avatar from "./Avatar";
 
-function Status({ state }: { state: FormResult }) {
+export function Status({ state }: { state: FormResult }) {
   if (state.error) return <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>;
   if (state.ok) return <p className="rounded-xl bg-accent/15 p-3 text-sm text-accent">{state.ok}</p>;
   return null;
 }
 
 /** Khung 1 mục cài đặt: tiêu đề + mô tả, nội dung, chân có nút (tuỳ chọn) */
-function Section({
+export function Section({
   icon: Icon,
   title,
   desc,
@@ -58,15 +58,17 @@ async function squareJpeg(file: File): Promise<Blob> {
 
 const joined = (createdAt: string) => createdAt.slice(0, 10).split("-").reverse().join("/");
 
-/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · đăng xuất / xoá tài khoản */
+/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · cài đặt admin (`admin`) · đăng xuất / xoá tài khoản */
 export default function SettingsForms({
   user,
   fixedAdmin,
   stats,
+  admin,
 }: {
   user: { id: number; name: string; email: string; admin: boolean; createdAt: string; avatarAt: number | null; hasPassword: boolean };
   fixedAdmin: boolean; // admin chính: email + mật khẩu lấy từ biến môi trường
   stats?: ReactNode; // khung thành tích học tập (kim cương, sổ từ…)
+  admin?: ReactNode; // cài đặt chung chỉ admin thấy (khoá bài học…)
 }) {
   const { hasPassword } = user;
   const [profile, profileAction, savingProfile] = useActionState(updateProfile, {});
@@ -220,6 +222,8 @@ export default function SettingsForms({
           <Status state={pw} />
         </Section>
       </form>
+
+      {admin}
 
       {/* Đăng xuất / xoá tài khoản */}
       <Section icon={ShieldAlert} title="Phiên đăng nhập & tài khoản" desc="Đăng xuất khỏi máy này, hoặc xoá vĩnh viễn tài khoản." danger>

@@ -2,8 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
-import { getLessonBySlug } from "@/lib/db";
+import LockedLesson from "@/components/LockedLesson";
+import { getLesson, getLessonBySlug } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { accessOf, lockInfo, lockSettings } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 
 /** Trang bài học: ckk.pro/<slug> (link cũ /lesson/<id> chuyển hướng 308 về đây) */
@@ -13,6 +15,15 @@ async function LessonView({ params }: PageProps<"/[slug]">) {
   // Bài nháp chỉ admin xem được
   const user = await getCurrentUser();
   if (!lesson || (!lesson.published && user?.role !== "admin")) notFound();
+  // Admin bật khoá bài học mà người này chưa mở bài → màn mở khoá (không gửi phụ đề xuống trình duyệt)
+  if (accessOf(user)(lesson.id) === "locked") {
+    const free = lockSettings()
+      .free.map(getLesson)
+      .filter((l) => l?.published)
+      .map((l) => ({ title: l!.title, slug: l!.slug }));
+    const { id, title, level, videoId, description } = lesson;
+    return <LockedLesson lesson={{ id, title, level, videoId, description }} lock={lockInfo(user)} freeLessons={free} />;
+  }
 
   return (
     <ShadowPlayer

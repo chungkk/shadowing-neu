@@ -2,10 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Headphones } from "lucide-react";
+import { Headphones, Lock } from "lucide-react";
+import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
+import { Gem } from "./PointsBadge";
 
-type Item = { id: number; title: string; slug: string; videoId: string; level: string; description: string; sentences: number; isNew: boolean };
+type Item = {
+  id: number;
+  title: string;
+  slug: string;
+  videoId: string;
+  level: string;
+  description: string;
+  sentences: number;
+  isNew: boolean;
+  access: LessonAccess;
+};
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -34,9 +46,17 @@ function LessonCard({ l }: { l: Item }) {
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className="size-full object-cover transition group-hover:scale-105"
+          className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-50" : ""}`}
         />
         {l.isNew && <span className="pill absolute top-2 left-2 bg-amber text-sidebar">Mới</span>}
+        {l.access === "free" && <span className="pill absolute top-2 right-2 bg-accent text-white">Miễn phí</span>}
+        {l.access === "locked" && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-11 items-center justify-center rounded-full bg-black/65 text-white">
+              <Lock className="size-5" />
+            </span>
+          </span>
+        )}
         <span className="pill absolute right-2 bottom-2 bg-black/75 text-white">
           <Headphones className="size-3.5" /> {l.sentences} câu
         </span>
@@ -52,8 +72,31 @@ function LessonCard({ l }: { l: Item }) {
   );
 }
 
+/** Dòng giải thích khoá bài dưới tiêu đề mục (admin bật khoá bài học) */
+function LockNote({ lock }: { lock: LockInfo }) {
+  const price = (
+    <span className="inline-flex items-center gap-1 font-bold text-gem">
+      <Gem className="size-4" /> {lock.price.toLocaleString("vi-VN")}
+    </span>
+  );
+  return (
+    <p className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
+      <Lock className="size-4" />
+      {!lock.loggedIn ? (
+        <>Khách học thử được các bài “Miễn phí” — đăng nhập để tự chọn thêm {FREE_PICKS} bài.</>
+      ) : lock.picksLeft > 0 ? (
+        <>
+          Bạn còn <b className="text-foreground">{lock.picksLeft}</b> lượt chọn bài miễn phí — bấm vào bài có ổ khoá để mở. Sau đó mỗi bài {price}.
+        </>
+      ) : (
+        <>Mở thêm bài: mỗi bài {price} (bạn có {lock.points.toLocaleString("vi-VN")}).</>
+      )}
+    </p>
+  );
+}
+
 /** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ */
-export default function LessonGrid({ lessons }: { lessons: Item[] }) {
+export default function LessonGrid({ lessons, lock }: { lessons: Item[]; lock?: LockInfo }) {
   const [level, setLevel] = useState<string | null>(null);
 
   if (!lessons.length) return <p className="text-sm text-muted">Chưa có bài học nào.</p>;
@@ -84,6 +127,7 @@ export default function LessonGrid({ lessons }: { lessons: Item[] }) {
           {levels.map((g) => chip(g.level, g.count))}
         </div>
       </SectionHeader>
+      {lock?.enabled && <LockNote lock={lock} />}
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {shown.map((l) => (
           <LessonCard key={l.id} l={l} />
