@@ -15,8 +15,10 @@ function useReduceMotion() {
   return on;
 }
 
-/** Đồng xu điểm: tròn vàng viền đậm, ngôi sao giữa */
+/** Đồng xu điểm: tròn vàng viền đậm, viên hình thoi 2 mặt cắt ở giữa (như bản web) */
 export function Coin({ size = 20 }: { size?: number }) {
+  const d = size * 0.32; // cạnh hình vuông → hình thoi rộng ~0,45 đồng xu, như bản web
+  const f = d * 1.5; // mặt cắt: hình vuông lớn hơn, xoay ngược lại cho thẳng hàng với màn hình
   return (
     <View
       style={{
@@ -30,7 +32,29 @@ export function Coin({ size = 20 }: { size?: number }) {
         justifyContent: "center",
       }}
     >
-      <Text style={{ color: "#fffbeb", fontSize: size * 0.55, lineHeight: size * 0.68, fontWeight: "900", includeFontPadding: false }}>★</Text>
+      {/* Hình vuông xoay 45° = hình thoi; nửa phải (chia dọc) tô đậm hơn làm mặt cắt */}
+      <View
+        style={{
+          width: d,
+          height: d,
+          borderRadius: size * 0.03,
+          backgroundColor: "#fffbeb",
+          overflow: "hidden",
+          transform: [{ rotate: "45deg" }],
+        }}
+      >
+        <View
+          style={{
+            position: "absolute",
+            left: (d - f) / 2,
+            top: (d - f) / 2,
+            width: f,
+            height: f,
+            backgroundColor: "#fde68a",
+            transform: [{ rotate: "-45deg" }, { translateX: f / 2 }],
+          }}
+        />
+      </View>
     </View>
   );
 }

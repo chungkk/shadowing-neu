@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { POINTS_EVENT, type PointsEvent } from "@/lib/points";
 
-/** Đồng xu điểm (vàng, ngôi sao giữa) — dùng ở huy hiệu, đồng xu bay và hiệu ứng +1 */
+/** Đồng xu điểm (vàng, viên hình thoi 2 mặt cắt ở giữa) — dùng ở huy hiệu, đồng xu bay và hiệu ứng +1 */
 export function Coin({ className = "size-5" }: { className?: string }) {
   const id = useId(); // mỗi đồng xu 1 id gradient riêng
   return (
@@ -17,8 +17,8 @@ export function Coin({ className = "size-5" }: { className?: string }) {
       </defs>
       <circle cx="12" cy="12" r="11" fill="#a16207" />
       <circle cx="12" cy="11.4" r="10.2" fill={`url(#${id})`} />
-      <circle cx="12" cy="11.4" r="7.6" fill="none" stroke="#fffbeb" strokeOpacity="0.55" strokeWidth="1" />
-      <path d="M12 6.6l1.5 3.1 3.4.5-2.5 2.4.6 3.4-3-1.6-3 1.6.6-3.4-2.5-2.4 3.4-.5z" fill="#fffbeb" />
+      <path d="M12 6.2 17.2 11.4 12 16.6 6.8 11.4z" fill="#fffbeb" />
+      <path d="M12 6.2 17.2 11.4 12 16.6z" fill="#fde68a" />
     </svg>
   );
 }
