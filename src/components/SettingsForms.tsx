@@ -6,14 +6,14 @@ import { deleteAccount, deleteAvatar, updatePassword, updateProfile, uploadAvata
 import { logout } from "@/app/auth-actions";
 import Avatar from "./Avatar";
 
-export function Status({ state }: { state: FormResult }) {
+function Status({ state }: { state: FormResult }) {
   if (state.error) return <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>;
   if (state.ok) return <p className="rounded-xl bg-accent/15 p-3 text-sm text-accent">{state.ok}</p>;
   return null;
 }
 
 /** Khung 1 mục cài đặt: tiêu đề + mô tả, nội dung, chân có nút (tuỳ chọn) */
-export function Section({
+function Section({
   icon: Icon,
   title,
   desc,

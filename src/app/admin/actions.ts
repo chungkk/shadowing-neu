@@ -9,7 +9,8 @@ import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount } from "@/lib/account";
 import { slugify } from "@/lib/slug";
-import { saveLockSettings } from "@/lib/access";
+import { lockSettings, saveLockSettings } from "@/lib/access";
+import { FREE_LESSONS } from "@/lib/lesson-lock";
 
 export type FormState = { error?: string };
 
@@ -84,6 +85,8 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
 export async function removeLesson(id: number) {
   await requireAdmin();
   deleteLesson(id);
+  const lock = lockSettings();
+  if (lock.free.includes(id)) saveLockSettings({ ...lock, free: lock.free.filter((x) => x !== id) }); // nhả chỗ bài miễn phí
   refresh();
 }
 
@@ -114,15 +117,23 @@ export async function removeUser(id: number) {
   refresh();
 }
 
-/** Cài đặt khoá bài học (trang Cài đặt của admin): bật / tắt + các bài miễn phí */
-export async function saveLessonLock(_: FormState & { ok?: string }, formData: FormData): Promise<FormState & { ok?: string }> {
+// ---- Khoá bài học (trang Quản lý bài học) ----
+
+/** Bật / tắt khoá bài học — bật cần có ít nhất 1 bài miễn phí (nút trên trang đã khoá sẵn khi chưa có) */
+export async function setLessonLock(enabled: boolean) {
   await requireAdmin();
-  const enabled = formData.get("enabled") === "on";
-  const free = formData.getAll("free").map(Number).filter((id) => Number.isInteger(id) && id > 0);
-  if (enabled && !free.length) return { error: "Chọn ít nhất 1 bài miễn phí trước khi bật khoá" };
-  saveLockSettings({ enabled, free });
+  const lock = lockSettings();
+  if (!enabled || lock.free.length) saveLockSettings({ ...lock, enabled });
   refresh();
-  return { ok: enabled ? "Đã bật khoá bài học" : "Đã lưu — khoá bài học đang tắt, mọi bài đều mở" };
+}
+
+/** Đặt / bỏ bài miễn phí (tối đa FREE_LESSONS bài) */
+export async function toggleFreeLesson(id: number, free: boolean) {
+  await requireAdmin();
+  const lock = lockSettings();
+  if (!free) saveLockSettings({ ...lock, free: lock.free.filter((x) => x !== id) });
+  else if (lock.free.length < FREE_LESSONS) saveLockSettings({ ...lock, free: [...lock.free, id] });
+  refresh();
 }
 
 export async function toggleLessonPublished(id: number, published: boolean) {
