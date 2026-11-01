@@ -90,62 +90,29 @@ function IconButton({ icon, onPress, disabled }: { icon: SFSymbol; onPress: () =
     </Pressable>
   );
 }
-/** Nút bật/tắt dạng icon vuông (cạnh Shadowing / Chính tả) */
-function ToggleIcon({ icon, on, onPress, label }: { icon: SFSymbol; on: boolean; onPress: () => void; label: string }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityLabel={label}
-      accessibilityState={{ checked: on }}
-      style={({ pressed }) => ({
-        width: 38,
-        height: 38,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: on ? C.accent : C.card2,
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      <SymbolView name={icon} size={18} tintColor={on ? "#fff" : C.muted} weight="semibold" />
-    </Pressable>
-  );
-}
-/** Công tắc gạt bật/tắt: icon + rãnh có nút tròn trượt sang phải khi bật */
-function ToggleSwitch({ icon, on, onPress, label }: { icon: SFSymbol; on: boolean; onPress: () => void; label: string }) {
-  const [x] = useState(() => new Animated.Value(on ? 1 : 0)); // 0 = tắt, 1 = bật
-  useEffect(() => {
-    Animated.timing(x, { toValue: on ? 1 : 0, duration: 160, useNativeDriver: true }).start();
-  }, [on, x]);
+/** Nút bật/tắt dạng viên thuốc: icon + chữ ngắn — bật: nền xanh nhạt, viền và chữ xanh */
+function Chip({ icon, iconOn, on, onPress, label, hint }: { icon: SFSymbol; iconOn?: SFSymbol; on: boolean; onPress: () => void; label: string; hint: string }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="switch"
-      accessibilityLabel={label}
+      accessibilityLabel={hint}
       accessibilityState={{ checked: on }}
       style={({ pressed }) => ({
-        height: 38,
-        paddingHorizontal: 8,
+        height: 34,
+        paddingHorizontal: 12,
         gap: 6,
-        borderRadius: 12,
+        borderRadius: 17,
+        borderWidth: 1,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: C.card2,
+        backgroundColor: on ? "rgba(22,163,74,0.16)" : C.card2,
+        borderColor: on ? C.accent : C.border,
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <SymbolView name={icon} size={18} tintColor={on ? C.accent : C.muted} weight="semibold" />
-      <View style={{ width: 34, height: 20, borderRadius: 10, padding: 2, backgroundColor: on ? C.accent : C.border }}>
-        <Animated.View
-          style={{
-            width: 16,
-            height: 16,
-            borderRadius: 8,
-            backgroundColor: "#fff",
-            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }) }],
-          }}
-        />
-      </View>
+      <SymbolView name={on && iconOn ? iconOn : icon} size={14} tintColor={on ? C.accent : C.muted} weight="semibold" />
+      <Text style={{ color: on ? C.accent : C.text, fontSize: 14, fontWeight: "700" }}>{label}</Text>
     </Pressable>
   );
 }
@@ -685,59 +652,60 @@ export default function Player({
     </View>
   );
 
-  // Thanh chế độ luyện + bản dịch + tự dừng: cố định dưới video, không cuộn theo danh sách câu
+  // Shadowing / Chính tả (nằm giữa thanh tiêu đề)
+  const changePractice = (p: "shadow" | "dictation") => {
+    if (p === practice) return;
+    pause();
+    setPractice(p);
+    // Về Shadowing đang lọc câu ⭐ → về câu ⭐ gần nhất
+    if (p !== "dictation") return starFilter && toNearestStarred();
+    // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
+    const i = roundStart(ensureRound());
+    if (i !== undefined && i !== idx) select(i);
+  };
+  const practiceSwitch = allowDictation ? (
+    <Segmented
+      options={[
+        ["shadow", t("player.shadowing")],
+        ["dictation", t("player.dictation")],
+      ]}
+      value={practice}
+      onChange={changePractice}
+    />
+  ) : null;
+
+  // Tuỳ chọn hiển thị (ẩn chữ · bản dịch · tự dừng · câu đã lưu): cố định dưới video, không cuộn theo danh sách câu.
+  // Cùng 1 kiểu nút có chữ; màn hẹp / chữ dài thì cuộn ngang
   const modeBar = (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8, // luôn 1 hàng: màn hẹp thì Shadowing / Chính tả co lại, icon giữ nguyên
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: C.background,
-        borderBottomWidth: 1,
-        borderBottomColor: C.border,
-      }}
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      style={{ flexGrow: 0, backgroundColor: C.background, borderBottomWidth: 1, borderBottomColor: C.border }}
+      contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}
     >
-      {allowDictation && (
-        <Segmented
-          options={[
-            ["shadow", t("player.shadowing")],
-            ["dictation", t("player.dictation")],
-          ]}
-          value={practice}
-          shrink
-          onChange={(p) => {
-            pause();
-            setPractice(p);
-            // Về Shadowing đang lọc câu ⭐ → về câu ⭐ gần nhất
-            if (p !== "dictation") return starFilter && toNearestStarred();
-            // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
-            const i = roundStart(ensureRound());
-            if (i !== undefined && i !== idx) select(i);
-          }}
-        />
-      )}
       {/* Shadowing: ẩn chữ tiếng Đức — nghe rồi nói theo, bấm 👁 trên từng câu để xem */}
       {!dictation && (
-        <ToggleIcon
+        <Chip
           icon="eye.slash"
           on={hideText}
-          label={t("player.hideText")}
+          label={t("player.chipHide")}
+          hint={t("player.hideText")}
           onPress={() => {
             setHideText((v) => !v);
             setRevealed(new Set());
           }}
         />
       )}
-      {/* Bản dịch tiếng Việt dưới mỗi câu */}
-      <ToggleIcon icon="translate" on={showTr} label={t("player.translation")} onPress={toggleTranslation} />
+      {/* Bản dịch dưới mỗi câu */}
+      <Chip icon="translate" on={showTr} label={t("player.translation")} hint={t("player.translation")} onPress={toggleTranslation} />
       {/* Tự dừng ở cuối mỗi câu; tắt → phát liên tục, câu hiện tại chạy theo video */}
-      <ToggleSwitch icon="pause.circle" on={autoStop} label={t("player.autoStop")} onPress={toggleAutoStop} />
+      <Chip icon="pause.circle" iconOn="pause.circle.fill" on={autoStop} label={t("player.chipAutoStop")} hint={t("player.autoStop")} onPress={toggleAutoStop} />
       {/* Shadowing: chỉ hiện các câu đã đánh dấu ⭐ */}
-      {!!user && !dictation && <ToggleIcon icon="star" on={starredOnly} label={t("player.starredOnly")} onPress={toggleStarredOnly} />}
-    </View>
+      {!!user && !dictation && (
+        <Chip icon="star" iconOn="star.fill" on={starredOnly} label={t("player.chipStarred")} hint={t("player.starredOnly")} onPress={toggleStarredOnly} />
+      )}
+    </ScrollView>
   );
 
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
@@ -1089,7 +1057,13 @@ export default function Player({
 
   return (
     <View style={{ flex: 1, backgroundColor: C.background, paddingTop: headerHeight }}>
-      <Stack.Screen options={{ title, headerRight: headerRight ? () => headerRight : undefined }} />
+      <Stack.Screen
+        options={{
+          title,
+          headerTitle: practiceSwitch ? () => practiceSwitch : undefined,
+          headerRight: headerRight ? () => headerRight : undefined,
+        }}
+      />
       {/* Video luôn ở cùng chỗ trong cây → xoay iPad (đổi bố cục) không làm tải lại video */}
       {/* Điện thoại: bàn phím mở → cả cột co lại, dock nằm trên bàn phím. iPad chia cột: cột trái tự cuộn theo bàn phím */}
       <KeyboardAvoidingView behavior="padding" enabled={!split} style={{ flex: 1, flexDirection: split ? "row" : "column" }}>
