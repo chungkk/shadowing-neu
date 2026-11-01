@@ -1,4 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
+import { getPoints } from "@/lib/db";
+import PointsBadge from "./PointsBadge";
 import { LoginLink } from "./LoginDialog";
 import Sidebar, { UserDropdown } from "./Sidebar";
 
@@ -8,7 +10,7 @@ export async function SidebarWithUser() {
   return <Sidebar user={user && { id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />;
 }
 
-/** Góc phải thanh trên cùng: nút đăng nhập, hoặc tên + vai trò */
+/** Góc phải thanh trên cùng: nút đăng nhập, hoặc điểm chính tả + tên + vai trò */
 export default async function UserMenu() {
   const user = await getCurrentUser();
   // Chỉ 1 nút: popup đăng nhập đã có nút chuyển sang đăng ký
@@ -19,5 +21,10 @@ export default async function UserMenu() {
       </LoginLink>
     );
   }
-  return <UserDropdown user={{ id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />;
+  return (
+    <div className="flex items-center gap-2 sm:gap-3">
+      <PointsBadge initial={getPoints(user.id).total} />
+      <UserDropdown user={{ id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />
+    </div>
+  );
 }

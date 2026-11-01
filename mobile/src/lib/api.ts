@@ -59,7 +59,10 @@ export type Stats = {
   days: { day: string; reviews: number }[]; // 14 ngày, cũ → mới, "YYYY-MM-DD" theo giờ máy
   mastery: Record<Mastery, number>;
   forgotten: { id: number; word: string; meaning: string; lapses: number }[];
+  points?: Points; // server cũ không gửi
 };
+/** Điểm chính tả (GET/POST /points): chép đúng hết 1 câu → +1, mỗi câu chỉ tính 1 lần · today theo giờ máy */
+export type Points = { total: number; today: number };
 
 export type Track = { languageCode: string; name: string; auto: boolean };
 export type Transcript = { videoId: string; title: string; track: Track; tracks: Track[]; segments: Segment[] };

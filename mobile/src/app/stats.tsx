@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Coin } from "@/components/Points";
 import { ErrorText, styles } from "@/components/ui";
 import { api, type Rate, type Stats } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -26,10 +27,13 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Tile({ label, value }: { label: string; value: string }) {
+function Tile({ label, value, icon, color = C.text }: { label: string; value: string; icon?: ReactNode; color?: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, paddingVertical: 14, paddingHorizontal: 12, gap: 4 }}>
-      <Text style={{ color: C.text, fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{value}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        {icon}
+        <Text style={{ color, fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{value}</Text>
+      </View>
       <Text style={{ color: C.muted, fontSize: 12 }}>{label}</Text>
     </View>
   );
@@ -166,6 +170,14 @@ export default function StatsScreen() {
               <Tile label={t("stats.streak")} value={`${s.streak}`} />
               <Tile label={t("stats.due")} value={`${s.dueToday}`} />
             </View>
+            {s.points && (
+              <Tile
+                icon={<Coin size={24} />}
+                color={C.amber}
+                value={`${s.points.total}`}
+                label={`${t("stats.points")}${s.points.today ? ` · ${t("stats.pointsToday", { n: s.points.today })}` : ""}`}
+              />
+            )}
 
             <Card title={t("stats.recallTitle")}>
               <RateRow label={t("stats.all")} r={s.recall30} />

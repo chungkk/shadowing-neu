@@ -97,6 +97,15 @@ function open() {
       updated_at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, source, idx)
     );
+    -- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +1 điểm. Mỗi câu chỉ tính 1 lần (làm lại / học lại từ đầu
+    -- không cộng thêm) và giữ vĩnh viễn (không bị xoá theo progress)
+    CREATE TABLE IF NOT EXISTS dict_points (
+      user_id INTEGER NOT NULL,
+      source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>"
+      idx INTEGER NOT NULL, -- câu (sau khi gộp câu)
+      at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, source, idx)
+    );
     -- Lịch sử ôn: mỗi lần ôn 1 dòng (không ghi đè) → đo độ chính xác nhớ lại, còn nhớ sau 7/30 ngày, hiệu quả từng dạng bài
     CREATE TABLE IF NOT EXISTS review_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -504,6 +513,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM vocab_examples WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
   rmSync(path.join(AVATAR_DIR, String(id)), { force: true }); // ảnh đại diện
@@ -924,6 +934,32 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
   return Object.fromEntries(rows.map((r) => [r.source.slice("/vocab/".length), { reps: r.reps, passed: !!r.passed }]));
 }
 
+// ---- Điểm chính tả ----
+
+export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học)
+
+/** tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
+export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Points {
+  const dayStart = Date.parse(new Date(now - tzOffset * 60_000).toISOString().slice(0, 10)) + tzOffset * 60_000;
+  const r = conn()
+    .prepare("SELECT COUNT(*) AS total, COALESCE(SUM(at >= ?), 0) AS today FROM dict_points WHERE user_id = ?")
+    .get(dayStart, userId) as Points;
+  return { total: r.total, today: r.today };
+}
+
+/** Các câu của 1 bài đã được tính điểm */
+export function getPointIdx(userId: number, source: string): number[] {
+  return (conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? ORDER BY idx").all(userId, source) as { idx: number }[]).map(
+    (r) => r.idx,
+  );
+}
+
+/** +1 điểm cho câu idx (câu đã tính rồi → awarded = false, không cộng) */
+export function awardDictPoint(userId: number, source: string, idx: number, tzOffset = 0): Points & { awarded: boolean } {
+  const r = conn().prepare("INSERT OR IGNORE INTO dict_points (user_id, source, idx, at) VALUES (?, ?, ?, ?)").run(userId, source, idx, Date.now());
+  return { ...getPoints(userId, tzOffset), awarded: r.changes > 0 };
+}
+
 // ---- Thống kê học tập (màn Thống kê trên app) ----
 
 export type Rate = { n: number; ok: number }; // ok = nhớ được (good / easy) trên n lần ôn
@@ -937,6 +973,7 @@ export type Stats = {
   mastery: Record<Mastery, number>;
   speaking: { reps: number; sentences: number; totalSentences: number }; // lượt nói (Luyện câu ⭐) · số câu đã luyện / có
   forgotten: { id: number; word: string; meaning: string; lapses: number }[]; // hay quên nhất
+  points: Points; // điểm chính tả
 };
 
 const rate = (rows: { grade: string }[]): Rate => ({ n: rows.length, ok: rows.filter((r) => r.grade === "good" || r.grade === "easy").length });
@@ -992,5 +1029,6 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
       .sort((a, b) => b.lapses - a.lapses)
       .slice(0, 5)
       .map((v) => ({ id: v.id, word: v.word, meaning: v.meaning, lapses: v.lapses })),
+    points: getPoints(userId, tzOffset, now),
   };
 }

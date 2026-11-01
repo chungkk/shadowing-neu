@@ -189,6 +189,8 @@ const vi = {
   "dict.lessonLeft": "Cả bài: đã chép {d}/{n} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.",
   "dict.lessonAll": "Bạn đã chép hết {n} câu của bài này 👏",
   "dict.newRound": "Lượt mới ›",
+  "dict.point": "+1 điểm",
+  "dict.roundPoints": "+{n} điểm lượt này",
 
   // Từ vựng
   "vocab.title": "Sổ từ vựng",
@@ -265,6 +267,8 @@ const vi = {
   "stats.title": "Thống kê",
   "stats.streak": "ngày liên tiếp",
   "stats.due": "mục đến hạn hôm nay",
+  "stats.points": "điểm chính tả",
+  "stats.pointsToday": "hôm nay +{n}",
   "stats.recallTitle": "NHỚ LẠI · 30 NGÀY QUA",
   "stats.all": "Tất cả lần ôn",
   "stats.ofReviews": "{ok}/{n} lần",
@@ -618,6 +622,8 @@ const de: Dict = {
   "dict.lessonLeft": "Ganze Lektion: {d}/{n} Sätze geschrieben. Eine neue Runde wählt zufällig 5–10 noch offene Sätze.",
   "dict.lessonAll": "Du hast alle {n} Sätze dieser Lektion geschrieben 👏",
   "dict.newRound": "Neue Runde ›",
+  "dict.point": "+1 Punkt",
+  "dict.roundPoints": "+{n} Punkte in dieser Runde",
 
   "vocab.title": "Vokabelheft",
   "vocab.loginHint": "Melde dich an, um beim Lernen Wörter zu speichern und hier zu wiederholen.",
@@ -694,6 +700,8 @@ const de: Dict = {
   "stats.title": "Statistik",
   "stats.streak": "Tage in Folge",
   "stats.due": "heute fällig",
+  "stats.points": "Diktat-Punkte",
+  "stats.pointsToday": "heute +{n}",
   "stats.recallTitle": "ERINNERN · LETZTE 30 TAGE",
   "stats.all": "Alle Wiederholungen",
   "stats.ofReviews": "{ok}/{n} Mal",

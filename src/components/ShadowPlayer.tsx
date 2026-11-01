@@ -27,12 +27,14 @@ import { pickDictation, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
 import { clientApi } from "@/lib/client-api";
+import { emitPoints } from "@/lib/points";
 import { prefetchGerman } from "@/lib/speak";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
+import { Coin } from "./PointsBadge";
 import WordPopup from "./WordPopup";
 
 type Settings = {
@@ -256,6 +258,8 @@ export default function ShadowPlayer({
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã xem của từng câu (quay lại vẫn còn)
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả
   const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép
+  const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
+  const [earned, setEarned] = useState<Set<number>>(new Set()); // câu được điểm trong lần mở bài này (điểm của lượt)
   const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch tiếng Việt
   const [trShown, setTrShown] = useState<Set<number>>(new Set()); // câu bấm "Dịch câu này" khi chưa bật bản dịch
   const [trError, setTrError] = useState("");
@@ -664,6 +668,34 @@ export default function ShadowPlayer({
     };
   }, [syncProgress, sourceUrl, segments.length, texts, allowDictation, update]);
 
+  // ---- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +1, mỗi câu chỉ tính 1 lần (cần tài khoản, như tiến độ) ----
+  useEffect(() => {
+    if (!syncProgress) return;
+    let alive = true;
+    clientApi<{ idx: number[] }>(`/points?source=${encodeURIComponent(sourceUrl!)}`)
+      .then((r) => alive && setPointIdx((s) => new Set([...s, ...r.idx])))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [syncProgress, sourceUrl]);
+  /** Làm xong câu chính tả → lưu kết quả; đúng hết lần đầu thì +1 điểm (hiện ngay, gửi server sau) → true */
+  const dictFinished = (i: number, correct: number, total: number) => {
+    setDictDone((d) => ({ ...d, [i]: { correct, total } }));
+    if (!syncProgress || correct !== total || pointIdx.has(i)) return false;
+    setPointIdx((s) => new Set(s).add(i));
+    setEarned((s) => new Set(s).add(i));
+    clientApi<{ total: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, tz: new Date().getTimezoneOffset() } })
+      .then((r) => emitPoints({ total: r.total }))
+      .catch(() => {
+        // Chưa lưu được → bỏ điểm tạm tính, lần sau làm đúng câu này vẫn được điểm
+        setPointIdx((s) => new Set([...s].filter((k) => k !== i)));
+        setEarned((s) => new Set([...s].filter((k) => k !== i)));
+        emitPoints({ delta: -1 });
+      });
+    return true;
+  };
+
   // Mở bài đang ở Chính tả mà chưa có lượt → chọn lượt đầu tiên
   const roundInit = useRef(false);
   useEffect(() => {
@@ -738,6 +770,7 @@ export default function ShadowPlayer({
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
   const roundDone = dictation && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
   const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
+  const roundPoints = dictPick.filter((k) => earned.has(k)).length;
   const left = segments.length - doneCount;
 
   const starButton = (text: string, size = "size-5") => {
@@ -1015,7 +1048,7 @@ export default function ShadowPlayer({
                 level={settings.dictLevel}
                 onReplay={() => go(idx)}
                 onNext={next}
-                onDone={(correct, total) => setDictDone((d) => ({ ...d, [idx]: { correct, total } }))}
+                onDone={(correct, total) => dictFinished(idx, correct, total)}
                 hasNext={nextIdx !== undefined}
                 draft={dictDrafts[idx]}
                 saved={dictDone[idx]}
@@ -1038,6 +1071,11 @@ export default function ShadowPlayer({
               {roundDone && (
                 <p className="text-base font-extrabold">
                   🎉 Xong lượt {dictPick.length} câu — đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
+                </p>
+              )}
+              {roundDone && roundPoints > 0 && (
+                <p className="inline-flex items-center gap-2 self-start rounded-full border border-amber/35 bg-amber/10 py-1 pr-3 pl-1.5 text-sm font-extrabold text-amber">
+                  <Coin className="size-6" /> +{roundPoints} điểm lượt này
                 </p>
               )}
               <p className="text-sm text-muted">
@@ -1188,6 +1226,11 @@ export default function ShadowPlayer({
                     {dictation && dictDone[i] && (
                       <span className="pill bg-accent/15 text-accent">
                         ✓ {dictDone[i].correct}/{dictDone[i].total}
+                      </span>
+                    )}
+                    {dictation && pointIdx.has(i) && (
+                      <span title="Câu này đã được tính điểm">
+                        <Coin className="size-4" />
                       </span>
                     )}
                     <span className="flex-1" />

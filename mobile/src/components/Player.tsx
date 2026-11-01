@@ -26,9 +26,10 @@ import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-nativ
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { DictationPanel, type DictDraft } from "./DictationPanel";
+import { Coin, PointsPill } from "./Points";
 import { WordSheet } from "./WordSheet";
 import { Button, Label, Segmented } from "./ui";
-import { api, type DictResult, type Progress, type VocabItem } from "@/lib/api";
+import { api, type DictResult, type Points, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { askLogin, micDenied, showError } from "@/lib/dialogs";
 import { pickDictation } from "@/lib/dictPick";
@@ -189,6 +190,9 @@ export default function Player({
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã hiện của từng câu (sang câu khác rồi quay lại vẫn còn)
   const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép ([] khi đang chép = đã chép hết bài)
   const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
+  const [points, setPoints] = useState<number | null>(null); // tổng điểm chính tả (null = chưa tải / server cũ)
+  const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
+  const [earned, setEarned] = useState<Set<number>>(new Set()); // câu được điểm trong lần mở bài này (điểm của lượt)
   const [recordings, setRecordings] = useState<Record<number, string>>({});
   const [hideText, setHideText] = useState(false); // Shadowing: ẩn chữ tiếng Đức (chỉ nghe rồi nói theo)
   const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
@@ -498,6 +502,39 @@ export default function Player({
     };
   }, [user, sourceUrl, segments.length, texts, allowDictation]);
 
+  // ---- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +1, mỗi câu chỉ tính 1 lần ----
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    api<Points & { idx?: number[] }>(`/points?source=${encodeURIComponent(sourceUrl)}&tz=${new Date().getTimezoneOffset()}`)
+      .then((r) => {
+        if (!alive || !r.idx) return; // server cũ chưa có điểm
+        setPoints(r.total);
+        setPointIdx((s) => new Set([...s, ...r.idx!]));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [user, sourceUrl]);
+  /** Làm xong câu chính tả → lưu kết quả; đúng hết lần đầu thì +1 điểm (hiện ngay, gửi server sau) → true */
+  const dictFinished = (i: number, correct: number, total: number) => {
+    setDictDone((d) => ({ ...d, [i]: { correct, total } }));
+    if (!user || points === null || correct !== total || pointIdx.has(i)) return false;
+    setPointIdx((s) => new Set(s).add(i));
+    setEarned((s) => new Set(s).add(i));
+    setPoints((n) => (n ?? 0) + 1);
+    api<Points>("/points", { method: "POST", body: { source: sourceUrl, idx: i, tz: new Date().getTimezoneOffset() } })
+      .then((r) => setPoints(r.total))
+      .catch(() => {
+        // Chưa lưu được → bỏ điểm tạm tính, lần sau làm đúng câu này vẫn được điểm
+        setPointIdx((s) => new Set([...s].filter((k) => k !== i)));
+        setEarned((s) => new Set([...s].filter((k) => k !== i)));
+        setPoints((n) => (n === null ? n : n - 1));
+      });
+    return true;
+  };
+
   const flushProgress = useCallback(() => {
     const b = pendingSave.current;
     pendingSave.current = null;
@@ -691,6 +728,7 @@ export default function Player({
 
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
   const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
+  const roundPoints = dictPick.filter((k) => earned.has(k)).length;
   const left = segments.length - doneCount;
   const roundCard = dictation && (roundDone || !dictPick.length) && (
     <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(22,163,74,0.12)", borderWidth: 1, borderColor: "rgba(22,163,74,0.35)" }}>
@@ -698,6 +736,12 @@ export default function Player({
         <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }}>
           {t("dict.roundDone", { n: dictPick.length, p: roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0 })}
         </Text>
+      )}
+      {roundDone && roundPoints > 0 && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Coin size={22} />
+          <Text style={{ color: C.amber, fontSize: 15, fontWeight: "800" }}>{t("dict.roundPoints", { n: roundPoints })}</Text>
+        </View>
       )}
       <Text style={{ color: C.muted, fontSize: 14 }}>
         {left > 0 ? t("dict.lessonLeft", { d: doneCount, n: segments.length }) : t("dict.lessonAll", { n: segments.length })}
@@ -722,6 +766,7 @@ export default function Player({
                 : t("player.sentenceOf", { i: idx + 1, n: segments.length })}
             </Label>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              {points !== null && <PointsPill total={points} />}
               <Text style={{ color: C.muted, fontSize: 12 }}>
                 {queue
                   ? t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })
@@ -761,7 +806,7 @@ export default function Player({
               onReplay={() => playSegment(idx)}
               onNext={next}
               hasNext={nextIdx !== undefined}
-              onDone={(correct, total) => setDictDone((d) => ({ ...d, [idx]: { correct, total } }))}
+              onDone={(correct, total) => dictFinished(idx, correct, total)}
               onWord={pickWord}
               translation={
                 showTr
