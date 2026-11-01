@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Nunito } from "next/font/google";
-import { SidebarSkeleton } from "@/components/Sidebar";
+import { HeaderNav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
 import ShareBar from "@/components/ShareBar";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
@@ -51,6 +51,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <span className="hidden sm:inline">Deutsch </span>Shadowing
               </span>
             </Link>
+            <Suspense fallback={<HeaderNavFrame />}>
+              <HeaderNav />
+            </Suspense>
             <div className="ml-auto">
               <Suspense>
                 <UserMenu />

@@ -86,6 +86,33 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
+const HEADER_ITEMS = ITEMS.filter((it) => it.href === "/vocab" || it.href === "/games");
+
+/** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy) */
+export function HeaderNav() {
+  return <HeaderNavFrame current={useCurrent(HEADER_ITEMS)} />;
+}
+
+/** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
+export function HeaderNavFrame({ current }: { current?: string }) {
+  return (
+    <nav className="flex items-center gap-1 max-md:hidden">
+      {HEADER_ITEMS.map((it) => (
+        <Link
+          key={it.href}
+          href={it.href}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
+            it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-white/5 hover:text-foreground"
+          }`}
+        >
+          <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
+          {it.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 /**
  * Góc phải thanh trên cùng: avatar + tên. Máy tính: rê chuột (hoặc bấm — màn cảm ứng) để mở menu các trang.
  * Điện thoại: chỉ là link tới Cài đặt (các trang đã có ở thanh dưới đáy).
