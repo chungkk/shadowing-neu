@@ -824,6 +824,7 @@ export default function NotebookScreen() {
     <SafeAreaView style={styles.screen} edges={[]}>
       <Stack.Screen options={{ title: "" }} />
       <SectionList
+        contentInsetAdjustmentBehavior="automatic"
         sections={sections}
         keyExtractor={(v) => String(v.id)}
         stickySectionHeadersEnabled

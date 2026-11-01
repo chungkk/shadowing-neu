@@ -353,6 +353,7 @@ export default function DeckScreen() {
       <SafeAreaView style={styles.screen} edges={[]}>
         <Stack.Screen options={{ title: deck.topic.title }} />
         <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
           style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
           contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 60, gap: 20 }}
           keyboardShouldPersistTaps="handled"
@@ -377,6 +378,7 @@ export default function DeckScreen() {
     <SafeAreaView style={styles.screen} edges={[]}>
       <Stack.Screen options={{ title: deck?.topic?.title ?? deck?.title ?? "" }} />
       <FlatList<DeckWord | DeckTopic>
+        contentInsetAdjustmentBehavior="automatic"
         data={topics ?? words}
         keyExtractor={(x, i) => ("id" in x ? x.id : `${i}`)} // từ đồng âm ("die Bank" ngân hàng / ghế băng) → không dùng từ làm khoá
         style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
