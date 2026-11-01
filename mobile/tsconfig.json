@@ -18,6 +18,7 @@
     "../src/lib/youtube-id.ts",
     "../src/lib/phrase-match.ts",
     "../src/lib/review.ts",
-    "../src/lib/srs.ts"
+    "../src/lib/srs.ts",
+    "../src/lib/deck-study.ts"
   ]
 }

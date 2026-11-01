@@ -20,7 +20,17 @@ const PAGE = 100;
 const CONFIRM_OVER = 100;
 
 /** Danh sách từ của 1 bộ + thêm vào sổ (cả bộ / từng từ) */
-export default function DeckWords({ slug, words: initial, loggedIn }: { slug: string; words: Word[]; loggedIn: boolean }) {
+export default function DeckWords({
+  slug,
+  words: initial,
+  loggedIn,
+  onSaved,
+}: {
+  slug: string;
+  words: Word[];
+  loggedIn: boolean;
+  onSaved?: (words: string[]) => void; // báo trang cha (màn học) cập nhật tiến độ
+}) {
   const [words, setWords] = useState(initial);
   const [limit, setLimit] = useState(PAGE);
   const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // từ đang thêm · "all" = đang thêm cả bộ
@@ -39,6 +49,7 @@ export default function DeckWords({ slug, words: initial, loggedIn }: { slug: st
       else {
         const set = new Set(list);
         setWords((ws) => ws.map((w) => (set.has(w.word) ? { ...w, saved: true } : w)));
+        onSaved?.(list);
         if (all) setMsg({ ok: `Đã thêm ${r.added} từ vào sổ — vào Sổ từ vựng để bắt đầu ôn.` });
       }
       setBusy((b) => {

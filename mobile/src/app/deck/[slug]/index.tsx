@@ -1,9 +1,10 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
+import { ModeBar, StudySession, type Mode } from "@/components/DeckStudy";
 import { Button, ErrorText, LevelBadge, styles } from "@/components/ui";
 import { api, type Deck, type DeckTopic, type DeckWord } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +20,9 @@ const GENDER: Record<string, string> = {
   die: C.redText,
   das: C.accent,
 };
+/** Chế độ học chọn lần trước (giữ khi mở chủ đề khác trong lúc dùng app) */
+let lastMode: Mode = "guess";
+
 /** Thêm nhiều hơn chừng này từ 1 lần → hỏi lại (sổ đầy từ mới, lịch ôn dồn dập) */
 const CONFIRM_OVER = 100;
 const hasArticle = (g: DeckWord["gender"]): g is "der" | "die" | "das" => g === "der" || g === "die" || g === "das";
@@ -190,7 +194,13 @@ export default function DeckScreen() {
   const [error, setError] = useState("");
   const [speaking, setSpeaking] = useState<string | null>(null);
   const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // từ đang thêm · "all" = đang thêm cả bộ
+  const [mode, setModeState] = useState<Mode>(lastMode);
+  const [practice, setPractice] = useState(0); // > 0: đang ôn lại chủ đề đã học xong (mỗi lần bấm tăng 1 → lượt mới)
   const PAD = tablet ? 24 : 16;
+  const setMode = (m: Mode) => {
+    lastMode = m;
+    setModeState(m);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -285,11 +295,78 @@ export default function DeckScreen() {
     }
   };
 
+  /** Thuộc 1 từ ở màn học → thêm vào sổ (khách: chỉ đánh dấu trong lượt này) */
+  const learn = (w: DeckWord) => {
+    markSaved([w.word]);
+    if (user)
+      api(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { words: [w.word] } }).catch((e) =>
+        showError(e, t("study.learnFailed")),
+      );
+  };
+
   const words = deck?.words ?? [];
   const saved = words.filter((w) => w.saved).length;
   const left = words.length - saved;
   // Bộ chia chủ đề, chưa chọn chủ đề → danh sách chủ đề thay cho danh sách từ
   const topics = deck && !topic && deck.topics.length ? deck.topics : null;
+
+  // Trang chủ đề: biểu tượng · tên · tiến độ · chọn chế độ học
+  const topicHeader = deck?.topic && (
+    <View style={{ gap: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            backgroundColor: C.card2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ fontSize: 30 }}>{deck.topic.icon}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={styles.h1}>{deck.topic.title}</Text>
+          <Text style={{ color: C.muted, fontSize: 14, fontWeight: "600" }}>
+            {deck.title} · {t("decks.words", { n: words.length })}
+            {!!user && saved > 0 && ` · ${t("decks.progress", { s: saved, n: words.length })}`}
+          </Text>
+        </View>
+      </View>
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
+        <View style={{ width: `${(saved * 100) / Math.max(1, words.length)}%`, height: "100%", backgroundColor: C.accent }} />
+      </View>
+      {!user && <Text style={{ color: C.muted, fontSize: 13 }}>{t("study.guest")}</Text>}
+      <ModeBar mode={mode} onChange={setMode} />
+    </View>
+  );
+
+  // Trang chủ đề, chế độ học (không phải "Danh sách") → thẻ học thay cho danh sách từ
+  if (deck?.topic && mode !== "list")
+    return (
+      <SafeAreaView style={styles.screen} edges={[]}>
+        <Stack.Screen options={{ title: deck.topic.title }} />
+        <ScrollView
+          style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
+          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 60, gap: 20 }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {topicHeader}
+          <StudySession
+            key={`${mode}|${practice}`}
+            words={words}
+            pool={words}
+            mode={mode}
+            icon={deck.topic.icon}
+            practice={practice > 0}
+            onLearned={learn}
+            onPractice={() => setPractice((p) => p + 1)}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
 
   return (
     <SafeAreaView style={styles.screen} edges={[]}>
@@ -303,29 +380,7 @@ export default function DeckScreen() {
           <View style={{ gap: 14, paddingTop: 8, paddingBottom: 18 }}>
             <ErrorText>{error}</ErrorText>
             {!deck && !error && <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />}
-            {deck?.topic && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 16,
-                    backgroundColor: C.card2,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 30 }}>{deck.topic.icon}</Text>
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.h1}>{deck.topic.title}</Text>
-                  <Text style={{ color: C.muted, fontSize: 14, fontWeight: "600" }}>
-                    {deck.title} · {t("decks.words", { n: words.length })}
-                    {!!user && saved > 0 && ` · ${t("decks.progress", { s: saved, n: words.length })}`}
-                  </Text>
-                </View>
-              </View>
-            )}
+            {topicHeader}
             {deck && !deck.topic && (
               <>
                 <DeckCover deck={deck} big />

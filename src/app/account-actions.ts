@@ -123,7 +123,6 @@ export async function addDeck(slug: string, words?: string[]): Promise<{ added: 
   const pick = words ? new Set(words) : null;
   const list = pick ? deck.words.filter((w) => pick.has(w.word)) : deck.words;
   if (!list.length) return { error: "Chưa chọn từ nào" };
-  const added = addDeckWords(user.id, list, deck.title);
-  refresh();
-  return { added };
+  // Không refresh(): màn học gọi sau mỗi câu trả lời đúng, giao diện tự đánh dấu "đã có trong sổ"
+  return { added: addDeckWords(user.id, list, deck.title) };
 }
