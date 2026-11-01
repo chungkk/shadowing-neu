@@ -4,6 +4,7 @@ import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";
 import goetheB1 from "@/content/decks/goethe-b1.json";
 import nomenVerb from "@/content/decks/nomen-verb-verbindungen.json";
+import wortschatzPflege from "@/content/decks/wortschatz-pflege.json";
 
 /**
  * Kho bộ từ vựng (tab Từ vựng của app): mỗi bộ 1 file JSON trong src/content/decks/, build kèm server.
@@ -16,6 +17,8 @@ const RAW: RawDeck[] = [
   goetheB1,
   // Nomen-Verb-Verbindungen (Hans Witzlinger, „Deutsch – Aber Hallo!“) — chủ đề theo vần A–Z
   nomenVerb,
+  // Wortschatz Deutsch Pflege (Sandra Hohmann) — từ vựng điều dưỡng, chủ đề theo vần A–Z
+  wortschatzPflege,
 ];
 
 type RawDeck = {

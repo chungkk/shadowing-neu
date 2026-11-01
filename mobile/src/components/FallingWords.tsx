@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { memo, useCallback, type ComponentRef, useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, type ComponentRef, useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, Animated, AppState, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fullWord } from "@shared/deck-study";
@@ -318,54 +318,6 @@ function RoundBtn({ icon, label, onPress, on, th, style }: { icon: SFSymbol; lab
   );
 }
 
-const OSK_ROWS = ["qwertzuiopü", "asdfghjklöä", "yxcvbnmß"];
-
-/** Bàn phím QWERTZ trên màn hình — onKey nhận chữ thường, "Backspace", "Enter". Bắt phím lúc chạm xuống (onPressIn) cho nhanh */
-const ScreenKeyboard = memo(function ScreenKeyboard({ onKey, disabled, enterLabel }: { onKey: (key: string) => void; disabled: boolean; enterLabel: string }) {
-  const key = (k: string, content: ReactNode, flex = 1, label?: string) => (
-    <Pressable
-      key={k}
-      disabled={disabled}
-      onPressIn={() => onKey(k)}
-      accessibilityRole="button"
-      accessibilityLabel={label ?? k}
-      style={({ pressed }) => ({
-        flex,
-        maxWidth: flex === 1 ? 44 : undefined,
-        height: 46,
-        borderRadius: 8,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: pressed ? C.border : C.card2,
-        borderBottomWidth: 2,
-        borderBottomColor: "#0a0f0c",
-        opacity: disabled ? 0.5 : 1,
-      })}
-    >
-      {content}
-    </Pressable>
-  );
-  return (
-    <View style={{ gap: 6, paddingHorizontal: 4, paddingTop: 8, paddingBottom: 4 }}>
-      {OSK_ROWS.map((row, r) => (
-        <View key={row} style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
-          {r === 2 && key("Backspace", <SymbolView name="delete.left" size={20} tintColor={C.text} />, 1.5, "Backspace")}
-          {[...row].map((ch) => key(ch, <Text style={{ color: C.text, fontSize: 19, fontWeight: "600" }}>{ch}</Text>))}
-          {r === 2 &&
-            key(
-              "Enter",
-              <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: C.text, fontSize: 12, fontWeight: "700", paddingHorizontal: 2 }}>
-                {enterLabel}
-              </Text>,
-              1.5,
-              enterLabel,
-            )}
-        </View>
-      ))}
-    </View>
-  );
-});
-
 function LevelTile({ level, size = 44 }: { level: string; size?: number }) {
   const c = LEVEL_COLORS[level[0]] ?? LEVEL_COLORS.A;
   return (
@@ -432,7 +384,6 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   const [deck, setDeck] = useState("");
   const [stats, setStats] = useState<Record<string, DeckStats>>({});
   const [sound, setSound] = useState(true);
-  const [osk, setOsk] = useState(true); // false: bàn phím hệ thống / bàn phím rời (ô nhập ẩn)
   const [phase, setPhase] = useState<Phase>("menu");
   const [view, setView] = useState<Snap | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -458,10 +409,9 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [d, s, k] = await Promise.all([load(`${cfg.store}-deck`), load(`${cfg.store}-sound`), load(`${cfg.store}-osk`)]);
+      const [d, s] = await Promise.all([load(`${cfg.store}-deck`), load(`${cfg.store}-sound`)]);
       if (!alive) return;
       if (s) setSound(s !== "false");
-      if (k) setOsk(k !== "false");
       let list: DeckOption[] = [];
       try {
         const r = await api<{ decks: DeckSummary[] }>("/vocab/decks");
@@ -574,8 +524,8 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     noteTimer.current = setTimeout(() => setNote(null), 2200);
   };
 
-  /** Dùng bàn phím hệ thống: focus ô nhập ẩn để bàn phím hiện lên */
-  const focusInput = (use = !osk) => use && requestAnimationFrame(() => inputRef.current?.focus());
+  /** Focus ô nhập ẩn để bàn phím hệ thống hiện lên */
+  const focusInput = () => requestAnimationFrame(() => inputRef.current?.focus());
 
   /** Vào ván: từ mốc đã lưu (from) — hết mốc rồi thì chơi lại từ đầu */
   async function start(from = cleared) {
@@ -666,13 +616,6 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     } else return;
     setView(snapshot(g));
   }
-
-  // Bàn phím trên màn hình: hàm nhận phím không đổi giữa các khung hình → bàn phím (memo) khỏi vẽ lại mỗi khung
-  const keyRef = useRef(handleKey);
-  useLayoutEffect(() => {
-    keyRef.current = handleKey;
-  });
-  const onScreenKey = useCallback((k: string) => keyRef.current(k), []);
 
   async function saveMissed() {
     if (!view || !current) return;
@@ -979,19 +922,6 @@ export default function FallingWords({ variant }: { variant: Variant }) {
               <RoundBtn th={th} icon={phase === "play" ? "pause.fill" : "play.fill"} label={phase === "play" ? t("games.pause") : t("games.resume")} onPress={phase === "play" ? pause : resume} />
               <RoundBtn
                 th={th}
-                icon="keyboard"
-                label={t("games.keyboard")}
-                on={osk}
-                onPress={() => {
-                  const next = !osk;
-                  setOsk(next);
-                  save(`${cfg.store}-osk`, next);
-                  if (next) inputRef.current?.blur();
-                  else if (phase === "play") focusInput(true);
-                }}
-              />
-              <RoundBtn
-                th={th}
                 icon={sound ? "speaker.wave.2.fill" : "speaker.slash.fill"}
                 label={sound ? t("games.soundOff") : t("games.soundOn")}
                 onPress={() => {
@@ -1081,26 +1011,23 @@ export default function FallingWords({ variant }: { variant: Variant }) {
         </Pressable>
 
         {/* Ô nhập ẩn: bàn phím hệ thống / bàn phím rời (luôn để trống, chữ chuyển ngay cho game) */}
-        {!osk && (
-          <TextInput
-            ref={inputRef}
-            value=""
-            onChangeText={(s) => [...s].forEach(handleKey)}
-            onKeyPress={(e) => e.nativeEvent.key === "Backspace" && handleKey("Backspace")}
-            onSubmitEditing={() => handleKey("Enter")}
-            submitBehavior="submit"
-            editable={phase === "play"}
-            autoCorrect={false}
-            autoCapitalize="none"
-            autoComplete="off"
-            spellCheck={false}
-            keyboardAppearance="dark"
-            returnKeyType="next"
-            accessibilityLabel={t("study.typeWord")}
-            style={{ position: "absolute", left: 0, bottom: 0, width: 1, height: 1, opacity: 0 }}
-          />
-        )}
-        {osk && <ScreenKeyboard onKey={onScreenKey} disabled={phase !== "play"} enterLabel={t("games.deselect")} />}
+        <TextInput
+          ref={inputRef}
+          value=""
+          onChangeText={(s) => [...s].forEach(handleKey)}
+          onKeyPress={(e) => e.nativeEvent.key === "Backspace" && handleKey("Backspace")}
+          onSubmitEditing={() => handleKey("Enter")}
+          submitBehavior="submit"
+          editable={phase === "play"}
+          autoCorrect={false}
+          autoCapitalize="none"
+          autoComplete="off"
+          spellCheck={false}
+          keyboardAppearance="dark"
+          returnKeyType="next"
+          accessibilityLabel={t("study.typeWord")}
+          style={{ position: "absolute", left: 0, bottom: 0, width: 1, height: 1, opacity: 0 }}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
