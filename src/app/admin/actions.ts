@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { adminSetPassword, envAdminEmail, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
+import { createLesson, deleteFeedback, deleteLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
 import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
@@ -114,6 +114,12 @@ export async function resetUserPassword(id: number, _: FormState & { ok?: string
 
 export async function removeUser(id: number) {
   if (await editableUser(id)) await removeAccount(id);
+  refresh();
+}
+
+export async function removeFeedback(id: number) {
+  await requireAdmin();
+  deleteFeedback(id);
   refresh();
 }
 

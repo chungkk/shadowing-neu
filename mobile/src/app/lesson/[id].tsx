@@ -61,7 +61,7 @@ function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => v
       {!lock.loggedIn ? (
         <>
           <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lock.guest", { n: 2 }) /* FREE_PICKS bên server (src/lib/lesson-lock.ts) */}</Text>
-          <Button title={t("loginOrRegister")} variant="primary" onPress={() => router.push("/account")} />
+          <Button title={t("loginOrRegister")} variant="primary" onPress={() => router.push("/settings")} />
         </>
       ) : lock.picksLeft > 0 ? (
         <>

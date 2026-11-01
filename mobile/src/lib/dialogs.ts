@@ -28,7 +28,7 @@ export function confirmDestructive(title: string, message: string, action: strin
   ]);
 }
 
-/** Tính năng cần tài khoản → mở tab Tài khoản */
+/** Tính năng cần tài khoản → mở tab Cài đặt (form đăng nhập) */
 export function askLogin(title: string, message: string, beforeNavigate?: () => void) {
   Alert.alert(title, message, [
     { text: t("later"), style: "cancel" },
@@ -36,7 +36,7 @@ export function askLogin(title: string, message: string, beforeNavigate?: () => 
       text: t("loginOrRegister"),
       onPress: () => {
         beforeNavigate?.();
-        router.push("/account");
+        router.push("/settings");
       },
     },
   ]);

@@ -20,7 +20,17 @@ function transport(): Transporter {
   }));
 }
 
-export async function sendMail(m: { to: string; subject: string; text: string; html: string }) {
+/** Email liên hệ hiển thị cho người dùng (trang Chính sách / Điều khoản) — mặc định là địa chỉ gửi mail của app */
+export const contactEmail = () => process.env.CONTACT_EMAIL || process.env.SMTP_USER || "";
+
+export async function sendMail(m: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  replyTo?: string;
+  attachments?: { filename: string; content: string; contentType: string }[];
+}) {
   await transport().sendMail({
     from: process.env.MAIL_FROM || `"Deutsch Shadowing" <${process.env.SMTP_USER}>`,
     ...m,

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { envAdminEmail, requireUser } from "@/lib/auth";
 import { getStats, listProgress } from "@/lib/db";
 import AccountStats from "@/components/AccountStats";
@@ -45,6 +46,14 @@ export default function SettingsPage() {
       <Suspense fallback={<SettingsSkeleton />}>
         <Settings />
       </Suspense>
+      <nav className="flex justify-center gap-4 text-sm text-muted">
+        <Link href="/privacy" className="hover:text-foreground hover:underline">
+          Chính sách quyền riêng tư
+        </Link>
+        <Link href="/terms" className="hover:text-foreground hover:underline">
+          Điều khoản sử dụng
+        </Link>
+      </nav>
     </main>
   );
 }

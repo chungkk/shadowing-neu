@@ -19,9 +19,9 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Label>{t("tabs.vocab")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} md="bookmark" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="account">
-        <NativeTabs.Trigger.Label>{t("tabs.account")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} md="person" />
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Label>{t("tabs.settings")}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

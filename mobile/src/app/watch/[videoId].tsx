@@ -91,7 +91,7 @@ export default function WatchScreen() {
                 <Text style={{ color: C.muted, textAlign: "center" }}>
                   {t("watch.noSubsHint")}
                 </Text>
-                <Button title={t("loginOrRegister")} variant="primary" onPress={() => router.push("/account")} />
+                <Button title={t("loginOrRegister")} variant="primary" onPress={() => router.push("/settings")} />
               </>
             )}
           </>

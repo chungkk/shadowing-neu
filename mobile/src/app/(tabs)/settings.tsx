@@ -1,96 +1,23 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { router, useFocusEffect } from "expo-router";
-import { SymbolView, type SFSymbol } from "expo-symbols";
+import { SymbolView } from "expo-symbols";
 import { Image } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import Constants from "expo-constants";
-import { ActionSheetIOS, ActivityIndicator, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
+import { Row, Section } from "@/components/SettingsList";
 import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
 import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
+import { openLegal } from "@/lib/legal";
 import { C } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
 import { germanVoices, speakGerman, stopSpeaking } from "@/lib/speak";
-
-/** Nhóm kiểu Cài đặt iOS: tiêu đề nhỏ · khung bo góc chứa các dòng · chú thích bên dưới */
-function Section({ title, footer, children }: { title?: string; footer?: string; children: ReactNode }) {
-  return (
-    <View style={{ gap: 6 }}>
-      {!!title && (
-        <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase", marginLeft: 14 }}>
-          {title}
-        </Text>
-      )}
-      <View style={{ backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 16, overflow: "hidden" }}>{children}</View>
-      {!!footer && <Text style={{ color: C.muted, fontSize: 13, marginHorizontal: 14, lineHeight: 18 }}>{footer}</Text>}
-    </View>
-  );
-}
-
-/** Một dòng trong nhóm: biểu tượng · tiêu đề · giá trị / mũi tên. `open` → mở rộng phần nội dung bên dưới */
-function Row({
-  icon,
-  iconBg = C.card2,
-  title,
-  value,
-  color = C.text,
-  first,
-  open,
-  chevron = true,
-  trailing,
-  onPress,
-  children,
-}: {
-  icon: SFSymbol;
-  iconBg?: string;
-  title: string;
-  value?: string;
-  color?: string;
-  first?: boolean;
-  open?: boolean;
-  chevron?: boolean;
-  trailing?: ReactNode;
-  onPress?: () => void;
-  children?: ReactNode;
-}) {
-  return (
-    <View style={{ borderTopWidth: first ? 0 : 1, borderTopColor: C.border }}>
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-          paddingHorizontal: 14,
-          minHeight: 52,
-          backgroundColor: pressed ? C.card2 : "transparent",
-        })}
-      >
-        <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: iconBg, alignItems: "center", justifyContent: "center" }}>
-          <SymbolView name={icon} size={16} tintColor={color === C.text ? "#fff" : color} weight="semibold" />
-        </View>
-        <Text style={{ flex: 1, color, fontSize: 16, fontWeight: "600" }} numberOfLines={1}>
-          {title}
-        </Text>
-        {!!value && (
-          <Text style={{ color: C.muted, fontSize: 15, maxWidth: "45%" }} numberOfLines={1}>
-            {value}
-          </Text>
-        )}
-        {trailing}
-        {chevron && (
-          <SymbolView name={open ? "chevron.down" : "chevron.right"} size={13} tintColor="#4a5a50" weight="semibold" />
-        )}
-      </Pressable>
-      {open && <View style={{ paddingHorizontal: 14, paddingBottom: 16, gap: 10 }}>{children}</View>}
-    </View>
-  );
-}
 
 const initials = (name: string) =>
   name
@@ -320,6 +247,62 @@ function SettingsSection() {
   );
 }
 
+/** Quyền riêng tư · hỗ trợ (góp ý, báo lỗi, chia sẻ) · pháp lý — giống nhau khi đã / chưa đăng nhập */
+function MoreSections() {
+  const { t } = useI18n();
+  const share = () => Share.share({ message: t("set.shareMessage", { url: API_URL }) }).catch(() => {});
+  return (
+    <>
+      <Section title={t("set.sectionPrivacy")}>
+        <Row first icon="hand.raised.fill" iconBg="#0d9488" title={t("set.privacy")} subtitle={t("set.privacySub")} onPress={() => router.push("/privacy")} />
+      </Section>
+
+      <Section title={t("set.sectionSupport")}>
+        <Row
+          first
+          icon="bubble.left.and.text.bubble.right.fill"
+          iconBg="#2563eb"
+          title={t("set.feedback")}
+          subtitle={t("set.feedbackSub")}
+          onPress={() => router.push({ pathname: "/feedback", params: { kind: "idea" } })}
+        />
+        <Row
+          icon="ant.fill"
+          iconBg="#dc2626"
+          title={t("set.reportBug")}
+          subtitle={t("set.reportBugSub")}
+          onPress={() => router.push({ pathname: "/feedback", params: { kind: "bug" } })}
+        />
+        <Row icon="square.and.arrow.up" iconBg="#7c3aed" title={t("set.share")} chevron={false} onPress={share} />
+      </Section>
+
+      <Section title={t("set.sectionLegal")}>
+        <Row first icon="lock.shield.fill" iconBg="#475569" title={t("set.privacyPolicy")} external onPress={() => openLegal("privacy")} />
+        <Row icon="doc.text.fill" iconBg="#475569" title={t("set.terms")} external onPress={() => openLegal("terms")} />
+      </Section>
+    </>
+  );
+}
+
+/** Dưới form đăng nhập / đăng ký: đồng ý Điều khoản + Chính sách (chạm để đọc) */
+function Consent() {
+  const { t } = useI18n();
+  const link = (doc: "terms" | "privacy", label: string) => (
+    <Text style={{ color: C.accent, fontWeight: "700" }} onPress={() => openLegal(doc)} accessibilityRole="link">
+      {label}
+    </Text>
+  );
+  return (
+    <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19, textAlign: "center", marginHorizontal: 14, marginTop: -8 }}>
+      {t("set.consentPre")}
+      {link("terms", t("set.terms"))}
+      {t("set.consentAnd")}
+      {link("privacy", t("set.privacyPolicy"))}
+      {t("set.consentPost")}
+    </Text>
+  );
+}
+
 type Panel = "profile" | "password" | "delete" | null;
 
 function Signed({ user }: { user: User }) {
@@ -441,6 +424,8 @@ function Signed({ user }: { user: User }) {
 
       <SettingsSection />
 
+      <MoreSections />
+
       {user.role === "admin" && (
         <Section title={t("admin.section")} footer={t("admin.hint")}>
           <Row first icon="person.2.fill" iconBg="#b45309" title={t("admin.users")} onPress={() => router.push("/admin/users")} />
@@ -475,7 +460,7 @@ function Signed({ user }: { user: User }) {
   );
 }
 
-export default function AccountScreen() {
+export default function SettingsScreen() {
   const { user, ready } = useAuth();
   const { t } = useI18n();
   const { tablet } = useLayout();
@@ -494,13 +479,20 @@ export default function AccountScreen() {
           }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.h1}>{t("tabs.account")}</Text>
+          <Text style={styles.h1}>{t("tabs.settings")}</Text>
           {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
-          {ready && !user && <SettingsSection />}
+          {ready && !user && (
+            <>
+              <Consent />
+              <SettingsSection />
+              <MoreSections />
+            </>
+          )}
           <View style={{ alignItems: "center", gap: 2 }}>
             <Text style={{ color: "#4a5a50", fontSize: 12, fontWeight: "600" }}>
               {Constants.expoConfig?.name} · {t("acc.version", { v: Constants.expoConfig?.version ?? "—" })}
             </Text>
+            <Text style={{ color: "#4a5a50", fontSize: 12 }}>© {new Date().getFullYear()} Deutsch Shadowing</Text>
             {__DEV__ && <Text style={{ color: "#4a5a50", fontSize: 12 }}>Server: {API_URL}</Text>}
           </View>
         </ScrollView>

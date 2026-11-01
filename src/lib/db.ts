@@ -188,6 +188,16 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, lesson_id)
     );
+    -- Góp ý / báo lỗi gửi từ app (khách chưa đăng nhập cũng gửi được: user_id NULL)
+    CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      kind TEXT NOT NULL, -- 'idea' | 'bug' | 'content' | 'other'
+      message TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '', -- email để trả lời (người dùng tự nhập / email tài khoản)
+      device TEXT NOT NULL DEFAULT '', -- "iOS 26.1 · iPhone 16 · app 1.0.1"
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   // Phụ đề YouTube trước đây chỉ lưu 7 ngày → giờ lưu vĩnh viễn
   db.exec("UPDATE transcript_cache SET expires_at = NULL WHERE key LIKE 'ytp:%' AND expires_at IS NOT NULL");
@@ -558,8 +568,88 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM dict_hints WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM lesson_unlocks WHERE user_id = ?").run(id);
+  conn().prepare("UPDATE feedback SET user_id = NULL, email = '' WHERE user_id = ?").run(id); // giữ nội dung góp ý, bỏ liên kết người gửi
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
   rmSync(path.join(AVATAR_DIR, String(id)), { force: true }); // ảnh đại diện
+}
+
+/**
+ * Bản sao toàn bộ dữ liệu của 1 người (quyền truy cập / mang dữ liệu theo GDPR) — không có mật khẩu băm hay token đăng nhập.
+ * Dạng thô theo từng bảng: đủ để đọc / nhập sang công cụ khác, không phụ thuộc định dạng API của app.
+ */
+export function exportUserData(id: number): Record<string, unknown> | null {
+  const user = getUserById(id);
+  if (!user) return null;
+  const rows = (sql: string) => conn().prepare(sql).all(id);
+  return {
+    exportedAt: new Date().toISOString(),
+    account: { id: user.id, name: user.name, email: user.email, role: user.role, lang: user.lang, createdAt: user.createdAt, hasAvatar: !!user.avatarAt },
+    signInWith: rows("SELECT provider, email, created_at FROM oauth_accounts WHERE user_id = ?"),
+    vocab: rows("SELECT id, word, meaning, context, source_url, source_title, gender, singular, plural, srs_stage, due_at, lapses, created_at FROM vocab WHERE user_id = ? ORDER BY id"),
+    vocabExamples: rows("SELECT vocab_id, context, source_url, source_title, created_at FROM vocab_examples WHERE user_id = ? ORDER BY id"),
+    progress: rows("SELECT source, title, idx, total, mode, dict_level, dict_done, updated_at FROM progress WHERE user_id = ? ORDER BY updated_at DESC"),
+    reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
+    crazyReps: rows("SELECT source, idx, reps, passed, updated_at FROM crazy_reps WHERE user_id = ?"),
+    dictationPoints: rows("SELECT source, idx, pts, at FROM dict_points WHERE user_id = ? ORDER BY at"),
+    dictationHints: rows("SELECT source, idx, n, at FROM dict_hints WHERE user_id = ? ORDER BY at"),
+    lessonUnlocks: rows("SELECT lesson_id, kind, cost, at FROM lesson_unlocks WHERE user_id = ?"),
+    feedback: rows("SELECT kind, message, created_at FROM feedback WHERE user_id = ? ORDER BY id"),
+  };
+}
+
+// ---- Góp ý ----
+
+export type FeedbackKind = "idea" | "bug" | "content" | "other";
+export const FEEDBACK_KINDS: readonly FeedbackKind[] = ["idea", "bug", "content", "other"];
+
+export type Feedback = {
+  id: number;
+  userId: number | null;
+  userName: string | null;
+  kind: FeedbackKind;
+  message: string;
+  email: string;
+  device: string;
+  createdAt: string;
+};
+
+export function saveFeedback(f: { userId: number | null; kind: FeedbackKind; message: string; email: string; device: string }): number {
+  const r = conn()
+    .prepare("INSERT INTO feedback (user_id, kind, message, email, device) VALUES (?, ?, ?, ?, ?)")
+    .run(f.userId, f.kind, f.message, f.email, f.device);
+  return Number(r.lastInsertRowid);
+}
+
+export function listFeedback(limit = 200): Feedback[] {
+  const rows = conn()
+    .prepare(
+      `SELECT f.id, f.user_id, u.name AS user_name, f.kind, f.message, f.email, f.device, f.created_at
+       FROM feedback f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.id DESC LIMIT ?`,
+    )
+    .all(limit) as {
+    id: number;
+    user_id: number | null;
+    user_name: string | null;
+    kind: FeedbackKind;
+    message: string;
+    email: string;
+    device: string;
+    created_at: string;
+  }[];
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.user_id,
+    userName: r.user_name,
+    kind: r.kind,
+    message: r.message,
+    email: r.email,
+    device: r.device,
+    createdAt: r.created_at,
+  }));
+}
+
+export function deleteFeedback(id: number) {
+  conn().prepare("DELETE FROM feedback WHERE id = ?").run(id);
 }
 
 // ---- Tài khoản Google / Apple ----
