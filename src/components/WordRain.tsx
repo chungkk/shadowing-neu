@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import Link from "next/link";
 import {
   BookmarkPlus,
-  Check,
-  ChevronLeft,
   CloudRain,
-  Delete,
   Flag,
   Heart,
   Keyboard,
@@ -22,10 +18,11 @@ import {
   X,
 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
-import { fullWord, type StudyWord } from "@/lib/deck-study";
+import { fullWord } from "@/lib/deck-study";
 import { shuffle } from "@/lib/review";
 import { speakGerman } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { DeckMenu, GameHeader, ScreenKeyboard, sameLetter, useCoarsePointer, type DeckOption, type GameWord, type Topic } from "./GameParts";
 
 /**
  * Game "Mưa từ vựng": nghĩa tiếng Việt rơi từ trên xuống, gõ đúng từ tiếng Đức để bắn trước khi chạm nước.
@@ -36,9 +33,6 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
  * chỉ chữ đúng mới được ghi — gõ sai thì giọt rung, không phải xoá. Sai 2 lần cùng chỗ → lộ chữ kế tiếp.
  */
 
-type DeckOption = { slug: string; title: string; level: string; wordCount: number; topicCount: number };
-type GameWord = StudyWord & { topic: string };
-type Topic = { id: string; title: string; icon: string };
 type Drop = { id: number; w: GameWord; x: number /* 0 = sát trái, 1 = sát phải */; y: number; speed: number; state: "fall" | "hit" | "miss" | "gone"; at: number; points: number };
 type Game = {
   words: GameWord[];
@@ -82,9 +76,6 @@ const goalOf = (g: Pick<Game, "words" | "topics">, m: number) => Math.min(MILEST
 
 /** Màu theo giống — như trang bộ từ: der xanh dương · die đỏ · das xanh lá */
 const GENDER_TEXT: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
-/** Ô bộ từ: màu theo nhóm trình độ (như DeckCover) */
-const LEVEL_TILE: Record<string, string> = { A: "bg-emerald-200 text-emerald-900", B: "bg-sky-200 text-sky-900", C: "bg-violet-200 text-violet-900" };
-
 /** Vệt mưa nền — số giả ngẫu nhiên cố định để server & trình duyệt vẽ giống nhau */
 const rand = (i: number, n: number) => (((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1) + 1) % 1;
 const STREAKS = Array.from({ length: 70 }, (_, i) => ({
@@ -95,14 +86,7 @@ const STREAKS = Array.from({ length: 70 }, (_, i) => ({
   op: 0.12 + rand(i, 5) * 0.3,
 }));
 
-/** Bàn phím trên màn hình (QWERTZ) — điện thoại khỏi bật bàn phím hệ thống che mất sân */
-const OSK_ROWS = ["qwertzuiopü", "asdfghjklöä", "yxcvbnmß"];
-
 let nextId = 1;
-
-/** Bàn phím không có umlaut: gõ a/o/u/s thay ä/ö/ü/ß cũng được */
-const BASE: Record<string, string> = { ä: "a", ö: "o", ü: "u", ß: "s" };
-const sameLetter = (key: string, want: string) => key === want.toLowerCase() || BASE[want.toLowerCase()] === key;
 
 /** Bỏ chọn giọt đang gõ */
 const untarget = (g: Game) => Object.assign(g, { targetId: null, typed: "", wrong: 0 });
@@ -231,49 +215,6 @@ const RoundBtn = ({ title, onClick, children, on }: { title: string; onClick: ()
   </button>
 );
 
-function LevelTile({ level }: { level: string }) {
-  return (
-    <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-lg font-black shadow-[0_3px_0_rgba(0,0,0,0.35)] ${LEVEL_TILE[level[0]] ?? LEVEL_TILE.A}`}>
-      {level || "Aa"}
-    </span>
-  );
-}
-
-/** Thẻ bộ từ ở màn chọn — kèm số mốc đã qua (lưu trong trình duyệt) */
-function DeckCard({ deck, selected, onSelect }: { deck: DeckOption; selected: boolean; onSelect: () => void }) {
-  const [cleared] = useLocalStorage(`wordrain-milestone-${deck.slug}`, 0);
-  const total = Math.max(deck.topicCount, 1);
-  return (
-    <button
-      onClick={onSelect}
-      className={`relative flex cursor-pointer flex-col gap-3 rounded-2xl border-2 p-3.5 text-left transition hover:-translate-y-0.5 ${
-        selected ? "border-cyan-400 bg-cyan-400/10 shadow-[0_4px_0_rgba(34,211,238,0.35)]" : "border-border bg-card hover:border-cyan-400/50"
-      }`}
-    >
-      {selected && (
-        <span className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-cyan-400 text-black">
-          <Check className="size-4" strokeWidth={3} />
-        </span>
-      )}
-      <LevelTile level={deck.level} />
-      <span className="flex flex-col gap-0.5">
-        <span className="font-extrabold">{deck.title}</span>
-        <span className="text-sm text-cyan-300/80">
-          {deck.wordCount} từ · {total} mốc
-        </span>
-      </span>
-      {cleared > 0 && (
-        <span className="flex items-center gap-2 text-xs font-bold text-muted">
-          <span className="h-1.5 flex-1 rounded-full bg-card-2">
-            <span className="block h-full rounded-full bg-cyan-400" style={{ width: `${Math.min(cleared / total, 1) * 100}%` }} />
-          </span>
-          {Math.min(cleared, total)}/{total}
-        </span>
-      )}
-    </button>
-  );
-}
-
 export default function WordRain({ decks }: { decks: DeckOption[] }) {
   const [deck, setDeck] = useLocalStorage("wordrain-deck", decks[0]?.slug ?? "");
   const [sound, setSound] = useLocalStorage("wordrain-sound", true);
@@ -288,7 +229,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [full, setFull] = useState(false);
-  const [coarse, setCoarse] = useState(false);
+  const coarse = useCoarsePointer();
   const game = useRef<Game | null>(null);
   const cache = useRef(new Map<string, { words: GameWord[]; topics: Topic[] }>());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -301,14 +242,9 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
   const playing = phase === "play" || phase === "pause";
 
   useEffect(() => {
-    const mq = matchMedia("(pointer: coarse)");
-    const sync = () => setCoarse(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
     const onFull = () => setFull(document.fullscreenElement === field.current);
     document.addEventListener("fullscreenchange", onFull);
     return () => {
-      mq.removeEventListener("change", sync);
       document.removeEventListener("fullscreenchange", onFull);
       clearTimeout(noteTimer.current);
       clearTimeout(badTimer.current);
@@ -485,80 +421,43 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
   }
 
   const header = (
-    <header className="flex items-center gap-3">
-      {playing || phase === "over" || phase === "win" ? (
-        <button title="Chọn bộ từ" className="btn-icon" onClick={quit}>
-          <ChevronLeft className="size-6" />
-        </button>
-      ) : (
-        <Link href="/games" title="Game" className="btn-icon">
-          <ChevronLeft className="size-6" />
-        </Link>
-      )}
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-300">
-        <CloudRain className="size-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h1 className="text-lg leading-tight font-extrabold md:text-xl">Mưa từ vựng</h1>
-        <p className="truncate text-xs text-cyan-300/80 md:text-sm">Đọc nghĩa đang rơi, nhớ lại từ tiếng Đức và gõ nó</p>
-      </div>
-      {playing && typeof document !== "undefined" && document.fullscreenEnabled && (
-        <button title={full ? "Thoát toàn màn hình" : "Toàn màn hình"} className="btn-icon" onClick={toggleFull}>
-          {full ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
-        </button>
-      )}
-    </header>
+    <GameHeader
+      icon={CloudRain}
+      tone="cyan"
+      title="Mưa từ vựng"
+      subtitle="Đọc nghĩa đang rơi, nhớ lại từ tiếng Đức và gõ nó"
+      onBack={phase === "menu" || phase === "loading" ? undefined : quit}
+      right={
+        playing &&
+        typeof document !== "undefined" &&
+        document.fullscreenEnabled && (
+          <button title={full ? "Thoát toàn màn hình" : "Toàn màn hình"} className="btn-icon" onClick={toggleFull}>
+            {full ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
+          </button>
+        )
+      }
+    />
   );
 
   // ---- Màn chọn bộ từ ----
   if (phase === "menu" || phase === "loading") {
-    const total = Math.max(current?.topicCount ?? 1, 1);
-    const from = cleared < total ? cleared : 0;
     return (
       <div className="flex flex-col gap-5">
         {header}
-        <div className="flex items-center gap-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-300">
-            <CloudRain className="size-6" />
-          </span>
-          <div>
-            <p className="font-extrabold">Chọn bộ từ</p>
-            <p className="text-sm text-cyan-300/80">Mỗi chủ đề là một mốc — bắn đủ {MILESTONE_GOAL} từ để vượt mốc. Gõ từng chữ — gõ sai không bị ghi nên khỏi phải xoá; gõ a/o/u/s thay ä/ö/ü/ß cũng được.</p>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {decks.map((d) => (
-            <DeckCard key={d.slug} deck={d} selected={d.slug === current?.slug} onSelect={() => setDeck(d.slug)} />
-          ))}
-        </div>
-        {!decks.length && <p className="text-center text-sm text-muted">Chưa có bộ từ nào.</p>}
-        {error && <p className="text-center text-sm text-red-400">{error}</p>}
-
-        {/* Thanh bắt đầu dính đáy (điện thoại: nằm trên thanh điều hướng) */}
-        {current && (
-          <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] mt-2 flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl shadow-black/60 backdrop-blur md:bottom-4">
-            <LevelTile level={current.level} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-extrabold">{current.title}</p>
-              <p className="text-xs text-cyan-300/80">
-                {current.wordCount} từ · {from ? `tiếp tục mốc ${from + 1}/${total}` : `${total} mốc`}
-                {best > 0 && ` · kỷ lục ${best}`}
-              </p>
-            </div>
-            {from > 0 && (
-              <button className="btn max-sm:hidden" disabled={phase === "loading"} onClick={() => start(0)}>
-                <RotateCcw className="size-4" /> Từ đầu
-              </button>
-            )}
-            <button
-              className="btn border-cyan-400 bg-cyan-500 px-5 py-2.5 tracking-wide text-white uppercase shadow-[0_4px_0_#0e7490] hover:brightness-110 active:translate-y-0.5 active:shadow-[0_2px_0_#0e7490]"
-              disabled={phase === "loading"}
-              onClick={() => start()}
-            >
-              <Play className="size-4 fill-current" /> {phase === "loading" ? "Đang tải…" : "Bắt đầu"}
-            </button>
-          </div>
-        )}
+        <DeckMenu
+          tone="cyan"
+          icon={CloudRain}
+          intro={`Mỗi chủ đề là một mốc — bắn đủ ${MILESTONE_GOAL} từ để vượt mốc. Gõ từng chữ — gõ sai không bị ghi nên khỏi phải xoá; gõ a/o/u/s thay ä/ö/ü/ß cũng được.`}
+          decks={decks}
+          current={current}
+          onSelect={setDeck}
+          progressKey={(slug) => `wordrain-milestone-${slug}`}
+          cleared={cleared}
+          best={best}
+          loading={phase === "loading"}
+          error={error}
+          onStart={start}
+        />
       </div>
     );
   }
@@ -787,29 +686,7 @@ export default function WordRain({ decks }: { decks: DeckOption[] }) {
       </div>
 
       {/* Bàn phím trên màn hình (QWERTZ) */}
-      {keyboard && (
-        <div className="flex flex-col gap-1.5 select-none" onPointerDown={(e) => e.preventDefault()}>
-          {OSK_ROWS.map((row, r) => (
-            <div key={row} className="flex justify-center gap-1">
-              {r === 2 && (
-                <button className="btn h-11 flex-[1.5] px-0" disabled={phase !== "play"} onClick={() => handleKey("Backspace")} title="Xoá">
-                  <Delete className="size-5" />
-                </button>
-              )}
-              {[...row].map((ch) => (
-                <button key={ch} className="btn h-11 max-w-12 flex-1 px-0 text-base" disabled={phase !== "play"} onClick={() => handleKey(ch)}>
-                  {ch}
-                </button>
-              ))}
-              {r === 2 && (
-                <button className="btn h-11 flex-[1.5] px-0 text-xs" disabled={phase !== "play"} onClick={() => handleKey("Enter")} title="Chọn giọt khác">
-                  Bỏ chọn
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {keyboard && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: "Chọn giọt khác" }} />}
     </div>
   );
 }
