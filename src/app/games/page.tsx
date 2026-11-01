@@ -47,14 +47,14 @@ const BeeArt = () => (
 
 const GAMES: { href: string; title: string; description: string; icon: ComponentType<{ className?: string }>; art: ReactNode }[] = [
   {
-    href: "/games/mua-tu-vung",
+    href: "/games/word-rain",
     title: "Mưa từ vựng",
     description: "Nghĩa tiếng Việt rơi xuống — gõ đúng từ tiếng Đức để bắn trước khi chạm nước.",
     icon: CloudRain,
     art: <RainArt />,
   },
   {
-    href: "/games/ong-danh-van",
+    href: "/games/spelling-bee",
     title: "Ong đánh vần",
     description: "Nghe phát âm rồi gõ lại từ tiếng Đức đúng chính tả, từng chữ cái.",
     icon: Volume2,
