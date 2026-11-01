@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Nunito } from "next/font/google";
 import { SidebarSkeleton } from "@/components/Sidebar";
@@ -37,11 +38,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SidebarWithUser />
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-          <header className="relative flex h-14 items-center gap-3 px-3 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
+          {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
+          <header className="relative z-30 flex h-14 items-center gap-3 px-3 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
             <div className="flag-stripe absolute inset-x-0 bottom-0 h-1 shadow-[0_-1px_0_var(--border)]" />
-            <span className="text-lg font-extrabold lg:hidden">
-              <span className="hidden sm:inline">Deutsch </span>Shadowing
-            </span>
+            <Link href="/" className="flex items-center gap-2.5 text-lg font-extrabold">
+              <span className="text-2xl max-md:hidden">🇩🇪</span>
+              <span>
+                <span className="hidden sm:inline">Deutsch </span>Shadowing
+              </span>
+            </Link>
             <div className="ml-auto">
               <Suspense>
                 <UserMenu />
