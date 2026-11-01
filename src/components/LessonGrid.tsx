@@ -73,7 +73,7 @@ function LessonCard({ l }: { l: Item }) {
 }
 
 /** Dòng giải thích khoá bài dưới tiêu đề mục (admin bật khoá bài học) */
-function LockNote({ lock }: { lock: LockInfo }) {
+function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
   const price = (
     <span className="inline-flex items-center gap-1 font-bold text-gem">
       <Gem className="size-4" /> {lock.price.toLocaleString("vi-VN")}
@@ -82,7 +82,9 @@ function LockNote({ lock }: { lock: LockInfo }) {
   return (
     <p className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
       <Lock className="size-4" />
-      {!lock.loggedIn ? (
+      {admin ? (
+        <>Khoá bài đang bật — nhãn bên dưới là những gì khách thấy. Admin vẫn mở được mọi bài.</>
+      ) : !lock.loggedIn ? (
         <>Khách học thử được các bài “Miễn phí” — đăng nhập để tự chọn thêm {FREE_PICKS} bài.</>
       ) : lock.picksLeft > 0 ? (
         <>
@@ -96,7 +98,7 @@ function LockNote({ lock }: { lock: LockInfo }) {
 }
 
 /** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ */
-export default function LessonGrid({ lessons, lock }: { lessons: Item[]; lock?: LockInfo }) {
+export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
   const [level, setLevel] = useState<string | null>(null);
 
   if (!lessons.length) return <p className="text-sm text-muted">Chưa có bài học nào.</p>;
@@ -127,7 +129,7 @@ export default function LessonGrid({ lessons, lock }: { lessons: Item[]; lock?: 
           {levels.map((g) => chip(g.level, g.count))}
         </div>
       </SectionHeader>
-      {lock?.enabled && <LockNote lock={lock} />}
+      {lock?.enabled && <LockNote lock={lock} admin={admin} />}
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {shown.map((l) => (
           <LessonCard key={l.id} l={l} />

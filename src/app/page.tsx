@@ -14,7 +14,8 @@ const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (l
 /** Dữ liệu thẻ bài: chỉ gửi xuống trình duyệt những gì thẻ cần */
 function lessonItems(user: User | null) {
   const now = Date.now();
-  const access = accessOf(user);
+  // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
+  const access = accessOf(user?.role === "admin" ? null : user);
   return listLessons().map((l) => ({
     id: l.id,
     title: l.title,
@@ -31,7 +32,8 @@ function lessonItems(user: User | null) {
 async function Lessons() {
   await connection(); // đọc DB lúc request, không prerender
   const user = await getCurrentUser();
-  return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(user)} />;
+  const admin = user?.role === "admin";
+  return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
 }
 
 /** Đã đăng nhập: bài đang học dở (lưu trên server) · khách: video đã mở trong trình duyệt này */
