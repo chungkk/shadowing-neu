@@ -23,6 +23,10 @@ Mỗi bộ từ là 1 file JSON ở thư mục này. Thêm bộ mới:
 }
 ```
 
+- `topics` + trường `topic` của từng từ (không bắt buộc): chia bộ thành các chủ đề — xem `goethe-a1.json`.
+- `image` (không bắt buộc): hình minh hoạ `/emoji/<mã>.webp` — emoji 3D Fluent (Microsoft, MIT) trong `public/emoji/`, 160px WebP.
+  Lấy ảnh mới: `https://github.com/microsoft/fluentui-emoji/tree/main/assets/<Tên>/3D`, rồi `cwebp -q 80 -resize 160 160 in.png -o public/emoji/<mã>.webp`.
+  Không có ảnh → app dùng biểu tượng của chủ đề.
 - Danh từ ghi kèm mạo từ (`der/die/das …`): app tô màu theo giống, lưu vào sổ đã có sẵn mạo từ.
 - Từ viết thường / cụm nhiều từ được coi là không phải danh từ.
 - Khi người học thêm từ vào sổ: từ đã có thì giữ nguyên mục cũ, chỉ điền nghĩa / mạo từ nếu mục cũ còn trống.

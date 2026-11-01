@@ -90,7 +90,11 @@ export default function DeckWords({
           const a = article(w);
           const adding = busy === "all" ? !w.saved : busy.has(w.word);
           return (
-            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-4">
+            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-card-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {w.image && <img src={w.image} alt="" loading="lazy" className="size-8 object-contain" />}
+              </span>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:grid sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-x-4">
                 <p className="text-lg font-bold">
                   {a && <span className={GENDER[a]}>{a} </span>}

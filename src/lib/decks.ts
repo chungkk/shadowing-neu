@@ -22,7 +22,7 @@ type RawDeck = {
   cover?: string; // "/decks/<file>" trong public/, hoặc URL đầy đủ — không có thì app tự vẽ bìa
   order?: number;
   topics?: DeckTopic[]; // có thì trang bộ từ hiện danh sách chủ đề, bấm vào mới ra từ
-  words: { word: string; meaning: string; example?: string; plural?: string; topic?: string }[];
+  words: { word: string; meaning: string; example?: string; plural?: string; topic?: string; image?: string }[];
 };
 
 /** Chủ đề trong 1 bộ ("an-uong" · "Ăn uống" · "🍽️") */
@@ -35,6 +35,7 @@ export type DeckWord = {
   meaning: string;
   example: string;
   topic: string; // id chủ đề ("" = bộ không chia chủ đề)
+  image: string | null; // hình minh hoạ "/emoji/<mã>.webp" (Fluent Emoji 3D trong public/) — null: dùng biểu tượng chủ đề
 };
 export type Deck = {
   slug: string;
@@ -62,6 +63,7 @@ function toWord(w: RawDeck["words"][number]): DeckWord {
     meaning: w.meaning.trim(),
     example: w.example?.trim() ?? "",
     topic: w.topic ?? "",
+    image: w.image ?? null,
   };
 }
 

@@ -131,6 +131,7 @@ export type DeckWord = {
   meaning: string;
   example: string;
   topic: string;
+  image?: string | null; // hình minh hoạ "/emoji/<mã>.webp" trên server (deckCover → URL đầy đủ); null = dùng biểu tượng chủ đề
   saved: boolean; // đã có trong sổ
 };
 /**

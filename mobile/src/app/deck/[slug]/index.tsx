@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useState } from "react";
@@ -6,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { ModeBar, StudySession, type Mode } from "@/components/DeckStudy";
 import { Button, ErrorText, LevelBadge, styles } from "@/components/ui";
-import { api, type Deck, type DeckTopic, type DeckWord } from "@/lib/api";
+import { api, deckCover, type Deck, type DeckTopic, type DeckWord } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { notice, showError } from "@/lib/dialogs";
 import { C } from "@/lib/theme";
@@ -57,17 +58,21 @@ function WordRow({
         borderBottomRightRadius: last ? 14 : 0,
       }}
     >
-      {!first && <View style={{ height: 1, backgroundColor: C.border, marginLeft: 14 }} />}
+      {!first && <View style={{ height: 1, backgroundColor: C.border, marginLeft: 66 }} />}
       <View
         style={{
           flexDirection: "row",
           alignItems: "center",
           gap: 4,
-          paddingLeft: 14,
+          paddingLeft: 10,
           paddingRight: 4,
           paddingVertical: 10,
         }}
       >
+        {/* Hình minh hoạ (emoji 3D) */}
+        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.card2, alignItems: "center", justifyContent: "center", marginRight: 8 }}>
+          {!!w.image && <Image source={{ uri: deckCover(w.image) }} style={{ width: 32, height: 32 }} contentFit="contain" />}
+        </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ color: C.text, fontSize: 17, fontWeight: "600" }}>
             {hasArticle(w.gender) && <Text style={{ color: GENDER[w.gender] }}>{w.gender} </Text>}

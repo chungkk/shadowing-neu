@@ -1,10 +1,11 @@
+import { Image } from "expo-image";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { blankExample, checkGuess, fullWord, hintOf, quizOptions, type StudyMode } from "@shared/deck-study";
 import { shuffle } from "@shared/review";
 import { Button } from "@/components/ui";
-import type { DeckWord } from "@/lib/api";
+import { deckCover, type DeckWord } from "@/lib/api";
 import { C } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
 import { speakGerman } from "@/lib/speak";
@@ -36,10 +37,10 @@ function SpeakButton({ w }: { w: DeckWord }) {
   );
 }
 
-/** Ô biểu tượng chủ đề (thay cho ảnh minh hoạ) */
-const Icon = ({ icon }: { icon: string }) => (
-  <View style={{ width: 88, height: 88, borderRadius: 22, backgroundColor: "rgba(250,204,21,0.8)", alignItems: "center", justifyContent: "center" }}>
-    <Text style={{ fontSize: 44 }}>{icon}</Text>
+/** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
+const Icon = ({ icon, image }: { icon: string; image?: string | null }) => (
+  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: "rgba(250,204,21,0.8)", alignItems: "center", justifyContent: "center" }}>
+    {image ? <Image source={{ uri: deckCover(image) }} style={{ width: 76, height: 76 }} contentFit="contain" /> : <Text style={{ fontSize: 48 }}>{icon}</Text>}
   </View>
 );
 
@@ -126,7 +127,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
         >
           {!flipped ? (
             <>
-              <Text style={{ fontSize: 48 }}>{icon}</Text>
+              <Icon icon={icon} image={w.image} />
               <German w={w} size={30} />
               {!!w.plural && w.plural !== w.word && <Text style={{ color: C.muted, fontSize: 14 }}>die {w.plural}</Text>}
               <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700" }}>{t("study.tapFlip")}</Text>
@@ -154,7 +155,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
     const right = answerOf(w, mode);
     return (
       <View style={{ alignItems: "center", gap: 14 }}>
-        <Icon icon={icon} />
+        <Icon icon={icon} image={w.image} />
         {mode === "quiz" ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
             <German w={w} size={28} />
@@ -208,7 +209,8 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
   };
   return (
     <View style={{ alignItems: "center", gap: 14 }}>
-      <Icon icon={icon} />
+      {/* Nghe viết: ảnh gợi ý quá nhiều → chỉ biểu tượng chủ đề */}
+      <Icon icon={icon} image={mode === "listen" ? null : w.image} />
       {mode === "listen" ? (
         <Button
           title={t("study.replay")}

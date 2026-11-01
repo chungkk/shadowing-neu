@@ -21,6 +21,20 @@ const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
 
 const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
 
+/** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
+function Picture({ w, icon, className = "size-28" }: { w: DeckWord; icon: string; className?: string }) {
+  return (
+    <span className={`flex shrink-0 items-center justify-center rounded-3xl bg-amber/80 ${className}`}>
+      {w.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={w.image} alt="" className="size-3/4 object-contain drop-shadow-lg" />
+      ) : (
+        <span className="text-5xl">{icon}</span>
+      )}
+    </span>
+  );
+}
+
 /** "der Hund" — mạo từ tô màu theo giống */
 function German({ w, className = "" }: { w: DeckWord; className?: string }) {
   const art = w.gender === "der" || w.gender === "die" || w.gender === "das" ? w.gender : "";
@@ -94,7 +108,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         >
           {!flipped ? (
             <>
-              <span className="text-5xl">{icon}</span>
+              <Picture w={w} icon={icon} />
               <German w={w} className="text-3xl font-extrabold" />
               {!!w.plural && w.plural !== w.word && <span className="text-sm text-muted">die {w.plural}</span>}
               <span className="text-xs font-bold text-muted">Bấm để lật thẻ</span>
@@ -129,7 +143,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
     const right = answerOf(w, mode);
     return (
       <div className="flex flex-col items-center gap-5">
-        <span className="flex size-24 items-center justify-center rounded-2xl bg-amber/80 text-5xl">{icon}</span>
+        <Picture w={w} icon={icon} />
         {mode === "quiz" ? (
           <div className="flex items-center gap-1">
             <German w={w} className="text-3xl font-extrabold" />
@@ -175,7 +189,8 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
   };
   return (
     <div className="flex flex-col items-center gap-4">
-      <span className="flex size-24 items-center justify-center rounded-2xl bg-amber/80 text-5xl">{icon}</span>
+      {/* Nghe viết: ảnh lộ đáp án → chỉ hiện biểu tượng chủ đề */}
+      <Picture w={mode === "listen" ? { ...w, image: null } : w} icon={icon} />
       {mode === "listen" ? (
         <button type="button" className="btn btn-amber h-14 px-6 text-base" onClick={() => speak(fullWord(w), 0.85)}>
           <Volume2 className="size-6" /> Nghe lại
