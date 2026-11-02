@@ -10,7 +10,7 @@ export async function GET() {
   return Response.json({ user: publicUser(user), token: createToken(user.id) });
 }
 
-/** PATCH { name?, email?, lang? } → sửa thông tin / ngôn ngữ giao diện */
+/** PATCH { name?, lang? } → sửa thông tin / ngôn ngữ giao diện (đổi email: /me/email/code rồi /me/email) */
 export async function PATCH(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;

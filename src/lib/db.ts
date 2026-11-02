@@ -215,6 +215,12 @@ function open() {
   if (!userCols.some((c) => c.name === "lang")) db.exec("ALTER TABLE users ADD COLUMN lang TEXT");
   // Ảnh đại diện: thời điểm đổi ảnh (ms) — làm phiên bản cho URL ảnh; NULL = chưa có ảnh (file ở AVATAR_DIR)
   if (!userCols.some((c) => c.name === "avatar_at")) db.exec("ALTER TABLE users ADD COLUMN avatar_at INTEGER");
+  // Email đã được chứng minh sở hữu (mã gửi qua email / Google, Apple xác nhận). Tài khoản cũ từng đổi email không cần xác minh
+  // nên mặc định 0; riêng email trùng với tài khoản Google / Apple đã liên kết thì coi như đã xác minh
+  if (!userCols.some((c) => c.name === "email_verified")) {
+    db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
+    db.exec("UPDATE users SET email_verified = 1 WHERE email IN (SELECT email FROM oauth_accounts)");
+  }
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
@@ -467,6 +473,7 @@ export type User = {
   role: Role;
   lang: string | null;
   hasPassword: boolean; // false = tài khoản tạo bằng Google / Apple, chưa đặt mật khẩu
+  emailVerified: boolean; // false = tài khoản cũ, chưa chứng minh sở hữu email (xem account.ts)
   createdAt: string;
   avatarAt: number | null; // ms lúc đổi ảnh đại diện, null = chưa có
 };
@@ -480,6 +487,7 @@ type UserRow = {
   lang: string | null;
   created_at: string;
   avatar_at: number | null;
+  email_verified: number;
 };
 
 const toUser = (r: UserRow): User => ({
@@ -489,6 +497,7 @@ const toUser = (r: UserRow): User => ({
   role: r.role,
   lang: r.lang ?? null,
   hasPassword: !r.password_hash.startsWith(NO_PASSWORD),
+  emailVerified: !!r.email_verified,
   createdAt: r.created_at,
   avatarAt: r.avatar_at ?? null,
 });
@@ -518,8 +527,17 @@ export function emailTaken(email: string, exceptId?: number): boolean {
   return !!conn().prepare("SELECT 1 FROM users WHERE email = ? AND id != ?").get(email, exceptId ?? -1);
 }
 
-export function updateUserProfile(id: number, p: { name: string; email: string }) {
-  conn().prepare("UPDATE users SET name = ?, email = ? WHERE id = ?").run(p.name, p.email, id);
+export function updateUserName(id: number, name: string) {
+  conn().prepare("UPDATE users SET name = ? WHERE id = ?").run(name, id);
+}
+
+/** Đặt email mới — chỉ gọi sau khi đã xác nhận mã gửi tới email đó */
+export function setVerifiedEmail(id: number, email: string) {
+  conn().prepare("UPDATE users SET email = ?, email_verified = 1 WHERE id = ?").run(email, id);
+}
+
+export function markEmailVerified(id: number) {
+  conn().prepare("UPDATE users SET email_verified = 1 WHERE id = ?").run(id);
 }
 
 export function setUserLang(id: number, lang: string) {
@@ -530,9 +548,10 @@ export function setUserPassword(id: number, passwordHash: string) {
   conn().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id);
 }
 
+/** Chỉ dùng khi email đã được xác minh (mã gửi qua email / Google, Apple xác nhận) */
 export function createUser(u: { email: string; name: string; passwordHash: string; role: Role; lang?: string | null }): number {
   const res = conn()
-    .prepare("INSERT INTO users (email, name, password_hash, role, lang) VALUES (?, ?, ?, ?, ?)")
+    .prepare("INSERT INTO users (email, name, password_hash, role, lang, email_verified) VALUES (?, ?, ?, ?, ?, 1)")
     .run(u.email, u.name, u.passwordHash, u.role, u.lang ?? null);
   return Number(res.lastInsertRowid);
 }
@@ -586,7 +605,7 @@ export function setUserRole(id: number, role: Role) {
 }
 
 export function deleteUser(id: number) {
-  conn().prepare("DELETE FROM oauth_accounts WHERE user_id = ?").run(id);
+  deleteOAuthLinks(id);
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab_examples WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM starred_sentences WHERE user_id = ?").run(id);
@@ -698,6 +717,10 @@ export function linkOAuth(provider: OAuthProvider, subject: string, userId: numb
   conn()
     .prepare("INSERT OR IGNORE INTO oauth_accounts (provider, subject, user_id, email) VALUES (?, ?, ?, ?)")
     .run(provider, subject, userId, email);
+}
+
+export function deleteOAuthLinks(userId: number) {
+  conn().prepare("DELETE FROM oauth_accounts WHERE user_id = ?").run(userId);
 }
 
 export function setOAuthRefreshToken(provider: OAuthProvider, subject: string, token: string) {

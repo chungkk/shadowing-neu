@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition, type ReactNode } from "react";
-import { Camera, KeyRound, LogOut, ShieldAlert, Trash2, UserRound } from "lucide-react";
-import { deleteAccount, deleteAvatar, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/account-actions";
+import { Camera, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
+import { deleteAccount, deleteAvatar, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/account-actions";
 import { logout } from "@/app/auth-actions";
 import Avatar from "./Avatar";
 
@@ -57,6 +57,92 @@ async function squareJpeg(file: File): Promise<Blob> {
 }
 
 const joined = (createdAt: string) => createdAt.slice(0, 10).split("-").reverse().join("/");
+
+/** Đổi email: bước 1 nhập email mới (+ mật khẩu) → gửi mã, bước 2 nhập mã */
+function EmailChangeForm({ email: current, hasPassword }: { email: string; hasPassword: boolean }) {
+  const [state, action, confirming] = useActionState(submitEmailChange, {});
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [sentTo, setSentTo] = useState(""); // khác rỗng = đã gửi mã, đang chờ nhập
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    setSending(true);
+    setError("");
+    const err = await requestEmailChange({ email, password });
+    setSending(false);
+    if (err) return setError(err);
+    setSentTo(email.trim().toLowerCase());
+    setPassword("");
+  };
+
+  // Đổi xong: `current` đã là email mới → quay lại bước 1
+  const waiting = sentTo && sentTo !== current;
+
+  if (!waiting) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+      >
+        <Section
+          icon={Mail}
+          title="Đổi email"
+          desc={`Email hiện tại: ${current}. Mã xác nhận sẽ được gửi tới email mới.`}
+          footer={
+            <button className="btn btn-primary" disabled={sending}>
+              {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
+            </button>
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="field text-sm">
+              Email mới
+              <input type="email" className="input text-foreground" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+            </label>
+            {hasPassword && (
+              <label className="field text-sm">
+                Mật khẩu hiện tại
+                <input type="password" className="input text-foreground" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+              </label>
+            )}
+          </div>
+          <Status state={{ error, ok: state.ok }} />
+        </Section>
+      </form>
+    );
+  }
+
+  return (
+    <form action={action}>
+      <Section
+        icon={Mail}
+        title="Đổi email"
+        desc={`Đã gửi mã 6 số tới ${sentTo}. Kiểm tra cả thư mục Spam.`}
+        footer={
+          <>
+            <button type="button" className="btn" onClick={() => setSentTo("")}>
+              Quay lại
+            </button>
+            <button className="btn btn-primary" disabled={confirming}>
+              {confirming ? "Đang lưu…" : "Xác nhận"}
+            </button>
+          </>
+        }
+      >
+        <input type="hidden" name="email" value={sentTo} />
+        <label className="field text-sm">
+          Mã xác nhận
+          <input name="code" className="input text-foreground" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus />
+        </label>
+        <Status state={{ error: state.error }} />
+      </Section>
+    </form>
+  );
+}
 
 /** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · đăng xuất / xoá tài khoản */
 export default function SettingsForms({
@@ -148,34 +234,23 @@ export default function SettingsForms({
         <Section
           icon={UserRound}
           title="Thông tin cá nhân"
-          desc="Tên hiển thị và email dùng để đăng nhập."
+          desc="Tên hiển thị của bạn."
           footer={
             <button className="btn btn-primary" disabled={savingProfile}>
               {savingProfile ? "Đang lưu…" : "Lưu thay đổi"}
             </button>
           }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="field text-sm">
-              Tên hiển thị
-              <input name="name" className="input text-foreground" defaultValue={user.name} maxLength={60} required />
-            </label>
-            <label className="field text-sm">
-              Email
-              <input
-                name="email"
-                type="email"
-                className="input text-foreground disabled:opacity-60"
-                defaultValue={user.email}
-                disabled={fixedAdmin}
-                required
-              />
-              {fixedAdmin && <span className="text-xs">Email admin chính cố định theo biến ADMIN_EMAIL.</span>}
-            </label>
-          </div>
+          <label className="field text-sm">
+            Tên hiển thị
+            <input name="name" className="input text-foreground" defaultValue={user.name} maxLength={60} required />
+          </label>
           <Status state={profile} />
         </Section>
       </form>
+
+      {/* Email admin chính cố định theo biến ADMIN_EMAIL */}
+      {!fixedAdmin && <EmailChangeForm email={user.email} hasPassword={hasPassword} />}
 
       {/* Mật khẩu — key: form tự xoá trắng sau khi đổi thành công */}
       <form key={pw.ok} action={pwAction}>

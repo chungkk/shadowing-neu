@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { changePassword, destroySession, envAdminEmail, getCurrentUser, requireUser, verifyPassword } from "@/lib/auth";
-import { addWord, aiWordMeaning, editProfile, removeAccount } from "@/lib/account";
+import { addWord, aiWordMeaning, confirmEmailChange, editProfile, removeAccount, sendEmailChangeCode } from "@/lib/account";
 import { AVATAR_MAX_BYTES, imageType, removeAvatar, saveAvatar } from "@/lib/avatar";
 import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
 import { addDeckEntries, getDeck } from "@/lib/decks";
@@ -14,13 +14,25 @@ export type FormResult = { error?: string; ok?: string };
 
 export async function updateProfile(_: FormResult, formData: FormData): Promise<FormResult> {
   const user = await requireUser("/settings");
-  const error = editProfile(user, {
-    name: String(formData.get("name") ?? ""),
-    email: String(formData.get("email") ?? ""),
-  });
+  const error = editProfile(user, { name: String(formData.get("name") ?? "") });
   if (error) return { error };
   refresh();
   return { ok: "Đã lưu thông tin" };
+}
+
+/** Đổi email bước 1: kiểm tra mật khẩu rồi gửi mã tới email mới. Trả về lỗi hoặc null */
+export async function requestEmailChange(input: { email: string; password: string }): Promise<string | null> {
+  const user = await requireUser("/settings");
+  return sendEmailChangeCode(user, { email: String(input.email ?? ""), password: String(input.password ?? "") });
+}
+
+/** Đổi email bước 2: nhập đúng mã → đổi email */
+export async function submitEmailChange(_: FormResult, formData: FormData): Promise<FormResult> {
+  const user = await requireUser("/settings");
+  const error = confirmEmailChange(user, { email: String(formData.get("email") ?? ""), code: String(formData.get("code") ?? "") });
+  if (error) return { error };
+  refresh();
+  return { ok: "Đã đổi email" };
 }
 
 export async function updatePassword(_: FormResult, formData: FormData): Promise<FormResult> {

@@ -303,7 +303,7 @@ function Consent() {
   );
 }
 
-type Panel = "profile" | "password" | "delete" | null;
+type Panel = "profile" | "email" | "password" | "delete" | null;
 
 function Signed({ user }: { user: User }) {
   const { logout, setUser, setToken } = useAuth();
@@ -312,7 +312,10 @@ function Signed({ user }: { user: User }) {
   const [words, setWords] = useState<number | null>(null);
   const [stats, setStats] = useState<Pick<Stats, "streak" | "dueToday"> | null>(null);
   const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPw, setEmailPw] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [codeSentTo, setCodeSentTo] = useState(""); // khác rỗng = đã gửi mã tới email mới, đang chờ nhập
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [delPw, setDelPw] = useState("");
@@ -354,9 +357,27 @@ function Signed({ user }: { user: User }) {
 
   const saveProfile = () =>
     run(async () => {
-      const r = await api<{ user: User }>("/me", { method: "PATCH", body: { name, email } });
+      const r = await api<{ user: User }>("/me", { method: "PATCH", body: { name } });
       setUser(r.user);
       setMsg(t("acc.saved"));
+    });
+
+  const sendEmailCode = () =>
+    run(async () => {
+      await api("/me/email/code", { method: "POST", body: { email: newEmail, password: emailPw } });
+      setCodeSentTo(newEmail.trim().toLowerCase());
+      setEmailPw("");
+      setEmailCode("");
+    });
+
+  const confirmEmail = () =>
+    run(async () => {
+      const r = await api<{ user: User }>("/me/email", { method: "POST", body: { email: codeSentTo, code: emailCode } });
+      setUser(r.user);
+      setCodeSentTo("");
+      setNewEmail("");
+      setEmailCode("");
+      setMsg(t("acc.emailChanged"));
     });
 
   const changePassword = () =>
@@ -385,7 +406,7 @@ function Signed({ user }: { user: User }) {
       {!!msg && <Text style={{ color: C.accent, fontWeight: "600" }}>{msg}</Text>}
     </>
   );
-  const nameChanged = name.trim() !== user.name || email.trim() !== user.email;
+  const nameChanged = name.trim() !== user.name;
 
   return (
     <>
@@ -394,9 +415,27 @@ function Signed({ user }: { user: User }) {
       <Section title={t("acc.sectionAccount")}>
         <Row first icon="person.text.rectangle" iconBg="#2563eb" title={t("acc.profile")} open={panel === "profile"} onPress={() => toggle("profile")}>
           <Input value={name} onChangeText={setName} placeholder={t("acc.displayName")} />
-          <Input value={email} onChangeText={setEmail} placeholder={t("auth.email")} autoCapitalize="none" keyboardType="email-address" />
           {feedback}
           <Button title={t("acc.save")} variant="primary" onPress={saveProfile} loading={busy} disabled={!nameChanged} />
+        </Row>
+        <Row icon="envelope.fill" iconBg="#0891b2" title={t("acc.changeEmail")} open={panel === "email"} onPress={() => toggle("email")}>
+          {codeSentTo ? (
+            <>
+              <Text style={styles.muted}>{t("auth.codeSub", { email: codeSentTo })}</Text>
+              <Input value={emailCode} onChangeText={setEmailCode} placeholder={t("auth.code")} keyboardType="number-pad" maxLength={6} />
+              {feedback}
+              <Button title={t("acc.confirmEmail")} variant="primary" onPress={confirmEmail} loading={busy} disabled={emailCode.length !== 6} />
+              <Button title={t("acc.backEmail")} onPress={() => setCodeSentTo("")} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.muted}>{user.email}</Text>
+              <Input value={newEmail} onChangeText={setNewEmail} placeholder={t("acc.newEmail")} autoCapitalize="none" keyboardType="email-address" />
+              {hasPassword && <Input value={emailPw} onChangeText={setEmailPw} placeholder={t("acc.currentPw")} secureTextEntry />}
+              {feedback}
+              <Button title={t("auth.sendCode")} variant="primary" onPress={sendEmailCode} loading={busy} disabled={!newEmail.trim() || (hasPassword && !emailPw)} />
+            </>
+          )}
         </Row>
         <Row
           icon="key.fill"
