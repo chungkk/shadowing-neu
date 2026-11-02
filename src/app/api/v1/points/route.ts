@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
-import { awardDictPoint, chargeDictHints, dictationSentence, getPointIdx, getPoints } from "@/lib/db";
+import { awardDictPoint, chargeDictHints, getPointIdx, getPoints } from "@/lib/db";
 import { checkDictation } from "@/lib/dictation";
 import { apiUser, body, fail, str } from "@/lib/api";
-import { lockedSource } from "@/lib/access";
+import { dictationSentenceFor, lockedSource } from "@/lib/access";
 import { allow } from "@/lib/rate-limit";
 
 /**
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST { source, idx, input, tz? } → { awarded, total, today } (câu đã tính rồi → awarded = false): input = câu đã chép, server tự chấm lại
- * vì điểm mua được bài. Chỉ tính ở bài đã đăng có bật Chính tả (video tự dán chỉ Shadowing, không có chính tả)
+ * vì điểm mua được bài. Chỉ tính ở bài có bật Chính tả mà người này được xem (video tự dán chỉ Shadowing, không có chính tả)
  * POST { source, idx, hints, tz? } → { total, today }: vừa xem `hints` từ của câu idx → trừ điểm
  */
 export async function POST(req: Request) {
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     return Response.json(chargeDictHints(user.id, source, b.idx, b.hints, tzOf(b.tz)));
   }
   const [, kind, id] = source.split("/");
-  const sentence = kind === "lesson" && /^\d+$/.test(id) ? dictationSentence(Number(id), b.idx) : null;
+  const sentence = kind === "lesson" && /^\d+$/.test(id) ? dictationSentenceFor(user, Number(id), b.idx) : null;
   if (sentence === null) return fail("Không có câu này trong bài chính tả");
   const input = str(b.input);
   // Dài quá câu gốc (ä → ae dài gấp đôi là tối đa) → khỏi chấm, tránh tốn CPU

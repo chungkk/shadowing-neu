@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { listLessons } from "@/lib/db";
 import { getCurrentUser, type User } from "@/lib/auth";
-import { accessOf, lockInfo } from "@/lib/access";
+import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
 import ContinueLearning from "@/components/ContinueLearning";
@@ -16,7 +15,7 @@ function lessonItems(user: User | null) {
   const now = Date.now();
   // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
   const access = accessOf(user?.role === "admin" ? null : user);
-  return listLessons().map((l) => ({
+  return lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => ({
     id: l.id,
     title: l.title,
     slug: l.slug,

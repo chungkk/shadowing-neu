@@ -35,9 +35,10 @@ function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => v
           text: t("lock.unlock"),
           onPress: () => {
             setBusy(true);
-            api(`/lessons/${lesson.id}/unlock`, { method: "POST" }).then(onUnlocked, (e: Error) => {
+            api(`/lessons/${lesson.id}/unlock`, { method: "POST", body: { expected: lock.picksLeft > 0 ? "pick" : "buy" } }).then(onUnlocked, (e: Error) => {
               setBusy(false);
               showError(e);
+              if (e instanceof ApiError && e.status === 409) onUnlocked(); // màn hình đã cũ → tải lại để hiện đúng cách mở
             });
           },
         },

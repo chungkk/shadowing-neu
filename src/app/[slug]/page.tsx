@@ -5,16 +5,16 @@ import ShadowPlayer from "@/components/ShadowPlayer";
 import LockedLesson from "@/components/LockedLesson";
 import { getLesson, getLessonBySlug } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { accessOf, lockInfo, lockSettings } from "@/lib/access";
+import { accessOf, canViewLesson, lockInfo, lockSettings } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 
 /** Trang bài học: ckk.pro/<slug> (link cũ /lesson/<id> chuyển hướng 308 về đây) */
 async function LessonView({ params }: PageProps<"/[slug]">) {
   const { slug } = await params;
   const lesson = getLessonBySlug(slug);
-  // Bài nháp chỉ admin xem được
+  // Bài nháp chỉ admin và người đã trả để mở xem được
   const user = await getCurrentUser();
-  if (!lesson || (!lesson.published && user?.role !== "admin")) notFound();
+  if (!lesson || !canViewLesson(user, lesson)) notFound();
   // Admin bật khoá bài học mà người này chưa mở bài → màn mở khoá (không gửi phụ đề xuống trình duyệt)
   if (accessOf(user)(lesson.id) === "locked") {
     const free = lockSettings()
@@ -25,6 +25,7 @@ async function LessonView({ params }: PageProps<"/[slug]">) {
     return <LockedLesson lesson={{ id, title, level, videoId, description }} lock={lockInfo(user)} freeLessons={free} />;
   }
 
+  const draft = !lesson.published && user?.role === "admin";
   return (
     <ShadowPlayer
       title={lesson.title}
@@ -36,9 +37,9 @@ async function LessonView({ params }: PageProps<"/[slug]">) {
       sourceUrl={`/lesson/${lesson.id}`}
       allowDictation={lesson.dictation}
     >
-      {(!lesson.published || lesson.description) && (
+      {(draft || lesson.description) && (
         <div className="flex flex-col gap-1 rounded-xl bg-card-2/60 p-3 text-sm">
-          {!lesson.published && <span className="font-bold text-amber">Bản nháp — chỉ admin xem được</span>}
+          {draft && <span className="font-bold text-amber">Bản nháp — chỉ admin xem được</span>}
           {lesson.description && <p className="whitespace-pre-line text-muted">{lesson.description}</p>}
         </div>
       )}

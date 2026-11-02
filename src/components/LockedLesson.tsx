@@ -44,7 +44,7 @@ export function UnlockBox({
     if (confirmFirst && !confirm(ask)) return;
     start(async () => {
       setError("");
-      const r = await unlockLessonAction(lesson.id);
+      const r = await unlockLessonAction(lesson.id, lock.picksLeft > 0 ? "pick" : "buy");
       if (r.error) return setError(r.error);
       if (r.points !== undefined) emitPoints({ total: r.points });
       setDone(true);

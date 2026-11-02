@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
-import { listLessons, listProgress, type Progress } from "@/lib/db";
+import { lessonsFor } from "@/lib/access";
+import { listProgress, type Progress } from "@/lib/db";
 import { SectionHeader } from "./LessonGrid";
 
 const SHOWN = 4;
@@ -17,7 +18,7 @@ const percent = (p: Progress) => {
 
 /** Các bài / video đang học dở của người đang đăng nhập, mới nhất trước (tiến độ đồng bộ với app) */
 export default function ContinueLearning({ userId }: { userId: number }) {
-  const lessons = new Map(listLessons().map((l) => [String(l.id), l]));
+  const lessons = new Map(lessonsFor(userId).map((l) => [String(l.id), l]));
   const items = listProgress(userId)
     .filter((p) => percent(p) < 100)
     .map((p) => {

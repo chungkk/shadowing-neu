@@ -331,12 +331,6 @@ export function getLesson(id: number): Lesson | null {
   return { ...rest, segments: JSON.parse(r.segments!) };
 }
 
-/** Câu idx (sau khi gộp, như màn học) của bài đã đăng có bật Chính tả — null = không có. Để server chấm lại trước khi cộng điểm */
-export function dictationSentence(id: number, idx: number): string | null {
-  const l = getLesson(id);
-  return l?.published && l.dictation ? (mergeIntoSentences(l.segments)[idx]?.text ?? null) : null;
-}
-
 /** Các bài đã đăng dùng video này (để khoá bài không bị lách qua /watch/<videoId>) */
 export function publishedLessonsByVideo(videoId: string): { id: number; slug: string }[] {
   return conn().prepare("SELECT id, slug FROM lessons WHERE video_id = ? AND published = 1 ORDER BY id").all(videoId) as { id: number; slug: string }[];
@@ -999,6 +993,13 @@ export function unlockedLessonIds(userId: number): Set<number> {
   );
 }
 
+/** Các bài người này đã trả để mở (kim cương hoặc lượt chọn) — bài bị ẩn sau đó vẫn học được */
+export function paidLessonIds(userId: number): Set<number> {
+  return new Set(
+    (conn().prepare("SELECT lesson_id FROM lesson_unlocks WHERE user_id = ? AND kind IN ('buy', 'pick')").all(userId) as { lesson_id: number }[]).map((r) => r.lesson_id),
+  );
+}
+
 /** Số lượt chọn bài miễn phí đã dùng */
 export function lessonPicksUsed(userId: number): number {
   return (conn().prepare("SELECT COUNT(*) AS n FROM lesson_unlocks WHERE user_id = ? AND kind = 'pick'").get(userId) as { n: number }).n;
@@ -1023,14 +1024,15 @@ export function lessonUnlockStats(): { pick: number; buy: number; legacy: number
     .get() as { pick: number; buy: number; legacy: number; users: number; spent: number };
 }
 
-/** Bật khoá bài: ai đã có tiến độ bài nào thì giữ quyền học tiếp bài đó (không tốn lượt chọn / điểm) */
-export function unlockLessonsWithProgress() {
+/** Bật khoá bài / bỏ miễn phí bài lessonId: ai đã có tiến độ bài nào thì giữ quyền học tiếp bài đó (không tốn lượt chọn / điểm) */
+export function unlockLessonsWithProgress(lessonId?: number) {
   conn()
     .prepare(
       `INSERT OR IGNORE INTO lesson_unlocks (user_id, lesson_id, kind, cost, at)
-       SELECT p.user_id, l.id, 'legacy', 0, ? FROM progress p JOIN lessons l ON p.source = '/lesson/' || l.id`,
+       SELECT p.user_id, l.id, 'legacy', 0, ? FROM progress p JOIN lessons l ON p.source = '/lesson/' || l.id
+       WHERE ? IS NULL OR l.id = ?`,
     )
-    .run(Date.now());
+    .run(Date.now(), lessonId ?? null, lessonId ?? null);
 }
 
 export function setLessonPublished(id: number, published: boolean) {
