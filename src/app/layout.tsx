@@ -5,6 +5,7 @@ import { Geist_Mono, Nunito } from "next/font/google";
 import { HeaderNav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
 import ShareBar from "@/components/ShareBar";
+import SiteFooter from "@/components/SiteFooter";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </header>
           {/* share-gutter: chừa lề phải khi thanh chia sẻ đang mở (globals.css) */}
           <div className="share-gutter flex min-w-0 flex-1 flex-col">{children}</div>
+          <SiteFooter />
         </div>
         <Suspense>
           <ShareBar />
