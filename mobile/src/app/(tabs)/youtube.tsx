@@ -14,7 +14,7 @@ import { FORM_MAX, useLayout } from "@/lib/layout";
 import { searchVideos } from "@/lib/youtube-device";
 
 /** Ô nhập là link (hoặc ID video) chứ không phải từ khoá. ID trần phải có số / "-" / "_" để không nhầm từ 11 chữ như "Deutschland". */
-const looksLikeLink = (s: string) => /youtu\.?be|youtube\./i.test(s) || (/^[\w-]{11}$/.test(s) && /[\d_-]/.test(s));
+const looksLikeLink = (s: string) => /youtu\.be\/|youtube(-nocookie)?\.com\//i.test(s) || (/^[\w-]{11}$/.test(s) && /[\d_-]/.test(s));
 
 /** 1 kết quả: ảnh bìa (kèm thời lượng) · tiêu đề · kênh · lượt xem */
 function VideoRow({ v, onPress }: { v: VideoHit; onPress: () => void }) {

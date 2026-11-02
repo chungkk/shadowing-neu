@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { extractVideoId } from "@/lib/youtube-id";
 
@@ -9,7 +9,7 @@ export default function YouTubeUrlForm() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pending, startTransition] = useTransition(); // tự hết khi điều hướng xong — state của trang được giữ lại khi bấm Back
 
   return (
     <form
@@ -19,8 +19,7 @@ export default function YouTubeUrlForm() {
         const id = extractVideoId(url);
         if (!id) return setError("Link YouTube không hợp lệ");
         setError("");
-        setPending(true);
-        router.push(`/watch/${id}`);
+        startTransition(() => router.push(`/watch/${id}`));
       }}
     >
       <div className="flex flex-col gap-3 sm:flex-row">
