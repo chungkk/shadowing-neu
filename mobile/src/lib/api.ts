@@ -49,6 +49,8 @@ export type Progress = {
   dictDone: Record<string, DictResult>;
   seen?: number[]; // các câu đã thực sự nghe (server cũ không gửi)
   dictPick?: number[]; // Chính tả: các câu của lượt đang làm (server cũ không gửi)
+  dictRoundEarned?: number[]; // các câu được điểm trong lượt đang làm (server cũ không gửi)
+  dictRoundSpent?: Record<number, number>; // số từ đã xem của từng câu trong lượt đang làm (server cũ không gửi)
   updatedAt: number;
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */

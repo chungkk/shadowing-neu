@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { deleteProgress, getProgress, listProgress, saveProgress, type DictResult } from "@/lib/db";
+import { deleteProgress, getProgress, getRoundPoints, listProgress, saveProgress, type DictResult } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { lockedSource } from "@/lib/access";
 
@@ -12,12 +12,15 @@ const SOURCE_RE = /^\/(lesson|watch)\/[\w-]{1,64}$/;
 const LEVELS = ["easy", "normal", "hard"];
 const int = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null);
 
-/** GET ?source=… → { progress } (null nếu chưa học) · không có source → { progress: [...] } mọi bài, mới nhất trước */
+/** GET ?source=… → { progress } (null nếu chưa học), kèm điểm của lượt chính tả đang làm · không có source → { progress: [...] } mọi bài, mới nhất trước */
 export async function GET(req: NextRequest) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   const source = req.nextUrl.searchParams.get("source");
-  if (source) return Response.json({ progress: SOURCE_RE.test(source) ? getProgress(user.id, source) : null });
+  if (source) {
+    const p = SOURCE_RE.test(source) ? getProgress(user.id, source) : null;
+    return Response.json({ progress: p && { ...p, ...getRoundPoints(user.id, source, p) } });
+  }
   // Danh sách: bỏ chi tiết từng câu, chỉ trả số câu chính tả đã làm / số câu đã nghe
   return Response.json({
     progress: listProgress(user.id).map(({ dictDone, seen, ...p }) => ({ ...p, dictCount: Object.keys(dictDone).length, seenCount: seen.length })),
@@ -28,7 +31,7 @@ export async function GET(req: NextRequest) {
  * PUT { source, title, idx, total, mode, dictLevel, dictDone, seen?, dictPick? } → lưu.
  * dictDone được GỘP với bản đã lưu (học trên 2 máy cùng lúc không mất câu nào); kết quả mới ghi đè câu trùng.
  * seen (các câu đã nghe) cũng GỘP, kèm câu đang học khi ở Shadowing — client cũ / web không gửi seen thì vẫn tăng dần.
- * dictPick (lượt chính tả đang làm) GHI ĐÈ — lượt mới thay lượt cũ; không gửi thì giữ lượt đã lưu.
+ * dictPick (lượt chính tả đang làm) GHI ĐÈ — lượt mới thay lượt cũ; không gửi thì giữ lượt đã lưu. Đổi lượt → ghi lại lúc bắt đầu lượt.
  */
 export async function PUT(req: Request) {
   const user = await apiUser();
@@ -69,6 +72,7 @@ export async function PUT(req: Request) {
     dictDone: { ...prev?.dictDone, ...incoming },
     seen: [...seen].sort((x, y) => x - y),
     dictPick,
+    dictRoundAt: prev && JSON.stringify(prev.dictPick) === JSON.stringify(dictPick) ? prev.dictRoundAt : Date.now(),
   });
   return Response.json({ progress: getProgress(user.id, source) });
 }

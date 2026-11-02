@@ -53,6 +53,9 @@ export function splitWords(text: string): string[] {
   return splitTokens(text).map((t) => t.text);
 }
 
+/** Câu có chữ / số để chép — câu chỉ gồm ký hiệu ("♪ ♪", "…") không chép được, không bao giờ "xong" */
+export const hasWords = (text: string) => splitTokens(text).length > 0;
+
 function editDistance(a: string, b: string): number {
   const dp = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
@@ -180,11 +183,11 @@ const shuffle = <T,>(a: T[]) => {
 
 /**
  * Chọn ngẫu nhiên 5–10 câu cho 1 lượt chính tả, xếp theo thứ tự trong video.
- * Chỉ lấy câu chưa làm (`done`) → các lượt nối tiếp nhau dần phủ hết bài; [] = đã làm hết.
+ * Chỉ lấy câu chưa làm (`done`) và có chữ để chép → các lượt nối tiếp nhau dần phủ hết bài; [] = đã làm hết.
  * Ưu tiên câu dài vừa phải (4–25 từ): câu quá ngắn ("Ja.") chép không có gì để luyện, câu quá dài dễ nản.
  */
 export function pickDictation(texts: string[], done: Record<number, { correct: number; total: number }>): number[] {
-  const left = texts.flatMap((_, i) => (done[i] ? [] : [i]));
+  const left = texts.flatMap((t, i) => (done[i] || !hasWords(t) ? [] : [i]));
   const fits = (i: number) => {
     const n = wordCount(texts[i]);
     return n >= 4 && n <= 25;

@@ -23,7 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
-import { pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@/lib/dictation";
+import { hasWords, pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
 import { clientApi } from "@/lib/client-api";
@@ -84,6 +84,8 @@ type Progress = {
   dictDone: Record<string, DictResult>;
   seen?: number[];
   dictPick?: number[];
+  dictRoundEarned?: number[];
+  dictRoundSpent?: Record<number, number>;
 };
 type VocabItem = { id: number; word: string; meaning: string; context: string };
 
@@ -245,6 +247,7 @@ export default function ShadowPlayer({
     [rawSegments, settings.merge],
   );
   const texts = useMemo(() => segments.map((s) => s.text), [segments]);
+  const dictTotal = useMemo(() => texts.filter(hasWords).length, [texts]); // số câu chép được (bỏ câu chỉ có ký hiệu)
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
@@ -611,6 +614,8 @@ export default function ShadowPlayer({
   };
   const prev = () => prevIdx !== undefined && go(prevIdx);
   const next = () => nextIdx !== undefined && go(nextIdx);
+  // Chính tả: hết câu phía sau mà lượt còn câu chưa chép (đã bỏ qua) → quay lại câu đó
+  const dictNextIdx = nextIdx ?? dictPick.find((k) => !dictDone[k] && k !== idx);
   /** Câu đang chọn không có sao → về câu ⭐ gần nhất */
   const toNearestStarred = () => {
     const i = starredIdx.find((k) => k >= idx) ?? starredIdx.at(-1);
@@ -635,6 +640,8 @@ export default function ShadowPlayer({
     const round = pickDictation(texts, dictDone);
     setDictPick(round);
     setDictDrafts({});
+    setEarned(new Set());
+    setSpent({});
     if (round.length) select(round[0]);
   };
   const changePractice = (p: Settings["practice"]) => {
@@ -666,7 +673,7 @@ export default function ShadowPlayer({
         const done = Object.fromEntries(Object.entries(p.dictDone).filter(([k]) => Number(k) < segments.length));
         const dict = allowDictation && p.mode === "dictation";
         // Lượt chính tả đã lưu (chưa có mà đang ở Chính tả → chọn lượt mới)
-        const pick = (p.dictPick ?? []).filter((k) => k < segments.length);
+        const pick = (p.dictPick ?? []).filter((k) => k < segments.length && hasWords(texts[k]));
         const round = pick.length || !dict ? pick : pickDictation(texts, done);
         let i = Math.min(p.idx, segments.length - 1);
         if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
@@ -678,6 +685,8 @@ export default function ShadowPlayer({
         if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") patch.dictLevel = p.dictLevel;
         update(patch);
         setDictDone(done);
+        setEarned(new Set(p.dictRoundEarned ?? []));
+        setSpent(p.dictRoundSpent ?? {});
         // Gộp (không ghi đè): có thể đã phát vài câu trong lúc chờ tải
         setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
@@ -729,7 +738,7 @@ export default function ShadowPlayer({
       .then((r) => emitPoints({ total: r.total }))
       .catch(() => {
         // Chưa lưu được → trả lại điểm tạm trừ
-        setSpent((s) => ({ ...s, [i]: (s[i] ?? 0) - n }));
+        setSpent((s) => ({ ...s, [i]: Math.max((s[i] ?? 0) - n, 0) }));
         emitPoints({ delta: cost });
       });
   };
@@ -793,6 +802,8 @@ export default function ShadowPlayer({
     setDictDone({});
     setDictPick(round);
     setDictDrafts({});
+    setEarned(new Set());
+    setSpent({});
     setDictEpoch((e) => e + 1);
     setResumed(null);
   };
@@ -800,7 +811,8 @@ export default function ShadowPlayer({
   const isRecording = recorder.recordingKey !== null;
   const doneCount = Object.keys(dictDone).length;
   const seenCount = new Set(seen).add(idx).size; // server cũng tính câu đang học là đã nghe
-  const progress = segments.length ? Math.round(((dictation ? doneCount : seenCount) / segments.length) * 100) : 0;
+  const progressTotal = dictation ? dictTotal : segments.length;
+  const progress = progressTotal ? Math.round(((dictation ? doneCount : seenCount) / progressTotal) * 100) : 0;
   const togglePlay = () => (playing ? pause() : go(idx));
   const trText = (text: string) =>
     tr[text] || (text in tr ? "⚠ Chưa dịch được câu này." : trError ? `⚠ ${trError}` : "Đang dịch…");
@@ -809,7 +821,7 @@ export default function ShadowPlayer({
   const roundDone = dictation && dictPick.length > 0 && dictPick.every((k) => dictDone[k]);
   const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
   const roundPoints = dictPick.reduce((p, k) => p + (earned.has(k) ? POINTS_CORRECT : 0) - (spent[k] ?? 0) * POINTS_HINT, 0);
-  const left = segments.length - doneCount;
+  const left = dictTotal - doneCount;
 
   const starButton = (text: string, size = "size-5") => {
     const on = stars.has(text.toLowerCase());
@@ -1016,6 +1028,8 @@ export default function ShadowPlayer({
                     setIdx(0);
                     setDictDone({});
                     setDictPick([]);
+                    setEarned(new Set());
+                    setSpent({});
                     setSeen(new Set());
                     setRevealed(new Set());
                     roundInit.current = false;
@@ -1085,10 +1099,10 @@ export default function ShadowPlayer({
                 text={current.text}
                 level={settings.dictLevel}
                 onReplay={() => go(idx)}
-                onNext={next}
+                onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
                 onDone={(correct, total, input) => dictFinished(idx, correct, total, input)}
                 onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
-                hasNext={nextIdx !== undefined}
+                hasNext={dictNextIdx !== undefined}
                 draft={dictDrafts[idx]}
                 saved={dictDone[idx]}
                 onWord={(w) => pickWord(w)}
@@ -1119,8 +1133,8 @@ export default function ShadowPlayer({
               )}
               <p className="text-sm text-muted">
                 {left > 0
-                  ? `Cả bài: đã chép ${doneCount}/${segments.length} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.`
-                  : `Bạn đã chép hết ${segments.length} câu của bài này 👏`}
+                  ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.`
+                  : `Bạn đã chép hết ${dictTotal} câu của bài này 👏`}
               </p>
               <button className="btn btn-primary py-3" onClick={left > 0 ? newRound : restartProgress}>
                 {left > 0 ? (

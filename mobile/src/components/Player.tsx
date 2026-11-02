@@ -37,7 +37,7 @@ import { pickDictation } from "@/lib/dictPick";
 import { noteProgress, progressSaved } from "@/lib/progress";
 import { prefetchGerman } from "@/lib/speak";
 import { C } from "@/lib/theme";
-import { POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@shared/dictation";
+import { hasWords, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@shared/dictation";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 
@@ -181,6 +181,7 @@ export default function Player({
   const insets = useSafeAreaInsets();
   const segments = useMemo(() => mergeIntoSentences(rawSegments), [rawSegments]);
   const texts = useMemo(() => segments.map((s) => s.text), [segments]);
+  const dictTotal = useMemo(() => texts.filter(hasWords).length, [texts]); // số câu chép được (bỏ câu chỉ có ký hiệu)
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -435,6 +436,8 @@ export default function Player({
   const nextIdx = queue ? queue.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
   const prevIdx = queue ? queue.findLast((i) => i < idx) : idx > 0 ? idx - 1 : undefined;
   const next = () => nextIdx !== undefined && playSegment(nextIdx);
+  // Chính tả: hết câu phía sau mà lượt còn câu chưa chép (đã bỏ qua) → quay lại câu đó
+  const dictNextIdx = nextIdx ?? dictPick.find((k) => !dictDone[k] && k !== idx);
   const prev = () => prevIdx !== undefined && playSegment(prevIdx);
   /** Chọn câu `i` mà không phát (bấm ▶ để nghe) */
   const select = (i: number) => {
@@ -456,6 +459,8 @@ export default function Player({
     const round = pickDictation(texts, dictDone);
     setDictPick(round);
     setDictDrafts({});
+    setEarned(new Set());
+    setSpent({});
     if (round.length) select(round[0]);
   };
   /** Câu đang chọn không có sao → về câu ⭐ gần nhất (chưa phát, bấm ▶ để nghe) */
@@ -510,7 +515,7 @@ export default function Player({
         const done = Object.fromEntries(Object.entries(p.dictDone).filter(([k]) => Number(k) < segments.length));
         const dict = allowDictation && p.mode === "dictation";
         // Lượt chính tả đã lưu (server cũ / lượt chưa chọn → chọn lượt mới nếu đang ở Chính tả)
-        const pick = (p.dictPick ?? []).filter((k) => k < segments.length);
+        const pick = (p.dictPick ?? []).filter((k) => k < segments.length && hasWords(texts[k]));
         const round = pick.length || !dict ? pick : pickDictation(texts, done);
         let i = Math.min(p.idx, segments.length - 1);
         if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
@@ -519,6 +524,8 @@ export default function Player({
         if (allowDictation) setPractice(p.mode);
         if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") setDictLevel(p.dictLevel);
         setDictDone(done);
+        setEarned(new Set(p.dictRoundEarned ?? []));
+        setSpent(p.dictRoundSpent ?? {});
         // Gộp (không ghi đè): có thể đã phát vài câu trong lúc chờ tải
         setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
@@ -574,7 +581,7 @@ export default function Player({
       .then((r) => setPoints(r.total))
       .catch(() => {
         // Chưa lưu được → trả lại điểm tạm trừ
-        setSpent((s) => ({ ...s, [i]: (s[i] ?? 0) - n }));
+        setSpent((s) => ({ ...s, [i]: Math.max((s[i] ?? 0) - n, 0) }));
         setPoints((p) => (p === null ? p : p + cost));
       });
   };
@@ -632,6 +639,8 @@ export default function Player({
     setDictDone({});
     setDictPick(round);
     setDictDrafts({});
+    setEarned(new Set());
+    setSpent({});
     setDictEpoch((e) => e + 1);
     setResumed(null);
   };
@@ -792,7 +801,7 @@ export default function Player({
   // Xong lượt chính tả (hoặc đã chép hết bài) → điểm của lượt + chọn lượt mới
   const roundScore = dictPick.reduce((a, k) => ({ c: a.c + (dictDone[k]?.correct ?? 0), n: a.n + (dictDone[k]?.total ?? 0) }), { c: 0, n: 0 });
   const roundPoints = dictPick.reduce((p, k) => p + (earned.has(k) ? POINTS_CORRECT : 0) - (spent[k] ?? 0) * POINTS_HINT, 0);
-  const left = segments.length - doneCount;
+  const left = dictTotal - doneCount;
   const roundCard = dictation && (roundDone || !dictPick.length) && (
     <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(22,163,74,0.12)", borderWidth: 1, borderColor: "rgba(22,163,74,0.35)" }}>
       {roundDone && (
@@ -807,7 +816,7 @@ export default function Player({
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 14 }}>
-        {left > 0 ? t("dict.lessonLeft", { d: doneCount, n: segments.length }) : t("dict.lessonAll", { n: segments.length })}
+        {left > 0 ? t("dict.lessonLeft", { d: doneCount, n: dictTotal }) : t("dict.lessonAll", { n: dictTotal })}
       </Text>
       <Button title={left > 0 ? t("dict.newRound") : t("player.restart")} variant="primary" onPress={left > 0 ? newRound : restart} />
     </View>
@@ -868,8 +877,8 @@ export default function Player({
               text={current.text}
               level={dictLevel}
               onReplay={() => playSegment(idx)}
-              onNext={next}
-              hasNext={nextIdx !== undefined}
+              onNext={() => dictNextIdx !== undefined && playSegment(dictNextIdx)}
+              hasNext={dictNextIdx !== undefined}
               onDone={(correct, total, input) => dictFinished(idx, correct, total, input)}
               onHint={user && points !== null ? (n) => dictHint(idx, n) : undefined}
               onWord={pickWord}

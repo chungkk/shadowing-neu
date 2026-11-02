@@ -249,6 +249,8 @@ function open() {
   if (!pointCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_points ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
   // Chính tả: các câu của lượt đang làm (app chọn ngẫu nhiên 5–10 câu / lượt)
   if (!progressCols.some((c) => c.name === "dict_pick")) db.exec("ALTER TABLE progress ADD COLUMN dict_pick TEXT NOT NULL DEFAULT '[]'"); // [3, 17, 42, …]
+  // Chính tả: lúc bắt đầu lượt đang làm (ms, 0 = chưa biết) → tính lại điểm của lượt khi mở lại bài
+  if (!progressCols.some((c) => c.name === "dict_round_at")) db.exec("ALTER TABLE progress ADD COLUMN dict_round_at INTEGER NOT NULL DEFAULT 0");
   // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
   const vocabCols = db.prepare("PRAGMA table_info(vocab)").all() as { name: string }[];
   if (!vocabCols.some((c) => c.name === "srs_stage")) {
@@ -1205,6 +1207,7 @@ export type Progress = {
   dictDone: Record<string, DictResult>;
   seen: number[]; // các câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   dictPick: number[]; // Chính tả: các câu của lượt đang làm ([] = chưa chọn)
+  dictRoundAt: number; // lúc bắt đầu lượt đang làm (ms, 0 = chưa biết)
   updatedAt: number;
 };
 
@@ -1218,6 +1221,7 @@ type ProgressRow = {
   dict_done: string;
   seen: string;
   dict_pick: string;
+  dict_round_at: number;
   updated_at: number;
 };
 
@@ -1231,6 +1235,7 @@ const toProgress = (r: ProgressRow): Progress => ({
   dictDone: JSON.parse(r.dict_done),
   seen: JSON.parse(r.seen ?? "[]"),
   dictPick: JSON.parse(r.dict_pick ?? "[]"),
+  dictRoundAt: r.dict_round_at ?? 0,
   updatedAt: r.updated_at,
 });
 
@@ -1249,13 +1254,13 @@ const MAX_PROGRESS = 300;
 export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
   conn()
     .prepare(
-      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, dict_pick, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, dict_pick, dict_round_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, source) DO UPDATE SET title = excluded.title, idx = excluded.idx, total = excluded.total,
          mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, seen = excluded.seen,
-         dict_pick = excluded.dict_pick, updated_at = excluded.updated_at`,
+         dict_pick = excluded.dict_pick, dict_round_at = excluded.dict_round_at, updated_at = excluded.updated_at`,
     )
-    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), JSON.stringify(p.dictPick), Date.now());
+    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), JSON.stringify(p.dictPick), p.dictRoundAt, Date.now());
   // Chỉ giữ MAX_PROGRESS bài học gần nhất / người (source /watch/<id> là tuỳ ý → không giới hạn thì DB phình mãi)
   conn()
     .prepare(
@@ -1329,6 +1334,20 @@ export function getPointIdx(userId: number, source: string): number[] {
   return (conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? ORDER BY idx").all(userId, source) as { idx: number }[]).map(
     (r) => r.idx,
   );
+}
+
+/** Điểm của lượt đang làm (để hiện lại khi mở lại bài): các câu được điểm + số từ đã xem của từng câu, tính từ lúc bắt đầu lượt */
+export function getRoundPoints(userId: number, source: string, p: Progress): { dictRoundEarned: number[]; dictRoundSpent: Record<number, number> } {
+  if (!p.dictRoundAt) return { dictRoundEarned: [], dictRoundSpent: {} }; // lượt bắt đầu trước khi có dict_round_at
+  const inRound = new Set(p.dictPick);
+  const earned = conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? AND at >= ?").all(userId, source, p.dictRoundAt) as { idx: number }[];
+  const spent = conn()
+    .prepare("SELECT idx, SUM(n) AS n FROM dict_hints WHERE user_id = ? AND source = ? AND at >= ? GROUP BY idx")
+    .all(userId, source, p.dictRoundAt) as { idx: number; n: number }[];
+  return {
+    dictRoundEarned: earned.flatMap((r) => (inRound.has(r.idx) ? [r.idx] : [])),
+    dictRoundSpent: Object.fromEntries(spent.flatMap((r) => (inRound.has(r.idx) ? [[r.idx, r.n]] : []))),
+  };
 }
 
 /** +POINTS_CORRECT cho câu idx (câu đã tính rồi → awarded = false, không cộng) */
