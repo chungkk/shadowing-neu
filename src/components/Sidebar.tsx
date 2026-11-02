@@ -17,6 +17,7 @@ const ITEMS: Item[] = [
   { href: "/sprechen", label: "Luyện nói", icon: Mic },
   { href: "/games", label: "Game", icon: Gamepad2 },
 ];
+const BAR_ITEMS = ITEMS.filter((it) => it.href !== "/sprechen" && it.href !== "/games"); // thanh dưới đáy không có Luyện nói + Game
 const USER_ITEMS: Item[] = [
   { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },
 ];
@@ -40,8 +41,8 @@ function useCurrent(items: Item[]) {
  * Cài đặt + Đăng xuất nằm ở avatar → /settings, Đăng nhập là nút ở thanh trên cùng, trang con admin có nút trong /admin.
  */
 export default function Sidebar({ user }: { user: NavUser | null }) {
-  const items = [...ITEMS, ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
-  const current = useCurrent([...items, ...USER_ITEMS]); // USER_ITEMS: ở /settings không sáng nhầm "Trang chủ"
+  const items = [...BAR_ITEMS, ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
+  const current = useCurrent([...ITEMS, ...items, ...USER_ITEMS]); // ITEMS, USER_ITEMS: ở /games, /settings… không sáng nhầm "Trang chủ"
 
   return (
     <SidebarFrame>
