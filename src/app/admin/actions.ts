@@ -10,7 +10,6 @@ import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount } from "@/lib/account";
 import { slugify } from "@/lib/slug";
 import { lockSettings, saveLockSettings } from "@/lib/access";
-import { FREE_LESSONS } from "@/lib/lesson-lock";
 
 export type FormState = { error?: string };
 
@@ -86,7 +85,7 @@ export async function removeLesson(id: number) {
   await requireAdmin();
   deleteLesson(id);
   const lock = lockSettings();
-  if (lock.free.includes(id)) saveLockSettings({ ...lock, free: lock.free.filter((x) => x !== id) }); // nhả chỗ bài miễn phí
+  if (lock.free.includes(id)) saveLockSettings({ ...lock, free: lock.free.filter((x) => x !== id) }); // bỏ khỏi danh sách miễn phí
   refresh();
 }
 
@@ -133,12 +132,12 @@ export async function setLessonLock(enabled: boolean) {
   refresh();
 }
 
-/** Đặt / bỏ bài miễn phí (tối đa FREE_LESSONS bài) */
+/** Đặt / bỏ bài miễn phí */
 export async function toggleFreeLesson(id: number, free: boolean) {
   await requireAdmin();
   const lock = lockSettings();
   if (!free) saveLockSettings({ ...lock, free: lock.free.filter((x) => x !== id) });
-  else if (lock.free.length < FREE_LESSONS) saveLockSettings({ ...lock, free: [...lock.free, id] });
+  else saveLockSettings({ ...lock, free: [...lock.free, id] });
   refresh();
 }
 

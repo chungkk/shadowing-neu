@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { lessonUnlockStats, listLessons } from "@/lib/db";
 import { lockSettings } from "@/lib/access";
-import { FREE_LESSONS, FREE_PICKS, LESSON_PRICE } from "@/lib/lesson-lock";
+import { FREE_PICKS, LESSON_PRICE } from "@/lib/lesson-lock";
 import { removeLesson, setLessonLock, toggleFreeLesson, toggleLessonPublished } from "./actions";
 import DeleteButton from "./DeleteButton";
 import LevelBadge from "@/components/LevelBadge";
@@ -23,7 +23,7 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
           Khoá bài học: {enabled ? <span className="text-accent">đang bật</span> : <span className="text-muted">đang tắt — mọi bài đều mở</span>}
         </p>
         <p className="text-xs text-muted">
-          Khách chỉ học {freeCount}/{FREE_LESSONS} bài “Miễn phí” (chọn ở từng bài bên dưới). Người đã đăng nhập chọn thêm {FREE_PICKS} bài, sau đó{" "}
+          Khách chỉ học {freeCount} bài “Miễn phí” (chọn ở từng bài bên dưới). Người đã đăng nhập chọn thêm {FREE_PICKS} bài, sau đó{" "}
           {fmt(LESSON_PRICE)} kim cương / bài. Bài ai đang học dở lúc bật vẫn học tiếp được.
         </p>
         {s.users > 0 && (
@@ -96,14 +96,7 @@ async function Dashboard() {
               {/* Bài miễn phí (khoá bài học): khách cũng học được */}
               <form action={toggleFreeLesson.bind(null, l.id, !free.has(l.id))}>
                 <button
-                  title={
-                    free.has(l.id)
-                      ? "Bấm để bỏ miễn phí"
-                      : free.size >= FREE_LESSONS
-                        ? `Đã đủ ${FREE_LESSONS} bài miễn phí — bỏ 1 bài trước`
-                        : "Bấm để cho khách học miễn phí bài này"
-                  }
-                  disabled={!free.has(l.id) && free.size >= FREE_LESSONS}
+                  title={free.has(l.id) ? "Bấm để bỏ miễn phí" : "Bấm để cho khách học miễn phí bài này"}
                   className={`btn ${free.has(l.id) ? "text-accent" : "text-muted"}`}
                 >
                   {free.has(l.id) ? "● Miễn phí" : "○ Miễn phí"}

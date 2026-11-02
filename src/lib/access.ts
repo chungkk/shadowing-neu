@@ -11,7 +11,7 @@ import {
   unlockedLessonIds,
   unlockLessonsWithProgress,
 } from "./db";
-import { FREE_LESSONS, FREE_PICKS, LESSON_PRICE, type LessonAccess, type LockInfo } from "./lesson-lock";
+import { FREE_PICKS, LESSON_PRICE, type LessonAccess, type LockInfo } from "./lesson-lock";
 
 /** Quyền học từng bài khi admin bật khoá bài (quy tắc: lib/lesson-lock.ts) */
 
@@ -23,7 +23,7 @@ export const lockSettings = (): LockSettings => getSetting<LockSettings>(KEY) ??
 export function saveLockSettings(s: LockSettings) {
   // Vừa bật khoá → bài ai đang học dở vẫn học tiếp được
   if (s.enabled && !lockSettings().enabled) unlockLessonsWithProgress();
-  setSetting(KEY, { enabled: s.enabled, free: [...new Set(s.free)].slice(0, FREE_LESSONS) });
+  setSetting(KEY, { enabled: s.enabled, free: [...new Set(s.free)] });
 }
 
 /** Hàm tra quyền từng bài của 1 người (đọc DB 1 lần — dùng cho cả danh sách bài) */

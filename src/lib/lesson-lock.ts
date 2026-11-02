@@ -1,9 +1,8 @@
 /**
- * Khoá bài học (admin bật trong Cài đặt): khách chỉ học được FREE_LESSONS bài admin chọn; người đã đăng nhập chọn thêm
+ * Khoá bài học (admin bật trong Cài đặt): khách chỉ học được các bài admin chọn miễn phí (không giới hạn số bài); người đã đăng nhập chọn thêm
  * FREE_PICKS bài bất kỳ, sau đó mỗi bài mở khoá tốn LESSON_PRICE kim cương (điểm chính tả). Dùng được cả trình duyệt lẫn server.
  */
 
-export const FREE_LESSONS = 2; // số bài miễn phí admin chọn (tối đa)
 export const FREE_PICKS = 2; // số bài người dùng mới được tự chọn mở miễn phí
 export const LESSON_PRICE = 1000; // kim cương / bài sau khi hết lượt chọn
 
