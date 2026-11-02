@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!deck) return fail("Không tìm thấy bộ từ", 404);
   const words = deck.words
     .filter(isGameWord)
-    .map((w) => ({ word: w.word, gender: w.gender, plural: "", meaning: shortMeaning(w.meaning), example: "", topic: w.topic }));
+    .map((w) => ({ key: w.key, word: w.word, gender: w.gender, plural: "", meaning: shortMeaning(w.meaning), example: "", topic: w.topic }));
   const used = new Set(words.map((w) => w.topic));
   const topics = deck.topics.length ? deck.topics.filter((t) => used.has(t.id)) : [{ id: "", title: deck.title, icon: "📚" }];
   return Response.json({ topics, words });

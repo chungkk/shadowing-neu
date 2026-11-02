@@ -26,6 +26,7 @@ import {
   REEL,
   RULES,
   backspace,
+  fitField,
   levelOf,
   newGame,
   nextMilestone,
@@ -46,6 +47,7 @@ import {
 } from "@/lib/falling-words";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { LoginLink } from "./LoginDialog";
 import { DeckMenu, GameHeader, ScreenKeyboard, useCoarsePointer, type DeckOption, type Tone } from "./GameParts";
 
 /**
@@ -81,6 +83,10 @@ const CONFIG = {
     dropW: "min(11rem, 60%)",
   },
 } satisfies Record<Variant, (typeof RULES)[Variant] & { title: string; subtitle: string; icon: ComponentType<{ className?: string }>; tone: Tone; dropW: string }>;
+
+/** Cỡ giọt (px) theo chiều rộng vùng rơi = cfg.dropW · chiều cao ước chừng */
+const dropWidth = (variant: Variant, w: number) => (variant === "gold" ? Math.min(176, w * 0.6) : Math.min(240, w * 0.7));
+const DROP_H = 60;
 
 /** Màu của từng biến thể (giọt, ô chữ, HUD, lớp phủ) */
 const THEME = {
@@ -244,7 +250,7 @@ function GoldScenery({ label, reeling }: { label: ReactNode; reeling: boolean })
   );
 }
 
-export default function FallingWords({ variant, decks }: { variant: Variant; decks: DeckOption[] }) {
+export default function FallingWords({ variant, decks, loggedIn }: { variant: Variant; decks: DeckOption[]; loggedIn: boolean }) {
   const cfg = CONFIG[variant];
   const theme = THEME[variant];
   const [deck, setDeck] = useLocalStorage(`${cfg.store}-deck`, decks[0]?.slug ?? "");
@@ -312,6 +318,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
     if (d) sayDrop(d);
   };
   const onSpawn = useEffectEvent((d: Drop) => cfg.listen && speech.word(saying(d), () => d.state === "fall"));
+  const fit = useEffectEvent((g: Game) => fitField(g, area.w, area.h, dropWidth(variant, area.w), DROP_H));
 
   // Hết lượt chơi: bỏ các câu đang chờ · tạm dừng thì ngừng đọc luôn (thắng / thua: đọc nốt từ vừa gõ xong)
   useEffect(() => {
@@ -323,15 +330,15 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   // Phím thật: bắt ở cả trang (không có ô nhập → bộ gõ tiếng Việt không đổi "fa" thành "fấ")
   const onWindowKey = useEffectEvent((e: globalThis.KeyboardEvent) => {
     if (e.metaKey || e.ctrlKey || e.isComposing || (e.target as HTMLElement).tagName === "INPUT") return;
-    if (e.key === "Escape") return setPhase("pause");
+    if (e.key === "Escape") return phase === "play" ? setPhase("pause") : resume();
     if (handleKey(e.key)) e.preventDefault();
   });
   useEffect(() => {
-    if (phase !== "play") return;
+    if (!playing) return;
     const on = (e: globalThis.KeyboardEvent) => onWindowKey(e);
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [phase]);
+  }, [playing]);
 
   // Vòng lặp game
   useEffect(() => {
@@ -340,6 +347,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
     let last = performance.now();
     const frame = (now: number) => {
       const g = game.current!;
+      fit(g);
       step(g, Math.min((now - last) / 1000, 0.1)); // tab bị treo lâu → không nhảy cóc
       last = now;
       if (g.fresh) {
@@ -485,8 +493,8 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
     if (!view || !current) return;
     setSaving(true);
     try {
-      const words = [...new Set(view.missed.map((w) => w.word))];
-      const r = await clientApi<{ added: number }>(`/vocab/decks/${current.slug}`, { method: "POST", body: { words } });
+      const keys = [...new Set(view.missed.map((w) => w.key))];
+      const r = await clientApi<{ added: number }>(`/vocab/decks/${current.slug}`, { method: "POST", body: { keys } });
       setSaved(r.added ? `Đã thêm ${r.added} từ vào sổ` : "Các từ này đã có trong sổ");
     } catch (e) {
       setSaved((e as Error).message);
@@ -546,12 +554,11 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const v = view!;
   const topic = v.topics[v.milestone];
   const target = v.drops.find((d) => d.id === v.targetId && d.state === "fall") ?? null;
-  const missed = [...new Map(v.missed.map((w) => [w.word, w])).values()];
+  const missed = [...new Map(v.missed.map((w) => [w.key, w])).values()];
   // "gold": vị trí dây móc / cục vàng đang kéo (px trong vùng rơi). Ròng rọc ở giữa SÂN (vùng rơi lệch: left-2, right-14
   // → giữa sân = giữa vùng rơi + (56 - 8) / 2 px), cao hơn vùng rơi 3.75rem
   const pulley = { x: area.w / 2 + 24, y: -60 };
-  const dropPx = Math.min(176, area.w * 0.6); // = cfg.dropW "min(11rem, 60%)"
-  const DROP_H = 60; // chiều cao ước chừng của cục vàng
+  const dropPx = dropWidth(variant, area.w);
   const reels =
     variant === "gold"
       ? v.drops
@@ -571,244 +578,253 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   return (
     <div className="flex flex-col gap-3">
       {header}
-      <div
-        ref={field}
-        onPointerDown={() => phase === "play" && nativeKeyboard && focusInput()}
-        className={`theme-night relative overflow-hidden select-none ${theme.field} ${
-          full ? "" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
-        }`}
-      >
-        {variant === "gold" ? <GoldScenery label={label} reeling={!!reels.length} /> : <RainScenery label={label} />}
+      {/* Toàn màn hình: phóng to cả sân lẫn bàn phím trên màn hình */}
+      <div ref={field} className={`flex flex-col ${full ? "gap-1.5 bg-background p-1.5" : "gap-3"}`}>
+        <div
+          onPointerDown={() => phase === "play" && nativeKeyboard && focusInput()}
+          className={`theme-night relative overflow-hidden select-none ${theme.field} ${
+            full ? "min-h-0 flex-1 rounded-xl" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
+          }`}
+        >
+          {variant === "gold" ? <GoldScenery label={label} reeling={!!reels.length} /> : <RainScenery label={label} />}
 
-        {/* Vùng rơi: dưới HUD (gold: dưới mặt đất), chừa cột nút bên phải; đáy = mặt nước / đáy mỏ */}
-        <div ref={measure} className={`absolute right-14 left-2 ${variant === "gold" ? "top-32 bottom-9" : "top-14 bottom-12"}`}>
-          {v.drops.map((d) => {
-            const isTarget = d.id === target?.id;
-            const reel = reelOf.get(d.id);
-            const done = d.state === "hit" || d.state === "miss";
-            return (
-              <div
-                key={d.id}
-                className="absolute"
-                style={
-                  reel
-                    ? { width: cfg.dropW, left: reel.at.x, top: reel.at.y, transform: `translate(-50%, -50%) scale(${reel.scale})`, opacity: reel.opacity, zIndex: 1 }
-                    : { width: cfg.dropW, left: `calc((100% - ${cfg.dropW}) * ${d.x})`, top: `${d.y * 100}%`, transform: `translateY(${-d.y * 100}%)` }
-                }
-              >
+          {/* Vùng rơi: dưới HUD (gold: dưới mặt đất), chừa cột nút bên phải; đáy = mặt nước / đáy mỏ */}
+          <div ref={measure} className={`absolute right-14 left-2 ${variant === "gold" ? "top-32 bottom-9" : "top-14 bottom-12"}`}>
+            {v.drops.map((d) => {
+              const isTarget = d.id === target?.id;
+              const reel = reelOf.get(d.id);
+              const done = d.state === "hit" || d.state === "miss";
+              return (
                 <div
-                  key={isTarget && bad ? bad.n : 0} // gõ sai → dựng lại để rung lần nữa
-                  onClick={cfg.listen && d.state === "fall" ? () => sayDrop(d) : undefined} // "gold": bấm vào cục vàng → nghe lại
-                  onPointerDown={cfg.listen ? (e) => e.stopPropagation() : undefined}
-                  title={cfg.listen && d.state === "fall" ? "Bấm để nghe lại" : undefined}
-                  className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} ${cfg.listen && d.state === "fall" ? "cursor-pointer hover:brightness-125" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
-                    d.state === "hit"
-                      ? variant === "gold"
-                        ? "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-200 bg-gradient-to-br from-[#8a6514]/95 to-[#4a3310]/95 shadow-[0_0_24px_rgba(250,204,21,0.7)]"
-                        : "rain-hit border-accent bg-accent/20"
-                      : d.state === "miss"
-                        ? "rain-miss border-red bg-red/20"
-                        : d.state === "gone"
-                          ? theme.gone
-                          : isTarget
-                            ? theme.dropTarget
-                            : d.y > 0.8
-                              ? `${theme.drop} border-red/70`
-                              : theme.drop
-                  }`}
+                  key={d.id}
+                  className="absolute"
+                  style={
+                    reel
+                      ? { width: cfg.dropW, left: reel.at.x, top: reel.at.y, transform: `translate(-50%, -50%) scale(${reel.scale})`, opacity: reel.opacity, zIndex: 1 }
+                      : { width: cfg.dropW, left: `calc((100% - ${cfg.dropW}) * ${d.x})`, top: `${d.y * 100}%`, transform: `translateY(${-d.y * 100}%)` }
+                  }
                 >
-                  {!cfg.listen ? (
-                    <span className="w-full truncate text-sm leading-snug font-bold text-white sm:text-base" title={d.w.meaning}>
-                      {d.w.meaning}
-                    </span>
-                  ) : done ? (
-                    <span className="w-full truncate text-xs text-amber-100/80">{d.w.meaning}</span>
-                  ) : (
-                    <span className={`flex h-6 w-full items-center justify-center rounded-md bg-black/25 ${speakingId === d.id ? "text-amber" : "text-amber-100/80"}`}>
-                      <Volume2 className={`size-4 ${speakingId === d.id ? "animate-pulse" : ""}`} />
-                    </span>
-                  )}
-                  {done ? (
-                    <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
-                  ) : (
-                    <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
-                  )}
-                  {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gem">+{d.points}</span>}
+                  <div
+                    key={isTarget && bad ? bad.n : 0} // gõ sai → dựng lại để rung lần nữa
+                    onClick={cfg.listen && d.state === "fall" ? () => sayDrop(d) : undefined} // "gold": bấm vào cục vàng → nghe lại
+                    onPointerDown={cfg.listen ? (e) => e.stopPropagation() : undefined}
+                    title={cfg.listen && d.state === "fall" ? "Bấm để nghe lại" : undefined}
+                    className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} ${cfg.listen && d.state === "fall" ? "cursor-pointer hover:brightness-125" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
+                      d.state === "hit"
+                        ? variant === "gold"
+                          ? "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-200 bg-gradient-to-br from-[#8a6514]/95 to-[#4a3310]/95 shadow-[0_0_24px_rgba(250,204,21,0.7)]"
+                          : "rain-hit border-accent bg-accent/20"
+                        : d.state === "miss"
+                          ? "rain-miss border-red bg-red/20"
+                          : d.state === "gone"
+                            ? theme.gone
+                            : isTarget
+                              ? theme.dropTarget
+                              : d.y > 0.8
+                                ? `${theme.drop} border-red/70`
+                                : theme.drop
+                    }`}
+                  >
+                    {!cfg.listen ? (
+                      <span className="w-full truncate text-sm leading-snug font-bold text-white sm:text-base" title={d.w.meaning}>
+                        {d.w.meaning}
+                      </span>
+                    ) : done ? (
+                      <span className="w-full truncate text-xs text-amber-100/80">{d.w.meaning}</span>
+                    ) : (
+                      <span className={`flex h-6 w-full items-center justify-center rounded-md bg-black/25 ${speakingId === d.id ? "text-amber" : "text-amber-100/80"}`}>
+                        <Volume2 className={`size-4 ${speakingId === d.id ? "animate-pulse" : ""}`} />
+                      </span>
+                    )}
+                    {done ? (
+                      <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
+                    ) : (
+                      <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
+                    )}
+                    {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gem">+{d.points}</span>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          {/* Dây móc: từ ròng rọc thả xuống cục vàng vừa gõ xong rồi kéo nó lên */}
-          {reels.map(({ id, tip }) => {
-            // móc nằm ở mép trên cục vàng (cách tâm 1.5rem)
-            const dx = tip.x - pulley.x;
-            const dy = tip.y - 24 - pulley.y;
-            return (
-              <div key={id} className="pointer-events-none absolute z-[2]" style={{ left: pulley.x, top: pulley.y }}>
-                <span
-                  className="absolute top-0 left-0 h-0.5 origin-left bg-amber-100/80"
-                  style={{ width: Math.hypot(dx, dy), transform: `rotate(${Math.atan2(dy, dx)}rad)` }}
-                />
-                <Emoji code="1fa9d" className="absolute size-6 max-w-none -translate-x-1/2 -translate-y-1/2" style={{ left: dx, top: dy }} />
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+            {/* Dây móc: từ ròng rọc thả xuống cục vàng vừa gõ xong rồi kéo nó lên */}
+            {reels.map(({ id, tip }) => {
+              // móc nằm ở mép trên cục vàng (cách tâm 1.5rem)
+              const dx = tip.x - pulley.x;
+              const dy = tip.y - 24 - pulley.y;
+              return (
+                <div key={id} className="pointer-events-none absolute z-[2]" style={{ left: pulley.x, top: pulley.y }}>
+                  <span
+                    className="absolute top-0 left-0 h-0.5 origin-left bg-amber-100/80"
+                    style={{ width: Math.hypot(dx, dy), transform: `rotate(${Math.atan2(dy, dx)}rad)` }}
+                  />
+                  <Emoji code="1fa9d" className="absolute size-6 max-w-none -translate-x-1/2 -translate-y-1/2" style={{ left: dx, top: dy }} />
+                </div>
+              );
+            })}
+          </div>
 
-        {/* HUD: điểm · mốc · mạng */}
-        {/* pointer-events-none: khung HUD rộng cả sân, không được chặn cú bấm vào giọt bên dưới */}
-        <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 *:pointer-events-auto">
-          <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-sm font-extrabold text-white backdrop-blur">
-            <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
-            {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
-          </span>
-          <span className="flex min-w-0 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-black/45 px-3 py-1 text-sm text-white backdrop-blur">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <Flag className={`size-4 shrink-0 ${theme.accent}`} />
-              <b className="shrink-0">
-                Mốc {v.milestone + 1}/{v.topics.length}
-              </b>
-              <span className="shrink-0 font-bold text-white/70">· Cấp {levelOf(v.hits)}</span>
-              <span className="truncate text-white/70 max-sm:hidden">
-                · {topic.icon} {topic.title}
+          {/* HUD: điểm · mốc · mạng */}
+          {/* pointer-events-none: khung HUD rộng cả sân, không được chặn cú bấm vào giọt bên dưới */}
+          <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 *:pointer-events-auto">
+            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-sm font-extrabold text-white backdrop-blur">
+              <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
+              {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
+            </span>
+            <span className="flex min-w-0 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-black/45 px-3 py-1 text-sm text-white backdrop-blur">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <Flag className={`size-4 shrink-0 ${theme.accent}`} />
+                <b className="shrink-0">
+                  Mốc {v.milestone + 1}/{v.topics.length}
+                </b>
+                <span className="shrink-0 font-bold text-white/70">· Cấp {levelOf(v.hits)}</span>
+                <span className="truncate text-white/70 max-sm:hidden">
+                  · {topic.icon} {topic.title}
+                </span>
+              </span>
+              <span className="h-1 w-full min-w-24 rounded-full bg-white/10">
+                <span className={`block h-full rounded-full transition-[width] ${theme.bar}`} style={{ width: `${Math.min(v.mHits / v.goal, 1) * 100}%` }} />
               </span>
             </span>
-            <span className="h-1 w-full min-w-24 rounded-full bg-white/10">
-              <span className={`block h-full rounded-full transition-[width] ${theme.bar}`} style={{ width: `${Math.min(v.mHits / v.goal, 1) * 100}%` }} />
-            </span>
-          </span>
-          <div className="flex flex-col items-end gap-2">
-            <span className="flex gap-0.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur" aria-label={`${v.lives} mạng`}>
-              {Array.from({ length: cfg.lives }, (_, i) => (
-                <Heart key={i} className={`size-4 ${i < v.lives ? "fill-red-500 text-red-500" : "text-white/20"}`} />
-              ))}
-            </span>
-            {playing && (
-              <div className="flex flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
-                {cfg.listen && (
-                  <button
-                    title="Nghe lại (Space)"
-                    onClick={listenAgain}
-                    className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-amber bg-gradient-to-b from-amber to-orange-500 text-amber-950 shadow-[0_0_14px_rgba(250,204,21,0.5)]"
-                  >
-                    <Ear className="size-4" />
-                  </button>
-                )}
-                <RoundBtn theme={theme} title="Thoát ván" onClick={quit}>
-                  <X className="size-4" />
-                </RoundBtn>
-                <RoundBtn theme={theme} title={phase === "play" ? "Tạm dừng (Esc)" : "Tiếp tục"} onClick={() => (phase === "play" ? setPhase("pause") : resume())}>
-                  {phase === "play" ? <Pause className="size-4" /> : <Play className="size-4" />}
-                </RoundBtn>
-                <RoundBtn theme={theme} title="Bàn phím trên màn hình" on={keyboard} onClick={() => setOsk(!keyboard)}>
-                  <Keyboard className="size-4" />
-                </RoundBtn>
-                <RoundBtn theme={theme} title={sound ? "Tắt đọc từ khi bắn trúng" : "Bật đọc từ khi bắn trúng"} onClick={() => setSound(!sound)}>
-                  {sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
-                </RoundBtn>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {note && (
-          <p
-            className={`sheet-fade pointer-events-none absolute inset-x-0 top-20 z-10 mx-auto w-fit max-w-[90%] rounded-xl px-3 py-1.5 text-center text-sm font-bold whitespace-pre-line ${
-              note.tone === "ok" ? theme.note : "bg-amber text-black"
-            }`}
-          >
-            {note.text}
-          </p>
-        )}
-
-        {/* Lớp phủ: tạm dừng / thua / thắng */}
-        {phase !== "play" && (
-          <div className={`absolute inset-0 z-20 flex flex-col items-center overflow-y-auto p-4 backdrop-blur-sm ${theme.overlay}`} onPointerDown={(e) => e.stopPropagation()}>
-            <div className="m-auto flex w-full max-w-md flex-col items-center gap-4 text-center">
-              {phase === "pause" ? (
-                <>
-                  <p className="text-xl font-extrabold">Tạm dừng</p>
-                  <button className="btn btn-primary w-full py-3" onClick={resume}>
-                    <Play className="size-5" /> Tiếp tục
-                  </button>
-                  <button className="btn w-full" onClick={quit}>
-                    Thoát ván
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
-                  <p className="text-5xl font-extrabold text-gem tabular-nums">{v.score}</p>
-                  {v.score > v.best ? (
-                    <p className="flex items-center gap-1.5 font-bold text-amber">
-                      <Trophy className="size-5" /> Kỷ lục mới!
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted">Kỷ lục: {best}</p>
-                  )}
-                  <p className="text-sm text-muted">
-                    {cfg.listen ? `Kéo được ${v.hits} cục vàng` : `Bắn trúng ${v.hits} từ`} ·{" "}
-                    {phase === "win" ? `qua cả ${v.topics.length} mốc` : `dừng ở mốc ${v.milestone + 1}/${v.topics.length}`}
-                  </p>
-                  {!!missed.length && (
-                    <div className="w-full text-left">
-                      <p className="label mb-2">Từ bị trượt</p>
-                      <ul className="card divide-y divide-border p-0">
-                        {missed.map((w) => (
-                          <li key={w.word} className="flex items-baseline gap-2 px-3 py-2">
-                            <button className="cursor-pointer font-bold hover:underline" onClick={() => speakGerman(fullWord(w))}>
-                              {GENDER_TEXT[w.gender] ? <span className={GENDER_TEXT[w.gender]}>{w.gender} </span> : null}
-                              {w.word}
-                            </button>
-                            <span className="ml-auto text-right text-sm text-muted">{w.meaning}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {saved ? (
-                        <p className="mt-2 text-center text-sm font-bold text-accent">{saved}</p>
-                      ) : (
-                        <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
-                          <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex w-full gap-2">
-                    <button className="btn flex-1" onClick={quit}>
-                      Đổi bộ từ
+            <div className="flex flex-col items-end gap-2">
+              <span className="flex gap-0.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur" aria-label={`${v.lives} mạng`}>
+                {Array.from({ length: cfg.lives }, (_, i) => (
+                  <Heart key={i} className={`size-4 ${i < v.lives ? "fill-red-500 text-red-500" : "text-white/20"}`} />
+                ))}
+              </span>
+              {playing && (
+                <div className="flex flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
+                  {cfg.listen && (
+                    <button
+                      title="Nghe lại (Space)"
+                      onClick={listenAgain}
+                      className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-amber bg-gradient-to-b from-amber to-orange-500 text-amber-950 shadow-[0_0_14px_rgba(250,204,21,0.5)]"
+                    >
+                      <Ear className="size-4" />
                     </button>
-                    <button className="btn btn-primary flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
-                      <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
-                    </button>
-                  </div>
-                </>
+                  )}
+                  <RoundBtn theme={theme} title="Thoát ván" onClick={quit}>
+                    <X className="size-4" />
+                  </RoundBtn>
+                  <RoundBtn theme={theme} title={phase === "play" ? "Tạm dừng (Esc)" : "Tiếp tục"} onClick={() => (phase === "play" ? setPhase("pause") : resume())}>
+                    {phase === "play" ? <Pause className="size-4" /> : <Play className="size-4" />}
+                  </RoundBtn>
+                  <RoundBtn theme={theme} title="Bàn phím trên màn hình" on={keyboard} onClick={() => setOsk(!keyboard)}>
+                    <Keyboard className="size-4" />
+                  </RoundBtn>
+                  <RoundBtn theme={theme} title={sound ? "Tắt đọc từ khi bắn trúng" : "Bật đọc từ khi bắn trúng"} onClick={() => setSound(!sound)}>
+                    {sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+                  </RoundBtn>
+                </div>
               )}
             </div>
           </div>
-        )}
 
-        {/* Ô nhập ẩn: chỉ để bật bàn phím hệ thống trên màn cảm ứng (luôn để trống, chữ chuyển ngay cho game) */}
-        {nativeKeyboard && (
-          <input
-            ref={inputRef}
-            value=""
-            onChange={(e) => onNativeInput(e.target.value)}
-            onKeyDown={onNativeKey}
-            disabled={phase !== "play"}
-            lang="de"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            enterKeyHint="send"
-            aria-label="Gõ từ tiếng Đức"
-            className="pointer-events-none absolute bottom-0 left-0 size-px opacity-0"
-          />
-        )}
+          {note && (
+            <p
+              className={`sheet-fade pointer-events-none absolute inset-x-0 top-20 z-10 mx-auto w-fit max-w-[90%] rounded-xl px-3 py-1.5 text-center text-sm font-bold whitespace-pre-line ${
+                note.tone === "ok" ? theme.note : "bg-amber text-black"
+              }`}
+            >
+              {note.text}
+            </p>
+          )}
+
+          {/* Lớp phủ: tạm dừng / thua / thắng */}
+          {phase !== "play" && (
+            <div className={`absolute inset-0 z-20 flex flex-col items-center overflow-y-auto p-4 backdrop-blur-sm ${theme.overlay}`} onPointerDown={(e) => e.stopPropagation()}>
+              <div className="m-auto flex w-full max-w-md flex-col items-center gap-4 text-center">
+                {phase === "pause" ? (
+                  <>
+                    <p className="text-xl font-extrabold">Tạm dừng</p>
+                    <button className="btn btn-primary w-full py-3" onClick={resume}>
+                      <Play className="size-5" /> Tiếp tục
+                    </button>
+                    <button className="btn w-full" onClick={quit}>
+                      Thoát ván
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
+                    <p className="text-5xl font-extrabold text-gem tabular-nums">{v.score}</p>
+                    {v.score > v.best ? (
+                      <p className="flex items-center gap-1.5 font-bold text-amber">
+                        <Trophy className="size-5" /> Kỷ lục mới!
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted">Kỷ lục: {best}</p>
+                    )}
+                    <p className="text-sm text-muted">
+                      {cfg.listen ? `Kéo được ${v.hits} cục vàng` : `Bắn trúng ${v.hits} từ`} ·{" "}
+                      {phase === "win" ? `qua cả ${v.topics.length} mốc` : `dừng ở mốc ${v.milestone + 1}/${v.topics.length}`}
+                    </p>
+                    {!!missed.length && (
+                      <div className="w-full text-left">
+                        <p className="label mb-2">Từ bị trượt</p>
+                        <ul className="card divide-y divide-border p-0">
+                          {missed.map((w) => (
+                            <li key={w.key} className="flex items-baseline gap-2 px-3 py-2">
+                              <button className="cursor-pointer font-bold hover:underline" onClick={() => speakGerman(fullWord(w))}>
+                                {GENDER_TEXT[w.gender] ? <span className={GENDER_TEXT[w.gender]}>{w.gender} </span> : null}
+                                {w.word}
+                              </button>
+                              <span className="ml-auto text-right text-sm text-muted">{w.meaning}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {saved ? (
+                          <p className="mt-2 text-center text-sm font-bold text-accent">{saved}</p>
+                        ) : loggedIn ? (
+                          <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
+                            <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn
+                          </button>
+                        ) : (
+                          <p className="mt-2 text-center text-sm text-muted">
+                            <LoginLink href={`/login?next=${location.pathname}`} className="font-bold text-link hover:underline">
+                              Đăng nhập
+                            </LoginLink>{" "}
+                            để lưu các từ này vào sổ.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex w-full gap-2">
+                      <button className="btn flex-1" onClick={quit}>
+                        Đổi bộ từ
+                      </button>
+                      <button className="btn btn-primary flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
+                        <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Ô nhập ẩn: chỉ để bật bàn phím hệ thống trên màn cảm ứng (luôn để trống, chữ chuyển ngay cho game) */}
+          {nativeKeyboard && (
+            <input
+              ref={inputRef}
+              value=""
+              onChange={(e) => onNativeInput(e.target.value)}
+              onKeyDown={onNativeKey}
+              disabled={phase !== "play"}
+              lang="de"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="send"
+              aria-label="Gõ từ tiếng Đức"
+              className="pointer-events-none absolute bottom-0 left-0 size-px opacity-0"
+            />
+          )}
+        </div>
+
+        {/* Bàn phím trên màn hình (QWERTZ) */}
+        {keyboard && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: variant === "gold" ? "Chọn cục vàng khác" : "Chọn giọt khác" }} />}
       </div>
-
-      {/* Bàn phím trên màn hình (QWERTZ) */}
-      {keyboard && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: variant === "gold" ? "Chọn cục vàng khác" : "Chọn giọt khác" }} />}
     </div>
   );
 }

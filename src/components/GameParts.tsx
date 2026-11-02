@@ -191,8 +191,8 @@ export function DeckMenu({
             </p>
           </div>
           {from > 0 && (
-            <button className="btn max-sm:hidden" disabled={loading} onClick={() => onStart(0)}>
-              <RotateCcw className="size-4" /> Từ đầu
+            <button className="btn max-sm:px-3" title="Từ đầu" aria-label="Từ đầu" disabled={loading} onClick={() => onStart(0)}>
+              <RotateCcw className="size-4" /> <span className="max-sm:hidden">Từ đầu</span>
             </button>
           )}
           <button className={toneButton(tone)} disabled={loading} onClick={() => onStart(from)}>

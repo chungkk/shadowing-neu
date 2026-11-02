@@ -7,7 +7,7 @@ import type { StudyWord } from "./deck-study";
 import { shuffle } from "./review";
 
 export type Variant = "rain" | "gold";
-export type GameWord = StudyWord & { topic: string };
+export type GameWord = StudyWord & { key: string /* khoá mục trong bộ — phân biệt từ đồng âm */; topic: string };
 export type Topic = { id: string; title: string; icon: string };
 
 export const REEL = 1.5; // giây "gold": móc thả xuống (REEL_OUT phần đầu) rồi kéo cục vàng lên tới ròng rọc
@@ -73,8 +73,10 @@ export type Game = {
   targetId: number | null; // giọt đang gõ
   typed: string; // phần đã gõ đúng của giọt đó (theo chữ của từ: gõ "a" cho "ä" thì lưu "ä")
   wrong: number; // số lần gõ sai liên tiếp ở chữ hiện tại
+  gapX: number; // 2 giọt cách nhau dưới gapX (theo x) là cùng cột — 0: chưa biết cỡ sân
+  gapY: number; // giọt phải rơi quá gapY (theo y) thì giọt mới cùng cột mới không đè lên
 };
-export type View = Omit<Game, "cfg" | "words" | "queue" | "fresh" | "restUntil">;
+export type View = Omit<Game, "cfg" | "words" | "queue" | "fresh" | "restUntil" | "gapX" | "gapY">;
 export type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
 
 export const HITS_PER_LEVEL = 10;
@@ -109,8 +111,11 @@ export function press(g: Game, key: string): Drop | "ok" | "wrong" {
   const fits = (d: Drop) => d.state === "fall" && n < d.w.word.length && d.w.word.slice(0, n).toLowerCase() === g.typed.toLowerCase() && sameLetter(key, d.w.word[n]);
   const d = g.drops.find((d) => d.id === g.targetId && fits(d)) ?? g.drops.filter(fits).sort((a, b) => b.y - a.y)[0];
   if (!d) {
-    g.wrong++;
-    g.combo = 0;
+    // Sân trống (đang nghỉ sau khi bắn trúng): phím thừa không tính là gõ sai
+    if (g.drops.some((d) => d.state === "fall")) {
+      g.wrong++;
+      g.combo = 0;
+    }
     return "wrong";
   }
   let typed = d.w.word.slice(0, n + 1);
@@ -149,10 +154,19 @@ export function newGame(cfg: Rules, words: GameWord[], topics: Topic[], mileston
     targetId: null,
     typed: "",
     wrong: 0,
+    gapX: 0,
+    gapY: 0,
   };
   g.queue = shuffle(topicWords(g, milestone));
   g.goal = goalOf(g, milestone);
   return g;
+}
+
+/** Báo cỡ vùng rơi và cỡ giọt (px) để giọt mới không đè lên giọt cùng cột */
+export function fitField(g: Game, w: number, h: number, dropW: number, dropH: number) {
+  if (!w || !h) return;
+  g.gapX = dropW / Math.max(w - dropW, 1);
+  g.gapY = Math.min(dropH / Math.max(h - dropH, 1), 0.5); // sân quá thấp vẫn có chỗ cho 2 giọt
 }
 
 export const snapshot = (g: Game): View => ({
@@ -187,12 +201,18 @@ function nextWord(g: Game): GameWord {
 
 function spawn(g: Game) {
   const level = levelOf(g.hits);
+  const falling = g.drops.filter((d) => d.state === "fall");
+  const sameColumn = (d: Drop, x: number) => Math.abs(d.x - x) < g.gapX;
+  const blocked = (x: number) => falling.some((d) => sameColumn(d, x) && d.y < g.gapY);
   // Chọn cột không đè lên giọt mới rơi gần đó
-  const recent = g.drops.filter((d) => d.state === "fall" && d.y < 0.3);
+  const recent = falling.filter((d) => d.y < 0.3);
   let x = Math.random();
-  for (let i = 0; i < 8 && recent.some((d) => Math.abs(d.x - x) < 0.35); i++) x = Math.random();
+  for (let i = 0; i < 8 && (blocked(x) || recent.some((d) => Math.abs(d.x - x) < 0.35)); i++) x = Math.random();
+  if (blocked(x)) return; // chưa có chỗ (sân hẹp): khung hình sau thử lại
   const w = nextWord(g);
-  const d: Drop = { id: nextId++, w, x, y: 0, speed: (0.92 + Math.random() * 0.16) / fallTime(g.cfg, level, w.word), state: "fall", at: 0, points: 0 };
+  // Giọt cùng cột bên dưới rơi chậm hơn: hãm lại để tới lúc nó chạm đáy vẫn chưa đuổi kịp
+  const speed = falling.filter((d) => sameColumn(d, x)).reduce((v, d) => Math.min(v, ((1 - g.gapY) * d.speed) / (1 - d.y)), (0.92 + Math.random() * 0.16) / fallTime(g.cfg, level, w.word));
+  const d: Drop = { id: nextId++, w, x, y: 0, speed, state: "fall", at: 0, points: 0 };
   g.drops.push(d);
   g.fresh = d;
   g.nextSpawn = g.time + spawnEvery(g.cfg, level);

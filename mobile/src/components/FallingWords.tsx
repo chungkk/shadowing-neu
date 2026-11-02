@@ -11,6 +11,7 @@ import {
   REEL,
   RULES,
   backspace,
+  fitField,
   levelOf,
   newGame,
   nextMilestone,
@@ -476,6 +477,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     if (d) sayDrop(d);
   };
   const onSpawn = useEffectEvent((d: Drop) => cfg.listen && speech.word(saying(d), () => d.state === "fall"));
+  const fit = useEffectEvent((g: Game) => fitField(g, area.w, area.h, dropWidth(variant, area.w), DROP_H));
 
   // Hết lượt chơi: bỏ các câu đang chờ · tạm dừng thì ngừng đọc luôn (thắng / thua: đọc nốt từ vừa gõ xong)
   useEffect(() => {
@@ -491,6 +493,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     let last = performance.now();
     const frame = (now: number) => {
       const g = game.current!;
+      fit(g);
       step(g, Math.min((now - last) / 1000, 0.1)); // máy bị treo lâu → không nhảy cóc
       last = now;
       if (g.fresh) {
@@ -646,8 +649,8 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     if (!view || !current) return;
     setSaving(true);
     try {
-      const words = [...new Set(view.missed.map((w) => w.word))];
-      const r = await api<{ added: number }>(`/vocab/decks/${encodeURIComponent(current.slug)}`, { method: "POST", body: { words } });
+      const keys = [...new Set(view.missed.map((w) => w.key))];
+      const r = await api<{ added: number }>(`/vocab/decks/${encodeURIComponent(current.slug)}`, { method: "POST", body: { keys } });
       setSaved(r.added ? t("games.saved", { n: r.added }) : t("games.savedNone"));
     } catch (e) {
       setSaved((e as Error).message);
@@ -762,7 +765,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   const v = view!;
   const topic = v.topics[v.milestone];
   const target = v.drops.find((d) => d.id === v.targetId && d.state === "fall") ?? null;
-  const missed = [...new Map(v.missed.map((w) => [w.word, w])).values()];
+  const missed = [...new Map(v.missed.map((w) => [w.key, w])).values()];
   const dropW = dropWidth(variant, area.w);
   // "gold": ròng rọc ở giữa SÂN (vùng rơi lệch trái: giữa sân = giữa vùng rơi + (right - left) / 2), tính theo toạ độ vùng rơi
   const pulley = { x: area.w / 2 + (INSET.right - INSET.left) / 2, y: PULLEY_Y - AREA.gold.top };
@@ -995,7 +998,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
                         <View style={{ borderRadius: 14, borderWidth: 1, borderColor: C.border, backgroundColor: C.card }}>
                           {missed.map((w, i) => (
                             <Pressable
-                              key={w.word}
+                              key={w.key}
                               onPress={() => speakGerman(fullWord(w)).catch(() => {})}
                               style={({ pressed }) => ({ flexDirection: "row", alignItems: "baseline", gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderTopWidth: i ? 1 : 0, borderTopColor: C.border, opacity: pressed ? 0.7 : 1 })}
                             >

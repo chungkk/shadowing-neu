@@ -5,7 +5,7 @@ import type { ComponentType, ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Game từ vựng",
-  description: "Chơi game để luyện từ vựng tiếng Đức theo bộ từ Goethe A1, A2, B1.",
+  description: "Chơi game để luyện từ vựng tiếng Đức theo các bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng.",
 };
 
 const Emoji = ({ code, className }: { code: string; className: string }) => (
