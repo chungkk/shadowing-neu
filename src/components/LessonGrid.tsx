@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Circle, CircleCheck, Clock, Headphones, Lock, Minus } from "lucide-react";
@@ -87,18 +87,21 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className="size-full object-cover transition group-hover:scale-105"
+          className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-50" : ""}`}
         />
         <div className="absolute top-2 left-2 flex flex-wrap gap-1 pr-14">
-          {l.access === "locked" && (
-            <span className="pill bg-gold text-black">
-              <Lock className="size-3.5" /> Khoá
-            </span>
-          )}
           {l.access === "free" && <span className="pill bg-accent text-white">Miễn phí</span>}
           {l.isNew && <span className="pill bg-gold text-black">Mới</span>}
         </div>
         <LevelBadge level={l.level} className="absolute top-2 right-2" />
+        {l.access === "locked" && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-11 items-center justify-center rounded-full bg-black/65 text-white">
+              <Lock className="size-5" />
+              <span className="sr-only">Khoá</span>
+            </span>
+          </span>
+        )}
         <span className="pill absolute bottom-2 left-2 bg-black/75 text-white">
           <Headphones className="size-3.5" /> {l.sentences} câu
         </span>
@@ -150,6 +153,9 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   const searchParams = useSearchParams();
   const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
   const top = useRef<HTMLElement>(null);
+
+  // Trang được giữ lại khi rời đi (cacheComponents) → đóng popup lúc rời, không thì bấm Back vẫn thấy popup mở khoá cũ
+  useLayoutEffect(() => () => setOpening(null), []);
 
   if (!lessons.length)
     return (
