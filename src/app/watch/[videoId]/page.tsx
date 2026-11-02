@@ -1,18 +1,15 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LoginLink } from "@/components/LoginDialog";
 import ShadowPlayer from "@/components/ShadowPlayer";
-import TrackSelect from "@/components/TrackSelect";
 import { RememberVideo } from "@/components/RecentVideos";
 import { extractVideoId, getYouTubeTranscript, WHISPER } from "@/lib/youtube";
 import { getCurrentUser } from "@/lib/auth";
 import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 
-async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
+async function Watch({ params }: PageProps<"/watch/[videoId]">) {
   const { videoId: rawId } = await params;
-  const { lang } = await searchParams;
   const user = await getCurrentUser();
   const opts = { whisper: !!user }; // chỉ người đã đăng nhập mới được chạy Whisper (tốn tiền API)
   // Video của bài đang khoá → sang trang bài (màn mở khoá), không cho học lách qua link YouTube
@@ -20,18 +17,10 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
   if (locked) redirect(`/${locked.slug}`);
 
   let data: Awaited<ReturnType<typeof getYouTubeTranscript>>;
-  let notice = "";
   try {
     const videoId = extractVideoId(rawId);
     if (!videoId) throw new Error("Link YouTube không hợp lệ");
-    try {
-      data = await getYouTubeTranscript(videoId, typeof lang === "string" ? lang : undefined, opts);
-    } catch (e) {
-      // Chọn Whisper nhưng thất bại → quay về phụ đề YouTube, kèm thông báo
-      if (lang !== WHISPER) throw e;
-      notice = (e as Error).message;
-      data = await getYouTubeTranscript(videoId, undefined, opts);
-    }
+    data = await getYouTubeTranscript(videoId, undefined, opts);
   } catch (e) {
     return (
       <main className="mx-auto flex max-w-xl flex-col items-center gap-4 p-4 pt-20 text-center">
@@ -54,26 +43,8 @@ async function Watch({ params, searchParams }: PageProps<"/watch/[videoId]">) {
         sourceUrl={`/watch/${data.videoId}`}
       >
         <div className="flex flex-wrap items-end gap-3 text-xs text-muted">
-          <TrackSelect videoId={data.videoId} tracks={data.tracks} current={data.track.languageCode} />
-          {data.track.auto && (
-            <span>
-              ⚠ Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.
-              {!notice &&
-                data.tracks.some((t) => t.languageCode === WHISPER) &&
-                " Thử chọn “Whisper (AI)” để có phụ đề tốt hơn (video ngắn)."}
-              {!user && (
-                <>
-                  {" "}
-                  <LoginLink href={`/login?next=${encodeURIComponent(`/watch/${data.videoId}`)}`} className="underline">
-                    Đăng nhập
-                  </LoginLink>{" "}
-                  để tạo phụ đề tốt hơn bằng Whisper (AI).
-                </>
-              )}
-            </span>
-          )}
+          {data.track.auto && <span>⚠ Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.</span>}
           {data.track.languageCode === WHISPER && <span>Phụ đề do Whisper (AI) tạo.</span>}
-          {notice && <span className="basis-full text-red-400">⚠ Không tạo được bằng Whisper: {notice}</span>}
         </div>
       </ShadowPlayer>
     </>

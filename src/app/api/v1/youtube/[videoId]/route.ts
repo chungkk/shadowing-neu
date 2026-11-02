@@ -12,7 +12,7 @@ function lockedVideo(user: User | null, videoId: string): Response | null {
 }
 
 /**
- * GET /api/v1/youtube/<videoId hoặc link đã encode>?lang=<mã | whisper>
+ * GET /api/v1/youtube/<videoId hoặc link đã encode>
  * → { videoId, title, track, tracks, segments }. Whisper (tốn tiền) chỉ cho người đã đăng nhập.
  * ?saved=1 → chỉ trả phụ đề đã lưu (không gọi YouTube); chưa có → 404 — app dùng để hỏi trước khi tự lấy.
  */
@@ -28,9 +28,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/youtube/[
     return saved ? Response.json(saved) : fail("Chưa có phụ đề lưu sẵn", 404);
   }
 
-  const lang = req.nextUrl.searchParams.get("lang") || undefined;
   try {
-    return Response.json(await getYouTubeTranscript(videoId, lang, { whisper: !!user }));
+    return Response.json(await getYouTubeTranscript(videoId, undefined, { whisper: !!user }));
   } catch (e) {
     return fail((e as Error).message, 502);
   }
