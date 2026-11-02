@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Nunito } from "next/font/google";
+import { Baloo_2, Geist_Mono, Nunito } from "next/font/google";
 import { HeaderNav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
+import Mascot from "@/components/Mascot";
 import ShareBar from "@/components/ShareBar";
 import SiteFooter from "@/components/SiteFooter";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
@@ -12,6 +13,11 @@ import "./globals.css";
 
 const nunito = Nunito({
   variable: "--font-nunito",
+  subsets: ["latin", "vietnamese"],
+});
+
+const baloo = Baloo_2({
+  variable: "--font-baloo",
   subsets: ["latin", "vietnamese"],
 });
 
@@ -32,23 +38,22 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0c110e",
+  themeColor: "#fff6e9",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${nunito.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="vi" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full">
         <Suspense fallback={<SidebarSkeleton />}>
           <SidebarWithUser />
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
-          <header className="relative z-30 flex h-14 items-center gap-3 px-3 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
-            <div className="flag-stripe absolute inset-x-0 bottom-0 h-1 shadow-[0_-1px_0_var(--border)]" />
-            <Link href="/" className="flex items-center gap-2.5 text-lg font-extrabold">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon.svg" alt="" className="size-8 rounded-lg max-md:hidden" />
+          <header className="relative z-30 flex h-14 items-center gap-3 bg-card px-3 pb-2 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
+            <div className="candy-stripe absolute inset-x-0 bottom-0 h-2.5" />
+            <Link href="/" className="flex items-center gap-1.5 font-display text-xl font-extrabold">
+              <Mascot className="size-11 max-md:hidden" />
               <span>
                 <span className="hidden sm:inline">Deutsch </span>Shadowing
               </span>

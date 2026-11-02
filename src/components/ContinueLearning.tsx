@@ -43,7 +43,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
             <Link
               key={p.source}
               href={href}
-              className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-accent"
+              className="group sticker sticker-link flex items-center gap-3 p-3"
             >
               <div className="relative w-24 shrink-0 overflow-hidden rounded-lg bg-black sm:w-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

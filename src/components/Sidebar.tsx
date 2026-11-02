@@ -49,7 +49,7 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
         href={it.href}
         title={it.label}
         className={`flex size-11 items-center justify-center rounded-2xl transition ${
-          it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-link hover:bg-white/10"
+          it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
         }`}
       >
         <it.icon className="size-6" />
@@ -62,7 +62,7 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
       {items.map(link)}
       {user ? (
         <form action={logout}>
-          <button title="Đăng xuất" className="flex size-11 cursor-pointer items-center justify-center rounded-2xl text-red-400 hover:bg-white/10">
+          <button title="Đăng xuất" className="flex size-11 cursor-pointer items-center justify-center rounded-2xl text-red-400 hover:bg-foreground/10">
             <LogOut className="size-6" />
           </button>
         </form>
@@ -75,7 +75,7 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t border-border bg-sidebar px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t-2 border-ink bg-card px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
       {children}
     </nav>
   );
@@ -102,7 +102,7 @@ export function HeaderNavFrame({ current }: { current?: string }) {
           key={it.href}
           href={it.href}
           className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
-            it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-white/5 hover:text-foreground"
+            it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
           }`}
         >
           <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
@@ -168,7 +168,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
       href={it.href}
       role="menuitem"
       className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold transition ${
-        it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-white/5 hover:text-foreground"
+        it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
       }`}
     >
       <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
@@ -178,12 +178,12 @@ export function UserDropdown({ user }: { user: NavUser }) {
 
   return (
     <>
-      <Link href="/settings" title="Cài đặt tài khoản" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-white/5 md:hidden">
+      <Link href="/settings" title="Cài đặt tài khoản" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-foreground/5 md:hidden">
         {trigger}
       </Link>
       <div ref={box} className="relative max-md:hidden" onPointerEnter={(e) => e.pointerType === "mouse" && show()} onPointerLeave={(e) => e.pointerType === "mouse" && hide()}>
         <button
-          className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-white/5 ${open ? "bg-white/5" : ""}`}
+          className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-foreground/5 ${open ? "bg-foreground/5" : ""}`}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
@@ -194,7 +194,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
         {open && (
           // pt-2: khe trong suốt vẫn thuộc vùng rê chuột
           <div className="absolute top-full right-0 z-50 w-64 pt-2">
-            <div role="menu" className="sheet-fade flex flex-col gap-0.5 rounded-2xl border border-border bg-card p-2 shadow-2xl shadow-black/50">
+            <div role="menu" className="sheet-fade flex flex-col gap-0.5 rounded-2xl border-2 border-ink bg-card p-2 shadow-[0_4px_0_var(--ink)]">
               <div className="mb-1 flex items-center gap-3 border-b border-border px-2 pt-1 pb-3">
                 <Avatar user={user} className="size-10 text-lg" />
                 <div className="min-w-0">

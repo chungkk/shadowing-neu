@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Headphones, Lock } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
+import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
 import UnlockDialog from "./UnlockDialog";
 
@@ -45,9 +46,9 @@ function LessonCard({ l, onLocked }: { l: Item; onLocked?: (l: Item) => void }) 
         e.preventDefault();
         onLocked(l);
       }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent active:scale-[0.99]"
+      className="group sticker sticker-link flex flex-col overflow-hidden"
     >
-      <div className="relative aspect-video overflow-hidden bg-black">
+      <div className="relative aspect-video overflow-hidden border-b-2 border-ink bg-black">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
@@ -55,7 +56,7 @@ function LessonCard({ l, onLocked }: { l: Item; onLocked?: (l: Item) => void }) 
           loading="lazy"
           className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-50" : ""}`}
         />
-        {l.isNew && <span className="pill absolute top-2 left-2 bg-amber text-sidebar">Mới</span>}
+        {l.isNew && <span className="pill absolute top-2 left-2 bg-gold text-black">Mới</span>}
         {l.access === "free" && <span className="pill absolute top-2 right-2 bg-accent text-white">Miễn phí</span>}
         {l.access === "locked" && (
           <span className="absolute inset-0 flex items-center justify-center">
@@ -109,7 +110,13 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   const [level, setLevel] = useState<string | null>(null);
   const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
 
-  if (!lessons.length) return <p className="text-sm text-muted">Chưa có bài học nào.</p>;
+  if (!lessons.length)
+    return (
+      <div className="flex flex-col items-center gap-1 py-6 text-center">
+        <Mascot className="size-28" />
+        <p className="text-sm font-bold text-muted">Chưa có bài học nào.</p>
+      </div>
+    );
 
   // Chỉ hiện cấp độ có bài, kèm số bài
   const levels = LEVELS.map((lv) => ({ level: lv, count: lessons.filter((l) => l.level === lv).length })).filter((g) => g.count);
@@ -119,8 +126,8 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
     <button
       key={lv ?? "all"}
       onClick={() => setLevel(lv)}
-      className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-sm font-bold transition ${
-        level === lv ? "border-accent bg-accent text-white" : "border-border bg-card text-foreground hover:border-accent"
+      className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-ink px-3.5 py-1.5 text-sm font-bold transition ${
+        level === lv ? "bg-accent text-white" : "bg-card text-foreground hover:bg-card-2"
       }`}
     >
       {lv ?? "Tất cả"}

@@ -1,11 +1,38 @@
 @import "tailwindcss";
 
-/* Giao diện tối: nền đen ánh xanh lá · xanh lá (chính) · vàng (nhấn) · đỏ (ghi âm / xoá) */
+/* Giao diện theo linh vật: nền kem · viền nâu mận (ink) · đỏ kẹo (ghi âm / xoá) · xanh lá (chính) · vàng tai nghe (nhấn) */
 :root {
+  color-scheme: light;
+  --background: #fff6e9;
+  --sidebar: #ffedd6;
+  --foreground: #43232f;
+  --ink: #55303f;
+  --card: #fffdf9;
+  --card-2: #ffedd6;
+  --border: #ecd3bb;
+  --muted: #7a5a65;
+  --link: #0f766e;
+  --accent: #17803f;
+  --accent-dark: #0e5a2b;
+  --amber: #a85605; /* đủ đậm để làm chữ trên nền kem; nền nút dùng --gold */
+  --amber-dark: #7a3e04;
+  --gold: #fbbf24;
+  --red: #e8384f;
+  --red-dark: #8f2036;
+  --red-400: #c81e3a; /* chữ đỏ (lỗi, xoá) */
+  --red-300: #c81e3a;
+  --phrase: #0369a1; /* cụm từ cố định AI tìm thấy */
+  --gem: #0369a1; /* điểm chính tả (kim cương) */
+  --gem-dark: #075985;
+}
+
+/* Màn chơi game và tranh minh hoạ game: vẽ riêng cho nền đêm nên giữ bảng màu tối */
+.theme-night {
   color-scheme: dark;
   --background: #0c110e;
   --sidebar: #070a08;
   --foreground: #eef5ef;
+  --ink: #26362c;
   --card: #131b16;
   --card-2: #1b261f;
   --border: #26362c;
@@ -15,11 +42,15 @@
   --accent-dark: #14532d;
   --amber: #facc15;
   --amber-dark: #854d0e;
+  --gold: #facc15;
   --red: #dc2626;
   --red-dark: #7f1d1d;
-  --phrase: #38bdf8; /* cụm từ cố định AI tìm thấy */
-  --gem: #38bdf8; /* điểm chính tả (kim cương) */
+  --red-400: #f87171;
+  --red-300: #fca5a5;
+  --phrase: #38bdf8;
+  --gem: #38bdf8;
   --gem-dark: #0369a1;
+  color: var(--foreground);
 }
 
 @theme inline {
@@ -29,6 +60,10 @@
   --color-card: var(--card);
   --color-card-2: var(--card-2);
   --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-gold: var(--gold);
+  --color-red-400: var(--red-400);
+  --color-red-300: var(--red-300);
   --color-muted: var(--muted);
   --color-link: var(--link);
   --color-accent: var(--accent);
@@ -41,12 +76,16 @@
   --color-gem: var(--gem);
   --color-gem-dark: var(--gem-dark);
   --font-sans: var(--font-nunito);
+  --font-display: var(--font-baloo);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Chấm bi nhạt như giấy dán sticker */
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 8%, transparent) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
   font-family: var(--font-sans), system-ui, sans-serif;
   /* Điện thoại xoay ngang: chừa chỗ tai thỏ (viewport-fit=cover) */
   padding-left: env(safe-area-inset-left);
@@ -62,37 +101,53 @@ select {
   touch-action: manipulation;
 }
 
+@layer base {
+  h1,
+  h2 {
+    font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  }
+}
+
 @layer components {
+  /* Khung kiểu sticker: viền đậm, bóng cứng dưới đáy */
+  .sticker {
+    @apply rounded-3xl border-2 border-ink bg-card shadow-[0_4px_0_var(--ink)];
+  }
+  /* Thẻ bấm được: nhấc lên và nghiêng nhẹ khi rê chuột */
+  .sticker-link {
+    @apply transition hover:-translate-y-1 hover:-rotate-1 hover:shadow-[0_7px_0_var(--ink)] active:translate-y-0.5 active:rotate-0 active:shadow-[0_1px_0_var(--ink)] motion-reduce:hover:rotate-0;
+  }
   .card {
-    @apply rounded-2xl border border-border bg-card p-4;
+    @apply rounded-3xl border-2 border-ink bg-card p-4 shadow-[0_4px_0_var(--ink)];
   }
   /* Tiêu đề nhỏ in hoa của từng khung: "VIDEO", "TRANSCRIPT"… */
   .label {
     @apply text-sm font-extrabold tracking-wider text-foreground uppercase;
   }
   .btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card-2 px-3.5 py-2 text-sm font-bold transition select-none hover:border-accent disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-card px-3.5 py-2 text-sm font-bold shadow-[0_3px_0_var(--ink)] transition select-none hover:-translate-y-px active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40;
   }
   /* Nút lớn kiểu "nổi" có viền dưới đậm */
   .btn-primary {
-    @apply border-accent bg-accent tracking-wide text-white uppercase shadow-[0_4px_0_var(--accent-dark)] hover:brightness-110 active:translate-y-0.5 active:shadow-[0_2px_0_var(--accent-dark)];
+    @apply bg-accent tracking-wide text-white uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-110;
   }
   .btn-amber {
-    @apply border-2 border-amber bg-amber/10 tracking-wide text-amber uppercase shadow-[0_4px_0_var(--amber-dark)] hover:border-amber active:translate-y-0.5 active:shadow-[0_2px_0_var(--amber-dark)];
+    @apply bg-gold tracking-wide text-black uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-105;
   }
   .btn-red {
-    @apply border-2 border-red bg-red/15 tracking-wide text-red-400 uppercase shadow-[0_4px_0_var(--red-dark)] hover:border-red active:translate-y-0.5 active:shadow-[0_2px_0_var(--red-dark)];
+    @apply bg-red tracking-wide text-white uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-110;
   }
-  /* Dải đen – đỏ – vàng (cờ Đức); "đen" là xám đậm để không chìm vào nền tối */
-  .flag-stripe {
-    background: linear-gradient(to right, #3f3f46 0 33.3%, var(--red) 33.3% 66.6%, var(--amber) 66.6%);
+  /* Dải sọc kẹo như thân linh vật */
+  .candy-stripe {
+    @apply border-y-2 border-ink;
+    background: repeating-linear-gradient(-45deg, var(--red) 0 10px, #fffaf3 10px 20px);
   }
   .btn-icon {
-    @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-40;
   }
   /* Điện thoại: chữ 16px — nhỏ hơn thì Safari iOS tự phóng to trang khi bấm vào ô */
   .input {
-    @apply rounded-xl border border-border bg-background px-4 py-3 text-base outline-none placeholder:text-muted focus:border-accent md:text-sm;
+    @apply rounded-2xl border-2 border-ink/40 bg-card px-4 py-3 text-base outline-none placeholder:text-muted focus:border-accent md:text-sm;
   }
   .field {
     @apply flex flex-col gap-1 text-muted;
@@ -107,7 +162,7 @@ select {
     @apply accent-accent;
   }
   .pill {
-    @apply inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold;
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold;
   }
   /* Thanh cuộn ngang trên điện thoại (hàng nút, hàng lọc) — ẩn thanh cuộn */
   .scroll-row {

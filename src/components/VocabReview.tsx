@@ -85,7 +85,7 @@ const PRAISE = ["Tuyệt vời!", "Chính xác!", "Giỏi lắm!", "Xuất sắc
 const tile = "rounded-2xl border-2 border-b-4 font-bold transition active:translate-y-0.5 active:border-b-2 disabled:active:translate-y-0";
 const tone = (state: "idle" | "sel" | "right" | "wrong" | "dim") =>
   ({
-    idle: "border-border bg-card-2 hover:bg-white/5",
+    idle: "border-border bg-card-2 hover:bg-foreground/5",
     sel: "border-link bg-link/15 text-link",
     right: "border-accent bg-accent/15 text-accent",
     wrong: "border-red bg-red/15 text-red-400",
@@ -510,7 +510,7 @@ export default function VocabReview({
             <div className="flex flex-wrap justify-center gap-2">
               {step.tiles!.map((c, i) =>
                 built.includes(i) ? (
-                  <span key={i} className="min-w-11 rounded-2xl bg-white/5 px-3 py-2 text-2xl text-transparent">
+                  <span key={i} className="min-w-11 rounded-2xl bg-foreground/5 px-3 py-2 text-2xl text-transparent">
                     {c}
                   </span>
                 ) : (
@@ -644,7 +644,7 @@ export default function VocabReview({
             <div className="flex flex-wrap justify-center gap-2">
               {step.tiles!.map((w, i) =>
                 built.includes(i) ? (
-                  <span key={i} className="rounded-2xl bg-white/5 px-3 py-2 text-lg text-transparent">
+                  <span key={i} className="rounded-2xl bg-foreground/5 px-3 py-2 text-lg text-transparent">
                     {w}
                   </span>
                 ) : (

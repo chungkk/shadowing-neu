@@ -4,6 +4,7 @@ import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
+import Mascot from "@/components/Mascot";
 import ContinueLearning from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
 import { LessonGridSkeleton } from "@/components/Skeleton";
@@ -44,9 +45,15 @@ async function Continue() {
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-4 md:gap-10 md:p-6">
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <h1 className="text-xl font-extrabold sm:text-2xl">Luyện nói tiếng Đức với video thật</h1>
-        <YouTubeUrlForm />
+      <section className="sticker grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-4 sm:gap-x-6 sm:p-6">
+        <Mascot className="bob size-20 sm:row-span-2 sm:size-36" />
+        <div className="flex flex-col items-start gap-1.5">
+          <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">Hallo! Cùng nói nào!</span>
+          <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Luyện nói tiếng Đức với video thật</h1>
+        </div>
+        <div className="col-span-2 sm:col-span-1">
+          <YouTubeUrlForm />
+        </div>
       </section>
 
       <Suspense>

@@ -7,7 +7,7 @@ const COLORS: Record<string, string> = {
 
 export default function LevelBadge({ level, className = "" }: { level: string; className?: string }) {
   return (
-    <span className={`rounded-lg px-2 py-0.5 text-sm font-extrabold ${COLORS[level[0]] ?? COLORS.A} ${className}`}>
+    <span className={`rounded-full border-2 border-ink px-2 text-sm font-extrabold ${COLORS[level[0]] ?? COLORS.A} ${className}`}>
       {level}
     </span>
   );

@@ -62,7 +62,7 @@ export default function LegalPage({ doc, lang }: { doc: LegalDoc; lang: LegalLan
         <p className="leading-relaxed text-foreground/85">{c.intro}</p>
       </header>
       {c.sections.map((s) => (
-        <section key={s.h} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5">
+        <section key={s.h} className="card flex flex-col gap-3 p-5">
           <h2 className="text-lg font-extrabold">{s.h}</h2>
           {s.body.map((b, i) =>
             typeof b === "string" ? (

@@ -424,7 +424,7 @@ export default function DeckStudy({
                   key={t.id}
                   onClick={() => pick(t.id)}
                   className={`flex shrink-0 cursor-pointer items-center gap-3 rounded-xl border p-2 text-left transition max-lg:pr-3 ${
-                    on ? "border-accent bg-accent/20" : "border-border hover:border-accent/60 hover:bg-white/5"
+                    on ? "border-accent bg-accent/20" : "border-border hover:border-accent/60 hover:bg-foreground/5"
                   }`}
                 >
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-card-2 text-xl">{t.icon}</span>

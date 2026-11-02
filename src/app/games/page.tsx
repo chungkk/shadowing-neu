@@ -77,8 +77,8 @@ export default function GamesPage() {
       <h1 className="text-2xl font-extrabold">Game từ vựng</h1>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {GAMES.map((g) => (
-          <Link key={g.href} href={g.href} className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-amber/60">
-            <div className="relative h-40 overflow-hidden">
+          <Link key={g.href} href={g.href} className="group sticker sticker-link flex flex-col overflow-hidden">
+            <div className="theme-night relative h-40 overflow-hidden border-b-2 border-ink">
               {g.art}
               <span className="absolute top-2.5 right-2.5 rounded-full border border-cyan-300/50 bg-black/60 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-cyan-200 uppercase">
                 1 người chơi
@@ -91,8 +91,8 @@ export default function GamesPage() {
                 </span>
                 {g.title}
               </h2>
-              <p className="flex-1 text-sm text-sky-300/80">{g.description}</p>
-              <span className="btn border-amber bg-amber py-2.5 tracking-wide text-black uppercase shadow-[0_4px_0_#a16207] group-hover:brightness-110">
+              <p className="flex-1 text-sm text-muted">{g.description}</p>
+              <span className="btn btn-amber py-2.5 group-hover:brightness-105">
                 Chơi ngay <ArrowRight className="size-4" />
               </span>
             </div>

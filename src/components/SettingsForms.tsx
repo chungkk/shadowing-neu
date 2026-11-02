@@ -29,7 +29,7 @@ function Section({
   danger?: boolean;
 }) {
   return (
-    <section className={`overflow-hidden rounded-2xl border bg-card ${danger ? "border-red/40" : "border-border"}`}>
+    <section className={`sticker overflow-hidden ${danger ? "border-red" : ""}`}>
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <div>
           <h2 className={`flex items-center gap-2 text-lg font-extrabold ${danger ? "text-red-400" : ""}`}>

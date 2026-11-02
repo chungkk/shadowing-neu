@@ -114,7 +114,7 @@ function Toggle({
     >
       <Icon className={`size-4 ${on ? "fill-accent/20 text-accent" : "text-muted"}`} />
       {label}
-      <span className={`relative ml-1 h-5 w-9 shrink-0 rounded-full transition-colors max-sm:hidden ${on ? "bg-accent" : "bg-white/15"}`}>
+      <span className={`relative ml-1 h-5 w-9 shrink-0 rounded-full transition-colors max-sm:hidden ${on ? "bg-accent" : "bg-foreground/15"}`}>
         <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : ""}`} />
       </span>
     </button>
@@ -952,7 +952,7 @@ export default function ShadowPlayer({
               <Zap className="size-5" /> {settings.rate}×
             </button>
             <button
-              className={`btn-icon ${panel === "settings" ? "bg-white/10" : ""}`}
+              className={`btn-icon ${panel === "settings" ? "bg-foreground/10" : ""}`}
               title="Cài đặt"
               onClick={() => setPanel(panel === "settings" ? null : "settings")}
             >
@@ -960,7 +960,7 @@ export default function ShadowPlayer({
             </button>
             {/* Điện thoại không có bàn phím → ẩn bảng phím tắt */}
             <button
-              className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-white/10" : ""}`}
+              className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-foreground/10" : ""}`}
               title="Phím tắt"
               onClick={() => setPanel(panel === "keys" ? null : "keys")}
             >
@@ -1196,7 +1196,7 @@ export default function ShadowPlayer({
                     {gap ? (isRecording ? "🎙 Đến lượt bạn — đang ghi âm…" : "🗣 Đến lượt bạn nói…") : ""}
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
                   {gap && (
                     <div
                       key={gap.id}

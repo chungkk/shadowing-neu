@@ -107,7 +107,7 @@ export default function ShareBar() {
       ))}
       <button
         title={copied ? "Đã chép link" : "Chép link"}
-        className={`${round} ${copied ? "bg-accent text-white" : "bg-card-2 text-foreground hover:bg-white/15"}`}
+        className={`${round} ${copied ? "bg-accent text-white" : "bg-card-2 text-foreground hover:bg-foreground/15"}`}
         onClick={copy}
       >
         {copied ? <Check className="size-[18px]" /> : <Link2 className="size-[18px]" />}

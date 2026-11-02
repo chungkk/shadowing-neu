@@ -59,7 +59,7 @@ function DeckCard({ deck, learned }: { deck: DeckSummary; learned: number | null
   return (
     <Link
       href={`/vocab/decks/${deck.slug}`}
-      className="group flex flex-col gap-3 rounded-2xl border border-border bg-card p-2.5 transition hover:-translate-y-1 hover:border-accent active:scale-[0.99] sm:p-3"
+      className="group sticker sticker-link flex flex-col gap-3 p-2.5 sm:p-3"
     >
       <DeckCover deck={deck} />
       <h3 className="line-clamp-2 min-h-[2lh] px-0.5 leading-snug font-extrabold sm:text-lg">{deck.title}</h3>

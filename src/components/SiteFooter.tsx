@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { contactEmail } from "@/lib/mail";
+import Mascot from "./Mascot";
 
 const COLUMNS = [
   {
@@ -45,14 +46,13 @@ async function CurrentYear() {
 export default function SiteFooter() {
   return (
     <footer className="bg-sidebar">
-      <div className="flag-stripe h-1" />
+      <div className="candy-stripe h-2.5" />
       <div className="share-gutter">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
-              <Link href="/" className="flex w-fit items-center gap-2.5 text-lg font-extrabold">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon.svg" alt="" className="size-8 rounded-lg" /> Deutsch Shadowing
+              <Link href="/" className="flex w-fit items-center gap-1.5 font-display text-xl font-extrabold">
+                <Mascot className="size-12" /> Deutsch Shadowing
               </Link>
               <p className="max-w-sm text-sm text-muted">Luyện nghe, nói và chép chính tả tiếng Đức với video thật.</p>
             </div>

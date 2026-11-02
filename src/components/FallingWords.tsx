@@ -574,7 +574,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       <div
         ref={field}
         onPointerDown={() => phase === "play" && nativeKeyboard && focusInput()}
-        className={`relative overflow-hidden select-none ${theme.field} ${
+        className={`theme-night relative overflow-hidden select-none ${theme.field} ${
           full ? "" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
         }`}
       >

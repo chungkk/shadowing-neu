@@ -21,7 +21,7 @@ export function RecentVideos() {
           <Link
             key={r.videoId}
             href={`/watch/${r.videoId}`}
-            className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:border-accent"
+            className="group sticker sticker-link overflow-hidden"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />

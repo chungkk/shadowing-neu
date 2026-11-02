@@ -243,7 +243,7 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
               <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
               <span className="text-sm text-muted">· {list.length} từ</span>
               <button
-                className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-muted transition hover:bg-white/5 hover:text-foreground"
+                className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-muted transition hover:bg-foreground/5 hover:text-foreground"
                 onClick={() => setReview({ title: dayLabel(day, local), items: list })}
               >
                 <Brain className="size-3.5 text-amber" /> Ôn ngày này

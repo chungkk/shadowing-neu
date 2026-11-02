@@ -117,7 +117,7 @@ export default function SocialLogin({
           <div className={`group relative ${pending || !googleReady ? "pointer-events-none opacity-50" : ""}`}>
             <div
               aria-hidden
-              className="btn w-full border-white bg-white py-3 text-[15px] text-neutral-900 group-focus-within:border-accent group-hover:border-accent"
+              className="btn w-full bg-white py-3 text-[15px] text-neutral-900 group-focus-within:border-accent group-hover:border-accent"
             >
               {pending === "google" ? <Loader2 className="size-5 animate-spin" /> : <GoogleLogo />}
               Tiếp tục với Google

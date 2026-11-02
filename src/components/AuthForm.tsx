@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
 import SocialLogin from "./SocialLogin";
+import Mascot from "./Mascot";
 
 const ErrorBox = ({ children }: { children?: string }) =>
   children ? <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
@@ -211,7 +212,7 @@ export default function AuthForm({
     <Frame onClose={onClose}>
       {/* Popup trên điện thoại: phủ kín màn hình (không viền / bo góc) thay cho hộp nhỏ giữa màn */}
       <div
-        className={`relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-black/40 md:grid-cols-2 ${
+        className={`relative grid w-full max-w-4xl overflow-hidden sticker md:grid-cols-2 ${
           onClose ? "max-sm:min-h-dvh max-sm:rounded-none max-sm:border-0" : ""
         }`}
       >
@@ -243,11 +244,11 @@ export default function AuthForm({
         {/* Hình minh hoạ */}
         <div className="relative hidden items-center justify-center bg-card-2 md:flex">
           <div className="absolute size-72 rounded-full bg-accent/15" />
-          <div className="relative text-[9rem] leading-none drop-shadow-xl">🎧</div>
-          <div className="absolute top-[30%] right-[14%] rotate-6 rounded-3xl rounded-bl-md bg-amber px-5 py-3 text-2xl font-extrabold text-sidebar shadow-lg">
+          <Mascot className="bob relative size-64" />
+          <div className="absolute top-[30%] right-[14%] rotate-6 rounded-3xl rounded-bl-md border-2 border-ink bg-gold px-5 py-3 text-2xl font-extrabold text-black">
             Hallo!
           </div>
-          <div className="absolute bottom-[24%] left-[14%] -rotate-6 rounded-3xl rounded-br-md bg-accent px-4 py-2 text-lg font-extrabold text-white shadow-lg">
+          <div className="absolute bottom-[24%] left-[14%] -rotate-6 rounded-3xl rounded-br-md border-2 border-ink bg-accent px-4 py-2 text-lg font-extrabold text-white">
             Wie geht&apos;s?
           </div>
         </div>
