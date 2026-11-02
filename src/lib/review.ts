@@ -47,9 +47,19 @@ export function checkTyped(given: string, word: string): "exact" | "ok" | "almos
   const b = norm(word);
   if (!a) return "wrong";
   if (a === b) return "ok";
-  const d = distance(a, b);
-  return (b.length >= 5 && d <= 1) || (b.length >= 10 && d <= 2) ? "almost" : "wrong";
+  const close = (x: string, y: string) => {
+    const d = distance(x, y);
+    return (y.length >= 5 && d <= 1) || (y.length >= 10 && d <= 2);
+  };
+  // Cụm từ: so từng từ — sai chính tả nhẹ vẫn được, nhưng sai từ ("im" / "in", "machen" / "leisten") hoặc sai thứ tự thì sai
+  const as = a.split(" ");
+  const bs = b.split(" ");
+  if (bs.length > 1) return as.length === bs.length && bs.every((w, i) => as[i] === w || close(as[i], w)) ? "almost" : "wrong";
+  return close(a, b) ? "almost" : "wrong";
 }
+
+/** Gợi ý khi gõ: hiện `hint` ký tự đầu, còn lại là gạch dưới (giữ khoảng trắng để thấy số từ của cụm) */
+export const typingMask = (word: string, hint: number) => word.slice(0, hint) + word.slice(hint).replace(/\S/g, "_");
 
 /** Đúng thứ tự từ (bỏ qua hoa/thường, dấu câu) — xếp từ thành câu */
 export function checkOrder(built: string[], sentence: string): "exact" | "ok" | "wrong" {
@@ -72,8 +82,8 @@ export type Kind =
   | "cloze-type" // gõ từ còn thiếu trong câu
   | "listen-type" // nghe, gõ từ
   | "match" // ghép cặp từ – nghĩa
-  | "order" // nhìn nghĩa, xếp từ thành câu (câu đánh dấu sao)
-  | "listen-order" // nghe, xếp từ thành câu
+  | "order" // nhìn nghĩa, xếp các từ của cụm từ / câu đánh dấu sao
+  | "listen-order" // nghe, xếp các từ của cụm từ / câu
   | "flash"; // thẻ lật tự chấm (khi không đủ dữ liệu cho dạng khác)
 
 export type Step = {
@@ -87,7 +97,7 @@ export type Step = {
   pairs?: ReviewWord[]; // match
   kind?: Kind; // chọn lúc tới lượt (lúc đó mới biết trình duyệt có giọng Đức chưa)
   options?: string[]; // trắc nghiệm; match: nghĩa cột phải đã xáo
-  tiles?: string[]; // xếp chữ; order: các từ của câu
+  tiles?: string[]; // xếp chữ; order: các từ của cụm / câu (cụm ngắn có thêm từ nhiễu)
 };
 
 export const isPhrase = (v: Pick<ReviewWord, "word">) => v.word.trim().includes(" ");
@@ -104,7 +114,10 @@ export const canCloze = (v: ReviewWord) =>
 const canTiles = (v: ReviewWord, tts: boolean) =>
   !isPhrase(v) && [...v.word].length >= 2 && [...v.word].length <= 14 && (!!v.meaning || canCloze(v) || tts);
 const tokens = (v: ReviewWord) => v.word.trim().split(/\s+/);
-const canOrder = (v: ReviewWord) => isSentence(v) && tokens(v).length >= 3 && tokens(v).length <= 18;
+/** Cụm từ viết ra được: không có phương án / phần tuỳ chọn ("getrennt / geschieden", "(sich) zwingen", "je … desto …") */
+const canWritePhrase = (v: ReviewWord) => isPhrase(v) && !isSentence(v) && !/[/(),…]|\.\./.test(v.word);
+const canOrder = (v: ReviewWord) =>
+  isSentence(v) ? tokens(v).length >= 3 && tokens(v).length <= 18 : canWritePhrase(v) && tokens(v).length <= 8;
 
 const category = (v: ReviewWord) => (isSentence(v) ? "sentence" : isPhrase(v) ? "phrase" : "word");
 
@@ -130,16 +143,16 @@ function distractors(item: ReviewWord, pool: ReviewWord[], field: "word" | "mean
 function available(v: ReviewWord, pool: ReviewWord[], tts: boolean): Set<Kind> {
   const out = new Set<Kind>(["flash"]);
   const words = distractors(v, pool, "word").length === 3;
-  if (canOrder(v) && (v.meaning || tts)) out.add("order");
+  if (canOrder(v) && (v.meaning || (tts && isSentence(v)))) out.add("order");
   if (canOrder(v) && tts) out.add("listen-order");
   if (v.meaning && distractors(v, pool, "meaning").length === 3) out.add("choose-meaning");
   if (v.meaning && words) out.add("choose-word");
   if (tts && words) out.add("listen-choose");
   if (canCloze(v) && words) out.add("cloze-bank");
   if (canTiles(v, tts)) out.add("tiles");
-  if (v.meaning && !isPhrase(v)) out.add("type");
+  if (v.meaning && (!isPhrase(v) || canWritePhrase(v))) out.add("type");
   if (canCloze(v)) out.add("cloze-type");
-  if (tts && !isPhrase(v)) out.add("listen-type");
+  if (tts && (!isPhrase(v) || canWritePhrase(v))) out.add("listen-type");
   return out;
 }
 
@@ -172,7 +185,12 @@ function pickKind(step: Step, pool: ReviewWord[], tts: boolean): Kind {
     // Sai rồi hỏi lại thì dễ hơn một bậc
     const s = step.role === "retry" ? Math.max(0, v.stage - 2) : v.stage;
     want =
-      s === 0
+      isPhrase(v) && s >= 3
+        ? // Cụm từ: xếp các từ → tự gõ cả cụm (cụm không gõ được thì giữ dạng xếp từ)
+          s === 3 || !(ok.has("type") || ok.has("listen-type"))
+          ? ["order"]
+          : ["type", "listen-type"]
+        : s === 0
         ? ["choose-meaning"]
         : s === 1
           ? ["choose-meaning", "listen-choose"]
@@ -188,6 +206,21 @@ function pickKind(step: Step, pool: ReviewWord[], tts: boolean): Kind {
 
 const EXTRA_LETTERS = [..."aeinrstlhdgumkbo"];
 
+/** Từ nhiễu cho bài xếp từ của cụm ngắn: lấy từ các cụm khác trong sổ */
+function extraTokens(v: ReviewWord, pool: ReviewWord[], n: number): string[] {
+  const have = new Set(tokens(v).map((t) => t.toLowerCase()));
+  const out: string[] = [];
+  for (const p of shuffle(pool)) {
+    if (out.length >= n) break;
+    if (!isPhrase(p) || isSentence(p)) continue;
+    const t = shuffle(tokens(p)).find((x) => /^[\p{L}-]+$/u.test(x) && !have.has(x.toLowerCase()));
+    if (!t) continue;
+    have.add(t.toLowerCase());
+    out.push(t);
+  }
+  return out;
+}
+
 export function resolveStep(step: Step, pool: ReviewWord[], tts: boolean): Step {
   if (step.kind) return step;
   const kind = pickKind(step, pool, tts);
@@ -200,8 +233,9 @@ export function resolveStep(step: Step, pool: ReviewWord[], tts: boolean): Step 
   if (kind === "order" || kind === "listen-order") {
     const list = tokens(v);
     // Xáo tới khi khác thứ tự gốc
-    let t = shuffle(list);
-    for (let i = 0; i < 5 && t.join(" ") === list.join(" "); i++) t = shuffle(list);
+    const all = !isSentence(v) && list.length < 4 ? [...list, ...extraTokens(v, pool, 2)] : list;
+    let t = shuffle(all);
+    for (let i = 0; i < 5 && t.join(" ") === all.join(" "); i++) t = shuffle(all);
     s.tiles = t;
   }
   if (kind === "tiles") {

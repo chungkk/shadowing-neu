@@ -18,6 +18,7 @@ import {
   newStep,
   resolveStep,
   shuffle,
+  typingMask,
   type Kind,
   type Step,
 } from "@shared/review";
@@ -562,8 +563,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
             {kind === "cloze-type" && clozeBox()}
             {kind === "listen-type" && <ListenButtons word={v.word} />}
             <Text style={{ color: C.muted, fontSize: 18, letterSpacing: 5, textAlign: "center", fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }) }}>
-              {v.word.slice(0, hint)}
-              {"_".repeat(Math.max(0, v.word.length - hint))}
+              {typingMask(v.word, hint)}
             </Text>
             <TextInput
               value={typed}

@@ -18,6 +18,7 @@ import {
   newStep,
   resolveStep,
   shuffle,
+  typingMask,
   type Kind,
   type ReviewWord,
   type Step,
@@ -62,8 +63,8 @@ const PROMPT: Record<Kind, string> = {
   "cloze-type": "Gõ từ còn thiếu",
   "listen-type": "Nghe và viết lại",
   match: "Ghép các cặp từ",
-  order: "Xếp từ thành câu",
-  "listen-order": "Nghe rồi xếp lại câu",
+  order: "Xếp các từ cho đúng thứ tự",
+  "listen-order": "Nghe rồi xếp lại các từ",
   flash: "Bạn còn nhớ từ này không?",
 };
 
@@ -259,7 +260,7 @@ export default function VocabReview({
     }
     if (ordering && built.length) {
       const c = checkOrder(built.map((i) => step.tiles![i]), v.word);
-      return answer(c !== "wrong", c === "ok" ? `Đúng — câu gốc: “${v.word}”` : undefined);
+      return answer(c !== "wrong", c === "ok" ? `Đúng — đáp án: “${v.word}”` : undefined);
     }
     if (typing && typed.trim()) {
       const c = checkTyped(typed, v.word);
@@ -522,8 +523,7 @@ export default function VocabReview({
             )}
             {kind === "listen-type" && <ListenButtons word={v.word} />}
             <p className="text-center font-mono text-lg tracking-[0.3em] text-muted">
-              {v.word.slice(0, hint)}
-              {"_".repeat(Math.max(0, v.word.length - hint))}
+              {typingMask(v.word, hint)}
             </p>
             <input
               ref={inputRef}
