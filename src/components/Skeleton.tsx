@@ -22,14 +22,14 @@ export function LessonGridSkeleton({ count = 8 }: { count?: number }) {
           <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card max-sm:w-[78vw] max-sm:shrink-0">
             <Bone className="aspect-video rounded-none" />
             <div className="flex flex-col gap-2 p-3 sm:p-4">
-              <div className="flex items-start gap-2">
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Bone className="h-4 w-full" />
-                  <Bone className="h-4 w-2/3" />
-                </div>
-                <Bone className="h-6 w-9" />
+              <div className="flex min-h-[2.75em] flex-col gap-1.5">
+                <Bone className="h-4 w-full" />
+                <Bone className="h-4 w-2/3" />
               </div>
-              <Bone className="h-3 w-4/5" />
+              <div className="flex justify-between gap-2">
+                <Bone className="h-4 w-20" />
+                <Bone className="h-4 w-20" />
+              </div>
             </div>
           </div>
         ))}

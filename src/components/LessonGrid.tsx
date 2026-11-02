@@ -2,12 +2,15 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Headphones, Lock } from "lucide-react";
+import { Circle, CircleCheck, Clock, Headphones, Lock, Minus } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
 import UnlockDialog from "./UnlockDialog";
+
+/** Tiến độ 1 chế độ luyện của bài: chưa học · đang học dở · xong */
+export type PracticeStatus = "none" | "doing" | "done";
 
 type Item = {
   id: number;
@@ -17,6 +20,10 @@ type Item = {
   level: string;
   description: string;
   sentences: number;
+  duration: number;
+  dictation: boolean;
+  shadowingStatus: PracticeStatus;
+  dictationStatus: PracticeStatus;
   isNew: boolean;
   access: LessonAccess;
 };
@@ -33,6 +40,31 @@ export function SectionHeader({ title, count, children }: { title: string; count
       </h2>
       {children && <div className="min-w-0 max-sm:w-full sm:ml-auto">{children}</div>}
     </div>
+  );
+}
+
+/** Giây → "04:05" (video trên 1 giờ: "1:04:05") */
+function formatDuration(total: number) {
+  const s = Math.round(total);
+  const mmss = `${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  return s >= 3600 ? `${Math.floor(s / 3600)}:${mmss}` : mmss;
+}
+
+const STATUS = {
+  none: { Icon: Circle, label: "chưa học", color: "text-muted" },
+  doing: { Icon: Clock, label: "đang học", color: "text-amber" },
+  done: { Icon: CircleCheck, label: "đã xong", color: "text-accent" },
+};
+
+/** Tên chế độ luyện + trạng thái ở chân thẻ. status null: bài này không có chế độ đó */
+function PracticeTag({ name, status }: { name: string; status: PracticeStatus | null }) {
+  const { Icon, label, color } = status ? STATUS[status] : { Icon: Minus, label: "không có", color: "text-muted" };
+  return (
+    <span title={`${name}: ${label}`} className={`flex items-center gap-1 text-xs font-bold ${status ? "" : "text-muted opacity-60"}`}>
+      {name}
+      <Icon className={`size-4 ${color}`} aria-hidden />
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }
 
@@ -54,27 +86,34 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-50" : ""}`}
+          className="size-full object-cover transition group-hover:scale-105"
         />
-        {l.isNew && <span className="pill absolute top-2 left-2 bg-gold text-black">Mới</span>}
-        {l.access === "free" && <span className="pill absolute top-2 right-2 bg-accent text-white">Miễn phí</span>}
-        {l.access === "locked" && (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-11 items-center justify-center rounded-full bg-black/65 text-white">
-              <Lock className="size-5" />
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1 pr-14">
+          {l.access === "locked" && (
+            <span className="pill bg-gold text-black">
+              <Lock className="size-3.5" /> Khoá
             </span>
-          </span>
-        )}
-        <span className="pill absolute right-2 bottom-2 bg-black/75 text-white">
+          )}
+          {l.access === "free" && <span className="pill bg-accent text-white">Miễn phí</span>}
+          {l.isNew && <span className="pill bg-gold text-black">Mới</span>}
+        </div>
+        <LevelBadge level={l.level} className="absolute top-2 right-2" />
+        <span className="pill absolute bottom-2 left-2 bg-black/75 text-white">
           <Headphones className="size-3.5" /> {l.sentences} câu
         </span>
+        {l.duration > 0 && (
+          <span className="pill absolute right-2 bottom-2 bg-black/75 text-white">
+            <Clock className="size-3.5" /> {formatDuration(l.duration)}
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <div className="flex items-start gap-2">
-          <h3 className="line-clamp-2 flex-1 font-extrabold leading-snug">{l.title}</h3>
-          <LevelBadge level={l.level} className="shrink-0" />
-        </div>
+        <h3 className="line-clamp-2 min-h-[2.75em] font-extrabold leading-snug">{l.title}</h3>
         {l.description && <p className="line-clamp-2 text-xs text-muted">{l.description}</p>}
+        <div className="mt-auto flex items-center justify-between gap-2">
+          <PracticeTag name="Chính tả" status={l.dictation ? l.dictationStatus : null} />
+          <PracticeTag name="Shadowing" status={l.shadowingStatus} />
+        </div>
       </div>
     </Link>
   );

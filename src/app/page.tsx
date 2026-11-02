@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
+import { listProgress } from "@/lib/db";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
-import LessonGrid from "@/components/LessonGrid";
+import LessonGrid, { type PracticeStatus } from "@/components/LessonGrid";
 import Mascot from "@/components/Mascot";
 import ContinueLearning from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
@@ -11,22 +12,32 @@ import { LessonGridSkeleton } from "@/components/Skeleton";
 
 const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
 
+const statusOf = (done: number, total: number): PracticeStatus => (!done ? "none" : done >= total ? "done" : "doing");
+
 /** Dữ liệu thẻ bài: chỉ gửi xuống trình duyệt những gì thẻ cần */
 function lessonItems(user: User | null) {
   const now = Date.now();
   // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
   const access = accessOf(user?.role === "admin" ? null : user);
-  return lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => ({
-    id: l.id,
-    title: l.title,
-    slug: l.slug,
-    videoId: l.videoId,
-    level: l.level,
-    description: l.description,
-    sentences: l.sentenceCount ?? l.segmentCount,
-    isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
-    access: access(l.id),
-  }));
+  const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
+  return lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
+    const p = progress.get(`/lesson/${l.id}`); // khoá tiến độ của bài vẫn theo id
+    return {
+      id: l.id,
+      title: l.title,
+      slug: l.slug,
+      videoId: l.videoId,
+      level: l.level,
+      description: l.description,
+      sentences: l.sentenceCount ?? l.segmentCount,
+      duration: l.duration ?? 0,
+      dictation: l.dictation,
+      shadowingStatus: p ? statusOf(p.seen.length, p.total) : "none",
+      dictationStatus: p ? statusOf(Object.keys(p.dictDone).length, p.total) : "none",
+      isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
+      access: access(l.id),
+    };
+  });
 }
 
 async function Lessons() {

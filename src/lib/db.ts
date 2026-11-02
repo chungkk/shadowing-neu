@@ -26,6 +26,7 @@ export type Lesson = {
 export type LessonSummary = Omit<Lesson, "segments"> & {
   segmentCount: number; // số dòng phụ đề thô
   sentenceCount?: number; // số câu sau khi gộp (như màn học đếm) — chỉ có trong danh sách bài
+  duration?: number; // giây, tính đến hết dòng phụ đề cuối — chỉ có trong danh sách bài
 };
 
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
@@ -346,22 +347,23 @@ export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
        ORDER BY created_at DESC, id DESC`,
     )
     .all() as Row[];
-  return rows.map((r) => ({ ...toSummary(r), sentenceCount: sentenceCount(r.id) }));
+  return rows.map((r) => ({ ...toSummary(r), ...lessonStats(r.id) }));
 }
 
 /**
- * Số câu của bài sau khi gộp dòng phụ đề thành câu (đúng số màn học hiện "Câu 3/52").
+ * Số câu của bài sau khi gộp dòng phụ đề thành câu (đúng số màn học hiện "Câu 3/52") và thời lượng.
  * Tính 1 lần mỗi bài rồi giữ trong bộ nhớ; deploy lại (có thể đổi cách gộp) thì tự tính lại.
  */
-const sentenceCounts = new Map<number, number>();
-function sentenceCount(id: number): number {
-  let n = sentenceCounts.get(id);
-  if (n === undefined) {
+const statsCache = new Map<number, { sentenceCount: number; duration: number }>();
+function lessonStats(id: number) {
+  let stats = statsCache.get(id);
+  if (!stats) {
     const r = conn().prepare("SELECT segments FROM lessons WHERE id = ?").get(id) as { segments: string } | undefined;
-    n = r ? mergeIntoSentences(JSON.parse(r.segments)).length : 0;
-    sentenceCounts.set(id, n);
+    const segments: Segment[] = r ? JSON.parse(r.segments) : [];
+    stats = { sentenceCount: mergeIntoSentences(segments).length, duration: Math.max(0, ...segments.map((s) => s.end)) };
+    statsCache.set(id, stats);
   }
-  return n;
+  return stats;
 }
 
 export function getLesson(id: number): Lesson | null {
@@ -401,11 +403,11 @@ export function updateLesson(id: number, l: LessonInput) {
     "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ?, dictation = ? WHERE id = ?",
   ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0, id);
   if (l.slug) db.prepare("UPDATE lessons SET slug = ? WHERE id = ?").run(uniqueSlug(db, l.slug, id), id);
-  sentenceCounts.delete(id);
+  statsCache.delete(id);
 }
 
 export function deleteLesson(id: number) {
-  sentenceCounts.delete(id);
+  statsCache.delete(id);
   conn().prepare("DELETE FROM lessons WHERE id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE source = ?").run(`/lesson/${id}`);
   conn().prepare("DELETE FROM crazy_reps WHERE source = ?").run(`/lesson/${id}`);
