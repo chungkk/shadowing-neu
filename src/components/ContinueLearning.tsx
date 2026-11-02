@@ -10,7 +10,7 @@ const SHOWN = 4;
  * % đã học: số câu đã nghe hoặc đã làm chính tả, lấy cái nhiều hơn (giống app).
  * Làm tròn xuống (199/200 câu chưa là "xong"); đã học ít nhất 1 câu thì tối thiểu 1%
  */
-const percent = (p: Progress) => {
+export const percent = (p: Progress) => {
   if (!p.total) return 0;
   const done = Math.min(p.total, Math.max(p.seen.length, Object.keys(p.dictDone).length));
   return done ? Math.max(1, Math.floor((done * 100) / p.total)) : 0;

@@ -5,9 +5,9 @@ import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
 import { listProgress } from "@/lib/db";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
-import LessonGrid, { type PracticeStatus } from "@/components/LessonGrid";
+import LessonGrid from "@/components/LessonGrid";
 import Mascot from "@/components/Mascot";
-import ContinueLearning from "@/components/ContinueLearning";
+import ContinueLearning, { percent } from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
 import { LessonGridSkeleton } from "@/components/Skeleton";
 
@@ -15,8 +15,6 @@ import { LessonGridSkeleton } from "@/components/Skeleton";
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
-
-const statusOf = (done: number, total: number): PracticeStatus => (!done ? "none" : done >= total ? "done" : "doing");
 
 /** Dữ liệu thẻ bài: chỉ gửi xuống trình duyệt những gì thẻ cần */
 function lessonItems(user: User | null) {
@@ -36,8 +34,7 @@ function lessonItems(user: User | null) {
       sentences: l.sentenceCount ?? l.segmentCount,
       duration: l.duration ?? 0,
       dictation: l.dictation,
-      shadowingStatus: p ? statusOf(p.seen.length, p.total) : "none",
-      dictationStatus: p ? statusOf(Object.keys(p.dictDone).length, p.total) : "none",
+      percent: p ? percent(p) : 0,
       isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
       access: access(l.id),
     };

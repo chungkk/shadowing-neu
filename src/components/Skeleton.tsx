@@ -26,10 +26,7 @@ export function LessonGridSkeleton({ count = 8 }: { count?: number }) {
                 <Bone className="h-4 w-full" />
                 <Bone className="h-4 w-2/3" />
               </div>
-              <div className="flex justify-between gap-2">
-                <Bone className="h-4 w-20" />
-                <Bone className="h-4 w-20" />
-              </div>
+              <Bone className="h-4 w-3/4" />
             </div>
           </div>
         ))}
