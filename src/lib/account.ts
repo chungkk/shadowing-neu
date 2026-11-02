@@ -1,31 +1,34 @@
 import "server-only";
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
-import { envAdminEmail, hashPassword, type User } from "./auth";
+import { envAdminEmail, hashPassword, verifyPassword, type User } from "./auth";
 import {
   bumpEmailCodeAttempts,
   appleRefreshTokens,
   createUser,
   deleteEmailCode,
+  deleteOAuthLinks,
   deleteUser,
   emailTaken,
   getEmailCode,
   getOAuthUserId,
   getUserWithHash,
   linkOAuth,
+  markEmailVerified,
   NO_PASSWORD,
   setOAuthRefreshToken,
+  setVerifiedEmail,
   type OAuthProvider,
   getVocab,
   saveEmailCode,
   saveVocab,
   starSentence,
   setUserPassword,
-  updateUserProfile,
+  updateUserName,
   updateVocabMeaning,
   type StarredSentence,
   type VocabItem,
 } from "./db";
-import { mailConfigured, sendMail } from "./mail";
+import { contactEmail, mailConfigured, sendMail } from "./mail";
 import { allow, clientIp } from "./rate-limit";
 import { appleRefreshToken, oauthEnabled, revokeApple, verifyIdToken } from "./oauth";
 import { translateSentences } from "./translate";
@@ -36,7 +39,10 @@ import { translateWord } from "./word";
  * Trả về chuỗi lỗi (tiếng Việt) hoặc kết quả.
  */
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Không nhận ký tự đặc biệt của cú pháp địa chỉ email (",", ":", "<"…): nodemailer sẽ đọc "a@evil.com,.gmail.com" thành
+// a@evil.com, tức mã xác nhận đi tới một địa chỉ khác với địa chỉ được lưu
+const EMAIL_RE = /^[^\s@,;:<>()[\]"\\]+@[^\s@,;:<>()[\]"\\]+\.[^\s@,;:<>()[\]"\\]+$/;
+const validEmail = (email: string) => email.length <= 254 && EMAIL_RE.test(email);
 
 export const authConfigured = () => !!(process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD);
 
@@ -49,7 +55,7 @@ function checkSignup(input: SignupInput): string | null {
   if (!authConfigured()) return "Server chưa cấu hình AUTH_SECRET";
   if (!name) return "Nhập tên của bạn";
   if (name.length > 60) return "Tên tối đa 60 ký tự";
-  if (!EMAIL_RE.test(email)) return "Email không hợp lệ";
+  if (!validEmail(email)) return "Email không hợp lệ";
   if (input.password.length < 8) return "Mật khẩu cần ít nhất 8 ký tự";
   // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD, không cho ai đăng ký chiếm trước
   if (email === envAdminEmail() || emailTaken(email)) return "Email này đã được đăng ký";
@@ -62,20 +68,22 @@ function checkSignup(input: SignupInput): string | null {
  */
 export async function lookupEmail(raw: string): Promise<{ exists: boolean } | { error: string }> {
   const email = raw.trim().toLowerCase();
-  if (!EMAIL_RE.test(email) || email.length > 254) return { error: "Email không hợp lệ" };
+  if (!validEmail(email)) return { error: "Email không hợp lệ" };
   if (!allow(`lookup:ip:${await clientIp()}`, 30, 10 * 60 * 1000)) return { error: "Thử quá nhiều lần, chờ ít phút." };
   return { exists: email === envAdminEmail() || emailTaken(email) };
 }
 
 // ---- Mã xác nhận qua email (6 số, hạn 10 phút, sai tối đa 5 lần, gửi lại sau 60 giây) ----
-// Dùng cho đăng ký (khoá = email) và quên mật khẩu (khoá = "reset:<email>").
+// Dùng cho đăng ký (khoá = email), quên mật khẩu (khoá = "reset:<email>") và đổi email (khoá = "change:<id người dùng>:<email mới>").
 
 const CODE_TTL = 10 * 60 * 1000;
 const RESEND_MS = 60 * 1000;
 const MAX_TRIES = 5;
+const LOCK_WINDOW = 10 * 60 * 1000;
 
 const hashCode = (key: string, code: string) => createHash("sha256").update(`${key}:${code}`).digest();
 const resetKey = (email: string) => `reset:${email}`;
+const changeKey = (userId: number, email: string) => `change:${userId}:${email}`;
 
 type CodeMail = { subject: string; hi: string; body: string; note: string };
 
@@ -87,6 +95,10 @@ const MAILS = {
   reset: {
     vi: { subject: "{code} là mã đặt lại mật khẩu", hi: "Xin chào {name},", body: "Mã để đặt mật khẩu mới cho tài khoản Deutsch Shadowing của bạn là:", note: "Mã có hiệu lực trong 10 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này — mật khẩu của bạn vẫn giữ nguyên." },
     de: { subject: "{code} ist dein Code zum Zurücksetzen", hi: "Hallo {name},", body: "dein Code zum Festlegen eines neuen Passworts für Deutsch Shadowing lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail – dein Passwort bleibt unverändert." },
+  },
+  change: {
+    vi: { subject: "{code} là mã xác nhận email mới", hi: "Xin chào {name},", body: "Mã để đổi email tài khoản Deutsch Shadowing sang địa chỉ này là:", note: "Mã có hiệu lực trong 10 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này." },
+    de: { subject: "{code} ist dein Code für die neue E-Mail", hi: "Hallo {name},", body: "dein Code, um die E-Mail deines Deutsch-Shadowing-Kontos auf diese Adresse zu ändern, lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail." },
   },
 } satisfies Record<string, Record<"vi" | "de", CodeMail>>;
 
@@ -181,6 +193,60 @@ export async function registerUser(input: SignupInput & { code: string }): Promi
   }
 }
 
+// ---- Đổi email: nhập mật khẩu → gửi mã tới email mới → nhập mã ----
+
+/** Email mới dùng được không. Trả về email đã chuẩn hoá hoặc lỗi */
+function checkNewEmail(user: User, raw: string): { email: string } | { error: string } {
+  const email = raw.trim().toLowerCase();
+  if (user.email === envAdminEmail()) return { error: "Email admin chính cố định theo biến ADMIN_EMAIL." };
+  if (!validEmail(email)) return { error: "Email không hợp lệ" };
+  if (email === user.email) return { error: "Đây đã là email của bạn" };
+  if (email === envAdminEmail() || emailTaken(email, user.id)) return { error: "Email này đã được dùng" };
+  return { email };
+}
+
+/** Gửi mã tới email mới; tài khoản có mật khẩu phải nhập đúng mật khẩu. Trả về lỗi hoặc null */
+export async function sendEmailChangeCode(user: User, input: { email: string; password: string }): Promise<string | null> {
+  const checked = checkNewEmail(user, input.email);
+  if ("error" in checked) return checked.error;
+  if (!allow(`email-change:u:${user.id}`, 10, LOCK_WINDOW)) return "Thử quá nhiều lần, chờ ít phút.";
+  const u = getUserWithHash({ id: user.id });
+  if (!u || (u.hasPassword && !(await verifyPassword(input.password, u.passwordHash)))) return "Mật khẩu không đúng";
+  const key = changeKey(user.id, checked.email);
+  const wait = resendWait(key);
+  if (wait > 0) return `Chờ ${wait} giây rồi gửi lại mã`;
+  if (!(await mailQuota())) return TOO_MANY;
+  return issueCode(key, checked.email, "change", user.lang, user.name);
+}
+
+/** Nhập đúng mã → đổi email và báo cho địa chỉ cũ. Trả về lỗi hoặc null */
+export function confirmEmailChange(user: User, input: { email: string; code: string }): string | null {
+  const checked = checkNewEmail(user, input.email);
+  if ("error" in checked) return checked.error;
+  const key = changeKey(user.id, checked.email);
+  const codeError = verifyCode(key, input.code.trim());
+  if (codeError) return codeError;
+  try {
+    setVerifiedEmail(user.id, checked.email);
+  } catch {
+    return "Email này đã được dùng"; // vừa có người đăng ký cùng lúc
+  }
+  deleteEmailCode(key);
+  notifyEmailChanged(user, checked.email);
+  return null;
+}
+
+/** Báo cho địa chỉ cũ để chủ tài khoản biết nếu không phải họ đổi — gửi nền, lỗi chỉ ghi log */
+function notifyEmailChanged(user: User, email: string) {
+  if (!mailConfigured()) return;
+  const m =
+    user.lang === "de"
+      ? { subject: "Deine E-Mail wurde geändert", text: `Hallo ${user.name},\n\ndie E-Mail deines Deutsch-Shadowing-Kontos wurde gerade auf ${email} geändert. Wenn du das nicht warst, antworte sofort auf diese E-Mail.` }
+      : { subject: "Email tài khoản của bạn đã được đổi", text: `Xin chào ${user.name},\n\nEmail tài khoản Deutsch Shadowing của bạn vừa được đổi thành ${email}. Nếu không phải bạn, hãy trả lời email này ngay.` };
+  const html = m.text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!).replace(/\n/g, "<br>");
+  sendMail({ to: user.email, replyTo: contactEmail() || undefined, ...m, html }).catch((e) => console.error("[mail] báo đổi email thất bại:", e));
+}
+
 // ---- Quên mật khẩu: gửi mã về email → nhập mã + mật khẩu mới ----
 
 /**
@@ -189,7 +255,7 @@ export async function registerUser(input: SignupInput & { code: string }): Promi
  */
 export async function sendPasswordReset(input: { email: string; lang?: string | null }): Promise<string | null> {
   const email = input.email.trim().toLowerCase();
-  if (!EMAIL_RE.test(email)) return "Email không hợp lệ";
+  if (!validEmail(email)) return "Email không hợp lệ";
   if (!mailConfigured() && process.env.NODE_ENV === "production") return "Server chưa cấu hình gửi email (SMTP_USER, SMTP_PASS)";
   const key = resetKey(email);
   const wait = resendWait(key);
@@ -215,6 +281,11 @@ export async function resetPasswordWithCode(input: { email: string; code: string
   const user = getUserWithHash({ email });
   if (!user || email === envAdminEmail()) return "Mã xác nhận không đúng";
   setUserPassword(user.id, await hashPassword(input.password)); // mọi phiên cũ trên các thiết bị hết hiệu lực
+  // Vừa chứng minh sở hữu email: Google / Apple liên kết từ trước khi email được xác minh có thể là của người khác
+  if (!user.emailVerified) {
+    await dropOAuthLinks(user.id);
+    markEmailVerified(user.id);
+  }
   deleteEmailCode(key);
   return user.id;
 }
@@ -246,8 +317,15 @@ export async function oauthSignIn(input: {
     // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD
     if (email === envAdminEmail()) return "Tài khoản admin chính chỉ đăng nhập bằng mật khẩu.";
     const existing = getUserWithHash({ email });
-    if (existing) userId = existing.id;
-    else {
+    if (existing) {
+      userId = existing.id;
+      // Email chưa xác minh: mật khẩu / liên kết hiện có có thể của người khác đã đặt email này trước chủ thật
+      if (!existing.emailVerified) {
+        setUserPassword(userId, NO_PASSWORD + randomBytes(32).toString("hex")); // đăng xuất mọi thiết bị
+        await dropOAuthLinks(userId);
+        markEmailVerified(userId);
+      }
+    } else {
       const name = (input.name?.trim() || profile.name || email.split("@")[0]).slice(0, 60);
       try {
         userId = createUser({
@@ -273,6 +351,13 @@ export async function oauthSignIn(input: {
   return userId;
 }
 
+/** Gỡ mọi liên kết Google / Apple của tài khoản, có thu hồi quyền phía Apple */
+async function dropOAuthLinks(userId: number) {
+  const apple = appleRefreshTokens(userId);
+  deleteOAuthLinks(userId);
+  await Promise.all(apple.map(revokeApple));
+}
+
 /** Xoá tài khoản + toàn bộ dữ liệu; có Sign in with Apple → thu hồi quyền phía Apple (App Store bắt buộc) */
 export async function removeAccount(userId: number) {
   const apple = appleRefreshTokens(userId);
@@ -280,17 +365,14 @@ export async function removeAccount(userId: number) {
   await Promise.all(apple.map(revokeApple));
 }
 
+/** Sửa tên. Đổi email phải qua mã xác nhận (sendEmailChangeCode) — app bản cũ vẫn gửi kèm email nên email không đổi thì bỏ qua */
 export function editProfile(user: User, input: { name: string; email?: string }): string | null {
   const name = input.name.trim();
-  const fixedAdmin = user.email === envAdminEmail();
-  const email = fixedAdmin ? user.email : (input.email ?? user.email).trim().toLowerCase();
   if (!name) return "Nhập tên của bạn";
   if (name.length > 60) return "Tên tối đa 60 ký tự";
-  if (!fixedAdmin) {
-    if (!EMAIL_RE.test(email)) return "Email không hợp lệ";
-    if (email === envAdminEmail() || emailTaken(email, user.id)) return "Email này đã được dùng";
-  }
-  updateUserProfile(user.id, { name, email });
+  if (input.email !== undefined && input.email.trim().toLowerCase() !== user.email)
+    return "Đổi email cần xác nhận mã gửi tới địa chỉ mới. Hãy dùng mục Đổi email (cập nhật app nếu chưa có).";
+  updateUserName(user.id, name);
   return null;
 }
 
