@@ -871,7 +871,7 @@ export default function ShadowPlayer({
     ));
 
   return (
-    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-3 p-3 sm:gap-4 sm:p-4 md:p-6">
+    <div className="share-wide mx-auto flex w-full max-w-[1800px] flex-col gap-3 p-3 sm:gap-4 sm:p-4 md:p-6">
       {/* Dòng tiêu đề — điện thoại: nút quay lại chỉ còn icon, các nút bật/tắt thành 1 hàng cuộn ngang */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Link href={backHref} className="btn shrink-0 max-sm:px-2.5" title="Quay lại">

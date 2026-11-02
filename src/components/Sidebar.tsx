@@ -17,7 +17,7 @@ const ITEMS: Item[] = [
   { href: "/sprechen", label: "Luyện nói", icon: Mic },
   { href: "/games", label: "Game", icon: Gamepad2 },
 ];
-const BAR_ITEMS = ITEMS.filter((it) => it.href !== "/sprechen" && it.href !== "/games"); // thanh dưới đáy không có Luyện nói + Game
+const BAR_ITEMS = ITEMS.filter((it) => it.href !== "/sprechen"); // thanh dưới đáy không có Luyện nói (chưa ra mắt)
 const USER_ITEMS: Item[] = [
   { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },
 ];
@@ -51,6 +51,7 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
           key={it.href}
           href={it.href}
           title={it.label}
+          aria-current={it.href === current ? "page" : undefined}
           className={`flex size-11 items-center justify-center rounded-2xl transition ${
             it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
           }`}

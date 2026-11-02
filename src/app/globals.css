@@ -223,9 +223,16 @@ select {
     opacity: 0;
   }
 }
-/* Thanh chia sẻ đang mở (máy tính): chừa lề phải để thanh nổi không che nội dung */
-@media (min-width: 48rem) {
+/* Thanh chia sẻ đang mở (máy tính): chừa lề phải để thanh nổi không che nội dung.
+   Từ 88rem khung max-w-7xl đã không chạm thanh → bỏ lề để nội dung luôn căn giữa, không nhảy khi đổi trang;
+   riêng trang rộng hơn khung đó (.share-wide: trình phát bài học) vẫn cần lề */
+@media (min-width: 48rem) and (max-width: 87.99rem) {
   body:has([data-share-open]) .share-gutter {
+    padding-right: 4rem;
+  }
+}
+@media (min-width: 88rem) {
+  body:has([data-share-open]):has(.share-wide) .share-gutter {
     padding-right: 4rem;
   }
 }

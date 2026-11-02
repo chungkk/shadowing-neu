@@ -13,7 +13,7 @@ export default function SprechenPage() {
         <span className="flex size-16 items-center justify-center rounded-full bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]">
           <Mic className="size-8" />
         </span>
-        <h1 className="text-2xl font-extrabold md:text-3xl">Coming soon</h1>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Sắp ra mắt</h1>
         <p className="text-sm text-muted">Tính năng luyện nói tiếng Đức với người thật đang được hoàn thiện. Bạn quay lại sau nhé!</p>
       </div>
     </main>

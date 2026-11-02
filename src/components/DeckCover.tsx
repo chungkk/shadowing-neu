@@ -8,7 +8,7 @@ const COLORS: Record<string, { cover: string; ribbon: string }> = {
 };
 
 /** Bìa bộ từ dáng một cuốn sách (gáy · mép giấy · dây đánh dấu): ảnh admin đặt (public/decks/…), chưa có ảnh thì vẽ bìa theo màu trình độ */
-export default function DeckCover({ deck, big, className = "" }: { deck: Pick<DeckSummary, "cover" | "level" | "title">; big?: boolean; className?: string }) {
+export default function DeckCover({ deck, big, className = "" }: { deck: Pick<DeckSummary, "cover" | "level">; big?: boolean; className?: string }) {
   const color = COLORS[deck.level[0]] ?? COLORS.A;
   const r = big ? "rounded-l-md rounded-r-2xl" : "rounded-l-sm rounded-r-xl";
   return (
@@ -25,7 +25,6 @@ export default function DeckCover({ deck, big, className = "" }: { deck: Pick<De
             {/* Dây đánh dấu trang */}
             <div className={`absolute top-0 ${big ? "right-8 h-14 w-5" : "right-5 h-9 w-3.5"} ${color.ribbon} [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]`} />
             <span className={`font-black tracking-tighter ${big ? "text-5xl" : "text-3xl sm:text-4xl"}`}>{deck.level || "Aa"}</span>
-            <span className={`line-clamp-2 border-t-2 border-current/25 pt-1.5 font-extrabold opacity-85 ${big ? "text-lg" : "text-sm"}`}>{deck.title}</span>
           </div>
         )}
         {/* Gáy sách: dải tối + nếp gấp sáng */}

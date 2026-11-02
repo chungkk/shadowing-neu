@@ -25,7 +25,8 @@ export default function YouTubeUrlForm() {
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
           className="input min-w-0 flex-1"
-          placeholder="Dán link YouTube… (https://www.youtube.com/watch?v=…)"
+          placeholder="Dán link video YouTube…"
+          aria-label="Link video YouTube"
           inputMode="url"
           autoCapitalize="off"
           autoCorrect="off"
