@@ -29,6 +29,7 @@ import { DictationPanel, type DictDraft } from "./DictationPanel";
 import { GEM, Gem, PointsPill } from "./Points";
 import { WordSheet } from "./WordSheet";
 import { Button, Label, Segmented } from "./ui";
+import { isSentence } from "@shared/review";
 import { api, type DictResult, type Points, type Progress, type VocabItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { askLogin, micDenied, showError } from "@/lib/dialogs";
@@ -198,7 +199,8 @@ export default function Player({
   const [recordings, setRecordings] = useState<Record<number, string>>({});
   const [hideText, setHideText] = useState(false); // Shadowing: ẩn chữ tiếng Đức (chỉ nghe rồi nói theo)
   const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
-  const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ / câu đã lưu (chữ thường) → id trong sổ từ vựng
+  const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ đã lưu (chữ thường) → id trong sổ từ vựng
+  const [stars, setStars] = useState<Map<string, number>>(new Map()); // câu ⭐ (chữ thường) → id
   const [starFilter, setStarFilter] = useState(false); // Shadowing: chỉ hiện các câu ⭐
   const [trOn, setTrOn] = useState(false); // hiện bản dịch dưới mỗi câu
   const showTr = trOn && !!user; // dịch chỉ dành cho tài khoản (đăng xuất → tự tắt)
@@ -377,8 +379,7 @@ export default function Player({
       showError(e, t("player.saveFailed"));
     }
   };
-  // Sao trên mỗi câu: đánh dấu câu trong bài (lưu nguyên câu kèm bản dịch, chỉ hiện ở bài học); bấm lại để bỏ
-  /** Bỏ từ / câu khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
+  /** Bỏ từ khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
   const unsave = async (text: string) => {
     const id = saved.get(text.toLowerCase());
     if (id === undefined) return;
@@ -389,13 +390,37 @@ export default function Player({
     });
     await api(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
   };
-  const toggleStar = (text: string) => (saved.has(text.toLowerCase()) ? unsave(text) : saveWord(text, "", tr[text] ?? ""));
-  // Mở bài → tải sổ từ vựng để tô màu từ đã lưu và hiện sao cho câu đã đánh dấu
+  // Sao trên mỗi câu: đánh dấu câu để lọc ở Shadowing (không vào sổ từ vựng); bấm lại để bỏ
+  const toggleStar = async (text: string) => {
+    if (!user) return askLogin(t("player.needLogin"), t("player.needLoginBody"));
+    const key = text.toLowerCase();
+    const id = stars.get(key);
+    try {
+      if (id === undefined) {
+        const { star } = await api<{ star: { id: number } }>("/stars", { method: "POST", body: { text, sourceUrl, sourceTitle: title } });
+        setStars((s) => new Map(s).set(key, star.id));
+      } else {
+        setStars((s) => {
+          const m = new Map(s);
+          m.delete(key);
+          return m;
+        });
+        await api("/stars", { method: "DELETE", body: { id } });
+      }
+    } catch (e) {
+      if (id !== undefined) setStars((s) => new Map(s).set(key, id));
+      showError(e, t("player.saveFailed"));
+    }
+  };
+  // Mở bài → tải sổ từ vựng để tô màu từ đã lưu, tải câu ⭐ để hiện sao
   useEffect(() => {
     if (!user) return;
     let alive = true;
     api<{ vocab: VocabItem[] }>("/vocab")
-      .then(({ vocab }) => alive && setSaved(new Map(vocab.map((v) => [v.word.toLowerCase(), v.id]))))
+      .then(({ vocab }) => alive && setSaved(new Map(vocab.filter((v) => !isSentence(v)).map((v) => [v.word.toLowerCase(), v.id]))))
+      .catch(() => {});
+    api<{ stars: { id: number; text: string }[] }>("/stars")
+      .then(({ stars: list }) => alive && setStars(new Map(list.map((s) => [s.text.toLowerCase(), s.id]))))
       .catch(() => {});
     return () => {
       alive = false;
@@ -403,7 +428,7 @@ export default function Player({
   }, [user]);
 
   // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu · Chính tả: chỉ các câu của lượt đang làm
-  const starredIdx = useMemo(() => segments.flatMap((s, i) => (saved.has(s.text.toLowerCase()) ? [i] : [])), [segments, saved]);
+  const starredIdx = useMemo(() => segments.flatMap((s, i) => (stars.has(s.text.toLowerCase()) ? [i] : [])), [segments, stars]);
   const queue = starredOnly ? starredIdx : dictation ? dictPick : null; // null = mọi câu
   const inQueue = useMemo(() => queue && new Set(queue), [queue]);
   const nextIdx = queue ? queue.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
@@ -809,12 +834,12 @@ export default function Player({
                   onPress={() => toggleStar(current.text)}
                   hitSlop={10}
                   accessibilityLabel={t("player.starSentence")}
-                  accessibilityState={{ checked: saved.has(current.text.toLowerCase()) }}
+                  accessibilityState={{ checked: stars.has(current.text.toLowerCase()) }}
                 >
                   <SymbolView
-                    name={saved.has(current.text.toLowerCase()) ? "star.fill" : "star"}
+                    name={stars.has(current.text.toLowerCase()) ? "star.fill" : "star"}
                     size={18}
-                    tintColor={saved.has(current.text.toLowerCase()) ? C.amber : C.muted}
+                    tintColor={stars.has(current.text.toLowerCase()) ? C.amber : C.muted}
                   />
                 </Pressable>
               )}
@@ -929,7 +954,7 @@ export default function Player({
       renderItem={({ item, index }) => {
         // Shadowing ẩn chữ: che tới khi bấm 👁
         const hidden = hideText && !revealed.has(index);
-        const starred = saved.has(item.text.toLowerCase());
+        const starred = stars.has(item.text.toLowerCase());
         if (inQueue && !inQueue.has(index)) return null;
         const phrases = showPhr && !hidden ? (phrasesOf(item.text) ?? []) : [];
         const tokens = tokenize(item.text, phrases);

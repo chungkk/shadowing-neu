@@ -3,7 +3,6 @@ import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { POINTS_CORRECT, POINTS_HINT } from "./dictation";
-import { isSentence } from "./review";
 import { isReservedSlug, slugify } from "./slug";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import { mergeIntoSentences, type Segment } from "./subtitles";
@@ -250,6 +249,33 @@ function open() {
       ALTER TABLE vocab ADD COLUMN singular TEXT NOT NULL DEFAULT '';
       ALTER TABLE vocab ADD COLUMN plural TEXT NOT NULL DEFAULT '';
     `);
+  }
+  // Câu ⭐ trước đây nằm trong vocab (nhiều từ, không câu ví dụ) → chuyển sang bảng riêng, chỉ dùng ở màn Shadowing
+  if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'starred_sentences'").get()) {
+    const legacy = "instr(trim(word), ' ') > 0 AND trim(context) = ''";
+    db.exec("BEGIN");
+    try {
+      db.exec(`
+        CREATE TABLE starred_sentences (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          text TEXT NOT NULL,
+          source_url TEXT, -- /lesson/1, /watch/abc…
+          source_title TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          UNIQUE (user_id, text)
+        );
+        INSERT OR IGNORE INTO starred_sentences (user_id, text, source_url, source_title, created_at)
+          SELECT user_id, word, source_url, source_title, created_at FROM vocab WHERE ${legacy} AND source_url IS NOT NULL;
+        DELETE FROM vocab WHERE ${legacy} AND source_url IS NOT NULL;
+        -- Không có nguồn = cụm từ thêm từ bộ từ / tự thêm, không phải câu ⭐ → lấy chính cụm làm ngữ cảnh (lâu nay bị ẩn nhầm khỏi sổ)
+        UPDATE vocab SET context = word WHERE ${legacy};
+      `);
+      db.exec("COMMIT");
+    } catch (e) {
+      db.exec("ROLLBACK");
+      throw e;
+    }
   }
   return db;
 }
@@ -556,6 +582,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM oauth_accounts WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab_examples WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM starred_sentences WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
@@ -581,6 +608,7 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     signInWith: rows("SELECT provider, email, created_at FROM oauth_accounts WHERE user_id = ?"),
     vocab: rows("SELECT id, word, meaning, context, source_url, source_title, gender, singular, plural, srs_stage, due_at, lapses, created_at FROM vocab WHERE user_id = ? ORDER BY id"),
     vocabExamples: rows("SELECT vocab_id, context, source_url, source_title, created_at FROM vocab_examples WHERE user_id = ? ORDER BY id"),
+    starredSentences: rows("SELECT text, source_url, source_title, created_at FROM starred_sentences WHERE user_id = ? ORDER BY id"),
     progress: rows("SELECT source, title, idx, total, mode, dict_level, dict_done, updated_at FROM progress WHERE user_id = ? ORDER BY updated_at DESC"),
     reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
     crazyReps: rows("SELECT source, idx, reps, passed, updated_at FROM crazy_reps WHERE user_id = ?"),
@@ -788,6 +816,8 @@ const caseVariants = (w: string) => [...new Set([w, w[0].toLowerCase() + w.slice
  * Trả về mục vừa lưu.
  */
 export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }): VocabItem {
+  // Cụm từ không kèm câu ví dụ → lấy chính cụm làm ngữ cảnh (mục sổ từ luôn có ngữ cảnh nếu nhiều từ)
+  const context = v.context.trim() || !/\s/.test(v.word.trim()) ? v.context : v.word;
   const variants = caseVariants(v.word);
   const found = conn()
     .prepare(`SELECT id, word, context FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
@@ -796,7 +826,7 @@ export function saveVocab(userId: number, v: { word: string; context: string; so
   if (!old) {
     const r = conn()
       .prepare(`INSERT INTO vocab (user_id, word, context, source_url, source_title) VALUES (?, ?, ?, ?, ?) RETURNING *`)
-      .get(userId, v.word, v.context, v.sourceUrl, v.sourceTitle) as VocabRow;
+      .get(userId, v.word, context, v.sourceUrl, v.sourceTitle) as VocabRow;
     return toVocab(r, false);
   }
   const lowerFirst = v.word[0] !== v.word[0].toUpperCase();
@@ -809,7 +839,7 @@ export function saveVocab(userId: number, v: { word: string; context: string; so
          context = CASE WHEN context = '' THEN ? ELSE context END
        WHERE id = ? RETURNING *`,
     )
-    .get(word, v.sourceUrl, v.sourceTitle, v.context, old.id) as VocabRow;
+    .get(word, v.sourceUrl, v.sourceTitle, context, old.id) as VocabRow;
   // Gặp lại ở câu khác → giữ thêm làm câu ví dụ (không trùng câu chính / câu đã có, tối đa MAX_EXAMPLES)
   const ctx = v.context.trim();
   if (old.context && ctx && ctx !== old.context.trim()) {
@@ -820,6 +850,31 @@ export function saveVocab(userId: number, v: { word: string; context: string; so
         .run(old.id, userId, ctx, v.sourceUrl, v.sourceTitle);
   }
   return toVocab(r, provenIds(userId).has(r.id), examplesOf(userId, old.id).get(old.id));
+}
+
+// ---- Câu ⭐ (đánh dấu câu ở màn Shadowing, không thuộc sổ từ vựng) ----
+
+export type StarredSentence = { id: number; text: string; sourceUrl: string | null; sourceTitle: string; createdAt: string };
+
+type StarredRow = { id: number; text: string; source_url: string | null; source_title: string; created_at: string };
+const toStarred = (r: StarredRow): StarredSentence => ({ id: r.id, text: r.text, sourceUrl: r.source_url, sourceTitle: r.source_title, createdAt: r.created_at });
+
+export function listStarred(userId: number): StarredSentence[] {
+  const rows = conn().prepare("SELECT * FROM starred_sentences WHERE user_id = ? ORDER BY id").all(userId) as StarredRow[];
+  return rows.map(toStarred);
+}
+
+/** Đánh dấu câu (đã đánh dấu thì giữ mục cũ) */
+export function starSentence(userId: number, s: { text: string; sourceUrl: string | null; sourceTitle: string }): StarredSentence {
+  conn()
+    .prepare("INSERT OR IGNORE INTO starred_sentences (user_id, text, source_url, source_title) VALUES (?, ?, ?, ?)")
+    .run(userId, s.text, s.sourceUrl, s.sourceTitle);
+  return toStarred(conn().prepare("SELECT * FROM starred_sentences WHERE user_id = ? AND text = ?").get(userId, s.text) as StarredRow);
+}
+
+/** false = không có câu này (của người này) */
+export function unstarSentence(userId: number, id: number): boolean {
+  return conn().prepare("DELETE FROM starred_sentences WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
 }
 
 export function getVocab(userId: number, id: number): { word: string; context: string } | undefined {
@@ -927,19 +982,17 @@ export function setVocabNoun(userId: number, id: number, n: { gender: NounGender
   conn().prepare("UPDATE vocab SET gender = ?, singular = ?, plural = ? WHERE id = ? AND user_id = ?").run(n.gender, n.singular, n.plural, id, userId);
 }
 
-/** Từ đã có trong sổ (chữ thường) + số mục / số mục đến hạn ôn (không tính câu ⭐ — như tab Từ vựng) */
+/** Từ đã có trong sổ (chữ thường) + số mục / số mục đến hạn ôn */
 export function vocabOverview(userId: number, now = Date.now()): { words: Set<string>; total: number; due: number } {
-  const rows = conn().prepare("SELECT word, context, srs_stage, due_at FROM vocab WHERE user_id = ?").all(userId) as {
+  const rows = conn().prepare("SELECT word, srs_stage, due_at FROM vocab WHERE user_id = ?").all(userId) as {
     word: string;
-    context: string;
     srs_stage: number;
     due_at: number | null;
   }[];
-  const notes = rows.filter((r) => !isSentence(r));
   return {
     words: new Set(rows.map((r) => r.word.toLowerCase())),
-    total: notes.length,
-    due: notes.filter((r) => isDue({ stage: r.srs_stage, dueAt: r.due_at }, now)).length,
+    total: rows.length,
+    due: rows.filter((r) => isDue({ stage: r.srs_stage, dueAt: r.due_at }, now)).length,
   };
 }
 
@@ -1257,9 +1310,7 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
   let streak = 0;
   for (let i = studied.has(dayOf(now)) ? 0 : 1; studied.has(dayOf(now - i * DAY)); i++) streak++;
 
-  const vocab = listVocab(userId);
-  // Câu ⭐ chỉ là đánh dấu trong bài học, app không ôn → không tính vào mục đến hạn / mức thành thạo / hay quên
-  const words = vocab.filter((v) => !isSentence(v));
+  const words = listVocab(userId);
   const mastery: Record<Mastery, number> = { saved: 0, learning: 0, active: 0, mastered: 0 };
   for (const v of words) mastery[v.mastery]++;
   const sp = conn()
@@ -1274,7 +1325,7 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
     retention30: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 30)),
     days,
     mastery,
-    speaking: { reps: sp.reps, sentences: sp.n, totalSentences: vocab.filter(isSentence).length },
+    speaking: { reps: sp.reps, sentences: sp.n, totalSentences: listStarred(userId).length },
     forgotten: words
       .filter((v) => v.lapses > 0)
       .sort((a, b) => b.lapses - a.lapses)

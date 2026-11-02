@@ -18,9 +18,11 @@ import {
   getVocab,
   saveEmailCode,
   saveVocab,
+  starSentence,
   setUserPassword,
   updateUserProfile,
   updateVocabMeaning,
+  type StarredSentence,
   type VocabItem,
 } from "./db";
 import { mailConfigured, sendMail } from "./mail";
@@ -297,7 +299,7 @@ export function addWord(
   user: User,
   input: { word: string; context?: string; sourceUrl?: string | null; sourceTitle?: string },
 ): VocabItem | string {
-  // Có khoảng trắng = lưu nguyên câu (đánh dấu sao trong app) → cho dài hơn 1 từ
+  // Có khoảng trắng = cụm từ → cho dài hơn 1 từ
   const word = input.word.trim().slice(0, input.word.trim().includes(" ") ? 500 : 80);
   if (!word) return "Từ trống";
   const sourceUrl = input.sourceUrl && /^\/(lesson|watch)\/[\w-]+$/.test(input.sourceUrl) ? input.sourceUrl : null;
@@ -307,6 +309,14 @@ export function addWord(
     sourceUrl,
     sourceTitle: (input.sourceTitle ?? "").slice(0, 200),
   });
+}
+
+/** Đánh dấu ⭐ 1 câu ở màn Shadowing (không vào sổ từ vựng) */
+export function addStar(user: User, input: { text: string; sourceUrl?: string | null; sourceTitle?: string }): StarredSentence | string {
+  const text = input.text.trim().slice(0, 500);
+  if (!text) return "Câu trống";
+  const sourceUrl = input.sourceUrl && /^\/(lesson|watch)\/[\w-]+$/.test(input.sourceUrl) ? input.sourceUrl : null;
+  return starSentence(user.id, { text, sourceUrl, sourceTitle: (input.sourceTitle ?? "").slice(0, 200) });
 }
 
 /**

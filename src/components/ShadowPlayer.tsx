@@ -27,6 +27,7 @@ import { pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from 
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
 import { clientApi } from "@/lib/client-api";
+import { isSentence } from "@/lib/review";
 import { emitPoints } from "@/lib/points";
 import { prefetchGerman } from "@/lib/speak";
 import { useRecorder } from "@/hooks/useRecorder";
@@ -84,7 +85,7 @@ type Progress = {
   seen?: number[];
   dictPick?: number[];
 };
-type VocabItem = { id: number; word: string; meaning: string };
+type VocabItem = { id: number; word: string; meaning: string; context: string };
 
 /** Nút bật/tắt: nhãn cố định + công tắc gạt (điện thoại: bỏ công tắc cho gọn, bật thì viền xanh) */
 function Toggle({
@@ -250,7 +251,8 @@ export default function ShadowPlayer({
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
   const [panel, setPanel] = useState<"settings" | "keys" | null>(null);
   const [picked, setPicked] = useState<{ word: string; context: string; marks?: string[] } | null>(null); // bảng tra từ đang mở
-  const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ / câu đã lưu (chữ thường) → id trong sổ từ vựng
+  const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ đã lưu (chữ thường) → id trong sổ từ vựng
+  const [stars, setStars] = useState<Map<string, number>>(new Map()); // câu ⭐ (chữ thường) → id
   const [starFilter, setStarFilter] = useState(false); // Shadowing: chỉ hiện các câu ⭐
   const [revealed, setRevealed] = useState<Set<number>>(new Set()); // câu đã bấm 👁 xem chữ khi đang ẩn
   const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
@@ -281,7 +283,7 @@ export default function ShadowPlayer({
   const mediaHidden = dictation ? settings.dictHideMedia : settings.hideMedia;
   const starredOnly = starFilter && loggedIn && !dictation; // Chính tả luôn theo lượt ngẫu nhiên, không lọc câu ⭐
   // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu · Chính tả: chỉ các câu của lượt đang làm
-  const starredIdx = useMemo(() => segments.flatMap((s, i) => (saved.has(s.text.toLowerCase()) ? [i] : [])), [segments, saved]);
+  const starredIdx = useMemo(() => segments.flatMap((s, i) => (stars.has(s.text.toLowerCase()) ? [i] : [])), [segments, stars]);
   const queue = starredOnly ? starredIdx : dictation ? dictPick : null; // null = mọi câu
   const inQueue = useMemo(() => queue && new Set(queue), [queue]);
   const nextIdx = queue ? queue.find((i) => i > idx) : idx < segments.length - 1 ? idx + 1 : undefined;
@@ -539,12 +541,15 @@ export default function ShadowPlayer({
     return () => clearTimeout(timer);
   }, [loggedIn, current, curHidden, curPhrases]);
 
-  // Mở bài → tải sổ từ vựng để tô màu từ đã lưu và hiện sao cho câu đã đánh dấu
+  // Mở bài → tải sổ từ vựng để tô màu từ đã lưu, tải câu ⭐ để hiện sao
   useEffect(() => {
     if (!loggedIn) return;
     let alive = true;
     clientApi<{ vocab: VocabItem[] }>("/vocab")
-      .then(({ vocab }) => alive && setSaved(new Map(vocab.map((v) => [v.word.toLowerCase(), v.id]))))
+      .then(({ vocab }) => alive && setSaved(new Map(vocab.filter((v) => !isSentence(v)).map((v) => [v.word.toLowerCase(), v.id]))))
+      .catch(() => {});
+    clientApi<{ stars: { id: number; text: string }[] }>("/stars")
+      .then(({ stars: list }) => alive && setStars(new Map(list.map((s) => [s.text.toLowerCase(), s.id]))))
       .catch(() => {});
     return () => {
       alive = false;
@@ -565,7 +570,7 @@ export default function ShadowPlayer({
       alert(`Không lưu được: ${(e as Error).message}`);
     }
   };
-  /** Bỏ từ / câu khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
+  /** Bỏ từ khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
   const unsave = async (text: string) => {
     const id = saved.get(text.toLowerCase());
     if (id === undefined) return;
@@ -576,8 +581,27 @@ export default function ShadowPlayer({
     });
     await clientApi(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
   };
-  // Sao trên mỗi câu: lưu nguyên câu (kèm bản dịch nếu có) vào sổ từ; bấm lại để bỏ
-  const toggleStar = (text: string) => (saved.has(text.toLowerCase()) ? unsave(text) : saveWord(text, "", tr[text] ?? ""));
+  // Sao trên mỗi câu: đánh dấu câu để lọc ở Shadowing (không vào sổ từ vựng); bấm lại để bỏ
+  const toggleStar = async (text: string) => {
+    const key = text.toLowerCase();
+    const id = stars.get(key);
+    try {
+      if (id === undefined) {
+        const { star } = await clientApi<{ star: { id: number } }>("/stars", { method: "POST", body: { text, sourceUrl, sourceTitle: title } });
+        setStars((s) => new Map(s).set(key, star.id));
+      } else {
+        setStars((s) => {
+          const m = new Map(s);
+          m.delete(key);
+          return m;
+        });
+        await clientApi("/stars", { method: "DELETE", body: { id } });
+      }
+    } catch (e) {
+      if (id !== undefined) setStars((s) => new Map(s).set(key, id));
+      alert(`Không lưu được: ${(e as Error).message}`);
+    }
+  };
 
   /** Chọn câu `i` mà không phát (bấm ▶ để nghe) */
   const select = (i: number) => {
@@ -788,10 +812,10 @@ export default function ShadowPlayer({
   const left = segments.length - doneCount;
 
   const starButton = (text: string, size = "size-5") => {
-    const on = saved.has(text.toLowerCase());
+    const on = stars.has(text.toLowerCase());
     return (
       <button
-        title={on ? "Bỏ đánh dấu câu" : "Đánh dấu câu (lưu vào sổ từ vựng)"}
+        title={on ? "Bỏ đánh dấu câu" : "Đánh dấu câu"}
         aria-pressed={on}
         className={`cursor-pointer transition hover:scale-110 ${on ? "text-amber" : "text-muted hover:text-foreground"}`}
         onClick={(e) => {

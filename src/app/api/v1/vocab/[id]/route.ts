@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { deleteVocab, updateVocabMeaning } from "@/lib/db";
+import { deleteVocab, unstarSentence, updateVocabMeaning } from "@/lib/db";
 import { aiWordMeaning } from "@/lib/account";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { translationEnabled } from "@/lib/translate";
@@ -11,7 +11,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[
   const user = await apiUser();
   if (user instanceof Response) return user;
   const b = await body<{ meaning: string }>(req);
-  if (!updateVocabMeaning(user.id, Number((await ctx.params).id), str(b.meaning).trim().slice(0, 500))) return fail(NOT_FOUND, 404);
+  const id = Number((await ctx.params).id);
+  if (id < 0) return Response.json({ ok: true }); // câu ⭐ của app bản cũ: không lưu nghĩa
+  if (!updateVocabMeaning(user.id, id, str(b.meaning).trim().slice(0, 500))) return fail(NOT_FOUND, 404);
   return Response.json({ ok: true });
 }
 
@@ -28,10 +30,11 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[
   }
 }
 
-/** DELETE → xoá từ */
+/** DELETE → xoá từ (id âm: bỏ câu ⭐ của app bản cũ) */
 export async function DELETE(_req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[id]">) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  if (!deleteVocab(user.id, Number((await ctx.params).id))) return fail(NOT_FOUND, 404);
+  const id = Number((await ctx.params).id);
+  if (!(id < 0 ? unstarSentence(user.id, -id) : deleteVocab(user.id, id))) return fail(NOT_FOUND, 404);
   return Response.json({ ok: true });
 }
