@@ -48,6 +48,7 @@ import {
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { LoginLink } from "./LoginDialog";
+import Mascot from "./Mascot";
 import { DeckMenu, GameHeader, ScreenKeyboard, useCoarsePointer, type DeckOption, type Tone } from "./GameParts";
 
 /**
@@ -185,7 +186,7 @@ const Emoji = ({ code, className, style }: { code: string; className: string; st
   <img src={`/emoji/${code}.webp`} alt="" className={`pointer-events-none ${className}`} style={style} />
 );
 
-/** Nền "rain": mây, mưa · đáy: mặt nước, thuyền (kèm nhãn), chim cánh cụt */
+/** Nền "rain": mây, mưa · đáy: mặt nước, thuyền (kèm nhãn), linh vật */
 function RainScenery({ label }: { label: ReactNode }) {
   return (
     <>
@@ -202,7 +203,7 @@ function RainScenery({ label }: { label: ReactNode }) {
         ))}
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 border-t-2 border-cyan-300/80 bg-gradient-to-b from-cyan-500/30 to-[#05233a] shadow-[0_-6px_24px_rgba(34,211,238,0.35)]" />
-      <Emoji code="1f427" className="bob absolute bottom-9 left-4 size-12" />
+      <Mascot animated className="pointer-events-none absolute bottom-8 left-3 size-14" />
       <div className="pointer-events-none absolute bottom-1.5 left-1/2 flex -translate-x-1/2 flex-col items-center">
         <Emoji code="26f5" className="bob size-12 [animation-delay:-1s]" />
         {label}

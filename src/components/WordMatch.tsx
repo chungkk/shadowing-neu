@@ -9,6 +9,7 @@ import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
 import { MILESTONE_PAIRS, TIME_BONUS, TIME_PENALTY, newGame, nextMilestone, pick, snapshot, step, type Game, type Phase, type View } from "@/lib/word-match";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { LoginLink } from "./LoginDialog";
+import Mascot from "./Mascot";
 import { DeckMenu, GameHeader, type DeckOption } from "./GameParts";
 
 /**
@@ -255,8 +256,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
       >
         {/* HUD: đồng hồ · điểm · nút */}
         <div className="flex items-center gap-2 text-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/emoji/1f427.webp" alt="" className="bob pointer-events-none size-8 max-sm:hidden" />
+          <Mascot animated className="pointer-events-none size-9 max-sm:hidden" />
           <Clock className={`size-5 shrink-0 ${low ? "text-red-400" : "text-cyan-300"}`} />
           <span className="h-2.5 max-w-sm min-w-8 flex-1 rounded-full bg-white/10">
             <span className={`block h-full rounded-full ${low ? "bg-red-500" : "bg-cyan-400"}`} style={{ width: `${(v.left / v.limit) * 100}%` }} />

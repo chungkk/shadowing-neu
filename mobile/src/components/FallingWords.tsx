@@ -190,7 +190,46 @@ function Star({ s }: { s: (typeof STARS)[number] }) {
   );
 }
 
-/** Nền "rain": mây, mưa · đáy: mặt nước, thuyền, chim cánh cụt */
+const MASCOT_PARTS = {
+  waves: require("@/assets/images/mascot-parts/waves.png"),
+  branch: require("@/assets/images/mascot-parts/branch.png"),
+  tail: require("@/assets/images/mascot-parts/tail.png"),
+  body: require("@/assets/images/mascot-parts/body.png"),
+  head: require("@/assets/images/mascot-parts/head.png"),
+  eyes: require("@/assets/images/mascot-parts/eyes.png"),
+  legs: require("@/assets/images/mascot-parts/legs.png"),
+};
+
+/** Linh vật ghép từ các lớp (scripts/make-mascot.mjs): sóng âm nhấp nháy, đuôi vẫy, thân thở, đầu lắc, mắt chớp — cùng nhịp bản web */
+function AnimatedMascot({ size, style }: { size: number; style?: ViewStyle }) {
+  const sway = useLoop(2800, { back: true });
+  const pulse = useLoop(1100, { back: true });
+  const blink = useLoop(4200);
+  const layer = { position: "absolute", top: 0, left: 0, width: size, height: size } as const;
+  return (
+    <View pointerEvents="none" style={[{ width: size, height: size }, style]}>
+      <Animated.View style={[layer, { transformOrigin: "12.7% 45.5%", transform: [{ scaleY: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] }) }] }]}>
+        <Image source={MASCOT_PARTS.waves} style={{ width: size, height: size }} />
+      </Animated.View>
+      <Image source={MASCOT_PARTS.branch} style={layer} />
+      <Animated.View style={[layer, { transformOrigin: "79.2% 64.9%", transform: [{ rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "7deg"] }) }] }]}>
+        <Image source={MASCOT_PARTS.tail} style={{ width: size, height: size }} />
+      </Animated.View>
+      <Animated.View style={[layer, { transformOrigin: "68.8% 68.8%", transform: [{ scale: sway.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] }) }] }]}>
+        <Image source={MASCOT_PARTS.body} style={{ width: size, height: size }} />
+      </Animated.View>
+      <Animated.View style={[layer, { transformOrigin: "62.1% 51.7%", transform: [{ rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ["-3deg", "4deg"] }) }] }]}>
+        <Image source={MASCOT_PARTS.head} style={{ width: size, height: size }} />
+        <Animated.View style={[layer, { transformOrigin: "50% 29.6%", transform: [{ scaleY: blink.interpolate({ inputRange: [0, 0.92, 0.96, 1], outputRange: [1, 1, 0.08, 1] }) }] }]}>
+          <Image source={MASCOT_PARTS.eyes} style={{ width: size, height: size }} />
+        </Animated.View>
+      </Animated.View>
+      <Image source={MASCOT_PARTS.legs} style={layer} />
+    </View>
+  );
+}
+
+/** Nền "rain": mây, mưa · đáy: mặt nước, thuyền, linh vật */
 const RainScenery = memo(function RainScenery({ height }: { height: number }) {
   return (
     <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
@@ -210,9 +249,7 @@ const RainScenery = memo(function RainScenery({ height }: { height: number }) {
           boxShadow: "0 -6px 24px rgba(34,211,238,0.35)",
         }}
       />
-      <Bob style={{ position: "absolute", bottom: 36, left: 16 }}>
-        <Image source={emoji("1f427")} style={{ width: 44, height: 44 }} />
-      </Bob>
+      <AnimatedMascot size={52} style={{ position: "absolute", bottom: 32, left: 12 }} />
       <Bob style={{ position: "absolute", bottom: 20, left: "50%", marginLeft: -22 }}>
         <Image source={emoji("26f5")} style={{ width: 44, height: 44 }} />
       </Bob>

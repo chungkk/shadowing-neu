@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CloudRain, Pickaxe, Puzzle, Volume2 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
+import Mascot from "@/components/Mascot";
 
 export const metadata: Metadata = {
   title: "Game từ vựng",
@@ -20,11 +21,11 @@ const RainArt = () => (
       <span key={i} className="absolute w-px bg-sky-200/30" style={{ left: `${(i * 37) % 100}%`, top: `${(i * 53) % 70}%`, height: 14 + (i % 4) * 6 }} />
     ))}
     <Emoji code="1f327-fe0f" className="top-3 left-1/2 size-20 -translate-x-1/2 transition group-hover:-translate-y-1" />
-    <span className="absolute top-24 left-[12%] rounded-lg border border-cyan-400/60 bg-[#0e2a3d]/90 px-2 py-0.5 text-xs font-bold text-white">cảm ơn</span>
+    <span className="absolute top-20 left-[24%] rounded-lg border border-cyan-400/60 bg-[#0e2a3d]/90 px-2 py-0.5 text-xs font-bold text-white">cảm ơn</span>
     <span className="absolute top-14 right-[10%] rounded-lg border border-cyan-400/60 bg-[#0e2a3d]/90 px-2 py-0.5 text-xs font-bold text-white">con chó</span>
     <div className="absolute inset-x-0 bottom-0 h-7 border-t-2 border-cyan-300/80 bg-gradient-to-b from-cyan-500/30 to-[#05233a]" />
     <Emoji code="26f5" className="bob bottom-3 left-1/2 size-10 -translate-x-1/2" />
-    <Emoji code="1f427" className="bottom-4 left-4 size-10" />
+    <Mascot animated className="absolute bottom-3 left-3 size-12" />
   </div>
 );
 
