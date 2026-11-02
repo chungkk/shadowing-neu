@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X, Zap } from "lucide-react";
 import { gradeWord } from "@/app/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { clientApi } from "@/lib/client-api";
 import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import {
   buildQueue,
@@ -18,6 +19,7 @@ import {
   newStep,
   resolveStep,
   shuffle,
+  spokenWord,
   typingMask,
   type Kind,
   type ReviewWord,
@@ -196,6 +198,22 @@ export default function VocabReview({
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Đọc từ kèm mạo từ: tra theo sổ từ (cả phương án nhiễu); danh từ chưa biết mạo từ thì hỏi 1 lần lúc vào buổi ôn
+  const [nouns, setNouns] = useState<Map<number, { gender: VocabItem["gender"]; singular: string; plural: string }>>(new Map());
+  useEffect(() => {
+    const ids = items.filter((x) => x.gender === "" && !isPhrase(x)).map((x) => x.id).slice(0, 40);
+    if (!ids.length) return;
+    let alive = true;
+    clientApi<{ items: { id: number; gender: VocabItem["gender"]; singular: string; plural: string }[] }>("/vocab/nouns", { method: "POST", body: { ids } })
+      .then((r) => alive && setNouns(new Map(r.items.map((n) => [n.id, n]))))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [items]);
+  const nounOf = useMemo(() => new Map(pool.map((p) => [p.word.trim().toLowerCase(), { ...p, ...nouns.get(p.id) }])), [pool, nouns]);
+  const spoken = (word: string) => spokenWord(nounOf.get(word.trim().toLowerCase()) ?? { word });
+
   const step = queue[pos] as Step | undefined;
   const done = !step;
   const kind = step?.kind;
@@ -211,8 +229,8 @@ export default function VocabReview({
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
   useEffect(() => {
-    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") speak(v.word, 0.85);
-    else if (kind === "intro" && sound) speak(v.word);
+    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") speak(spoken(v.word), 0.85);
+    else if (kind === "intro" && sound) speak(spoken(v.word));
   }, [step?.id, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -228,7 +246,7 @@ export default function VocabReview({
     if (ok) setXp((x) => x + (s.role === "graded" || s.role === "match" ? 10 : 5));
     if (sound) {
       sfx(ok);
-      if (kind !== "match") setTimeout(() => speak(v.word), 350);
+      if (kind !== "match") setTimeout(() => speak(spoken(v.word)), 350);
     }
     if (s.role === "graded") {
       const entry: Graded = { item: v, correct: ok };
@@ -320,7 +338,7 @@ export default function VocabReview({
     if (pick.id === id) {
       const m = [...matched, id];
       setMatched(m);
-      if (sound) speak(step!.pairs!.find((p) => p.id === id)!.word);
+      if (sound) speak(spoken(step!.pairs!.find((p) => p.id === id)!.word));
       if (m.length === step!.pairs!.length) answer(true, "Ghép đúng hết!");
     } else {
       setBadPair([pick.side + pick.id, side + id]);
@@ -394,7 +412,7 @@ export default function VocabReview({
               {sentence ? "Câu mới" : "Từ mới"} — ghi nhớ nhé
             </span>
             <div className="flex items-center gap-3">
-              <SpeakButton text={v.word} tts={tts} big />
+              <SpeakButton text={spoken(v.word)} tts={tts} big />
               <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
             </div>
             <p className={`wrap-anywhere ${v.meaning ? `${sentence ? "text-lg" : "text-2xl"} font-bold text-amber` : "text-muted italic"}`}>
@@ -419,7 +437,7 @@ export default function VocabReview({
             {kind === "choose-meaning" && (
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="flex items-center gap-3">
-                  <SpeakButton text={v.word} tts={tts} big />
+                  <SpeakButton text={spoken(v.word)} tts={tts} big />
                   <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
                 </div>
                 {v.context && (
@@ -429,7 +447,7 @@ export default function VocabReview({
                 )}
               </div>
             )}
-            {kind === "listen-choose" && <ListenButtons word={v.word} />}
+            {kind === "listen-choose" && <ListenButtons word={spoken(v.word)} />}
             {kind === "choose-word" && <p className={`text-center ${sentence ? "text-xl" : "text-3xl"} font-extrabold text-amber wrap-anywhere`}>{v.meaning}</p>}
             {kind === "cloze-bank" && (
               <div className="rounded-2xl border-2 border-border p-4 text-lg leading-loose wrap-anywhere">
@@ -447,7 +465,7 @@ export default function VocabReview({
                     onClick={() => {
                       setSel(opt);
                       // Chọn từ tiếng Đức thì đọc lên cho quen tai (dạng nghe thì không, kẻo lộ đáp án)
-                      if (sound && kind !== "choose-meaning" && kind !== "listen-choose") speak(opt);
+                      if (sound && kind !== "choose-meaning" && kind !== "listen-choose") speak(spoken(opt));
                     }}
                     disabled={!!feedback}
                   >
@@ -471,7 +489,7 @@ export default function VocabReview({
                 <Context text={v.context} word={v.word} blank={!feedback} />
               </p>
             ) : (
-              <ListenButtons word={v.word} />
+              <ListenButtons word={spoken(v.word)} />
             )}
             {/* Hàng chữ đã xếp */}
             <div
@@ -521,7 +539,7 @@ export default function VocabReview({
                 {v.meaning && <p className="mt-2 text-sm text-amber">Nghĩa: {v.meaning}</p>}
               </div>
             )}
-            {kind === "listen-type" && <ListenButtons word={v.word} />}
+            {kind === "listen-type" && <ListenButtons word={spoken(v.word)} />}
             <p className="text-center font-mono text-lg tracking-[0.3em] text-muted">
               {typingMask(v.word, hint)}
             </p>
@@ -606,7 +624,7 @@ export default function VocabReview({
       case "listen-order":
         return (
           <div className="flex flex-col gap-6">
-            {kind === "order" ? <p className="text-center text-xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p> : <ListenButtons word={v.word} />}
+            {kind === "order" ? <p className="text-center text-xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p> : <ListenButtons word={spoken(v.word)} />}
             {/* Hàng từ đã xếp */}
             <div
               className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-border"}`}
@@ -647,7 +665,7 @@ export default function VocabReview({
         return (
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-3">
-              <SpeakButton text={v.word} tts={tts} big />
+              <SpeakButton text={spoken(v.word)} tts={tts} big />
               <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
             </div>
             {flipped || feedback ? (
@@ -693,7 +711,7 @@ export default function VocabReview({
                     {v.word}
                     {v.meaning && <span className="font-normal opacity-80"> — {v.meaning}</span>}
                   </p>
-                  <SpeakButton text={v.word} tts={tts} />
+                  <SpeakButton text={spoken(v.word)} tts={tts} />
                 </div>
               )}
               {!ok && v.context && kind !== "choose-meaning" && (
@@ -820,7 +838,7 @@ export default function VocabReview({
                     <b>{g.item.word}</b> <span className="text-muted">— {g.item.meaning || "chưa ghi nghĩa"}</span>
                   </p>
                   {g.stage != null && <span className={`text-xs font-bold ${stageInfo(g.stage).color}`}>{stageInfo(g.stage).label}</span>}
-                  <SpeakButton text={g.item.word} tts={tts} />
+                  <SpeakButton text={spoken(g.item.word)} tts={tts} />
                 </div>
               ))}
             </div>

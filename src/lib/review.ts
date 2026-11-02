@@ -58,6 +58,15 @@ export function checkTyped(given: string, word: string): "exact" | "ok" | "almos
   return close(a, b) ? "almost" : "wrong";
 }
 
+/** Chữ để đọc thành tiếng: danh từ đọc kèm mạo từ ("der Hund"; dạng số nhiều "Hunde" → "die Hunde") — chấm bài và hiển thị vẫn không cần mạo từ */
+export function spokenWord(v: { word: string; gender?: string; singular?: string; plural?: string }): string {
+  const w = v.word.trim();
+  if ((v.gender !== "der" && v.gender !== "die" && v.gender !== "das") || /^(der|die|das) /i.test(w)) return w;
+  const low = w.toLowerCase();
+  const isPlural = !!v.plural && low === v.plural.toLowerCase() && low !== (v.singular ?? "").toLowerCase();
+  return `${isPlural ? "die" : v.gender} ${w}`;
+}
+
 /** Gợi ý khi gõ: hiện `hint` ký tự đầu, còn lại là gạch dưới (giữ khoảng trắng để thấy số từ của cụm) */
 export const typingMask = (word: string, hint: number) => word.slice(0, hint) + word.slice(hint).replace(/\S/g, "_");
 

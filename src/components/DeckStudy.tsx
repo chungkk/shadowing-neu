@@ -12,7 +12,7 @@ import { shuffle } from "@/lib/review";
 import DeckWords from "./DeckWords";
 import { LoginLink } from "./LoginDialog";
 
-type Word = DeckWord & { saved: boolean };
+type Word = DeckWord & { saved: boolean; learned: boolean };
 type Mode = StudyMode | "list";
 
 const noop = () => () => {};
@@ -289,7 +289,7 @@ function Session({
   onPractice: () => void;
   nextTopic: (() => void) | null;
 }) {
-  const [queue, setQueue] = useState(() => (practice ? shuffle(words) : words.filter((w) => !w.saved)));
+  const [queue, setQueue] = useState(() => (practice ? shuffle(words) : words.filter((w) => !w.learned)));
   const [seq, setSeq] = useState(0); // đổi key thẻ mỗi lần sang thẻ mới
   const w = queue[0];
   if (!w)
@@ -311,18 +311,21 @@ function Session({
       </div>
     );
   return (
-    <StudyCard
-      key={seq}
-      w={w}
-      mode={mode}
-      pool={pool}
-      icon={icon}
-      onDone={(ok) => {
-        if (ok && !practice && !w.saved) onLearned(w);
-        setQueue((q) => (ok ? q.slice(1) : [...q.slice(1, 4), q[0], ...q.slice(4)]));
-        setSeq((n) => n + 1);
-      }}
-    />
+    <div className="flex flex-col gap-3">
+      {w.saved && !practice && <p className="self-center rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent">Đã có trong sổ</p>}
+      <StudyCard
+        key={seq}
+        w={w}
+        mode={mode}
+        pool={pool}
+        icon={icon}
+        onDone={(ok) => {
+          if (ok && !practice && !w.learned) onLearned(w);
+          setQueue((q) => (ok ? q.slice(1) : [...q.slice(1, 4), q[0], ...q.slice(4)]));
+          setSeq((n) => n + 1);
+        }}
+      />
+    </div>
   );
 }
 
@@ -354,19 +357,19 @@ export default function DeckStudy({
   const topic = topics.find((t) => t.id === topicId) ?? topics[0];
   const topicWords = useMemo(() => words.filter((w) => w.topic === topic.id), [words, topic.id]);
   const pool = topicWords.length >= 4 ? topicWords : words;
-  const learned = topicWords.filter((w) => w.saved).length;
+  const learned = topicWords.filter((w) => w.learned).length;
   const modes = STUDY_MODES.filter((m) => m.mode !== "listen" || tts);
   const study: Mode = mode === "listen" && !tts ? "guess" : mode;
 
-  const markSaved = (list: string[]) => {
-    const set = new Set(list);
-    setWords((ws) => ws.map((w) => (set.has(w.word) ? { ...w, saved: true } : w)));
+  const markSaved = (keys: string[]) => {
+    const set = new Set(keys);
+    setWords((ws) => ws.map((w) => (set.has(w.key) ? { ...w, saved: true } : w)));
   };
   const learn = (w: Word) => {
-    markSaved([w.word]);
+    setWords((ws) => ws.map((x) => (x.key === w.key ? { ...x, saved: true, learned: true } : x)));
     if (!loggedIn) return; // khách: tiến độ chỉ trong lượt này
     startTransition(async () => {
-      const r = await addDeck(slug, [w.word]);
+      const r = await addDeck(slug, [w.key], true);
       if ("error" in r) setError(r.error);
     });
   };
@@ -381,7 +384,7 @@ export default function DeckStudy({
 
   const countOf = (id: string) => {
     const list = words.filter((w) => w.topic === id);
-    return { n: list.length, s: list.filter((w) => w.saved).length };
+    return { n: list.length, s: list.filter((w) => w.learned).length };
   };
 
   return (
@@ -473,7 +476,7 @@ export default function DeckStudy({
             )}
           </div>
           <p className="text-center text-xs font-bold text-muted">
-            Chủ đề {i + 1}/{topics.length} · {words.length} từ trong bộ · đã thuộc {words.filter((w) => w.saved).length}
+            Chủ đề {i + 1}/{topics.length} · {words.length} từ trong bộ · đã thuộc {words.filter((w) => w.learned).length}
           </p>
         </section>
       </div>

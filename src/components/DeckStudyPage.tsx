@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { vocabOverview } from "@/lib/db";
-import { getDeck, type DeckTopic } from "@/lib/decks";
+import { deckMarks, getDeck, markWord, type DeckTopic } from "@/lib/decks";
 import DeckStudy from "./DeckStudy";
 
 const ALL = "tat-ca"; // bộ không chia chủ đề → 1 "chủ đề" gồm mọi từ
@@ -11,9 +10,9 @@ export default async function DeckStudyPage({ slug, topic }: { slug: string; top
   const deck = getDeck(slug);
   if (!deck || (topic && !deck.topics.some((t) => t.id === topic))) notFound();
   const user = await getCurrentUser();
-  const saved = user ? vocabOverview(user.id).words : new Set<string>();
+  const marks = deckMarks(user?.id ?? null);
   const topics: DeckTopic[] = deck.topics.length ? deck.topics : [{ id: ALL, title: deck.title, icon: "📘" }];
-  const words = deck.words.map((w) => ({ ...w, topic: deck.topics.length ? w.topic : ALL, saved: saved.has(w.word.toLowerCase()) }));
-  const first = topics.find((t) => words.some((w) => w.topic === t.id && !w.saved)) ?? topics[0];
+  const words = deck.words.map((w) => ({ ...markWord(deck, w, marks), topic: deck.topics.length ? w.topic : ALL }));
+  const first = topics.find((t) => words.some((w) => w.topic === t.id && !w.learned)) ?? topics[0];
   return <DeckStudy slug={deck.slug} title={deck.title} topics={topics} words={words} initialTopic={topic ?? first.id} loggedIn={!!user} />;
 }

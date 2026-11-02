@@ -109,7 +109,7 @@ export type VocabItem = {
 };
 export type VocabExample = { id: number; context: string; sourceUrl: string | null; sourceTitle: string };
 
-/** Bộ từ vựng có sẵn (GET /vocab/decks) — saved = số từ của bộ đã có trong sổ (chỉ khi đăng nhập) */
+/** Bộ từ vựng có sẵn (GET /vocab/decks) — saved = số từ đã có trong sổ, learned = số từ đã học trong bộ (chỉ khi đăng nhập) */
 export type DeckSummary = {
   slug: string;
   title: string;
@@ -121,10 +121,12 @@ export type DeckSummary = {
   wordCount: number;
   topicCount?: number; // > 0: bấm vào bộ ra danh sách chủ đề
   saved?: number;
+  learned?: number;
 };
-/** Chủ đề trong bộ ("an-uong" · "Ăn uống" · "🍽️") kèm số từ / số từ đã có trong sổ */
-export type DeckTopic = { id: string; title: string; icon: string; wordCount: number; saved: number };
+/** Chủ đề trong bộ ("an-uong" · "Ăn uống" · "🍽️") kèm số từ / số từ đã có trong sổ / số từ đã học */
+export type DeckTopic = { id: string; title: string; icon: string; wordCount: number; saved: number; learned: number };
 export type DeckWord = {
+  key: string; // khoá mục trong bộ — phân biệt từ đồng âm
   word: string; // không kèm mạo từ
   gender: "der" | "die" | "das" | "-" | "";
   plural: string;
@@ -133,6 +135,7 @@ export type DeckWord = {
   topic: string;
   image?: string | null; // hình minh hoạ "/emoji/<mã>.webp" trên server (deckCover → URL đầy đủ); null = dùng biểu tượng chủ đề
   saved: boolean; // đã có trong sổ
+  learned: boolean; // đã học trong bộ này
 };
 /**
  * GET /vocab/decks/<slug>[?topic=<id>] — bộ chia chủ đề: chưa có từ (words rỗng) tới khi chọn chủ đề;
@@ -140,7 +143,7 @@ export type DeckWord = {
  */
 export type Deck = Omit<DeckSummary, "topicCount"> & {
   topics: DeckTopic[];
-  topic: Omit<DeckTopic, "wordCount" | "saved"> | null;
+  topic: Omit<DeckTopic, "wordCount" | "saved" | "learned"> | null;
   words: DeckWord[];
 };
 /** Ảnh bìa bộ từ → URL đầy đủ */

@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { changePassword, destroySession, envAdminEmail, getCurrentUser, requireUser, verifyPassword } from "@/lib/auth";
 import { addWord, aiWordMeaning, editProfile, removeAccount } from "@/lib/account";
 import { AVATAR_MAX_BYTES, imageType, removeAvatar, saveAvatar } from "@/lib/avatar";
-import { addDeckWords, deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
-import { getDeck } from "@/lib/decks";
+import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
+import { addDeckEntries, getDeck } from "@/lib/decks";
 
 export type FormResult = { error?: string; ok?: string };
 
@@ -114,15 +114,15 @@ export async function removeWord(id: number) {
   refresh();
 }
 
-/** Thêm các từ của 1 bộ từ (không truyền words = cả bộ) vào sổ để ôn. Chưa đăng nhập → { error: "login" } */
-export async function addDeck(slug: string, words?: string[]): Promise<{ added: number } | { error: string }> {
+/** Thêm các mục của 1 bộ từ (không truyền keys = cả bộ) vào sổ để ôn; learn = học xong ở màn học. Chưa đăng nhập → { error: "login" } */
+export async function addDeck(slug: string, keys?: string[], learn = false): Promise<{ added: number } | { error: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "login" };
   const deck = getDeck(slug);
   if (!deck) return { error: "Không tìm thấy bộ từ" };
-  const pick = words ? new Set(words) : null;
-  const list = pick ? deck.words.filter((w) => pick.has(w.word)) : deck.words;
+  const pick = keys ? new Set(keys) : null;
+  const list = pick ? deck.words.filter((w) => pick.has(w.key)) : deck.words;
   if (!list.length) return { error: "Chưa chọn từ nào" };
   // Không refresh(): màn học gọi sau mỗi câu trả lời đúng, giao diện tự đánh dấu "đã có trong sổ"
-  return { added: addDeckWords(user.id, list, deck.title) };
+  return { added: addDeckEntries(user.id, deck, list, learn) };
 }

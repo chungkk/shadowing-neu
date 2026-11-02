@@ -120,7 +120,7 @@ function GameCard({ game, width }: { game: (typeof GAMES)[number]; width: number
 
 function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
   const { t } = useI18n();
-  const saved = deck.saved ?? 0;
+  const saved = deck.learned ?? 0;
   return (
     <Pressable
       onPress={() => router.push({ pathname: "/deck/[slug]", params: { slug: deck.slug } })}
@@ -149,7 +149,7 @@ function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
           </Text>
         )}
       </View>
-      {/* Tiến độ: phần đã đưa vào sổ */}
+      {/* Tiến độ: phần đã học */}
       {saved > 0 && saved < deck.wordCount && (
         <View style={{ height: 3, borderRadius: 2, backgroundColor: C.card2, marginHorizontal: 2, marginTop: -4 }}>
           <View style={{ width: `${(saved * 100) / deck.wordCount}%`, height: "100%", borderRadius: 2, backgroundColor: C.amber }} />

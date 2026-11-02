@@ -327,7 +327,7 @@ export function StudySession({
   onPractice: () => void;
 }) {
   const { t } = useI18n();
-  const [queue, setQueue] = useState(() => (practice ? shuffle(words) : words.filter((w) => !w.saved)));
+  const [queue, setQueue] = useState(() => (practice ? shuffle(words) : words.filter((w) => !w.learned)));
   const [seq, setSeq] = useState(0);
   const w = queue[0];
   if (!w)
@@ -348,18 +348,23 @@ export function StudySession({
       </View>
     );
   return (
-    <StudyCard
-      key={seq}
-      w={w}
-      mode={mode}
-      pool={pool}
-      icon={icon}
-      onDone={(ok) => {
-        if (ok && !practice && !w.saved) onLearned(w);
-        setQueue((q) => (ok ? q.slice(1) : [...q.slice(1, 4), q[0], ...q.slice(4)]));
-        setSeq((n) => n + 1);
-      }}
-    />
+    <View style={{ gap: 12 }}>
+      {w.saved && !practice && (
+        <Text style={{ alignSelf: "center", color: C.accent, fontSize: 12, fontWeight: "700" }}>{t("decks.inNotebook")}</Text>
+      )}
+      <StudyCard
+        key={seq}
+        w={w}
+        mode={mode}
+        pool={pool}
+        icon={icon}
+        onDone={(ok) => {
+          if (ok && !practice && !w.learned) onLearned(w);
+          setQueue((q) => (ok ? q.slice(1) : [...q.slice(1, 4), q[0], ...q.slice(4)]));
+          setSeq((n) => n + 1);
+        }}
+      />
+    </View>
   );
 }
 

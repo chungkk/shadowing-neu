@@ -8,7 +8,7 @@ import type { DeckWord } from "@/lib/decks";
 import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import { LoginLink } from "./LoginDialog";
 
-type Word = DeckWord & { saved: boolean };
+type Word = DeckWord & { saved: boolean; learned: boolean };
 
 /** Màu mạo từ theo giống — như app: der xanh dương · die đỏ · das xanh lá */
 const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
@@ -29,11 +29,11 @@ export default function DeckWords({
   slug: string;
   words: Word[];
   loggedIn: boolean;
-  onSaved?: (words: string[]) => void; // báo trang cha (màn học) cập nhật tiến độ
+  onSaved?: (keys: string[]) => void; // báo trang cha (màn học) cập nhật cờ "có trong sổ"
 }) {
   const [words, setWords] = useState(initial);
   const [limit, setLimit] = useState(PAGE);
-  const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // từ đang thêm · "all" = đang thêm cả bộ
+  const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // mục đang thêm · "all" = đang thêm cả bộ
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [, startTransition] = useTransition();
   const tts = useHasGermanVoice();
@@ -48,7 +48,7 @@ export default function DeckWords({
       if ("error" in r) setMsg({ error: r.error === "login" ? "Đăng nhập để thêm từ vào sổ." : r.error });
       else {
         const set = new Set(list);
-        setWords((ws) => ws.map((w) => (set.has(w.word) ? { ...w, saved: true } : w)));
+        setWords((ws) => ws.map((w) => (set.has(w.key) ? { ...w, saved: true } : w)));
         onSaved?.(list);
         if (all) setMsg({ ok: `Đã thêm ${r.added} từ vào sổ — vào Sổ từ vựng để bắt đầu ôn.` });
       }
@@ -69,7 +69,7 @@ export default function DeckWords({
             Đăng nhập để thêm vào sổ và ôn tập
           </LoginLink>
         ) : left.length ? (
-          <button className="btn btn-primary h-11" disabled={busy === "all"} onClick={() => add(left.map((w) => w.word), true)}>
+          <button className="btn btn-primary h-11" disabled={busy === "all"} onClick={() => add(left.map((w) => w.key), true)}>
             {busy === "all" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Thêm {left.length} từ vào sổ
           </button>
         ) : (
@@ -88,7 +88,7 @@ export default function DeckWords({
       <ul className="card divide-y divide-border p-0">
         {words.slice(0, limit).map((w, i) => {
           const a = article(w);
-          const adding = busy === "all" ? !w.saved : busy.has(w.word);
+          const adding = busy === "all" ? !w.saved : busy.has(w.key);
           return (
             <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-3">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-card-2">
@@ -117,7 +117,7 @@ export default function DeckWords({
                   title={w.saved ? "Đã có trong sổ" : "Thêm vào sổ"}
                   disabled={w.saved || adding || busy === "all"}
                   className={`btn-icon size-9 shrink-0 ${w.saved ? "text-accent" : "text-foreground"}`}
-                  onClick={() => add([w.word], false)}
+                  onClick={() => add([w.key], false)}
                 >
                   {adding ? <Loader2 className="size-4 animate-spin" /> : w.saved ? <Check className="size-5" /> : <Plus className="size-5" />}
                 </button>

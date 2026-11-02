@@ -120,7 +120,7 @@ function WordRow({
 /** 1 chủ đề trong bộ: biểu tượng · tên · số từ · phần đã đưa vào sổ */
 function TopicRow({ topic, first, last, onPress }: { topic: DeckTopic; first: boolean; last: boolean; onPress: () => void }) {
   const { t } = useI18n();
-  const done = topic.saved >= topic.wordCount;
+  const done = topic.learned >= topic.wordCount;
   return (
     <Pressable
       onPress={onPress}
@@ -161,17 +161,17 @@ function TopicRow({ topic, first, last, onPress }: { topic: DeckTopic; first: bo
           </Text>
           <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>
             {t("decks.words", { n: topic.wordCount })}
-            {topic.saved > 0 && (
+            {topic.learned > 0 && (
               <Text style={{ color: done ? C.accent : C.amber }}>
-                {done ? "  ✓" : `  ·  ${t("decks.progress", { s: topic.saved, n: topic.wordCount })}`}
+                {done ? "  ✓" : `  ·  ${t("decks.progress", { s: topic.learned, n: topic.wordCount })}`}
               </Text>
             )}
           </Text>
-          {topic.saved > 0 && !done && (
+          {topic.learned > 0 && !done && (
             <View style={{ height: 3, borderRadius: 2, backgroundColor: C.card2 }}>
               <View
                 style={{
-                  width: `${(topic.saved * 100) / topic.wordCount}%`,
+                  width: `${(topic.learned * 100) / topic.wordCount}%`,
                   height: "100%",
                   borderRadius: 2,
                   backgroundColor: C.amber,
@@ -197,8 +197,8 @@ export default function DeckScreen() {
   const { tablet } = useLayout();
   const [deck, setDeck] = useState<Deck | null>(null);
   const [error, setError] = useState("");
-  const [speaking, setSpeaking] = useState<string | null>(null);
-  const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // từ đang thêm · "all" = đang thêm cả bộ
+  const [speaking, setSpeaking] = useState<string | null>(null); // khoá mục đang đọc
+  const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // mục đang thêm · "all" = đang thêm cả bộ
   const [mode, setModeState] = useState<Mode>(lastMode);
   const [practice, setPractice] = useState(0); // > 0: đang ôn lại chủ đề đã học xong (mỗi lần bấm tăng 1 → lượt mới)
   const PAD = tablet ? 24 : 16;
@@ -232,45 +232,45 @@ export default function DeckScreen() {
   );
 
   /** Đọc từ (danh từ đọc kèm mạo từ); chạm lần nữa để dừng */
-  const speak = ({ word, gender }: DeckWord) => {
-    if (speaking === word) {
+  const speak = ({ key, word, gender }: DeckWord) => {
+    if (speaking === key) {
       stopSpeaking();
       setSpeaking(null);
       return;
     }
-    setSpeaking(word);
+    setSpeaking(key);
     speakGerman(hasArticle(gender) ? `${gender} ${word}` : word, {
-      onEnd: () => setSpeaking((s) => (s === word ? null : s)),
+      onEnd: () => setSpeaking((s) => (s === key ? null : s)),
     }).catch(() => setSpeaking(null));
   };
 
-  const markSaved = (words: string[]) => {
-    const set = new Set(words);
+  const markSaved = (keys: string[], learned = false) => {
+    const set = new Set(keys);
     setDeck(
       (d) =>
         d && {
           ...d,
-          words: d.words.map((w) => (set.has(w.word) ? { ...w, saved: true } : w)),
+          words: d.words.map((w) => (set.has(w.key) ? { ...w, saved: true, learned: learned || w.learned } : w)),
         },
     );
   };
   /** Thêm 1 từ vào sổ */
-  const addOne = async (word: string) => {
+  const addOne = async (key: string) => {
     if (busy === "all") return;
-    setBusy((b) => new Set(b === "all" ? [] : b).add(word));
+    setBusy((b) => new Set(b === "all" ? [] : b).add(key));
     try {
       await api(`/vocab/decks/${encodeURIComponent(slug)}`, {
         method: "POST",
-        body: { words: [word] },
+        body: { keys: [key] },
       });
-      markSaved([word]);
+      markSaved([key]);
     } catch (e) {
       showError(e, t("decks.addFailed"));
     } finally {
       setBusy((b) => {
         if (b === "all") return b;
         const n = new Set(b);
-        n.delete(word);
+        n.delete(key);
         return n;
       });
     }
@@ -287,10 +287,10 @@ export default function DeckScreen() {
   };
   const doAddAll = async () => {
     if (!deck) return;
-    const rest = deck.words.filter((w) => !w.saved).map((w) => w.word);
+    const rest = deck.words.filter((w) => !w.saved).map((w) => w.key);
     setBusy("all");
     try {
-      const { added } = await api<{ added: number }>(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { words: rest } });
+      const { added } = await api<{ added: number }>(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { keys: rest } });
       markSaved(rest);
       notice(t("decks.added", { n: added }));
     } catch (e) {
@@ -302,9 +302,9 @@ export default function DeckScreen() {
 
   /** Thuộc 1 từ ở màn học → thêm vào sổ (khách: chỉ đánh dấu trong lượt này) */
   const learn = (w: DeckWord) => {
-    markSaved([w.word]);
+    markSaved([w.key], true);
     if (user)
-      api(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { words: [w.word] } }).catch((e) =>
+      api(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { keys: [w.key], learn: true } }).catch((e) =>
         showError(e, t("study.learnFailed")),
       );
   };
@@ -312,6 +312,7 @@ export default function DeckScreen() {
   const words = deck?.words ?? [];
   const saved = words.filter((w) => w.saved).length;
   const left = words.length - saved;
+  const learned = words.filter((w) => w.learned).length;
   // Bộ chia chủ đề, chưa chọn chủ đề → danh sách chủ đề thay cho danh sách từ
   const topics = deck && !topic && deck.topics.length ? deck.topics : null;
 
@@ -335,12 +336,12 @@ export default function DeckScreen() {
           <Text style={styles.h1}>{deck.topic.title}</Text>
           <Text style={{ color: C.muted, fontSize: 14, fontWeight: "600" }}>
             {deck.title} · {t("decks.words", { n: words.length })}
-            {!!user && saved > 0 && ` · ${t("decks.progress", { s: saved, n: words.length })}`}
+            {!!user && learned > 0 && ` · ${t("decks.progress", { s: learned, n: words.length })}`}
           </Text>
         </View>
       </View>
       <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
-        <View style={{ width: `${(saved * 100) / Math.max(1, words.length)}%`, height: "100%", backgroundColor: C.accent }} />
+        <View style={{ width: `${(learned * 100) / Math.max(1, words.length)}%`, height: "100%", backgroundColor: C.accent }} />
       </View>
       {!user && <Text style={{ color: C.muted, fontSize: 13 }}>{t("study.guest")}</Text>}
       <ModeBar mode={mode} onChange={setMode} />
@@ -406,7 +407,7 @@ export default function DeckScreen() {
                   <Text style={{ color: C.muted, fontSize: 14, fontWeight: "600" }}>
                     {!!topics && `${t("decks.topics", { n: topics.length })} · `}
                     {t("decks.words", { n: deck.wordCount })}
-                    {!!user && !!deck.saved && ` · ${t("decks.progress", { s: deck.saved, n: deck.wordCount })}`}
+                    {!!user && !!deck.learned && ` · ${t("decks.progress", { s: deck.learned, n: deck.wordCount })}`}
                   </Text>
                 </View>
               </>
@@ -453,11 +454,11 @@ export default function DeckScreen() {
               w={item}
               first={index === 0}
               last={index === words.length - 1}
-              speaking={speaking === item.word}
-              busy={busy === "all" ? !item.saved : busy.has(item.word)}
+              speaking={speaking === item.key}
+              busy={busy === "all" ? !item.saved : busy.has(item.key)}
               canAdd={!!user}
               onSpeak={() => speak(item)}
-              onAdd={() => addOne(item.word)}
+              onAdd={() => addOne(item.key)}
             />
           )
         }

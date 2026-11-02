@@ -135,6 +135,13 @@ function open() {
     );
     CREATE INDEX IF NOT EXISTS review_events_user ON review_events (user_id, vocab_id, at);
     -- Câu ví dụ thêm của 1 mục sổ từ (gặp lại từ ở câu khác). Câu chính vẫn ở vocab.context — nghĩa được ghi theo câu đó
+    CREATE TABLE IF NOT EXISTS deck_learned (
+      user_id INTEGER NOT NULL,
+      deck TEXT NOT NULL, -- slug của bộ từ
+      word_key TEXT NOT NULL, -- khoá mục trong bộ (phân biệt từ đồng âm)
+      at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, deck, word_key)
+    );
     CREATE TABLE IF NOT EXISTS vocab_examples (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       vocab_id INTEGER NOT NULL,
@@ -583,6 +590,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM vocab WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM vocab_examples WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM starred_sentences WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM deck_learned WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
@@ -609,6 +617,7 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     vocab: rows("SELECT id, word, meaning, context, source_url, source_title, gender, singular, plural, srs_stage, due_at, lapses, created_at FROM vocab WHERE user_id = ? ORDER BY id"),
     vocabExamples: rows("SELECT vocab_id, context, source_url, source_title, created_at FROM vocab_examples WHERE user_id = ? ORDER BY id"),
     starredSentences: rows("SELECT text, source_url, source_title, created_at FROM starred_sentences WHERE user_id = ? ORDER BY id"),
+    deckLearned: rows("SELECT deck, word_key, at FROM deck_learned WHERE user_id = ? ORDER BY at"),
     progress: rows("SELECT source, title, idx, total, mode, dict_level, dict_done, updated_at FROM progress WHERE user_id = ? ORDER BY updated_at DESC"),
     reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
     crazyReps: rows("SELECT source, idx, reps, passed, updated_at FROM crazy_reps WHERE user_id = ?"),
@@ -815,10 +824,14 @@ const caseVariants = (w: string) => [...new Set([w, w[0].toLowerCase() + w.slice
  * Mục cũ viết hoa mà lần này gặp dạng viết thường (giữa câu → chắc chắn không phải danh từ) → đổi về viết thường.
  * Trả về mục vừa lưu.
  */
-export function saveVocab(userId: number, v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string }): VocabItem {
+export function saveVocab(
+  userId: number,
+  v: { word: string; context: string; sourceUrl: string | null; sourceTitle: string },
+  opts: { exactCase?: boolean } = {},
+): VocabItem {
   // Cụm từ không kèm câu ví dụ → lấy chính cụm làm ngữ cảnh (mục sổ từ luôn có ngữ cảnh nếu nhiều từ)
   const context = v.context.trim() || !/\s/.test(v.word.trim()) ? v.context : v.word;
-  const variants = caseVariants(v.word);
+  const variants = opts.exactCase ? [v.word] : caseVariants(v.word);
   const found = conn()
     .prepare(`SELECT id, word, context FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
     .all(userId, ...variants) as { id: number; word: string; context: string }[];
@@ -982,38 +995,43 @@ export function setVocabNoun(userId: number, id: number, n: { gender: NounGender
   conn().prepare("UPDATE vocab SET gender = ?, singular = ?, plural = ? WHERE id = ? AND user_id = ?").run(n.gender, n.singular, n.plural, id, userId);
 }
 
-/** Từ đã có trong sổ (chữ thường) + số mục / số mục đến hạn ôn */
-export function vocabOverview(userId: number, now = Date.now()): { words: Set<string>; total: number; due: number } {
-  const rows = conn().prepare("SELECT word, srs_stage, due_at FROM vocab WHERE user_id = ?").all(userId) as {
+/** Từ đã có trong sổ (đúng hoa thường → nghĩa) + số mục / số mục đến hạn ôn */
+export function vocabOverview(userId: number, now = Date.now()): { notes: Map<string, string>; total: number; due: number } {
+  const rows = conn().prepare("SELECT word, meaning, srs_stage, due_at FROM vocab WHERE user_id = ?").all(userId) as {
     word: string;
+    meaning: string;
     srs_stage: number;
     due_at: number | null;
   }[];
   return {
-    words: new Set(rows.map((r) => r.word.toLowerCase())),
+    notes: new Map(rows.map((r) => [r.word, r.meaning])),
     total: rows.length,
     due: rows.filter((r) => isDue({ stage: r.srs_stage, dueAt: r.due_at }, now)).length,
   };
 }
 
-/**
- * Thêm các từ của 1 bộ từ vào sổ (1 giao dịch). Từ đã có thì giữ mục cũ (saveVocab); mục chưa có nghĩa / chưa biết mạo từ
- * thì điền theo bộ từ. → số mục mới thêm
- */
-export function addDeckWords(
-  userId: number,
-  words: { word: string; gender: NounGender; plural: string; meaning: string; example: string }[],
-  sourceTitle: string,
-): number {
+/** 1 mục của bộ từ cần đưa vào sổ — cách gộp nghĩa / phân biệt từ trùng do lib/decks quyết định */
+export type DeckNoteInput = {
+  word: string;
+  gender: NounGender;
+  plural: string;
+  example: string;
+  exactCase: boolean; // bộ có cả "essen" lẫn "Essen" → 2 mục riêng, không gộp theo viết hoa
+  isNew: boolean; // chưa có trong sổ (để đếm số mục mới)
+  mergeMeaning: (current: string) => string;
+};
+
+/** Thêm các từ của 1 bộ từ vào sổ (1 giao dịch). Từ đã có thì giữ mục cũ (saveVocab). → số mục mới thêm */
+export function addDeckWords(userId: number, words: DeckNoteInput[], sourceTitle: string): number {
   const db = conn();
-  const before = vocabOverview(userId).words;
   db.exec("BEGIN");
   try {
     let added = 0;
     for (const w of words) {
-      if (!before.has(w.word.toLowerCase())) added++;
-      const item = saveVocab(userId, { word: w.word, context: w.example, sourceUrl: null, sourceTitle });
-      if (!item.meaning && w.meaning) updateVocabMeaning(userId, item.id, w.meaning);
+      if (w.isNew) added++;
+      const item = saveVocab(userId, { word: w.word, context: w.example, sourceUrl: null, sourceTitle }, { exactCase: w.exactCase });
+      const meaning = w.mergeMeaning(item.meaning);
+      if (meaning && meaning !== item.meaning) updateVocabMeaning(userId, item.id, meaning.slice(0, 500));
       if (!item.gender && w.gender) setVocabNoun(userId, item.id, { gender: w.gender, singular: w.gender === "-" ? "" : w.word, plural: w.plural });
     }
     db.exec("COMMIT");
@@ -1022,6 +1040,37 @@ export function addDeckWords(
     db.exec("ROLLBACK");
     throw e;
   }
+}
+
+/** Các mục đã học trong từng bộ: bộ → tập khoá từ */
+export function listDeckLearned(userId: number): Map<string, Set<string>> {
+  const rows = conn().prepare("SELECT deck, word_key FROM deck_learned WHERE user_id = ?").all(userId) as { deck: string; word_key: string }[];
+  const out = new Map<string, Set<string>>();
+  for (const r of rows) (out.get(r.deck) ?? out.set(r.deck, new Set()).get(r.deck)!).add(r.word_key);
+  return out;
+}
+
+export function markDeckLearned(userId: number, deck: string, keys: string[], at = Date.now()) {
+  const db = conn();
+  const insert = db.prepare("INSERT OR IGNORE INTO deck_learned (user_id, deck, word_key, at) VALUES (?, ?, ?, ?)");
+  db.exec("BEGIN");
+  try {
+    for (const key of keys) insert.run(userId, deck, key, at);
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
+/** Mục sổ từ thêm từ bộ từ (không có nguồn bài / video, tên nguồn = tên bộ) — dựng lại tiến độ học lần đầu */
+export function deckSourcedVocab(): { user_id: number; word: string; meaning: string; source_title: string }[] {
+  return conn().prepare("SELECT user_id, word, meaning, source_title FROM vocab WHERE source_url IS NULL AND source_title != ''").all() as {
+    user_id: number;
+    word: string;
+    meaning: string;
+    source_title: string;
+  }[];
 }
 
 // ---- Cài đặt chung ----

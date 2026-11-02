@@ -18,6 +18,7 @@ import {
   newStep,
   resolveStep,
   shuffle,
+  spokenWord,
   typingMask,
   type Kind,
   type Step,
@@ -267,6 +268,22 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const look = useLookup(pool);
   const lookUp = (word: string, context: string) => look.open(word, context, undefined, v);
 
+  // Đọc từ kèm mạo từ: tra theo sổ từ (cả phương án nhiễu); danh từ chưa biết mạo từ thì hỏi 1 lần lúc vào buổi ôn
+  const [nouns, setNouns] = useState<Map<number, { gender: VocabItem["gender"]; singular: string; plural: string }>>(new Map());
+  useEffect(() => {
+    const ids = items.filter((x) => x.gender === "" && !isPhrase(x)).map((x) => x.id).slice(0, 40);
+    if (!ids.length) return;
+    let alive = true;
+    api<{ items: { id: number; gender: VocabItem["gender"]; singular: string; plural: string }[] }>("/vocab/nouns", { method: "POST", body: { ids } })
+      .then((r) => alive && setNouns(new Map(r.items.map((n) => [n.id, n]))))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [items]);
+  const nounOf = useMemo(() => new Map(pool.map((p) => [p.word.trim().toLowerCase(), { ...p, ...nouns.get(p.id) }])), [pool, nouns]);
+  const spoken = (word: string) => spokenWord(nounOf.get(word.trim().toLowerCase()) ?? { word });
+
   const step = queue[pos] as Step | undefined;
   const done = !step;
   const kind = step?.kind;
@@ -289,8 +306,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
   useEffect(() => {
-    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") say(v.word);
-    else if (kind === "intro" && sound) say(v.word);
+    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") say(spoken(v.word));
+    else if (kind === "intro" && sound) say(spoken(v.word));
   }, [step?.id, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSound = () => {
@@ -313,7 +330,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     if (ok) setXp((x) => x + (s.role === "graded" || s.role === "match" ? 10 : 5));
     if (sound) {
       playSfx(ok);
-      if (kind !== "match") setTimeout(() => say(v.word), 450);
+      if (kind !== "match") setTimeout(() => say(spoken(v.word)), 450);
     }
     if (s.role === "graded") {
       const entry: Graded = { item: v, correct: ok };
@@ -410,7 +427,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     if (pick.id === id) {
       const m = [...matched, id];
       setMatched(m);
-      if (sound) say(step!.pairs!.find((p) => p.id === id)!.word);
+      if (sound) say(spoken(step!.pairs!.find((p) => p.id === id)!.word));
       if (m.length === step!.pairs!.length) answer(true, t("review.matchedAll"));
     } else {
       setBadPair([pick.side + pick.id, side + id]);
@@ -445,7 +462,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           <View style={{ alignItems: "center", gap: 18 }}>
             <Text style={{ color: C.amber, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>{t(sentence ? "review.newSentence" : "review.newWord")}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <SpeakButton text={v.word} big />
+              <SpeakButton text={spoken(v.word)} big />
               <View style={{ flexShrink: 1 }}>
                 <HeadWord word={v.word} context={v.context}>
                   <Big size={headSize}>{v.word}</Big>
@@ -474,7 +491,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
             {kind === "choose-meaning" && (
               <View style={{ alignItems: "center", gap: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <SpeakButton text={v.word} big />
+                  <SpeakButton text={spoken(v.word)} big />
                   <View style={{ flexShrink: 1 }}>
                     <HeadWord word={v.word} context={v.context}>
                   <Big size={headSize}>{v.word}</Big>
@@ -484,7 +501,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                 {!!v.context && <Context text={v.context} word={v.word} />}
               </View>
             )}
-            {kind === "listen-choose" && <ListenButtons word={v.word} />}
+            {kind === "listen-choose" && <ListenButtons word={spoken(v.word)} />}
             {kind === "choose-word" && meaningBig}
             {kind === "cloze-bank" && clozeBox(sel)}
             <View style={{ gap: 10 }}>
@@ -498,7 +515,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                     onPress={() => {
                       setSel(opt);
                       // Chọn từ tiếng Đức thì đọc lên cho quen tai (dạng nghe thì không, kẻo lộ đáp án)
-                      if (sound && kind !== "choose-meaning" && kind !== "listen-choose") say(opt);
+                      if (sound && kind !== "choose-meaning" && kind !== "listen-choose") say(spoken(opt));
                     }}
                     style={{ paddingVertical: 15, paddingHorizontal: 16 }}
                   >
@@ -513,7 +530,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
         const lineTone: Tone = feedback ? (feedback.ok ? "right" : "wrong") : "idle";
         return (
           <View style={{ gap: 22 }}>
-            {v.meaning ? meaningBig : canCloze(v) ? clozeBox() : <ListenButtons word={v.word} />}
+            {v.meaning ? meaningBig : canCloze(v) ? clozeBox() : <ListenButtons word={spoken(v.word)} />}
             {/* Hàng chữ đã xếp */}
             <View
               style={{
@@ -561,7 +578,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           <View style={{ gap: 18 }}>
             {kind === "type" && meaningBig}
             {kind === "cloze-type" && clozeBox()}
-            {kind === "listen-type" && <ListenButtons word={v.word} />}
+            {kind === "listen-type" && <ListenButtons word={spoken(v.word)} />}
             <Text style={{ color: C.muted, fontSize: 18, letterSpacing: 5, textAlign: "center", fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }) }}>
               {typingMask(v.word, hint)}
             </Text>
@@ -644,7 +661,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
         const cell = { height: 46, paddingHorizontal: 12 };
         return (
           <View style={{ gap: 22 }}>
-            {kind === "order" ? meaningBig : <ListenButtons word={v.word} />}
+            {kind === "order" ? meaningBig : <ListenButtons word={spoken(v.word)} />}
             {/* Hàng từ đã xếp */}
             <View
               style={{
@@ -686,7 +703,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
         return (
           <View style={{ alignItems: "center", gap: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <SpeakButton text={v.word} big />
+              <SpeakButton text={spoken(v.word)} big />
               <View style={{ flexShrink: 1 }}>
                 <HeadWord word={v.word} context={v.context}>
                   <Big size={headSize}>{v.word}</Big>
@@ -732,7 +749,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                 <Text onPress={() => lookUp(v.word, v.context || v.word)}>{v.word}</Text>
                 {!!v.meaning && <Text style={{ fontWeight: "400" }}> — {v.meaning}</Text>}
               </Text>
-              <SpeakButton text={v.word} />
+              <SpeakButton text={spoken(v.word)} />
             </View>
           )}
           {!ok && !!v.context && kind !== "choose-meaning" && <Context text={v.context} word={v.word} size={14} />}
@@ -832,7 +849,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                         {masteryMeta(masteryOfItem({ stage: g.stage, mastery: g.mastery }), t).label}
                       </Text>
                     )}
-                    <SpeakButton text={g.item.word} />
+                    <SpeakButton text={spoken(g.item.word)} />
                   </View>
                 ))}
               </View>

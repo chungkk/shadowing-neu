@@ -1,6 +1,7 @@
 /**
  * Học 1 chủ đề trong bộ từ (Đoán từ · Thẻ lật · Trắc nghiệm · Nghe viết) — TypeScript thuần, dùng chung cho web và app.
- * Trả lời đúng / bấm "Đã thuộc" → từ được thêm vào sổ (ôn tiếp theo lịch SRS); tiến độ chủ đề = số từ đã ở trong sổ.
+ * Trả lời đúng / bấm "Đã thuộc" → từ được thêm vào sổ (ôn tiếp theo lịch SRS) và tính là đã học trong bộ;
+ * tiến độ chủ đề = số từ đã học (từ có sẵn trong sổ từ nơi khác vẫn được học).
  */
 
 import { checkTyped, findWord, shuffle } from "./review";

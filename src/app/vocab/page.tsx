@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BookOpen, ChevronRight, Layers } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { vocabOverview } from "@/lib/db";
-import { getDeck, listDecks, type DeckSummary } from "@/lib/decks";
+import { deckCounts, deckMarks, getDeck, listDecks, type DeckSummary } from "@/lib/decks";
 import DeckCover from "@/components/DeckCover";
 import { LoginLink } from "@/components/LoginDialog";
 import { DecksSkeleton } from "@/components/Skeleton";
@@ -54,8 +54,8 @@ function NotebookBanner({ notebook }: { notebook: { total: number; due: number }
   );
 }
 
-function DeckCard({ deck, saved }: { deck: DeckSummary; saved: number | null }) {
-  const done = saved !== null && saved >= deck.wordCount;
+function DeckCard({ deck, learned }: { deck: DeckSummary; learned: number | null }) {
+  const done = learned !== null && learned >= deck.wordCount;
   return (
     <Link
       href={`/vocab/decks/${deck.slug}`}
@@ -66,12 +66,12 @@ function DeckCard({ deck, saved }: { deck: DeckSummary; saved: number | null }) 
       <div className="flex items-center gap-1.5 px-0.5 text-sm font-bold text-muted">
         <Layers className="size-4" />
         <span className="flex-1">{deck.wordCount}</span>
-        {!!saved && <span className={done ? "text-accent" : "text-amber"}>{done ? "✓" : `${saved}/${deck.wordCount}`}</span>}
+        {!!learned && <span className={done ? "text-accent" : "text-amber"}>{done ? "✓" : `${learned}/${deck.wordCount}`}</span>}
       </div>
-      {/* Tiến độ: phần đã đưa vào sổ */}
-      {!!saved && !done && (
+      {/* Tiến độ: phần đã học */}
+      {!!learned && !done && (
         <div className="-mt-1.5 mx-0.5 h-1 rounded-full bg-card-2">
-          <div className="h-full rounded-full bg-amber" style={{ width: `${(saved * 100) / deck.wordCount}%` }} />
+          <div className="h-full rounded-full bg-amber" style={{ width: `${(learned * 100) / deck.wordCount}%` }} />
         </div>
       )}
     </Link>
@@ -82,7 +82,8 @@ async function Decks() {
   const user = await getCurrentUser();
   const o = user ? vocabOverview(user.id) : null;
   const decks = listDecks();
-  const savedOf = (d: DeckSummary) => (o ? getDeck(d.slug)!.words.filter((w) => o.words.has(w.word.toLowerCase())).length : null);
+  const marks = deckMarks(user?.id ?? null);
+  const learnedOf = (d: DeckSummary) => (o ? deckCounts(getDeck(d.slug)!, marks).learned : null);
   return (
     <>
       <NotebookBanner notebook={o && { total: o.total, due: o.due }} />
@@ -94,7 +95,7 @@ async function Decks() {
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {list.map((d) => (
-              <DeckCard key={d.slug} deck={d} saved={savedOf(d)} />
+              <DeckCard key={d.slug} deck={d} learned={learnedOf(d)} />
             ))}
           </div>
         </section>

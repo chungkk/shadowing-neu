@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { addDeckWords, vocabOverview } from "@/lib/db";
-import { deckTopics, getDeck } from "@/lib/decks";
+import { addDeckEntries, deckCounts, deckMarks, deckTopics, getDeck, markWord } from "@/lib/decks";
 import { apiUser, body, fail } from "@/lib/api";
 
 const NOT_FOUND = "Không tìm thấy bộ từ";
@@ -9,13 +8,13 @@ const NOT_FOUND = "Không tìm thấy bộ từ";
 /**
  * GET → { deck } — bộ chia chủ đề: `topics` (kèm số từ / số đã có trong sổ), chưa gửi từ;
  * ?topic=<id> → chỉ các từ của chủ đề đó (+ `topic`). Bộ không chia chủ đề → mọi từ.
- * Đã đăng nhập: mỗi từ có `saved` = đã có trong sổ
+ * Đã đăng nhập: mỗi từ có `saved` = đã có trong sổ, `learned` = đã học trong bộ này
  */
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/decks/[slug]">) {
   const deck = getDeck((await ctx.params).slug);
   if (!deck) return fail(NOT_FOUND, 404);
   const user = await getCurrentUser();
-  const saved = user ? vocabOverview(user.id).words : new Set<string>();
+  const marks = deckMarks(user?.id ?? null);
   const topicId = req.nextUrl.searchParams.get("topic");
   const topic = topicId ? deck.topics.find((t) => t.id === topicId) : undefined;
   if (topicId && !topic) return fail("Không tìm thấy chủ đề", 404);
@@ -23,24 +22,29 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/dec
   return Response.json({
     deck: {
       ...deck,
-      topics: deckTopics(deck, saved),
+      topics: deckTopics(deck, marks),
       topic: topic ?? null,
       wordCount: deck.words.length,
-      saved: deck.words.filter((w) => saved.has(w.word.toLowerCase())).length,
-      words: words.map((w) => ({ ...w, saved: saved.has(w.word.toLowerCase()) })),
+      ...deckCounts(deck, marks),
+      words: words.map((w) => markWord(deck, w, marks)),
     },
   });
 }
 
-/** POST { words?: string[] } → thêm các từ đó (không gửi = cả bộ) vào sổ để ôn → { added } */
+/**
+ * POST { keys?: string[], learn?: boolean } → thêm các mục đó vào sổ để ôn (learn: học xong ở màn học, ghi tiến độ) → { added }.
+ * App bản cũ gửi { words: string[] } theo cách viết; không gửi gì = cả bộ.
+ */
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/decks/[slug]">) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   const deck = getDeck((await ctx.params).slug);
   if (!deck) return fail(NOT_FOUND, 404);
-  const b = await body<{ words: unknown[] }>(req);
-  const pick = Array.isArray(b.words) ? new Set(b.words.filter((x): x is string => typeof x === "string")) : null;
-  const words = pick ? deck.words.filter((w) => pick.has(w.word)) : deck.words;
+  const b = await body<{ keys: unknown[]; words: unknown[]; learn: boolean }>(req);
+  const strings = (list: unknown[]) => new Set(list.filter((x): x is string => typeof x === "string"));
+  const keys = Array.isArray(b.keys) ? strings(b.keys) : null;
+  const names = Array.isArray(b.words) ? strings(b.words) : null;
+  const words = keys ? deck.words.filter((w) => keys.has(w.key)) : names ? deck.words.filter((w) => names.has(w.word)) : deck.words;
   if (!words.length) return fail("Chưa chọn từ nào");
-  return Response.json({ added: addDeckWords(user.id, words, deck.title) });
+  return Response.json({ added: addDeckEntries(user.id, deck, words, b.learn === true) });
 }

@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { tokenize, type Phrase } from "@shared/phrase-match";
-import { isPhrase, isSentence } from "@shared/review";
+import { isPhrase, isSentence, spokenWord } from "@shared/review";
 import { isDue } from "@shared/srs";
 import { Button, Card, ErrorText, Input, styles } from "@/components/ui";
 import { WordSheet } from "@/components/WordSheet";
@@ -303,7 +303,7 @@ function VocabRow({
       return;
     }
     setSpeaking(true);
-    speakGerman(v.word, { onEnd: () => setSpeaking(false) }).catch(() => setSpeaking(false));
+    speakGerman(spokenWord(v), { onEnd: () => setSpeaking(false) }).catch(() => setSpeaking(false));
   };
 
   return (
