@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Headphones, Lock } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
@@ -37,7 +37,7 @@ export function SectionHeader({ title, count, children }: { title: string; count
 }
 
 /** onLocked: bấm thẻ bài đang khoá → mở popup mở khoá tại chỗ (mở tab mới / Ctrl+bấm → vẫn sang trang bài) */
-function LessonCard({ l, onLocked }: { l: Item; onLocked?: (l: Item) => void }) {
+function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: Item) => void; className?: string }) {
   return (
     <Link
       href={`/${l.slug}`}
@@ -46,7 +46,7 @@ function LessonCard({ l, onLocked }: { l: Item; onLocked?: (l: Item) => void }) 
         e.preventDefault();
         onLocked(l);
       }}
-      className="group sticker sticker-link flex flex-col overflow-hidden"
+      className={`group sticker sticker-link flex flex-col overflow-hidden ${className}`}
     >
       <div className="relative aspect-video overflow-hidden border-b-2 border-ink bg-black">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -109,6 +109,7 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
 export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
   const [level, setLevel] = useState<string | null>(null);
   const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
+  const top = useRef<HTMLElement>(null);
 
   if (!lessons.length)
     return (
@@ -121,6 +122,8 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   // Chỉ hiện cấp độ có bài, kèm số bài
   const levels = LEVELS.map((lv) => ({ level: lv, count: lessons.filter((l) => l.level === lv).length })).filter((g) => g.count);
   const shown = level ? lessons.filter((l) => l.level === level) : lessons;
+  // Admin học được mọi bài → bấm thẻ khoá vẫn vào thẳng bài
+  const onLocked = lock?.enabled && !admin ? setOpening : undefined;
 
   const chip = (lv: string | null, count: number) => (
     <button
@@ -136,7 +139,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   );
 
   return (
-    <section className="flex flex-col gap-4 sm:gap-5">
+    <section ref={top} className="flex scroll-mt-4 flex-col gap-4 sm:gap-5">
       <SectionHeader title="Thư viện bài học" count={lessons.length}>
         {/* Điện thoại: 1 hàng cuộn ngang sát mép màn hình thay vì xuống nhiều dòng */}
         <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
@@ -145,10 +148,39 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
         </div>
       </SectionHeader>
       {lock?.enabled && <LockNote lock={lock} admin={admin} />}
-      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+      {/* Điện thoại, chưa lọc: mỗi cấp độ 1 hàng vuốt ngang, thẻ kế tiếp ló ra ở mép để biết còn bài */}
+      {!level && (
+        <div className="flex flex-col gap-5 sm:hidden">
+          {levels.map((g) => (
+            <div key={g.level} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-extrabold">Trình độ {g.level}</h3>
+                {g.count > 1 && (
+                  <button
+                    onClick={() => {
+                      top.current?.scrollIntoView();
+                      setLevel(g.level);
+                    }}
+                    className="cursor-pointer rounded-full border-2 border-ink bg-card px-3 py-1 text-xs font-bold"
+                  >
+                    Xem tất cả ({g.count})
+                  </button>
+                )}
+              </div>
+              <div className="scroll-row -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 px-4 pt-1.5 pb-2.5">
+                {lessons
+                  .filter((l) => l.level === g.level)
+                  .map((l) => (
+                    <LessonCard key={l.id} l={l} onLocked={onLocked} className="w-[78vw] snap-start" />
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={`grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 ${level ? "" : "max-sm:hidden"}`}>
         {shown.map((l) => (
-          // Admin học được mọi bài → bấm thẻ khoá vẫn vào thẳng bài
-          <LessonCard key={l.id} l={l} onLocked={lock?.enabled && !admin ? setOpening : undefined} />
+          <LessonCard key={l.id} l={l} onLocked={onLocked} />
         ))}
       </div>
       {opening && lock && <UnlockDialog lesson={opening} lock={lock} onClose={() => setOpening(null)} />}

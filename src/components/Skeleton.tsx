@@ -16,9 +16,10 @@ export function LessonGridSkeleton({ count = 8 }: { count?: number }) {
           ))}
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+      {/* Điện thoại: 1 hàng vuốt ngang như thẻ thật */}
+      <div className="max-sm:-mx-4 max-sm:flex max-sm:gap-3 max-sm:overflow-hidden max-sm:px-4 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: count }, (_, i) => (
-          <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
+          <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card max-sm:w-[78vw] max-sm:shrink-0">
             <Bone className="aspect-video rounded-none" />
             <div className="flex flex-col gap-2 p-3 sm:p-4">
               <div className="flex items-start gap-2">
