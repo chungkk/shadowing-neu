@@ -65,7 +65,7 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-50" : ""}`}
+          className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-80" : ""}`}
         />
         {l.access === "free" && <span className="pill absolute top-2 left-2 bg-accent text-white">Miễn phí</span>}
         <LevelBadge level={l.level} className="absolute top-2 right-2" />
