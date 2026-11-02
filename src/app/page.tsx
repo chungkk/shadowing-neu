@@ -20,7 +20,7 @@ function lessonItems(user: User | null) {
   // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
   const access = accessOf(user?.role === "admin" ? null : user);
   const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
-  return lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
+  const items = lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
     const p = progress.get(`/lesson/${l.id}`); // khoá tiến độ của bài vẫn theo id
     return {
       id: l.id,
@@ -38,6 +38,8 @@ function lessonItems(user: User | null) {
       access: access(l.id),
     };
   });
+  // Bài học được ngay (miễn phí / đã mở) lên đầu, trong mỗi nhóm vẫn mới nhất trước
+  return items.sort((x, y) => +(x.access === "locked") - +(y.access === "locked"));
 }
 
 async function Lessons() {
