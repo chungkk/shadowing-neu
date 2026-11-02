@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { connection } from "next/server";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
@@ -9,6 +10,9 @@ import Mascot from "@/components/Mascot";
 import ContinueLearning from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
 import { LessonGridSkeleton } from "@/components/Skeleton";
+
+// Link đã lọc (/?level=B1) vẫn là trang chủ với Google
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
 

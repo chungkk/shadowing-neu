@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, X } from "lucide-react";
 import type { LockInfo } from "@/lib/lesson-lock";
@@ -21,9 +21,30 @@ export default function UnlockDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const panel = useRef<HTMLDivElement>(null);
+
+  // Mở: focus vào popup · đóng: trả focus về thẻ vừa bấm. useLayoutEffect: trả xong trước khi popup đăng nhập (mở ngay sau đó) tự focus ô nhập
+  useLayoutEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    panel.current?.focus({ preventScroll: true });
+    return () => before?.focus({ preventScroll: true });
+  }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return onClose();
+      if (e.key !== "Tab" || !panel.current) return;
+      // Tab chỉ đi vòng trong popup
+      const items = panel.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const inside = active !== panel.current && panel.current.contains(active);
+      if (!inside || active === (e.shiftKey ? first : last)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first)?.focus();
+      }
+    };
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden"; // khoá cuộn trang phía sau
     window.addEventListener("keydown", onKey);
@@ -36,7 +57,7 @@ export default function UnlockDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={lesson.title}>
       <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={onClose} aria-label="Đóng" />
-      <div className="sheet-up relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border-t border-border bg-card md:rounded-[28px] md:border">
+      <div ref={panel} tabIndex={-1} className="sheet-up relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border-t border-border bg-card outline-none md:rounded-[28px] md:border">
         <div className="relative aspect-video bg-black">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-45" />

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Circle, CircleCheck, Clock, Headphones, Lock, Minus } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
@@ -144,9 +145,9 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
   );
 }
 
-/** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ */
+/** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ (lưu trên URL: ?level=B1 → chia sẻ link / tải lại trang vẫn giữ) */
 export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
-  const [level, setLevel] = useState<string | null>(null);
+  const searchParams = useSearchParams();
   const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
   const top = useRef<HTMLElement>(null);
 
@@ -160,6 +161,16 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
 
   // Chỉ hiện cấp độ có bài, kèm số bài
   const levels = LEVELS.map((lv) => ({ level: lv, count: lessons.filter((l) => l.level === lv).length })).filter((g) => g.count);
+  const param = searchParams.get("level");
+  const level = levels.some((g) => g.level === param) ? param : null; // cấp độ lạ / không còn bài → như chưa lọc
+  const setLevel = (lv: string | null) => {
+    if (lv === level) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (lv) params.set("level", lv);
+    else params.delete("level");
+    const query = params.toString();
+    window.history.pushState(null, "", query ? `?${query}` : window.location.pathname);
+  };
   const shown = level ? lessons.filter((l) => l.level === level) : lessons;
   // Admin học được mọi bài → bấm thẻ khoá vẫn vào thẳng bài
   const onLocked = lock?.enabled && !admin ? setOpening : undefined;
@@ -168,6 +179,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
     <button
       key={lv ?? "all"}
       onClick={() => setLevel(lv)}
+      aria-pressed={level === lv}
       className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-ink px-3.5 py-1.5 text-sm font-bold transition ${
         level === lv ? "bg-accent text-white" : "bg-card text-foreground hover:bg-card-2"
       }`}
