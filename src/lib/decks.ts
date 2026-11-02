@@ -1,5 +1,6 @@
 import "server-only";
 import type { NounGender } from "./db";
+import aspekteNeuB2 from "@/content/decks/aspekte-neu-b2.json";
 import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";
 import goetheB1 from "@/content/decks/goethe-b1.json";
@@ -15,6 +16,8 @@ const RAW: RawDeck[] = [
   goetheA1,
   goetheA2,
   goetheB1,
+  // Aspekte neu B2 (Klett, Kapitelwortschatz) — chủ đề theo 10 chương của giáo trình
+  aspekteNeuB2,
   // Nomen-Verb-Verbindungen (Hans Witzlinger, „Deutsch – Aber Hallo!“) — chủ đề theo vần A–Z
   nomenVerb,
   // Wortschatz Deutsch Pflege (Sandra Hohmann) — từ vựng điều dưỡng, chủ đề theo vần A–Z
