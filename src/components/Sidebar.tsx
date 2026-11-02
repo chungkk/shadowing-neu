@@ -3,11 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogIn, LogOut, MessageSquare, Mic, Settings, Users } from "lucide-react";
+import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogOut, MessageSquare, Mic, Settings, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
-import { LoginLink } from "./LoginDialog";
 
 type Item = { href: string; label: string; icon: ComponentType<{ className?: string }> };
 type NavUser = AvatarUser & { role: string };
@@ -36,39 +35,28 @@ function useCurrent(items: Item[]) {
   return items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }
 
-/** Thanh icon dưới đáy — chỉ trên điện thoại (máy tính dùng menu thả xuống ở avatar) */
+/**
+ * Thanh icon dưới đáy — chỉ trên điện thoại (máy tính dùng menu thả xuống ở avatar). Chỉ giữ các trang chính:
+ * Cài đặt + Đăng xuất nằm ở avatar → /settings, Đăng nhập là nút ở thanh trên cùng, trang con admin có nút trong /admin.
+ */
 export default function Sidebar({ user }: { user: NavUser | null }) {
-  const items = [...ITEMS, ...(user ? USER_ITEMS : []), ...(user?.role === "admin" ? ADMIN_ITEMS : [])];
-  const current = useCurrent(items);
-
-  const link = (it: Item) => {
-    const As = it.href === "/login" ? LoginLink : Link; // đăng nhập: mở popup tại trang đang xem
-    return (
-      <As
-        key={it.href}
-        href={it.href}
-        title={it.label}
-        className={`flex size-11 items-center justify-center rounded-2xl transition ${
-          it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
-        }`}
-      >
-        <it.icon className="size-6" />
-      </As>
-    );
-  };
+  const items = [...ITEMS, ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
+  const current = useCurrent([...items, ...USER_ITEMS]); // USER_ITEMS: ở /settings không sáng nhầm "Trang chủ"
 
   return (
     <SidebarFrame>
-      {items.map(link)}
-      {user ? (
-        <form action={logout}>
-          <button title="Đăng xuất" className="flex size-11 cursor-pointer items-center justify-center rounded-2xl text-red-400 hover:bg-foreground/10">
-            <LogOut className="size-6" />
-          </button>
-        </form>
-      ) : (
-        link({ href: "/login", label: "Đăng nhập", icon: LogIn })
-      )}
+      {items.map((it) => (
+        <Link
+          key={it.href}
+          href={it.href}
+          title={it.label}
+          className={`flex size-11 items-center justify-center rounded-2xl transition ${
+            it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
+          }`}
+        >
+          <it.icon className="size-6" />
+        </Link>
+      ))}
     </SidebarFrame>
   );
 }
@@ -115,7 +103,7 @@ export function HeaderNavFrame({ current }: { current?: string }) {
 
 /**
  * Góc phải thanh trên cùng: avatar + tên. Máy tính: rê chuột (hoặc bấm — màn cảm ứng) để mở menu các trang.
- * Điện thoại: chỉ là link tới Cài đặt (các trang đã có ở thanh dưới đáy).
+ * Điện thoại: chỉ là link tới Cài đặt (trang chính đã có ở thanh dưới đáy, Đăng xuất nằm trong Cài đặt).
  */
 export function UserDropdown({ user }: { user: NavUser }) {
   const admin = user.role === "admin";
