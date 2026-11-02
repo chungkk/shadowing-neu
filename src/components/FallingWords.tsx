@@ -26,12 +26,14 @@ import {
   REEL,
   RULES,
   backspace,
+  levelOf,
   newGame,
   nextMilestone,
   press,
   reelAt,
   scoreHit,
   snapshot,
+  speechLine,
   step,
   untarget,
   type Drop,
@@ -144,7 +146,8 @@ const GEMS = Array.from({ length: 6 }, (_, i) => ({ left: 4 + rand(i, 16) * 88, 
 function Slots({ word, typed, hint, theme }: { word: string; typed: string | null; hint: boolean; theme: Theme }) {
   const n = typed?.length ?? 0;
   return (
-    <span className="flex justify-center font-mono text-base font-extrabold tracking-[0.18em]">
+    // Từ dài: chữ nhỏ lại, vẫn không vừa thì xuống dòng (giữa các chữ cái) — không tràn khỏi giọt
+    <span className={`flex flex-wrap justify-center font-mono font-extrabold ${word.length > 12 ? "text-sm tracking-[0.08em]" : "text-base tracking-[0.18em]"}`}>
       {[...word].map((c, i) => {
         if (i < n) return <span key={i} className="text-white">{c}</span>;
         if (!/\p{L}/u.test(c)) return <span key={i}>{c}</span>;
@@ -259,6 +262,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [full, setFull] = useState(false);
+  const [speech] = useState(() => speechLine());
   const coarse = useCoarsePointer();
   const game = useRef<Game | null>(null);
   const cache = useRef(new Map<string, { words: GameWord[]; topics: Topic[] }>());
@@ -285,22 +289,36 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       document.removeEventListener("fullscreenchange", onFull);
       clearTimeout(noteTimer.current);
       clearTimeout(badTimer.current);
+      speech.clear();
       stopSpeaking();
     };
-  }, []);
+  }, [speech]);
 
-  /** Đọc to từ của 1 giọt (biến thể "gold": khi xuất hiện, khi bấm vào, Space) */
-  const sayDrop = (d: Pick<Drop, "id" | "w">) => {
+  /** Đọc to từ của 1 giọt (biến thể "gold": khi xuất hiện, khi bấm vào, Space) — chạy qua hàng đọc */
+  const saying = (d: Pick<Drop, "id" | "w">) => (done: () => void) => {
     setSpeakingId(d.id);
-    void speakGerman(fullWord(d.w), { onEnd: () => setSpeakingId((id) => (id === d.id ? null : id)) });
+    void speakGerman(fullWord(d.w), {
+      onEnd: () => {
+        setSpeakingId((id) => (id === d.id ? null : id));
+        done();
+      },
+    });
   };
+  const sayDrop = (d: Pick<Drop, "id" | "w">) => speech.now(saying(d));
   /** Nghe lại giọt đang gõ, chưa gõ thì giọt thấp nhất */
   const listenAgain = () => {
     const g = game.current;
     const d = g?.drops.find((d) => d.id === g.targetId) ?? g?.drops.filter((d) => d.state === "fall").sort((a, b) => b.y - a.y)[0];
     if (d) sayDrop(d);
   };
-  const onSpawn = useEffectEvent((d: Drop) => cfg.listen && sayDrop(d));
+  const onSpawn = useEffectEvent((d: Drop) => cfg.listen && speech.word(saying(d), () => d.state === "fall"));
+
+  // Hết lượt chơi: bỏ các câu đang chờ · tạm dừng thì ngừng đọc luôn (thắng / thua: đọc nốt từ vừa gõ xong)
+  useEffect(() => {
+    if (phase === "play") return;
+    speech.clear();
+    if (phase === "pause") stopSpeaking();
+  }, [phase, speech]);
 
   // Phím thật: bắt ở cả trang (không có ô nhập → bộ gõ tiếng Việt không đổi "fa" thành "fấ")
   const onWindowKey = useEffectEvent((e: globalThis.KeyboardEvent) => {
@@ -330,7 +348,6 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       }
       setView(snapshot(g));
       if (g.lives <= 0) {
-        if (g.score > g.best) setBest(g.score);
         setPhase("over");
         return;
       }
@@ -344,12 +361,12 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
       cancelAnimationFrame(raf);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [phase, setBest]);
+  }, [phase]);
 
   const flash = (text: string, tone: "ok" | "warn") => {
     clearTimeout(noteTimer.current);
     setNote({ text, tone });
-    noteTimer.current = setTimeout(() => setNote(null), 2200);
+    noteTimer.current = setTimeout(() => setNote(null), text.includes("\n") ? 3500 : 2200);
   };
 
   /** Màn cảm ứng dùng bàn phím hệ thống: focus ô nhập ẩn để bàn phím hiện lên */
@@ -383,40 +400,47 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
   const resume = () => {
     setPhase("play");
     focusInput();
+    if (cfg.listen) listenAgain(); // tạm dừng đã ngắt tiếng → đọc lại cho khỏi quên từ
   };
 
+  /** Thoát: đang chơi dở mà đã gõ / trượt từ nào → hiện kết quả để còn lưu từ trượt, không thì về màn chọn bộ từ */
   const quit = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
+    speech.clear();
     stopSpeaking();
-    setPhase("menu");
+    const g = game.current;
+    if (playing && g && (g.hits || g.missed.length)) {
+      setView(snapshot(g));
+      setPhase("over");
+    } else setPhase("menu");
   };
 
+  /** Lời báo lên cấp */
+  const levelNote = (level: number) =>
+    cfg.drops(level) > cfg.drops(level - 1)
+      ? `Lên cấp ${level} — thêm 1 ${variant === "gold" ? "cục vàng" : "từ rơi"} cùng lúc!`
+      : `Lên cấp ${level} — ${variant === "gold" ? "chìm" : "rơi"} nhanh hơn!`;
+
   /** Vượt mốc: sang chủ đề kế (+1 mạng), giọt còn trên sân tan đi; hết chủ đề → thắng */
-  function clearMilestone(g: Game) {
+  function clearMilestone(g: Game, level: number | null) {
     const done = g.milestone + 1;
     if (done > cleared) setCleared(done);
     if (done >= g.topics.length) {
-      if (g.score > g.best) setBest(g.score);
       setView(snapshot(g));
       setPhase("win");
       return;
     }
-    flash(`Vượt mốc ${done}: ${g.topics[g.milestone].title} ✓ — +1 mạng`, "ok");
+    flash(`Vượt mốc ${done}: ${g.topics[g.milestone].title} ✓ — +1 mạng${level ? `\n${levelNote(level)}` : ""}`, "ok");
     nextMilestone(g);
   }
 
   /** Bắn trúng giọt vừa gõ xong */
   function hit(g: Game, d: Drop) {
     const { milestone, levelUp: level } = scoreHit(g, d);
-    if (sound) speakGerman(fullWord(d.w));
-    if (milestone) clearMilestone(g);
-    else if (level)
-      flash(
-        cfg.drops(level) > cfg.drops(level - 1)
-          ? `Lên cấp ${level} — thêm 1 ${variant === "gold" ? "cục vàng" : "từ rơi"} cùng lúc!`
-          : `Lên cấp ${level} — ${variant === "gold" ? "chìm" : "rơi"} nhanh hơn!`,
-        "ok",
-      );
+    if (g.score > g.best) setBest(g.score); // lưu ngay: thoát giữa ván / đóng tab vẫn giữ kỷ lục
+    if (sound) speech.bonus((done) => void speakGerman(fullWord(d.w), { onEnd: done }));
+    if (milestone) clearMilestone(g, level);
+    else if (level) flash(levelNote(level), "ok");
   }
 
   /** 1 phím (bàn phím thật / trên màn hình / hệ thống) → true nếu game dùng phím đó */
@@ -605,7 +629,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
                     </span>
                   )}
                   {done ? (
-                    <span className={`font-extrabold ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
+                    <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
                   ) : (
                     <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
                   )}
@@ -644,6 +668,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
               <b className="shrink-0">
                 Mốc {v.milestone + 1}/{v.topics.length}
               </b>
+              <span className="shrink-0 font-bold text-white/70">· Cấp {levelOf(v.hits)}</span>
               <span className="truncate text-white/70 max-sm:hidden">
                 · {topic.icon} {topic.title}
               </span>
@@ -688,7 +713,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
 
         {note && (
           <p
-            className={`sheet-fade pointer-events-none absolute inset-x-0 top-20 z-10 mx-auto w-fit max-w-[90%] rounded-xl px-3 py-1.5 text-center text-sm font-bold ${
+            className={`sheet-fade pointer-events-none absolute inset-x-0 top-20 z-10 mx-auto w-fit max-w-[90%] rounded-xl px-3 py-1.5 text-center text-sm font-bold whitespace-pre-line ${
               note.tone === "ok" ? theme.note : "bg-amber text-black"
             }`}
           >
@@ -712,7 +737,7 @@ export default function FallingWords({ variant, decks }: { variant: Variant; dec
                 </>
               ) : (
                 <>
-                  <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : "Hết mạng!"}</p>
+                  <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
                   <p className="text-5xl font-extrabold text-gem tabular-nums">{v.score}</p>
                   {v.score > v.best ? (
                     <p className="flex items-center gap-1.5 font-bold text-amber">

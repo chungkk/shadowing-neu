@@ -22,6 +22,7 @@ export type Rules = {
   spawnMin: number;
   drops: (level: number) => number; // số giọt tối đa trên sân
   fade: number; // giây hiệu ứng nổ / chạm đáy trước khi xoá giọt
+  rest: number; // giây nghỉ sau khi bắn trúng / để trượt, trước khi thả giọt mới
 };
 
 export const RULES: Record<Variant, Rules> = {
@@ -34,6 +35,7 @@ export const RULES: Record<Variant, Rules> = {
     spawnMin: 1.6,
     drops: (level) => Math.min(2 + level, 6),
     fade: 0.85, // đủ cho hiệu ứng nổ / mờ dần (~0.7 giây)
+    rest: 1.2,
   },
   gold: {
     store: "spellingbee", // giữ khoá cũ (game từng tên "Ong đánh vần") → không mất kỷ lục, tiến độ mốc
@@ -44,6 +46,7 @@ export const RULES: Record<Variant, Rules> = {
     spawnMin: 3.5,
     drops: (level) => (level < 3 ? 1 : level < 6 ? 2 : 3), // cấp 1–2: từng từ một
     fade: REEL, // móc thả xuống + kéo lên
+    rest: REEL + 0.3, // kéo xong cục vàng rồi mới lộ cục mới
   },
 };
 
@@ -60,6 +63,7 @@ export type Game = {
   fresh: Drop | null; // giọt vừa thả (để đọc to ở biến thể "gold")
   time: number;
   nextSpawn: number;
+  restUntil: number; // đang nghỉ sau khi bắn trúng / để trượt / vượt mốc: chưa thả giọt mới, kể cả khi sân trống
   lives: number;
   score: number;
   combo: number;
@@ -70,7 +74,7 @@ export type Game = {
   typed: string; // phần đã gõ đúng của giọt đó (theo chữ của từ: gõ "a" cho "ä" thì lưu "ä")
   wrong: number; // số lần gõ sai liên tiếp ở chữ hiện tại
 };
-export type View = Omit<Game, "cfg" | "words" | "queue" | "fresh">;
+export type View = Omit<Game, "cfg" | "words" | "queue" | "fresh" | "restUntil">;
 export type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
 
 export const HITS_PER_LEVEL = 10;
@@ -135,6 +139,7 @@ export function newGame(cfg: Rules, words: GameWord[], topics: Topic[], mileston
     fresh: null,
     time: 0,
     nextSpawn: 0,
+    restUntil: 0,
     lives: cfg.lives,
     score: 0,
     combo: 0,
@@ -205,11 +210,13 @@ export function step(g: Game, dt: number) {
       g.lives--;
       g.combo = 0;
       g.missed.push(d.w);
+      g.restUntil = g.time + g.cfg.rest; // nghỉ để kịp xem đáp án của giọt vừa trượt
+      g.nextSpawn = Math.max(g.nextSpawn, g.restUntil);
     }
   }
   g.drops = g.drops.filter((d) => d.state === "fall" || g.time - d.at < g.cfg.fade);
   const falling = g.drops.filter((d) => d.state === "fall").length;
-  if (!falling) g.nextSpawn = Math.min(g.nextSpawn, g.time + 1); // sân trống → khỏi chờ lâu
+  if (!falling) g.nextSpawn = Math.min(g.nextSpawn, Math.max(g.time + 1, g.restUntil)); // sân trống → khỏi chờ lâu, trừ lúc đang nghỉ
   if (g.time >= g.nextSpawn && falling < g.cfg.drops(levelOf(g.hits))) spawn(g);
 }
 
@@ -225,7 +232,8 @@ export function scoreHit(g: Game, d: Drop): { milestone: boolean; levelUp: numbe
   d.points = 10 * levelOf(g.hits - 1) + 2 * Math.min(g.combo - 1, 10);
   g.score += d.points;
   Object.assign(d, { state: "hit", at: g.time });
-  g.nextSpawn = Math.max(g.nextSpawn, g.time + 1.2); // nghỉ chút sau khi bắn trúng
+  g.restUntil = g.time + g.cfg.rest;
+  g.nextSpawn = Math.max(g.nextSpawn, g.restUntil);
   const level = levelOf(g.hits);
   return { milestone: g.mHits >= g.goal, levelUp: level > levelOf(g.hits - 1) ? level : null };
 }
@@ -240,7 +248,51 @@ export function nextMilestone(g: Game) {
   g.goal = goalOf(g, done);
   g.queue = shuffle(topicWords(g, done));
   g.lives = Math.min(g.cfg.lives, g.lives + 1);
-  g.nextSpawn = g.time + 1.8;
+  g.restUntil = g.time + 1.8;
+  g.nextSpawn = g.restUntil;
+}
+
+/**
+ * Hàng đọc to của game: tiếng từ của giọt mới là để chơi nên không bị cắt, đọc lần lượt; tiếng thưởng khi bắn trúng thì nhường.
+ * say(done): bắt đầu đọc, gọi done khi đọc xong / bị dừng. Giọng đọc treo không báo xong → sau maxMs đọc tiếp.
+ * Gọi clear() TRƯỚC khi dừng tiếng, không thì câu đang chờ sẽ đọc tiếp ngay.
+ */
+export function speechLine(maxMs = 10000) {
+  type Say = (done: () => void) => void;
+  let turn = 0; // lượt đọc mới nhất (done của lượt cũ bỏ qua)
+  let busy: "word" | "bonus" | null = null;
+  let waiting: { say: Say; live: () => boolean }[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const play = (say: Say, kind: "word" | "bonus") => {
+    const my = ++turn;
+    busy = kind;
+    const done = () => {
+      if (my !== turn) return;
+      turn++;
+      busy = null;
+      clearTimeout(timer);
+      waiting = waiting.filter((w) => w.live());
+      const next = waiting.shift();
+      if (next) play(next.say, "word");
+    };
+    clearTimeout(timer);
+    timer = setTimeout(done, maxMs);
+    say(done);
+  };
+  return {
+    /** Từ của giọt mới: đang có tiếng thì chờ; tới lượt mà live() = false (giọt đã xong) thì bỏ */
+    word: (say: Say, live: () => boolean) => (busy ? void waiting.push({ say, live }) : play(say, "word")),
+    /** Đọc khi bắn trúng: bỏ qua nếu có từ đang đọc / đang chờ */
+    bonus: (say: Say) => (busy === "word" || waiting.length ? undefined : play(say, "bonus")),
+    /** Người chơi bấm nghe lại: đọc ngay, câu đang chờ đọc sau */
+    now: (say: Say) => play(say, "word"),
+    clear: () => {
+      turn++;
+      busy = null;
+      waiting = [];
+      clearTimeout(timer);
+    },
+  };
 }
 
 /** "gold": vị trí móc / cục vàng đang được kéo lên, t = 0…1 tính từ lúc gõ xong */

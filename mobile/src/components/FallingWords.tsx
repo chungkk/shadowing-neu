@@ -11,12 +11,14 @@ import {
   REEL,
   RULES,
   backspace,
+  levelOf,
   newGame,
   nextMilestone,
   press,
   reelAt,
   scoreHit,
   snapshot,
+  speechLine,
   step,
   untarget,
   type Drop,
@@ -276,7 +278,8 @@ const GoldScenery = memo(function GoldScenery({ reeling }: { reeling: boolean })
 function Slots({ word, typed, hint, th }: { word: string; typed: string | null; hint: boolean; th: Theme }) {
   const n = typed?.length ?? 0;
   return (
-    <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: MONO, fontSize: 16, fontWeight: "800", letterSpacing: 2.5, textAlign: "center", color: th.empty }}>
+    // Từ dài: 2 dòng rồi mới thu nhỏ chữ — không bé tới mức khó đọc
+    <Text numberOfLines={word.length > 14 ? 2 : 1} adjustsFontSizeToFit style={{ fontFamily: MONO, fontSize: 16, fontWeight: "800", letterSpacing: 2.5, textAlign: "center", color: th.empty }}>
       {[...word].map((c, i) => {
         if (i < n || !/\p{L}/u.test(c))
           return (
@@ -395,6 +398,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [shake] = useState(() => new Animated.Value(0));
+  const [speech] = useState(() => speechLine());
   const game = useRef<Game | null>(null);
   const cache = useRef(new Map<string, { words: GameWord[]; topics: Topic[] }>());
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
@@ -436,9 +440,10 @@ export default function FallingWords({ variant }: { variant: Variant }) {
       alive = false;
       clearTimeout(noteTimer.current);
       clearTimeout(badTimer.current);
+      speech.clear();
       stopSpeaking();
     };
-  }, [cfg.store]);
+  }, [cfg.store, speech]);
 
   const pickDeck = (slug: string) => {
     setDeck(slug);
@@ -453,22 +458,31 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     if (current && g.score > g.best) putStats(current.slug, { best: g.score });
   };
 
-  /** Đọc to từ của 1 giọt (biến thể "gold": khi xuất hiện, khi chạm vào, nút tai) */
-  const sayDrop = (d: Pick<Drop, "id" | "w">) => {
+  /** Đọc to từ của 1 giọt (biến thể "gold": khi xuất hiện, khi chạm vào, nút tai) — chạy qua hàng đọc */
+  const saying = (d: Pick<Drop, "id" | "w">) => (done: () => void) => {
     setSpeakingId(d.id);
-    speakGerman(fullWord(d.w), { onEnd: () => setSpeakingId((id) => (id === d.id ? null : id)) }).catch(() => {});
+    speakGerman(fullWord(d.w), {
+      onEnd: () => {
+        setSpeakingId((id) => (id === d.id ? null : id));
+        done();
+      },
+    }).catch(done);
   };
+  const sayDrop = (d: Pick<Drop, "id" | "w">) => speech.now(saying(d));
   /** Nghe lại giọt đang gõ, chưa gõ thì giọt thấp nhất */
   const listenAgain = () => {
     const g = game.current;
     const d = g?.drops.find((d) => d.id === g.targetId) ?? g?.drops.filter((d) => d.state === "fall").sort((a, b) => b.y - a.y)[0];
     if (d) sayDrop(d);
   };
-  const onSpawn = useEffectEvent((d: Drop) => cfg.listen && sayDrop(d));
-  const onOver = useEffectEvent((g: Game) => {
-    recordBest(g);
-    setPhase("over");
-  });
+  const onSpawn = useEffectEvent((d: Drop) => cfg.listen && speech.word(saying(d), () => d.state === "fall"));
+
+  // Hết lượt chơi: bỏ các câu đang chờ · tạm dừng thì ngừng đọc luôn (thắng / thua: đọc nốt từ vừa gõ xong)
+  useEffect(() => {
+    if (phase === "play") return;
+    speech.clear();
+    if (phase === "pause") stopSpeaking();
+  }, [phase, speech]);
 
   // Vòng lặp game
   useEffect(() => {
@@ -484,7 +498,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
         g.fresh = null;
       }
       setView(snapshot(g));
-      if (g.lives <= 0) return onOver(g);
+      if (g.lives <= 0) return setPhase("over");
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -501,9 +515,10 @@ export default function FallingWords({ variant }: { variant: Variant }) {
     useCallback(
       () => () => {
         setPhase((p) => (p === "play" ? "pause" : p));
+        speech.clear();
         stopSpeaking();
       },
-      [],
+      [speech],
     ),
   );
 
@@ -521,7 +536,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   const flash = (text: string) => {
     clearTimeout(noteTimer.current);
     setNote(text);
-    noteTimer.current = setTimeout(() => setNote(null), 2200);
+    noteTimer.current = setTimeout(() => setNote(null), text.includes("\n") ? 3500 : 2200);
   };
 
   /** Focus ô nhập ẩn để bàn phím hệ thống hiện lên */
@@ -559,41 +574,51 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   const resume = () => {
     setPhase("play");
     focusInput();
+    if (cfg.listen) listenAgain(); // tạm dừng đã ngắt tiếng → đọc lại cho khỏi quên từ
   };
   const pause = () => {
     inputRef.current?.blur();
     setPhase("pause");
   };
+  /** Thoát: đang chơi dở mà đã gõ / trượt từ nào → hiện kết quả để còn lưu từ trượt, không thì về màn chọn bộ từ */
   const quit = () => {
     inputRef.current?.blur();
+    speech.clear();
     stopSpeaking();
-    setPhase("menu");
+    const g = game.current;
+    if (playing && g && (g.hits || g.missed.length)) {
+      setView(snapshot(g));
+      setPhase("over");
+    } else setPhase("menu");
+  };
+
+  /** Lời báo lên cấp */
+  const levelNote = (level: number) => {
+    const more = cfg.drops(level) > cfg.drops(level - 1);
+    return t(more ? (variant === "gold" ? "games.levelUpGold" : "games.levelUpRain") : variant === "gold" ? "games.fasterGold" : "games.fasterRain", { n: level });
   };
 
   /** Vượt mốc: sang chủ đề kế (+1 mạng); hết chủ đề → thắng */
-  function clearMilestone(g: Game) {
+  function clearMilestone(g: Game, level: number | null) {
     const done = g.milestone + 1;
     if (current && done > cleared) putStats(current.slug, { cleared: done });
     if (done >= g.topics.length) {
-      recordBest(g);
       setView(snapshot(g));
       inputRef.current?.blur();
       setPhase("win");
       return;
     }
-    flash(t("games.milestoneDone", { n: done, title: g.topics[g.milestone].title }));
+    flash(t("games.milestoneDone", { n: done, title: g.topics[g.milestone].title }) + (level ? `\n${levelNote(level)}` : ""));
     nextMilestone(g);
   }
 
   /** Bắn trúng giọt vừa gõ xong */
   function hit(g: Game, d: Drop) {
     const { milestone, levelUp: level } = scoreHit(g, d);
-    if (sound) speakGerman(fullWord(d.w)).catch(() => {});
-    if (milestone) clearMilestone(g);
-    else if (level) {
-      const more = cfg.drops(level) > cfg.drops(level - 1);
-      flash(t(more ? (variant === "gold" ? "games.levelUpGold" : "games.levelUpRain") : variant === "gold" ? "games.fasterGold" : "games.fasterRain", { n: level }));
-    }
+    recordBest(g); // lưu ngay: thoát giữa ván / tắt app vẫn giữ kỷ lục
+    if (sound) speech.bonus((done) => void speakGerman(fullWord(d.w), { onEnd: done }).catch(done));
+    if (milestone) clearMilestone(g, level);
+    else if (level) flash(levelNote(level));
   }
 
   /** 1 phím (bàn phím trên màn hình / hệ thống) */
@@ -895,7 +920,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
                 <SymbolView name="flag.fill" size={12} tintColor={th.accent} />
                 <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: 13 }}>
                   <Text style={{ fontWeight: "800" }}>{t("games.milestone", { n: v.milestone + 1, total: v.topics.length })}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.7)" }}>{` · ${topic.icon} ${topic.title}`}</Text>
+                  <Text style={{ color: "rgba(255,255,255,0.7)" }}>{` · ${t("games.level", { n: levelOf(v.hits) })} · ${topic.icon} ${topic.title}`}</Text>
                 </Text>
               </View>
               <View style={{ alignSelf: "stretch", height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.1)" }}>
@@ -950,7 +975,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
                   </>
                 ) : (
                   <>
-                    <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>{phase === "win" ? t("games.win") : t("games.over")}</Text>
+                    <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>{phase === "win" ? t("games.win") : v.lives > 0 ? t("games.quitDone") : t("games.over")}</Text>
                     <Text style={{ color: "#a78bfa", fontSize: 48, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{v.score}</Text>
                     {v.score > v.best ? (
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
