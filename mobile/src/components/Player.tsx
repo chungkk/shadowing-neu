@@ -193,6 +193,7 @@ export default function Player({
   const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép ([] khi đang chép = đã chép hết bài)
   const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   const [points, setPoints] = useState<number | null>(null); // tổng điểm chính tả (null = chưa tải / server cũ)
+  const [pointsEarned, setPointsEarned] = useState(0); // tăng mỗi lần vừa được điểm → huy hiệu điểm hiện "+2"
   const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
   const [earned, setEarned] = useState<Set<number>>(new Set()); // câu được điểm trong lần mở bài này (điểm của lượt)
   const [spent, setSpent] = useState<Record<number, number>>({}); // số từ đã chạm xem của từng câu trong lần mở bài này (điểm bị trừ)
@@ -553,6 +554,7 @@ export default function Player({
     setPointIdx((s) => new Set(s).add(i));
     setEarned((s) => new Set(s).add(i));
     setPoints((n) => (n ?? 0) + POINTS_CORRECT);
+    setPointsEarned((n) => n + 1);
     api<Points>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, tz: new Date().getTimezoneOffset() } })
       .then((r) => setPoints(r.total))
       .catch(() => {
@@ -827,7 +829,7 @@ export default function Player({
               </Label>
               <Text style={{ color: C.muted, fontSize: 12 }}>#{idx + 1}</Text>
               <View style={{ flex: 1 }} />
-              {points !== null && <PointsPill total={points} />}
+              {points !== null && <PointsPill total={points} earned={pointsEarned} />}
               {/* Đánh dấu câu đang chép (giống sao trên từng câu ở Shadowing) */}
               {!!user && (
                 <Pressable

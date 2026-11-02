@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { SymbolView } from "expo-symbols";
 import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@shared/dictation";
-import { GEM, Gem, PointBurst } from "./Points";
+import { GEM, Gem } from "./Points";
 import { Button } from "./ui";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -70,7 +70,6 @@ export function DictationPanel({
   const [score, setScore] = useState(saved);
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
   const [won, setWon] = useState(false); // vừa được điểm ở câu này
-  const [burst, setBurst] = useState(false); // hiệu ứng +2 đang chạy
   // Số từ đã bấm xem
   const revealedCount = result.words.filter((w) => w.state === "revealed").length;
   const [focused, setFocused] = useState(!!autoFocus);
@@ -89,7 +88,6 @@ export function DictationPanel({
       setScore({ correct: r.correct, total: r.total });
       if (onDone(r.correct, r.total, nextInput) === true) {
         setWon(true);
-        setBurst(true);
       }
     }
   };
@@ -180,7 +178,6 @@ export function DictationPanel({
       </View>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {burst && <PointBurst onEnd={() => setBurst(false)} />}
         {result.words.map((w, k) => {
           const shown = w.state === "correct" || w.state === "revealed";
           const b = BOX[shown || checked ? w.state : "hint"];
