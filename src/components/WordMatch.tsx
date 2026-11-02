@@ -5,7 +5,7 @@ import { BookmarkPlus, Clock, Flag, Maximize2, Minimize2, Pause, Play, Puzzle, R
 import { clientApi } from "@/lib/client-api";
 import { fullWord } from "@/lib/deck-study";
 import type { GameWord, Topic } from "@/lib/falling-words";
-import { speakGerman, stopSpeaking } from "@/lib/speak";
+import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
 import { MILESTONE_PAIRS, TIME_BONUS, TIME_PENALTY, newGame, nextMilestone, pick, snapshot, step, type Game, type Phase, type View } from "@/lib/word-match";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { LoginLink } from "./LoginDialog";
@@ -17,6 +17,7 @@ import { DeckMenu, GameHeader, type DeckOption } from "./GameParts";
  */
 
 const STORE = "wordmatch"; // tiền tố khoá localStorage
+const PAINT_MS = 100; // đồng hồ chạy theo khung hình, giao diện vẽ lại thưa hơn (bấm thẻ thì vẽ ngay)
 
 const RoundBtn = ({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) => (
   <button title={title} onClick={onClick} className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/85 transition hover:bg-black/60">
@@ -24,23 +25,33 @@ const RoundBtn = ({ title, onClick, children }: { title: string; onClick: () => 
   </button>
 );
 
+/** Dòng "đã gặp X/Y từ" trên thẻ bộ từ */
+function SeenLine({ deck }: { deck: DeckOption }) {
+  const [seen] = useLocalStorage<string[]>(`${STORE}-seen-${deck.slug}`, []);
+  if (!seen.length) return null;
+  return <span className="text-xs font-bold text-muted">Đã gặp {Math.min(seen.length, deck.wordCount)}/{deck.wordCount} từ</span>;
+}
+
 export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; loggedIn: boolean }) {
   const [deck, setDeck] = useLocalStorage(`${STORE}-deck`, decks[0]?.slug ?? "");
   const [sound, setSound] = useLocalStorage(`${STORE}-sound`, true);
-  const [best, setBest] = useLocalStorage(`${STORE}-best-${deck}`, 0);
-  const [cleared, setCleared] = useLocalStorage(`${STORE}-milestone-${deck}`, 0);
+  const current = decks.find((d) => d.slug === deck) ?? decks[0]; // bộ đã lưu không còn → bộ đầu tiên, kỷ lục / tiến độ theo bộ đang hiện
+  const [best, setBest] = useLocalStorage(`${STORE}-best-${current?.slug ?? ""}`, 0);
+  const [cleared, setCleared] = useLocalStorage(`${STORE}-milestone-${current?.slug ?? ""}`, 0);
+  const [seen, setSeen] = useLocalStorage<string[]>(`${STORE}-seen-${current?.slug ?? ""}`, []);
   const [phase, setPhase] = useState<Phase>("menu");
   const [view, setView] = useState<View | null>(null);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [full, setFull] = useState(false);
   const game = useRef<Game | null>(null);
   const cache = useRef(new Map<string, { words: GameWord[]; topics: Topic[] }>());
   const field = useRef<HTMLDivElement>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const current = decks.find((d) => d.slug === deck) ?? decks[0];
+  const dealt = useRef(0); // sân đã tải sẵn giọng đọc
   const playing = phase === "play" || phase === "pause";
 
   useEffect(() => {
@@ -53,19 +64,32 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
     };
   }, []);
 
+  /** Sân mới: tải sẵn giọng đọc để nối đúng là nghe ngay (khách không có giọng neural; tắt tiếng thì khỏi tải) */
+  const onDeal = useEffectEvent((g: Game) => {
+    if (g.round === dealt.current) return;
+    dealt.current = g.round;
+    if (sound && loggedIn) for (const c of g.cards) if (c.kind === "word") prefetchGerman(fullWord(c.w));
+  });
+
   // Vòng lặp game
   useEffect(() => {
     if (phase !== "play") return;
     let raf = 0;
     let last = performance.now();
+    let painted = last;
     const frame = (now: number) => {
       const g = game.current!;
       step(g, Math.min((now - last) / 1000, 0.1)); // tab bị treo lâu → không nhảy cóc
       last = now;
-      setView(snapshot(g));
+      onDeal(g);
       if (g.left <= 0) {
+        setView(snapshot(g));
         setPhase("over");
         return;
+      }
+      if (now - painted >= PAINT_MS) {
+        painted = now;
+        setView(snapshot(g));
       }
       raf = requestAnimationFrame(frame);
     };
@@ -103,10 +127,13 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
         return;
       }
     }
-    game.current = newGame(data.words, data.topics, from < data.topics.length ? from : 0, best);
+    const keys = new Set(data.words.map((w) => w.key));
+    game.current = newGame(data.words, data.topics, from < data.topics.length ? from : 0, best, seen.filter((k) => keys.has(k))); // bộ từ đã đổi → bỏ khoá cũ
+    dealt.current = 0;
     setView(snapshot(game.current));
     setNote("");
     setSaved(null);
+    setSaveError("");
     setPhase("play");
   }
 
@@ -141,6 +168,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
     const r = pick(g, id);
     if (r && r !== "wrong") {
       if (g.score > g.best) setBest(g.score); // lưu ngay: thoát giữa ván / đóng tab vẫn giữ kỷ lục
+      if (g.seen.size !== seen.length) setSeen([...g.seen]);
       if (sound) void speakGerman(fullWord(r.word));
       if (r.milestone) clearMilestone(g);
     }
@@ -155,12 +183,13 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
   async function saveMissed() {
     if (!view || !current) return;
     setSaving(true);
+    setSaveError("");
     try {
       const keys = [...new Set(view.missed.map((w) => w.key))];
       const r = await clientApi<{ added: number }>(`/vocab/decks/${current.slug}`, { method: "POST", body: { keys } });
       setSaved(r.added ? `Đã thêm ${r.added} từ vào sổ` : "Các từ này đã có trong sổ");
     } catch (e) {
-      setSaved((e as Error).message);
+      setSaveError((e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -193,7 +222,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
         <DeckMenu
           tone="cyan"
           icon={Puzzle}
-          intro={`Mỗi chủ đề là một mốc — nối đúng ${MILESTONE_PAIRS} cặp để vượt mốc. Nối đúng được cộng ${TIME_BONUS} giây, nối sai bị trừ ${TIME_PENALTY} giây; hết giờ là thua.`}
+          intro={`Mỗi chủ đề là một mốc — nối đúng ${MILESTONE_PAIRS} cặp để vượt mốc, từ chưa gặp được ưu tiên. Nối đúng được cộng ${TIME_BONUS} giây, nối sai bị trừ ${TIME_PENALTY} giây; hết giờ là thua.`}
           decks={decks}
           current={current}
           onSelect={setDeck}
@@ -203,6 +232,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
           loading={phase === "loading"}
           error={error}
           onStart={start}
+          deckExtra={(d) => <SeenLine deck={d} />}
         />
       </div>
     );
@@ -325,6 +355,13 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                   <p className="text-sm text-muted">
                     Nối đúng {v.pairs} cặp · {phase === "win" ? `qua cả ${v.topics.length} mốc` : `dừng ở mốc ${v.milestone + 1}/${v.topics.length}`}
                   </p>
+                  {current && (
+                    <p className="text-sm text-muted">
+                      Đã gặp {Math.min(v.seenCount, current.wordCount)}/{current.wordCount} từ của bộ
+                      {v.fresh > 0 && ` · ${v.fresh} từ mới ván này`}
+                      {phase === "win" && v.seenCount < current.wordCount && ` · chơi lại để gặp thêm ${current.wordCount - v.seenCount} từ`}
+                    </p>
+                  )}
                   {!!missed.length && (
                     <div className="w-full text-left">
                       <p className="label mb-2">Từ bị nhầm</p>
@@ -341,9 +378,12 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                       {saved ? (
                         <p className="mt-2 text-center text-sm font-bold text-accent">{saved}</p>
                       ) : loggedIn ? (
-                        <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
-                          <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn
-                        </button>
+                        <>
+                          {saveError && <p className="mt-2 text-center text-sm text-red-400">{saveError}</p>}
+                          <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
+                            <BookmarkPlus className="size-4" /> {saveError ? "Thử lưu lại" : "Lưu vào sổ để ôn"}
+                          </button>
+                        </>
                       ) : (
                         <p className="mt-2 text-center text-sm text-muted">
                           <LoginLink href={`/login?next=${location.pathname}`} className="font-bold text-link hover:underline">

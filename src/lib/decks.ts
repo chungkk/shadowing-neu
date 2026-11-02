@@ -113,6 +113,15 @@ export const isGameWord = (w: Pick<DeckWord, "word" | "meaning">) => /^[\p{L}-]+
 export const listDecks = (): DeckSummary[] =>
   DECKS.map(({ words, topics, ...d }) => ({ ...d, wordCount: words.length, topicCount: topics.length, gameReady: words.some(isGameWord) }));
 
+/** Các bộ chơi được game, số từ / số mốc chỉ đếm phần game thật sự dùng (khớp /api/v1/games/words) */
+export const listGameDecks = () =>
+  DECKS.flatMap(({ slug, title, level, words, topics }) => {
+    const playable = words.filter(isGameWord);
+    if (!playable.length) return [];
+    const used = new Set(playable.map((w) => w.topic));
+    return [{ slug, title, level, wordCount: new Set(playable.map((w) => w.key)).size, topicCount: topics.filter((t) => used.has(t.id)).length }];
+  });
+
 export const getDeck = (slug: string): Deck | null => DECKS.find((d) => d.slug === slug) ?? null;
 
 // ---- Tiến độ của từng người: "có trong sổ" (saved) và "đã học trong bộ này" (learned) là 2 việc khác nhau ----

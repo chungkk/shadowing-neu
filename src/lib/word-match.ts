@@ -2,6 +2,7 @@
  * Luật chơi game Nối từ — TypeScript thuần, phần giao diện ở components/WordMatch.
  * Sân là các cặp thẻ (từ tiếng Đức · nghĩa) xáo lẫn: chọn 1 từ và 1 nghĩa để nối. Đúng +điểm, +giờ; sai -giờ, mất combo.
  * Mỗi chủ đề là 1 mốc gồm vài sân; vượt mốc được đầy lại đồng hồ, hết giờ là thua.
+ * Mỗi mốc ưu tiên từ chưa từng nối đúng, nên chơi lại nhiều lượt sẽ đi hết các từ của bộ.
  */
 
 import type { GameWord, Topic } from "./falling-words";
@@ -37,30 +38,32 @@ export type Game = {
   score: number;
   combo: number;
   pairs: number; // số cặp đã nối cả ván
-  missed: GameWord[]; // từ bị nối nhầm
+  seen: Set<string>; // khoá các từ đã từng nối đúng ở bộ này (cả các ván trước)
+  fresh: number; // số từ lần đầu nối đúng trong ván này
+  missed: GameWord[]; // từ người chơi đang tìm cặp (thẻ bấm trước) mà nối nhầm
   best: number; // kỷ lục trước ván này
 };
-export type View = Omit<Game, "words" | "queue" | "round" | "wrongUntil" | "dealAt">;
+export type View = Omit<Game, "words" | "queue" | "round" | "wrongUntil" | "dealAt" | "seen"> & { seenCount: number };
 export type Phase = "menu" | "loading" | "play" | "pause" | "over" | "win";
 
 const topicWords = (g: Pick<Game, "words" | "topics">, m: number) => g.words.filter((w) => w.topic === g.topics[m].id);
 
-/** Lấy từ cho sân: 2 từ cùng cách viết / cùng nghĩa không ở chung 1 sân (không thì không biết nối với thẻ nào) */
+/** Các nghĩa của 1 từ ("bệnh viện, phòng khám" → bệnh viện · phòng khám) */
+const senses = (w: GameWord) => w.meaning.toLowerCase().split(/[,;/]/).map((s) => s.trim()).filter(Boolean);
+
+/**
+ * Lấy từ cho sân: 2 từ cùng cách viết / có chung 1 nghĩa không ở chung 1 sân (không thì không biết nối với thẻ nào).
+ * Từ bị tránh nằm lại hàng đợi cho sân sau — sân có thể ít cặp hơn, hàng đợi luôn đủ từ tới hết mốc (goal ≤ số từ của chủ đề).
+ */
 function deal(g: Game) {
   const size = Math.min(BOARD_PAIRS, g.goal - g.mPairs);
   const picks: GameWord[] = [];
-  const clash = (w: GameWord) => picks.some((p) => p.word.toLowerCase() === w.word.toLowerCase() || p.meaning.toLowerCase() === w.meaning.toLowerCase());
-  const take = () => {
-    for (const w of g.queue) if (picks.length < size && !clash(w)) picks.push(w);
-    g.queue = g.queue.filter((w) => !picks.includes(w));
+  const clash = (w: GameWord) => {
+    const mine = senses(w);
+    return picks.some((p) => p.word.toLowerCase() === w.word.toLowerCase() || senses(p).some((s) => mine.includes(s)));
   };
-  take();
-  // Hàng đợi không đủ → xáo lại các từ của chủ đề (trừ từ đang có trong hàng đợi / trên sân)
-  if (picks.length < size) {
-    const used = new Set([...g.queue, ...picks].map((w) => w.key));
-    g.queue.push(...shuffle(topicWords(g, g.milestone).filter((w) => !used.has(w.key))));
-    take();
-  }
+  for (const w of g.queue) if (picks.length < size && !clash(w)) picks.push(w);
+  g.queue = g.queue.filter((w) => !picks.includes(w));
   g.round++;
   g.cards = shuffle(picks.flatMap((w) => (["word", "meaning"] as const).map((kind): Card => ({ id: `${g.round}-${kind}-${w.key}`, kind, w, done: false, points: 0 }))));
   g.selected = null;
@@ -68,18 +71,18 @@ function deal(g: Game) {
   g.dealAt = null;
 }
 
-/** Bắt đầu mốc: đầy đồng hồ, hàng đợi là các từ của chủ đề */
+/** Bắt đầu mốc: đầy đồng hồ, hàng đợi là các từ của chủ đề — từ chưa gặp lên trước */
 function enterMilestone(g: Game, milestone: number) {
   const words = topicWords(g, milestone);
   g.milestone = milestone;
   g.mPairs = 0;
   g.goal = Math.min(MILESTONE_PAIRS, words.length);
-  g.queue = shuffle(words);
+  g.queue = [...shuffle(words.filter((w) => !g.seen.has(w.key))), ...shuffle(words.filter((w) => g.seen.has(w.key)))];
   g.limit = limitOf(milestone);
   g.left = g.limit;
 }
 
-export function newGame(words: GameWord[], topics: Topic[], milestone: number, best: number): Game {
+export function newGame(words: GameWord[], topics: Topic[], milestone: number, best: number, seen: Iterable<string> = []): Game {
   const g: Game = {
     words,
     topics,
@@ -99,6 +102,8 @@ export function newGame(words: GameWord[], topics: Topic[], milestone: number, b
     score: 0,
     combo: 0,
     pairs: 0,
+    seen: new Set(seen),
+    fresh: 0,
     missed: [],
     best,
   };
@@ -121,6 +126,8 @@ export const snapshot = (g: Game): View => ({
   score: g.score,
   combo: g.combo,
   pairs: g.pairs,
+  seenCount: g.seen.size,
+  fresh: g.fresh,
   missed: [...g.missed],
   best: g.best,
 });
@@ -153,7 +160,7 @@ export function pick(g: Game, id: string): { word: GameWord; milestone: boolean 
   if (first.w.key !== card.w.key) {
     g.combo = 0;
     g.left = Math.max(0, g.left - TIME_PENALTY);
-    g.missed.push(first.w, card.w);
+    g.missed.push(first.w);
     g.wrong = [first.id, id];
     g.wrongUntil = g.time + WRONG_SHOW;
     return "wrong";
@@ -164,6 +171,10 @@ export function pick(g: Game, id: string): { word: GameWord; milestone: boolean 
   g.combo++;
   g.pairs++;
   g.mPairs++;
+  if (!g.seen.has(card.w.key)) {
+    g.seen.add(card.w.key);
+    g.fresh++;
+  }
   g.left = Math.min(g.limit, g.left + TIME_BONUS);
   if (g.cards.every((c) => c.done)) g.dealAt = g.time + DEAL_DELAY;
   return { word: card.w, milestone: g.mPairs >= g.goal };

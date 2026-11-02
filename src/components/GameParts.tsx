@@ -91,13 +91,14 @@ export function GameHeader({
 }
 
 /** Thẻ bộ từ ở màn chọn — kèm số mốc đã qua (lưu trong trình duyệt ở progressKey) */
-function DeckCard({ deck, tone, progressKey, selected, onSelect }: { deck: DeckOption; tone: Tone; progressKey: string; selected: boolean; onSelect: () => void }) {
+function DeckCard({ deck, tone, progressKey, selected, disabled, extra, onSelect }: { deck: DeckOption; tone: Tone; progressKey: string; selected: boolean; disabled: boolean; extra?: ReactNode; onSelect: () => void }) {
   const [cleared] = useLocalStorage(progressKey, 0);
   const total = Math.max(deck.topicCount, 1);
   const t = TONE[tone];
   return (
     <button
       onClick={onSelect}
+      disabled={disabled}
       className={`relative flex cursor-pointer flex-col gap-3 rounded-2xl border-2 p-3.5 text-left transition hover:-translate-y-0.5 ${
         selected ? t.selected : `border-border bg-card ${t.hover}`
       }`}
@@ -122,6 +123,7 @@ function DeckCard({ deck, tone, progressKey, selected, onSelect }: { deck: DeckO
           {Math.min(cleared, total)}/{total}
         </span>
       )}
+      {extra}
     </button>
   );
 }
@@ -143,6 +145,7 @@ export function DeckMenu({
   loading,
   error,
   onStart,
+  deckExtra,
 }: {
   tone: Tone;
   icon: ComponentType<{ className?: string }>;
@@ -156,6 +159,7 @@ export function DeckMenu({
   loading: boolean;
   error: string;
   onStart: (from: number) => void;
+  deckExtra?: (deck: DeckOption) => ReactNode; // dòng thêm ở cuối thẻ bộ từ
 }) {
   const t = TONE[tone];
   const total = Math.max(current?.topicCount ?? 1, 1);
@@ -173,7 +177,7 @@ export function DeckMenu({
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {decks.map((d) => (
-          <DeckCard key={d.slug} deck={d} tone={tone} progressKey={progressKey(d.slug)} selected={d.slug === current?.slug} onSelect={() => onSelect(d.slug)} />
+          <DeckCard key={d.slug} deck={d} tone={tone} progressKey={progressKey(d.slug)} selected={d.slug === current?.slug} disabled={loading} extra={deckExtra?.(d)} onSelect={() => onSelect(d.slug)} />
         ))}
       </div>
       {!decks.length && <p className="text-center text-sm text-muted">Chưa có bộ từ nào.</p>}
