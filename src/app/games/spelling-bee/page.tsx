@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default function SpellingBeePage() {
-  const decks = listDecks().map((d) => ({ slug: d.slug, title: d.title, level: d.level, wordCount: d.wordCount, topicCount: d.topicCount }));
+  const decks = listDecks().filter((d) => d.gameReady).map((d) => ({ slug: d.slug, title: d.title, level: d.level, wordCount: d.wordCount, topicCount: d.topicCount }));
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
       <FallingWords variant="gold" decks={decks} />

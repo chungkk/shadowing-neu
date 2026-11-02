@@ -416,7 +416,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
       try {
         const r = await api<{ decks: DeckSummary[] }>("/vocab/decks");
         list = r.decks
-          .filter((x) => x.wordCount > 0)
+          .filter((x) => x.wordCount > 0 && x.gameReady !== false)
           .map((x) => ({ slug: x.slug, title: x.title, level: x.level, wordCount: x.wordCount, topicCount: x.topicCount ?? 0 }));
       } catch (e) {
         if (alive) setError((e as Error).message);

@@ -69,7 +69,11 @@ export type Deck = {
   topics: DeckTopic[];
   words: DeckWord[];
 };
-export type DeckSummary = Omit<Deck, "words" | "topics"> & { wordCount: number; topicCount: number };
+export type DeckSummary = Omit<Deck, "words" | "topics"> & {
+  wordCount: number;
+  topicCount: number;
+  gameReady: boolean; // có từ đơn để chơi game chữ rơi (bộ toàn cụm từ như Nomen-Verb-Verbindungen thì không)
+};
 
 function toWord(w: RawDeck["words"][number]): DeckWord {
   const raw = w.word.trim();
@@ -103,8 +107,11 @@ const DECKS: Deck[] = RAW.map((d) => ({
   words: d.words.map(toWord),
 })).sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 
+/** Từ dùng được trong game chữ rơi: chỉ từ đơn (gõ được nhanh), có nghĩa */
+export const isGameWord = (w: Pick<DeckWord, "word" | "meaning">) => /^[\p{L}-]+$/u.test(w.word) && !!w.meaning;
+
 export const listDecks = (): DeckSummary[] =>
-  DECKS.map(({ words, topics, ...d }) => ({ ...d, wordCount: words.length, topicCount: topics.length }));
+  DECKS.map(({ words, topics, ...d }) => ({ ...d, wordCount: words.length, topicCount: topics.length, gameReady: words.some(isGameWord) }));
 
 export const getDeck = (slug: string): Deck | null => DECKS.find((d) => d.slug === slug) ?? null;
 

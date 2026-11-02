@@ -119,6 +119,7 @@ export type DeckSummary = {
   cover: string | null; // "/decks/…" trên server hoặc URL đầy đủ; null = app tự vẽ bìa
   order: number;
   wordCount: number;
+  gameReady?: boolean; // false: bộ không có từ đơn → không hiện trong game chữ rơi (server cũ không gửi)
   topicCount?: number; // > 0: bấm vào bộ ra danh sách chủ đề
   saved?: number;
   learned?: number;
