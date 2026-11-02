@@ -681,12 +681,12 @@ export default function ShadowPlayer({
     };
   }, [syncProgress, sourceUrl]);
   /** Làm xong câu chính tả → lưu kết quả; đúng hết lần đầu thì +2 điểm (hiện ngay, gửi server sau) → true */
-  const dictFinished = (i: number, correct: number, total: number) => {
+  const dictFinished = (i: number, correct: number, total: number, input: string) => {
     setDictDone((d) => ({ ...d, [i]: { correct, total } }));
     if (!syncProgress || correct !== total || pointIdx.has(i)) return false;
     setPointIdx((s) => new Set(s).add(i));
     setEarned((s) => new Set(s).add(i));
-    clientApi<{ total: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, tz: new Date().getTimezoneOffset() } })
+    clientApi<{ total: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, tz: new Date().getTimezoneOffset() } })
       .then((r) => emitPoints({ total: r.total }))
       .catch(() => {
         // Chưa lưu được → bỏ điểm tạm tính, lần sau làm đúng câu này vẫn được điểm
@@ -1062,7 +1062,7 @@ export default function ShadowPlayer({
                 level={settings.dictLevel}
                 onReplay={() => go(idx)}
                 onNext={next}
-                onDone={(correct, total) => dictFinished(idx, correct, total)}
+                onDone={(correct, total, input) => dictFinished(idx, correct, total, input)}
                 onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
                 hasNext={nextIdx !== undefined}
                 draft={dictDrafts[idx]}

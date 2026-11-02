@@ -9,7 +9,8 @@ import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount } from "@/lib/account";
 import { slugify } from "@/lib/slug";
-import { lockSettings, saveLockSettings } from "@/lib/access";
+import { earnableFreePoints, lockSettings, saveLockSettings } from "@/lib/access";
+import { LESSON_PRICE } from "@/lib/lesson-lock";
 
 export type FormState = { error?: string };
 
@@ -124,11 +125,11 @@ export async function removeFeedback(id: number) {
 
 // ---- Khoá bài học (trang Quản lý bài học) ----
 
-/** Bật / tắt khoá bài học — bật cần có ít nhất 1 bài miễn phí (nút trên trang đã khoá sẵn khi chưa có) */
+/** Bật / tắt khoá bài học — bật cần các bài miễn phí kiếm đủ kim cương mở 1 bài (nút trên trang đã khoá sẵn khi chưa đủ) */
 export async function setLessonLock(enabled: boolean) {
   await requireAdmin();
   const lock = lockSettings();
-  if (!enabled || lock.free.length) saveLockSettings({ ...lock, enabled });
+  if (!enabled || earnableFreePoints() >= LESSON_PRICE) saveLockSettings({ ...lock, enabled });
   refresh();
 }
 

@@ -66,7 +66,7 @@ export default function DictationPanel({
   level: DictationLevel;
   onReplay: () => void;
   onNext: () => void;
-  onDone: (correct: number, total: number) => boolean | void; // true = được +2 điểm
+  onDone: (correct: number, total: number, input: string) => boolean | void; // true = được +2 điểm · input: câu đã chép, server chấm lại
   hasNext: boolean;
   draft?: DictDraft;
   saved?: { correct: number; total: number };
@@ -90,11 +90,11 @@ export default function DictationPanel({
   const revealedCount = result.words.filter((w) => w.state === "revealed").length; // số từ đã bấm xem
   const hintCost = onHint ? `−${POINTS_HINT} điểm` : "tính là lỗi";
 
-  const finish = (r = result) => {
+  const finish = (r = result, typed = input) => {
     if (!reported) {
       setReported(true);
       setScore({ correct: r.correct, total: r.total });
-      if (onDone(r.correct, r.total) === true) {
+      if (onDone(r.correct, r.total, typed) === true) {
         setWon(true);
         setBurst(true);
         // Kim cương bay từ giữa hàng ô từ lên huy hiệu điểm
@@ -110,7 +110,7 @@ export default function DictationPanel({
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkDictation(text, nextInput, nextRevealed);
     setChecked(r.done);
-    if (r.done) finish(r);
+    if (r.done) finish(r, nextInput);
   };
   const check = () => {
     setChecked(true);

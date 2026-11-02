@@ -49,7 +49,7 @@ export function DictationPanel({
   level: DictationLevel;
   onReplay: () => void;
   onNext: () => void;
-  onDone: (correct: number, total: number) => boolean | void; // true = được +2 điểm
+  onDone: (correct: number, total: number, input: string) => boolean | void; // true = được +2 điểm · input: câu đã chép, server chấm lại
   hasNext: boolean;
   draft?: DictDraft; // bản nháp lần trước (trong phiên học này)
   saved?: { correct: number; total: number }; // kết quả đã lưu của câu này
@@ -87,7 +87,7 @@ export function DictationPanel({
     if (r.done && !reported) {
       setReported(true);
       setScore({ correct: r.correct, total: r.total });
-      if (onDone(r.correct, r.total) === true) {
+      if (onDone(r.correct, r.total, nextInput) === true) {
         setWon(true);
         setBurst(true);
       }

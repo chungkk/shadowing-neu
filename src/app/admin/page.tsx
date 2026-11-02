@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Lock } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { lessonUnlockStats, listLessons } from "@/lib/db";
-import { lockSettings } from "@/lib/access";
+import { earnableFreePoints, lockSettings } from "@/lib/access";
 import { FREE_PICKS, LESSON_PRICE } from "@/lib/lesson-lock";
 import { removeLesson, setLessonLock, toggleFreeLesson, toggleLessonPublished } from "./actions";
 import DeleteButton from "./DeleteButton";
@@ -15,6 +15,8 @@ const fmt = (n: number) => n.toLocaleString("vi-VN");
 /** Khoá bài học: bật / tắt + tình trạng. Bài miễn phí chọn bằng nút "Miễn phí" ở từng bài bên dưới */
 function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number }) {
   const s = lessonUnlockStats();
+  const earnable = earnableFreePoints();
+  const short = earnable < LESSON_PRICE; // bài miễn phí không kiếm đủ kim cương để mở 1 bài
   return (
     <div className="card flex flex-wrap items-center gap-3 p-4">
       <Lock className={`size-5 shrink-0 ${enabled ? "text-accent" : "text-muted"}`} />
@@ -26,6 +28,11 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
           Khách chỉ học {freeCount} bài “Miễn phí” (chọn ở từng bài bên dưới). Người đã đăng nhập chọn thêm {FREE_PICKS} bài, sau đó{" "}
           {fmt(LESSON_PRICE)} kim cương / bài. Bài ai đang học dở lúc bật vẫn học tiếp được.
         </p>
+        {short && (
+          <p className="text-xs font-bold text-amber">
+            Các bài “Miễn phí” có bật Chính tả chỉ kiếm được tối đa {fmt(earnable)} kim cương, chưa đủ {fmt(LESSON_PRICE)} để mở 1 bài. Hãy bật Chính tả hoặc thêm bài miễn phí.
+          </p>
+        )}
         {s.users > 0 && (
           <p className="text-xs text-muted">
             Đã mở khoá: {fmt(s.pick)} lượt miễn phí · {fmt(s.buy)} lượt mua ({fmt(s.spent)} kim cương) · {fmt(s.legacy)} bài học dở · {fmt(s.users)} người
@@ -35,8 +42,8 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
       <form action={setLessonLock.bind(null, !enabled)} className="max-sm:basis-full max-sm:text-right">
         <button
           className={`btn ${enabled ? "" : "btn-primary"}`}
-          disabled={!enabled && !freeCount}
-          title={!enabled && !freeCount ? "Chọn ít nhất 1 bài “Miễn phí” trước khi bật khoá" : undefined}
+          disabled={!enabled && short}
+          title={!enabled && short ? "Các bài “Miễn phí” chưa kiếm đủ kim cương để mở 1 bài" : undefined}
         >
           {enabled ? "Tắt khoá" : "Bật khoá"}
         </button>
@@ -80,7 +87,8 @@ async function Dashboard() {
               <div className="truncate font-medium">{l.title}</div>
               <div className="flex gap-2 text-xs text-muted">
                 <LevelBadge level={l.level} className="text-xs" />
-                <span>{l.segmentCount} câu</span>
+                <span>{l.sentenceCount} câu</span>
+                {l.dictation && <span className="text-gem">Chính tả</span>}
               </div>
             </div>
             {/* Điện thoại: các nút xuống hàng riêng dưới tiêu đề */}

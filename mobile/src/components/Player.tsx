@@ -522,13 +522,13 @@ export default function Player({
     };
   }, [user, sourceUrl]);
   /** Làm xong câu chính tả → lưu kết quả; đúng hết lần đầu thì +2 điểm (hiện ngay, gửi server sau) → true */
-  const dictFinished = (i: number, correct: number, total: number) => {
+  const dictFinished = (i: number, correct: number, total: number, input: string) => {
     setDictDone((d) => ({ ...d, [i]: { correct, total } }));
     if (!user || points === null || correct !== total || pointIdx.has(i)) return false;
     setPointIdx((s) => new Set(s).add(i));
     setEarned((s) => new Set(s).add(i));
     setPoints((n) => (n ?? 0) + POINTS_CORRECT);
-    api<Points>("/points", { method: "POST", body: { source: sourceUrl, idx: i, tz: new Date().getTimezoneOffset() } })
+    api<Points>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, tz: new Date().getTimezoneOffset() } })
       .then((r) => setPoints(r.total))
       .catch(() => {
         // Chưa lưu được → bỏ điểm tạm tính, lần sau làm đúng câu này vẫn được điểm
@@ -843,7 +843,7 @@ export default function Player({
               onReplay={() => playSegment(idx)}
               onNext={next}
               hasNext={nextIdx !== undefined}
-              onDone={(correct, total) => dictFinished(idx, correct, total)}
+              onDone={(correct, total, input) => dictFinished(idx, correct, total, input)}
               onHint={user && points !== null ? (n) => dictHint(idx, n) : undefined}
               onWord={pickWord}
               translation={

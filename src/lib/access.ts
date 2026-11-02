@@ -6,11 +6,13 @@ import {
   getPoints,
   getSetting,
   lessonPicksUsed,
+  listLessons,
   publishedLessonsByVideo,
   setSetting,
   unlockedLessonIds,
   unlockLessonsWithProgress,
 } from "./db";
+import { POINTS_CORRECT } from "./dictation";
 import { FREE_PICKS, LESSON_PRICE, type LessonAccess, type LockInfo } from "./lesson-lock";
 
 /** Quyền học từng bài khi admin bật khoá bài (quy tắc: lib/lesson-lock.ts) */
@@ -24,6 +26,17 @@ export function saveLockSettings(s: LockSettings) {
   // Vừa bật khoá → bài ai đang học dở vẫn học tiếp được
   if (s.enabled && !lockSettings().enabled) unlockLessonsWithProgress();
   setSetting(KEY, { enabled: s.enabled, free: [...new Set(s.free)] });
+}
+
+/**
+ * Số kim cương tối đa ai cũng kiếm được từ các bài miễn phí (chỉ bài đã đăng có bật Chính tả mới có điểm).
+ * Dưới LESSON_PRICE → người học có thể không bao giờ đủ để mở bài đầu tiên.
+ */
+export function earnableFreePoints(): number {
+  const free = new Set(lockSettings().free);
+  return listLessons()
+    .filter((l) => l.dictation && free.has(l.id))
+    .reduce((n, l) => n + (l.sentenceCount ?? 0) * POINTS_CORRECT, 0);
 }
 
 /** Hàm tra quyền từng bài của 1 người (đọc DB 1 lần — dùng cho cả danh sách bài) */
