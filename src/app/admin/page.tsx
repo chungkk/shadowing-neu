@@ -30,7 +30,7 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
         </p>
         {short && (
           <p className="text-xs font-bold text-amber">
-            Các bài “Miễn phí” có bật Chính tả chỉ kiếm được tối đa {fmt(earnable)} kim cương, chưa đủ {fmt(LESSON_PRICE)} để mở 1 bài. Hãy bật Chính tả hoặc thêm bài miễn phí.
+            Các bài “Miễn phí” có bật Dictation chỉ kiếm được tối đa {fmt(earnable)} kim cương, chưa đủ {fmt(LESSON_PRICE)} để mở 1 bài. Hãy bật Dictation hoặc thêm bài miễn phí.
           </p>
         )}
         {s.users > 0 && (
@@ -88,7 +88,7 @@ async function Dashboard() {
               <div className="flex gap-2 text-xs text-muted">
                 <LevelBadge level={l.level} className="text-xs" />
                 <span>{l.sentenceCount} câu</span>
-                {l.dictation && <span className="text-gem">Chính tả</span>}
+                {l.dictation && <span className="text-gem">Dictation</span>}
               </div>
             </div>
             {/* Điện thoại: các nút xuống hàng riêng dưới tiêu đề */}

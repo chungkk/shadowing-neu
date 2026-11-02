@@ -153,7 +153,7 @@ function Segmented<T extends string>({
 
 const PRACTICES = [
   ["shadow", "Shadowing"],
-  ["dictation", "Chính tả"],
+  ["dictation", "Dictation"],
 ] as const;
 const DICT_LEVELS = [
   ["easy", "Dễ", "Gợi ý chữ cái đầu"],
@@ -1235,7 +1235,7 @@ export default function ShadowPlayer({
         {/* Cột 3: toàn bộ transcript (Chính tả: chỉ các câu của lượt đang làm) */}
         <div className="card flex max-h-[75dvh] flex-col gap-3 max-sm:p-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
           <div className="flex items-center justify-between">
-            <span className="label">{dictation ? "Lượt chính tả" : starredOnly ? "Câu đã đánh dấu ⭐" : "Transcript"}</span>
+            <span className="label">{dictation ? "Lượt Dictation" : starredOnly ? "Câu đã đánh dấu ⭐" : "Transcript"}</span>
             {/* Chính tả: % tính trên cả bài (không phải lượt) — ghi rõ để khỏi lẫn với "Đã xong x/y câu" của lượt */}
             <span className="pill bg-card-2 px-3 py-1 text-sm" title={dictation ? "Số câu đã chép trong cả bài" : "Số câu đã nghe"}>
               {dictation ? `Cả bài ${progress}%` : `${progress}%`}

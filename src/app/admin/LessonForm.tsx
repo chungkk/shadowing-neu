@@ -135,7 +135,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         </label>
         <label className="check text-sm">
           <input type="checkbox" name="dictation" defaultChecked={initial?.dictation ?? false} />
-          Cho luyện Chính tả (bỏ chọn = chỉ Shadowing)
+          Cho luyện Dictation (bỏ chọn = chỉ Shadowing)
         </label>
       </div>
 

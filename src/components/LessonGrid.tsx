@@ -89,7 +89,7 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
         <div className="mt-auto flex flex-col gap-2">
           <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold text-muted">
             {l.isNew && <span className="pill bg-gold text-black">Mới</span>}
-            Shadowing{l.dictation && " · Chính tả"} · {l.sentences} câu
+            Shadowing{l.dictation && " · Dictation"} · {l.sentences} câu
           </p>
           {l.percent >= 100 ? (
             <p className="flex items-center gap-1 text-xs font-bold text-accent">

@@ -38,7 +38,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
         {items.map(({ p, href, title, videoId }) => {
           const n = percent(p);
           const dictCount = Object.keys(p.dictDone).length;
-          const at = p.mode === "dictation" && dictCount ? `Chính tả ${dictCount}/${p.total}` : `Câu ${p.idx + 1}/${p.total}`;
+          const at = p.mode === "dictation" && dictCount ? `Dictation ${dictCount}/${p.total}` : `Câu ${p.idx + 1}/${p.total}`;
           return (
             <Link
               key={p.source}
