@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition, type ReactNode } from "react";
-import { Camera, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
+import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { Camera, Download, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
 import { deleteAccount, deleteAvatar, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/account-actions";
 import { logout } from "@/app/auth-actions";
+import { clientApi } from "@/lib/client-api";
 import Avatar from "./Avatar";
 
 function Status({ state }: { state: FormResult }) {
@@ -24,7 +25,7 @@ function Section({
   icon: typeof UserRound;
   title: string;
   desc: string;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
   danger?: boolean;
 }) {
@@ -58,9 +59,39 @@ async function squareJpeg(file: File): Promise<Blob> {
 
 const joined = (createdAt: string) => createdAt.slice(0, 10).split("-").reverse().join("/");
 
+/** Đổi email bước 2: nhập mã. Đổi xong trang tải lại → `current` là email mới → EmailChangeForm về bước 1 */
+function EmailCodeForm({ sentTo, onBack }: { sentTo: string; onBack: () => void }) {
+  const [state, action, confirming] = useActionState(submitEmailChange, {});
+  return (
+    <form action={action}>
+      <Section
+        icon={Mail}
+        title="Đổi email"
+        desc={`Đã gửi mã 6 số tới ${sentTo}. Kiểm tra cả thư mục Spam.`}
+        footer={
+          <>
+            <button type="button" className="btn" onClick={onBack}>
+              Quay lại
+            </button>
+            <button className="btn btn-primary" disabled={confirming}>
+              {confirming ? "Đang lưu…" : "Xác nhận"}
+            </button>
+          </>
+        }
+      >
+        <input type="hidden" name="email" value={sentTo} />
+        <label className="field text-sm">
+          Mã xác nhận
+          <input name="code" className="input text-foreground" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus />
+        </label>
+        <Status state={state} />
+      </Section>
+    </form>
+  );
+}
+
 /** Đổi email: bước 1 nhập email mới (+ mật khẩu) → gửi mã, bước 2 nhập mã */
 function EmailChangeForm({ email: current, hasPassword }: { email: string; hasPassword: boolean }) {
-  const [state, action, confirming] = useActionState(submitEmailChange, {});
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [sentTo, setSentTo] = useState(""); // khác rỗng = đã gửi mã, đang chờ nhập
@@ -78,73 +109,87 @@ function EmailChangeForm({ email: current, hasPassword }: { email: string; hasPa
   };
 
   // Đổi xong: `current` đã là email mới → quay lại bước 1
-  const waiting = sentTo && sentTo !== current;
-
-  if (!waiting) {
-    return (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
-        }}
-      >
-        <Section
-          icon={Mail}
-          title="Đổi email"
-          desc={`Email hiện tại: ${current}. Mã xác nhận sẽ được gửi tới email mới.`}
-          footer={
-            <button className="btn btn-primary" disabled={sending}>
-              {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
-            </button>
-          }
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="field text-sm">
-              Email mới
-              <input type="email" className="input text-foreground" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-            </label>
-            {hasPassword && (
-              <label className="field text-sm">
-                Mật khẩu hiện tại
-                <input type="password" className="input text-foreground" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
-              </label>
-            )}
-          </div>
-          <Status state={{ error, ok: state.ok }} />
-        </Section>
-      </form>
-    );
-  }
+  if (sentTo && sentTo !== current) return <EmailCodeForm sentTo={sentTo} onBack={() => setSentTo("")} />;
 
   return (
-    <form action={action}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        send();
+      }}
+    >
       <Section
         icon={Mail}
         title="Đổi email"
-        desc={`Đã gửi mã 6 số tới ${sentTo}. Kiểm tra cả thư mục Spam.`}
+        desc={`Email hiện tại: ${current}. Mã xác nhận sẽ được gửi tới email mới.`}
         footer={
-          <>
-            <button type="button" className="btn" onClick={() => setSentTo("")}>
-              Quay lại
-            </button>
-            <button className="btn btn-primary" disabled={confirming}>
-              {confirming ? "Đang lưu…" : "Xác nhận"}
-            </button>
-          </>
+          <button className="btn btn-primary" disabled={sending}>
+            {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
+          </button>
         }
       >
-        <input type="hidden" name="email" value={sentTo} />
-        <label className="field text-sm">
-          Mã xác nhận
-          <input name="code" className="input text-foreground" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus />
-        </label>
-        <Status state={{ error: state.error }} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="field text-sm">
+            Email mới
+            <input
+              type="email"
+              className="input text-foreground"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setSentTo(""); // bắt đầu lần đổi mới: ẩn thông báo "Đã đổi email"
+              }}
+              autoComplete="email"
+              required
+            />
+          </label>
+          {hasPassword && (
+            <label className="field text-sm">
+              Mật khẩu hiện tại
+              <input type="password" className="input text-foreground" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            </label>
+          )}
+        </div>
+        <Status state={{ error, ok: sentTo === current ? "Đã đổi email" : undefined }} />
       </Section>
     </form>
   );
 }
 
-/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · đăng xuất / xoá tài khoản */
+/** Gửi bản sao toàn bộ dữ liệu tài khoản (JSON) về email — tối đa 3 lần / ngày */
+function DataExport() {
+  const [state, setState] = useState<FormResult>({});
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    setSending(true);
+    setState({});
+    try {
+      const r = await clientApi<{ email: string }>("/me/export", { method: "POST" });
+      setState({ ok: `Đã gửi bản sao tới ${r.email}. Kiểm tra cả thư mục Spam.` });
+    } catch (e) {
+      setState({ error: (e as Error).message });
+    }
+    setSending(false);
+  };
+
+  return (
+    <Section
+      icon={Download}
+      title="Dữ liệu của bạn"
+      desc="Nhận bản sao thông tin tài khoản, sổ từ vựng, tiến độ học và điểm (định dạng JSON) qua email."
+      footer={
+        <button className="btn" onClick={send} disabled={sending}>
+          <Download className="size-4" /> {sending ? "Đang gửi…" : "Gửi bản sao qua email"}
+        </button>
+      }
+    >
+      <Status state={state} />
+    </Section>
+  );
+}
+
+/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · xuất dữ liệu · đăng xuất · xoá tài khoản */
 export default function SettingsForms({
   user,
   fixedAdmin,
@@ -162,6 +207,12 @@ export default function SettingsForms({
   const [avatarError, setAvatarError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pwForm = useRef<HTMLFormElement>(null);
+
+  // Chỉ xoá trắng form mật khẩu khi đổi thành công (nhập sai thì giữ để sửa)
+  useEffect(() => {
+    if (pw.ok) pwForm.current?.reset();
+  }, [pw]);
 
   const pickAvatar = (file: File | undefined) => {
     if (!file) return;
@@ -178,20 +229,24 @@ export default function SettingsForms({
     });
   };
 
+  const removeAvatar = () => {
+    if (!confirm("Xoá ảnh đại diện?")) return;
+    startAvatar(async () => {
+      setAvatarError("");
+      try {
+        await deleteAvatar();
+      } catch {
+        setAvatarError("Không xoá được ảnh — thử lại sau");
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {/* Hồ sơ */}
       <section className="card flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:p-6 sm:text-left">
-        <div className="relative">
+        <div>
           <Avatar user={user} className={`size-24 text-4xl ring-4 ring-card-2 ${avatarPending ? "animate-pulse opacity-60" : ""}`} />
-          <button
-            title="Đổi ảnh đại diện"
-            className="absolute right-0 bottom-0 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-card bg-accent text-white transition hover:brightness-110"
-            onClick={() => fileRef.current?.click()}
-            disabled={avatarPending}
-          >
-            <Camera className="size-4" />
-          </button>
           <input
             ref={fileRef}
             type="file"
@@ -218,7 +273,7 @@ export default function SettingsForms({
               <Camera className="size-4" /> {avatarPending ? "Đang tải ảnh…" : user.avatarAt ? "Đổi ảnh" : "Tải ảnh lên"}
             </button>
             {user.avatarAt && (
-              <button className="btn text-muted hover:border-red hover:text-red-400" onClick={() => startAvatar(() => deleteAvatar())} disabled={avatarPending}>
+              <button className="btn text-muted hover:border-red hover:text-red-400" onClick={removeAvatar} disabled={avatarPending}>
                 <Trash2 className="size-4" /> Xoá ảnh
               </button>
             )}
@@ -252,8 +307,16 @@ export default function SettingsForms({
       {/* Email admin chính cố định theo biến ADMIN_EMAIL */}
       {!fixedAdmin && <EmailChangeForm email={user.email} hasPassword={hasPassword} />}
 
-      {/* Mật khẩu — key: form tự xoá trắng sau khi đổi thành công */}
-      <form key={pw.ok} action={pwAction}>
+      {/* Mật khẩu — tự gọi action trong onSubmit: React không reset form, nhập sai không mất chữ */}
+      <form
+        ref={pwForm}
+        action={pwAction}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const data = new FormData(e.currentTarget);
+          startTransition(() => pwAction(data));
+        }}
+      >
         <Section
           icon={KeyRound}
           title={hasPassword ? "Đổi mật khẩu" : "Đặt mật khẩu"}
@@ -296,53 +359,55 @@ export default function SettingsForms({
         </Section>
       </form>
 
-      {/* Đăng xuất / xoá tài khoản */}
-      <Section icon={ShieldAlert} title="Phiên đăng nhập & tài khoản" desc="Đăng xuất khỏi máy này, hoặc xoá vĩnh viễn tài khoản." danger>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-sm">
-            <b>Đăng xuất</b>
-            <span className="block text-muted">Sổ từ vựng và tiến độ vẫn được giữ trong tài khoản.</span>
-          </p>
+      <DataExport />
+
+      <Section
+        icon={LogOut}
+        title="Đăng xuất"
+        desc="Đăng xuất khỏi máy này. Sổ từ vựng và tiến độ vẫn được giữ trong tài khoản."
+        footer={
           <form action={logout}>
             <button className="btn">
               <LogOut className="size-4" /> Đăng xuất
             </button>
           </form>
-        </div>
-        {!fixedAdmin && (
-          <div className="flex flex-col gap-3 border-t border-border pt-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="min-w-0 flex-1 text-sm">
-                <b className="text-red-400">Xoá tài khoản</b>
-                <span className="block text-muted">Xoá vĩnh viễn tài khoản, sổ từ vựng và tiến độ học. Không thể hoàn tác.</span>
-              </p>
-              {!confirmDelete && (
-                <button className="btn border-red/50 text-red-400 hover:border-red" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="size-4" /> Xoá tài khoản
-                </button>
+        }
+      />
+
+      {!fixedAdmin && (
+        <Section
+          icon={ShieldAlert}
+          title="Xoá tài khoản"
+          desc="Xoá vĩnh viễn tài khoản, sổ từ vựng và tiến độ học. Không thể hoàn tác."
+          danger
+          footer={
+            !confirmDelete && (
+              <button className="btn border-red/50 text-red-400 hover:border-red" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="size-4" /> Xoá tài khoản
+              </button>
+            )
+          }
+        >
+          {confirmDelete && (
+            <form action={delAction} className="flex flex-col gap-3 rounded-xl border border-red/40 bg-red/10 p-4">
+              {hasPassword ? (
+                <input name="password" type="password" placeholder="Nhập mật khẩu để xác nhận" className="input" autoComplete="current-password" required autoFocus />
+              ) : (
+                <p className="text-sm">Bạn chắc chắn muốn xoá? Mọi dữ liệu sẽ mất vĩnh viễn.</p>
               )}
-            </div>
-            {confirmDelete && (
-              <form action={delAction} className="flex flex-col gap-3 rounded-xl border border-red/40 bg-red/10 p-4">
-                {hasPassword ? (
-                  <input name="password" type="password" placeholder="Nhập mật khẩu để xác nhận" className="input" autoComplete="current-password" required autoFocus />
-                ) : (
-                  <p className="text-sm">Bạn chắc chắn muốn xoá? Mọi dữ liệu sẽ mất vĩnh viễn.</p>
-                )}
-                <Status state={del} />
-                <div className="flex justify-end gap-2">
-                  <button type="button" className="btn" onClick={() => setConfirmDelete(false)}>
-                    Huỷ
-                  </button>
-                  <button className="btn btn-red" disabled={deleting}>
-                    {deleting ? "Đang xoá…" : "Xoá vĩnh viễn"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
-      </Section>
+              <Status state={del} />
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn" onClick={() => setConfirmDelete(false)}>
+                  Huỷ
+                </button>
+                <button className="btn btn-red" disabled={deleting}>
+                  {deleting ? "Đang xoá…" : "Xoá vĩnh viễn"}
+                </button>
+              </div>
+            </form>
+          )}
+        </Section>
+      )}
     </div>
   );
 }

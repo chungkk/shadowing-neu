@@ -14,6 +14,7 @@ export type User = {
   role: "user" | "admin";
   lang: string | null; // ngôn ngữ giao diện lưu theo tài khoản
   hasPassword?: boolean; // false = tài khoản Google / Apple chưa đặt mật khẩu (server cũ không gửi → coi như có)
+  fixedAdmin?: boolean; // admin chính: không đổi email / mật khẩu, không xoá được tài khoản
   avatarUrl?: string | null; // "/api/v1/avatar/<id>?v=…" — xem cần token (dùng avatarSource)
   createdAt: string;
 };

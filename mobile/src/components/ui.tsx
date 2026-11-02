@@ -148,7 +148,7 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
 }
 
 export function Input(props: TextInputProps & { ref?: Ref<ComponentRef<typeof TextInput>> }) {
-  return <TextInput placeholderTextColor={C.muted} {...props} style={[styles.input, props.style]} />;
+  return <TextInput placeholderTextColor={C.muted} accessibilityLabel={props.placeholder} {...props} style={[styles.input, props.style]} />;
 }
 
 export function Label({ children, color = C.text }: { children: ReactNode; color?: string }) {

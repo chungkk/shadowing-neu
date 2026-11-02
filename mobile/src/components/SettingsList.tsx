@@ -61,6 +61,7 @@ export function Row({
         onPress={onPress}
         disabled={disabled || !onPress}
         accessibilityRole={onPress ? "button" : undefined}
+        accessibilityState={open === undefined ? undefined : { expanded: open }}
         style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",

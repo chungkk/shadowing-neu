@@ -21,7 +21,7 @@ export async function PATCH(req: Request) {
     setUserLang(user.id, lang);
   }
   if (b.name !== undefined || b.email !== undefined) {
-    const error = editProfile(user, { name: str(b.name) || user.name, email: str(b.email) || undefined });
+    const error = editProfile(user, { name: b.name !== undefined ? str(b.name) : user.name, email: str(b.email) || undefined });
     if (error) return fail(error);
   }
   return Response.json({ user: publicUser(getUserById(user.id)!) });

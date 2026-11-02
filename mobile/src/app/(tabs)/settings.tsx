@@ -5,7 +5,7 @@ import { Image } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import Constants from "expo-constants";
-import { ActionSheetIOS, ActivityIndicator, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
@@ -70,7 +70,15 @@ function Avatar({ user }: { user: User }) {
     });
   const menu = () => {
     if (busy) return;
-    if (!user.avatarUrl || Platform.OS !== "ios") return upload();
+    if (!user.avatarUrl) return upload();
+    if (Platform.OS !== "ios") {
+      Alert.alert(t("acc.avatarChange"), undefined, [
+        { text: t("cancel"), style: "cancel" },
+        { text: t("acc.avatarRemove"), style: "destructive", onPress: remove },
+        { text: t("acc.avatarPick"), onPress: upload },
+      ]);
+      return;
+    }
     ActionSheetIOS.showActionSheetWithOptions(
       { options: [t("acc.avatarPick"), t("acc.avatarRemove"), t("cancel")], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
       (i) => (i === 0 ? upload() : i === 1 ? remove() : undefined),
@@ -138,8 +146,9 @@ function Tile({ value, label, first }: { value: string; label: string; first?: b
 }
 
 /** Thẻ đầu trang: ảnh · tên · email · vai trò — bên dưới là số liệu học tập (chạm → màn Thống kê) */
-function ProfileCard({ user, words, stats }: { user: User; words: number | null; stats: Pick<Stats, "streak" | "dueToday"> | null }) {
+function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" | "dueToday" | "mastery"> | null }) {
   const { t, lang } = useI18n();
+  const words = stats && Object.values(stats.mastery).reduce((a, b) => a + b, 0); // như web: không tính câu ⭐
   const num = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
   return (
     <View style={{ backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 20, overflow: "hidden" }}>
@@ -309,8 +318,7 @@ function Signed({ user }: { user: User }) {
   const { logout, setUser, setToken } = useAuth();
   const { t } = useI18n();
   const [panel, setPanel] = useState<Panel>(null);
-  const [words, setWords] = useState<number | null>(null);
-  const [stats, setStats] = useState<Pick<Stats, "streak" | "dueToday"> | null>(null);
+  const [stats, setStats] = useState<Pick<Stats, "streak" | "dueToday" | "mastery"> | null>(null);
   const [name, setName] = useState(user.name);
   const [newEmail, setNewEmail] = useState("");
   const [emailPw, setEmailPw] = useState("");
@@ -318,6 +326,7 @@ function Signed({ user }: { user: User }) {
   const [codeSentTo, setCodeSentTo] = useState(""); // khác rỗng = đã gửi mã tới email mới, đang chờ nhập
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
   const [delPw, setDelPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -327,10 +336,6 @@ function Signed({ user }: { user: User }) {
   // Số từ đã lưu + chuỗi ngày / mục đến hạn: tải lại mỗi lần mở tab
   useFocusEffect(
     useCallback(() => {
-      api<{ vocab: unknown[] }>("/vocab").then(
-        (r) => setWords(r.vocab.length),
-        () => {},
-      );
       api<Stats>(`/stats?tz=${new Date().getTimezoneOffset()}`).then(setStats, () => {});
     }, []),
   );
@@ -382,10 +387,12 @@ function Signed({ user }: { user: User }) {
 
   const changePassword = () =>
     run(async () => {
+      if (next !== confirmPw) throw new Error(t("acc.pwMismatch"));
       const r = await api<{ token: string }>("/me/password", { method: "POST", body: { current, next } });
       await setToken(r.token);
       setCurrent("");
       setNext("");
+      setConfirmPw("");
       setMsg(hasPassword ? t("acc.pwChanged") : t("acc.pwSet"));
       setUser({ ...user, hasPassword: true });
     });
@@ -410,55 +417,60 @@ function Signed({ user }: { user: User }) {
 
   return (
     <>
-      <ProfileCard user={user} words={words} stats={stats} />
+      <ProfileCard user={user} stats={stats} />
 
       <Section title={t("acc.sectionAccount")}>
         <Row first icon="person.text.rectangle" iconBg="#2563eb" title={t("acc.profile")} open={panel === "profile"} onPress={() => toggle("profile")}>
-          <Input value={name} onChangeText={setName} placeholder={t("acc.displayName")} />
+          <Input value={name} onChangeText={setName} placeholder={t("acc.displayName")} autoComplete="name" textContentType="name" />
           {feedback}
-          <Button title={t("acc.save")} variant="primary" onPress={saveProfile} loading={busy} disabled={!nameChanged} />
+          <Button title={t("acc.save")} variant="primary" onPress={saveProfile} loading={busy} disabled={!nameChanged || !name.trim()} />
         </Row>
-        <Row icon="envelope.fill" iconBg="#0891b2" title={t("acc.changeEmail")} open={panel === "email"} onPress={() => toggle("email")}>
-          {codeSentTo ? (
-            <>
-              <Text style={styles.muted}>{t("auth.codeSub", { email: codeSentTo })}</Text>
-              <Input value={emailCode} onChangeText={setEmailCode} placeholder={t("auth.code")} keyboardType="number-pad" maxLength={6} />
+        {!user.fixedAdmin && (
+          <>
+            <Row icon="envelope.fill" iconBg="#0891b2" title={t("acc.changeEmail")} open={panel === "email"} onPress={() => toggle("email")}>
+              {codeSentTo ? (
+                <>
+                  <Text style={styles.muted}>{t("auth.codeSub", { email: codeSentTo })}</Text>
+                  <Input value={emailCode} onChangeText={setEmailCode} placeholder={t("auth.code")} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
+                  {feedback}
+                  <Button title={t("acc.confirmEmail")} variant="primary" onPress={confirmEmail} loading={busy} disabled={emailCode.length !== 6} />
+                  <Button title={t("acc.backEmail")} onPress={() => setCodeSentTo("")} />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.muted}>{user.email}</Text>
+                  <Input value={newEmail} onChangeText={setNewEmail} placeholder={t("acc.newEmail")} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" />
+                  {hasPassword && <Input value={emailPw} onChangeText={setEmailPw} placeholder={t("acc.currentPw")} secureTextEntry autoComplete="current-password" textContentType="password" />}
+                  {feedback}
+                  <Button title={t("auth.sendCode")} variant="primary" onPress={sendEmailCode} loading={busy} disabled={!newEmail.trim() || (hasPassword && !emailPw)} />
+                </>
+              )}
+            </Row>
+            <Row
+              icon="key.fill"
+              iconBg="#7c3aed"
+              title={hasPassword ? t("acc.changePw") : t("acc.setPw")}
+              open={panel === "password"}
+              onPress={() => toggle("password")}
+            >
+              {hasPassword ? (
+                <Input value={current} onChangeText={setCurrent} placeholder={t("acc.currentPw")} secureTextEntry autoComplete="current-password" textContentType="password" />
+              ) : (
+                <Text style={styles.muted}>{t("acc.setPwNote")}</Text>
+              )}
+              <Input value={next} onChangeText={setNext} placeholder={t("acc.newPw")} secureTextEntry autoComplete="new-password" textContentType="newPassword" />
+              <Input value={confirmPw} onChangeText={setConfirmPw} placeholder={t("acc.confirmPw")} secureTextEntry autoComplete="new-password" textContentType="newPassword" />
               {feedback}
-              <Button title={t("acc.confirmEmail")} variant="primary" onPress={confirmEmail} loading={busy} disabled={emailCode.length !== 6} />
-              <Button title={t("acc.backEmail")} onPress={() => setCodeSentTo("")} />
-            </>
-          ) : (
-            <>
-              <Text style={styles.muted}>{user.email}</Text>
-              <Input value={newEmail} onChangeText={setNewEmail} placeholder={t("acc.newEmail")} autoCapitalize="none" keyboardType="email-address" />
-              {hasPassword && <Input value={emailPw} onChangeText={setEmailPw} placeholder={t("acc.currentPw")} secureTextEntry />}
-              {feedback}
-              <Button title={t("auth.sendCode")} variant="primary" onPress={sendEmailCode} loading={busy} disabled={!newEmail.trim() || (hasPassword && !emailPw)} />
-            </>
-          )}
-        </Row>
-        <Row
-          icon="key.fill"
-          iconBg="#7c3aed"
-          title={hasPassword ? t("acc.changePw") : t("acc.setPw")}
-          open={panel === "password"}
-          onPress={() => toggle("password")}
-        >
-          {hasPassword ? (
-            <Input value={current} onChangeText={setCurrent} placeholder={t("acc.currentPw")} secureTextEntry />
-          ) : (
-            <Text style={styles.muted}>{t("acc.setPwNote")}</Text>
-          )}
-          <Input value={next} onChangeText={setNext} placeholder={t("acc.newPw")} secureTextEntry />
-          {feedback}
-          <Button
-            title={hasPassword ? t("acc.changePw") : t("acc.setPw")}
-            variant="primary"
-            onPress={changePassword}
-            loading={busy}
-            disabled={(hasPassword && !current) || !next}
-          />
-        </Row>
+              <Button
+                title={hasPassword ? t("acc.changePw") : t("acc.setPw")}
+                variant="primary"
+                onPress={changePassword}
+                loading={busy}
+                disabled={(hasPassword && !current) || next.length < 8 || !confirmPw}
+              />
+            </Row>
+          </>
+        )}
       </Section>
 
       <SettingsSection />
@@ -484,17 +496,19 @@ function Signed({ user }: { user: User }) {
         />
       </Section>
 
-      <Section footer={t("acc.deleteSub")}>
-        <Row first icon="trash.fill" iconBg="rgba(220,38,38,0.25)" color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
-          {hasPassword ? (
-            <Input value={delPw} onChangeText={setDelPw} placeholder={t("acc.deletePw")} secureTextEntry />
-          ) : (
-            <Text style={styles.muted}>{t("acc.deleteNoPw")}</Text>
-          )}
-          {feedback}
-          <Button title={t("acc.deleteTitle")} variant="red" onPress={deleteAccount} loading={busy} disabled={hasPassword && !delPw} />
-        </Row>
-      </Section>
+      {!user.fixedAdmin && (
+        <Section footer={t("acc.deleteSub")}>
+          <Row first icon="trash.fill" iconBg="rgba(220,38,38,0.25)" color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
+            {hasPassword ? (
+              <Input value={delPw} onChangeText={setDelPw} placeholder={t("acc.deletePw")} secureTextEntry autoComplete="current-password" textContentType="password" />
+            ) : (
+              <Text style={styles.muted}>{t("acc.deleteNoPw")}</Text>
+            )}
+            {feedback}
+            <Button title={t("acc.deleteTitle")} variant="red" onPress={deleteAccount} loading={busy} disabled={hasPassword && !delPw} />
+          </Row>
+        </Section>
+      )}
     </>
   );
 }
@@ -528,11 +542,11 @@ export default function SettingsScreen() {
             </>
           )}
           <View style={{ alignItems: "center", gap: 2 }}>
-            <Text style={{ color: "#4a5a50", fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: C.muted, fontSize: 12, fontWeight: "600" }}>
               {Constants.expoConfig?.name} · {t("acc.version", { v: Constants.expoConfig?.version ?? "—" })}
             </Text>
-            <Text style={{ color: "#4a5a50", fontSize: 12 }}>© {new Date().getFullYear()} Deutsch Shadowing</Text>
-            {__DEV__ && <Text style={{ color: "#4a5a50", fontSize: 12 }}>Server: {API_URL}</Text>}
+            <Text style={{ color: C.muted, fontSize: 12 }}>© {new Date().getFullYear()} Deutsch Shadowing</Text>
+            {__DEV__ && <Text style={{ color: C.muted, fontSize: 12 }}>Server: {API_URL}</Text>}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

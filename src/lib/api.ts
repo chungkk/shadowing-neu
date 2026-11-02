@@ -1,5 +1,5 @@
 import "server-only";
-import { getCurrentUser, type User } from "./auth";
+import { envAdminEmail, getCurrentUser, type User } from "./auth";
 
 /** Tiện ích cho API JSON của app di động (/api/v1/…). Lỗi luôn có dạng { error: "…" }. */
 
@@ -37,6 +37,7 @@ export const publicUser = (u: User) => ({
   role: u.role,
   lang: u.lang,
   hasPassword: u.hasPassword, // false → app hiện "Đặt mật khẩu" thay cho "Đổi mật khẩu"
+  fixedAdmin: u.email === envAdminEmail(), // admin chính: email + mật khẩu lấy từ biến môi trường, không đổi / xoá được
   createdAt: u.createdAt,
   // Ảnh đại diện (cần đăng nhập để xem); ?v= đổi khi đổi ảnh → app không dùng ảnh cũ trong cache
   avatarUrl: u.avatarAt ? `/api/v1/avatar/${u.id}?v=${u.avatarAt}` : null,
