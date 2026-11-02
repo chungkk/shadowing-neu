@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CloudRain, Pickaxe, Volume2 } from "lucide-react";
+import { ArrowRight, CloudRain, Pickaxe, Puzzle, Volume2 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
 export const metadata: Metadata = {
@@ -54,6 +54,17 @@ const GoldArt = () => (
   </div>
 );
 
+const MatchArt = () => (
+  <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-1.5 bg-gradient-to-b from-[#0a1f24] to-[#0b2a2a] p-3 pt-9 text-center text-xs font-bold">
+    <span className="flex items-center justify-center rounded-lg border border-teal-500/60 bg-[#0e1b26] text-cyan-100">der Hund</span>
+    <span className="flex items-center justify-center rounded-lg border border-orange-500/60 bg-[#33221a] text-amber-100">cảm ơn</span>
+    <span className="flex items-center justify-center rounded-lg border border-amber bg-amber/25 text-white transition group-hover:-translate-y-0.5">danke</span>
+    <span className="flex items-center justify-center rounded-lg border border-orange-500/60 bg-[#33221a] text-amber-100">con chó</span>
+    <span className="flex items-center justify-center rounded-lg border border-teal-500/60 bg-[#0e1b26] text-cyan-100">das Haus</span>
+    <span className="flex items-center justify-center rounded-lg border border-orange-500/60 bg-[#33221a] text-amber-100">ngôi nhà</span>
+  </div>
+);
+
 const GAMES: { href: string; title: string; description: string; icon: ComponentType<{ className?: string }>; art: ReactNode }[] = [
   {
     href: "/games/word-rain",
@@ -68,6 +79,13 @@ const GAMES: { href: string; title: string; description: string; icon: Component
     description: "Mỗi cục vàng là 1 từ kèm phát âm — nghe, gõ đúng chính tả để quăng móc kéo vàng lên trước khi chìm mất.",
     icon: Pickaxe,
     art: <GoldArt />,
+  },
+  {
+    href: "/games/word-match",
+    title: "Nối từ",
+    description: "Bấm từ tiếng Đức và nghĩa của nó để xoá cặp thẻ — nối đúng được thêm giờ, nối sai bị trừ giờ.",
+    icon: Puzzle,
+    art: <MatchArt />,
   },
 ];
 
