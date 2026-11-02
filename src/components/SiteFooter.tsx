@@ -51,7 +51,8 @@ export default function SiteFooter() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
               <Link href="/" className="flex w-fit items-center gap-2.5 text-lg font-extrabold">
-                <span className="text-2xl">🇩🇪</span> Deutsch Shadowing
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon.svg" alt="" className="size-8 rounded-lg" /> Deutsch Shadowing
               </Link>
               <p className="max-w-sm text-sm text-muted">Luyện nghe, nói và chép chính tả tiếng Đức với video thật.</p>
             </div>
