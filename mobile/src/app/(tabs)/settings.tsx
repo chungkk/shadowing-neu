@@ -11,7 +11,7 @@ import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
 import { Row, Section } from "@/components/SettingsList";
 import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
-import { confirmDestructive, showError } from "@/lib/dialogs";
+import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { openLegal } from "@/lib/legal";
 import { C } from "@/lib/theme";
@@ -399,6 +399,17 @@ function Signed({ user }: { user: User }) {
 
   const confirmLogout = () => confirmDestructive(t("acc.logoutConfirm"), t("acc.logoutBody"), t("acc.logout"), logout);
 
+  const logoutOthers = () =>
+    confirmDestructive(t("acc.logoutOthersConfirm"), t("acc.logoutOthersBody"), t("acc.logoutOthers"), async () => {
+      try {
+        const r = await api<{ token: string }>("/me/logout-all", { method: "POST" });
+        await setToken(r.token);
+        notice(t("acc.logoutOthersDone"));
+      } catch (e) {
+        showError(e);
+      }
+    });
+
   const deleteAccount = () =>
     confirmDestructive(t("acc.deleteConfirm"), t("acc.deleteConfirmSub"), t("acc.deleteAction"), () =>
       run(async () => {
@@ -494,6 +505,7 @@ function Signed({ user }: { user: User }) {
           chevron={false}
           onPress={confirmLogout}
         />
+        <Row icon="iphone.and.arrow.forward" iconBg={C.card2} color={C.redText} title={t("acc.logoutOthers")} chevron={false} onPress={logoutOthers} />
       </Section>
 
       {!user.fixedAdmin && (

@@ -1,8 +1,9 @@
 import "server-only";
 import { headers } from "next/headers";
 
-// Giới hạn số lần gọi theo khoá (lưu trong RAM, đủ cho 1 server)
-const hits = new Map<string, { n: number; reset: number }>();
+// Giới hạn số lần gọi theo khoá (lưu trong RAM, đủ cho 1 server; để ở globalThis → dùng chung giữa các route)
+const g = globalThis as unknown as { __rateHits?: Map<string, { n: number; reset: number }> };
+const hits = (g.__rateHits ??= new Map());
 
 /** true = còn lượt (đã tính lần này); tối đa `max` lần / `windowMs` cho mỗi khoá */
 export function allow(key: string, max: number, windowMs: number): boolean {
@@ -16,7 +17,12 @@ export function allow(key: string, max: number, windowMs: number): boolean {
   return ++h.n <= max;
 }
 
-/** IP người gọi (sau proxy của Coolify) */
+/**
+ * IP người gọi (sau proxy của Coolify). Proxy thêm IP nó thấy vào CUỐI x-forwarded-for, phần đầu do người gọi tự gửi nên giả được
+ * → đếm từ cuối. TRUSTED_PROXY_HOPS = số proxy đứng trước app (mặc định 1; thêm Cloudflare phía trước thì đặt 2).
+ */
 export async function clientIp(): Promise<string> {
-  return (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const ips = (await headers()).get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS) || 1;
+  return ips[Math.max(0, ips.length - hops)] || "local";
 }

@@ -221,6 +221,8 @@ function open() {
     db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
     db.exec("UPDATE users SET email_verified = 1 WHERE email IN (SELECT email FROM oauth_accounts)");
   }
+  // Tăng lên khi "đăng xuất mọi thiết bị": nằm trong chữ ký phiên nên mọi token cũ hết hiệu lực
+  if (!userCols.some((c) => c.name === "session_version")) db.exec("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0");
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
@@ -488,6 +490,7 @@ type UserRow = {
   created_at: string;
   avatar_at: number | null;
   email_verified: number;
+  session_version: number;
 };
 
 const toUser = (r: UserRow): User => ({
@@ -516,11 +519,11 @@ export function getUserById(id: number): User | null {
 }
 
 /** Trả về cả password_hash — chỉ dùng trong lib/auth (kiểm tra đăng nhập / chữ ký phiên) */
-export function getUserWithHash(by: { email: string } | { id: number }): (User & { passwordHash: string }) | null {
+export function getUserWithHash(by: { email: string } | { id: number }): (User & { passwordHash: string; sessionVersion: number }) | null {
   const r = ("email" in by
     ? conn().prepare("SELECT * FROM users WHERE email = ?").get(by.email)
     : conn().prepare("SELECT * FROM users WHERE id = ?").get(by.id)) as UserRow | undefined;
-  return r ? { ...toUser(r), passwordHash: r.password_hash } : null;
+  return r ? { ...toUser(r), passwordHash: r.password_hash, sessionVersion: r.session_version } : null;
 }
 
 export function emailTaken(email: string, exceptId?: number): boolean {
@@ -542,6 +545,10 @@ export function markEmailVerified(id: number) {
 
 export function setUserLang(id: number, lang: string) {
   conn().prepare("UPDATE users SET lang = ? WHERE id = ?").run(lang, id);
+}
+
+export function bumpSessionVersion(id: number) {
+  conn().prepare("UPDATE users SET session_version = session_version + 1 WHERE id = ?").run(id);
 }
 
 export function setUserPassword(id: number, passwordHash: string) {

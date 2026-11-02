@@ -28,7 +28,7 @@ import {
   type StarredSentence,
   type VocabItem,
 } from "./db";
-import { contactEmail, mailConfigured, sendMail } from "./mail";
+import { contactEmail, mailConfigured, notifyPasswordChanged, sendMail } from "./mail";
 import { allow, clientIp } from "./rate-limit";
 import { appleRefreshToken, oauthEnabled, revokeApple, verifyIdToken } from "./oauth";
 import { translateSentences } from "./translate";
@@ -48,8 +48,12 @@ export const authConfigured = () => !!(process.env.AUTH_SECRET || process.env.AD
 
 type SignupInput = { name: string; email: string; password: string; lang?: string | null };
 
+const TOO_MANY_TRIES = "Thử quá nhiều lần, chờ ít phút.";
+/** Mọi chỗ cho biết email đã có tài khoản hay chưa đều dùng chung giới hạn này, để không dò hàng loạt được qua lối khác */
+const lookupQuota = async () => allow(`lookup:ip:${await clientIp()}`, 30, 10 * 60 * 1000);
+
 /** Kiểm tra thông tin đăng ký (trước khi gửi mã và lúc tạo tài khoản). Trả về lỗi hoặc null */
-function checkSignup(input: SignupInput): string | null {
+async function checkSignup(input: SignupInput): Promise<string | null> {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
   if (!authConfigured()) return "Server chưa cấu hình AUTH_SECRET";
@@ -57,6 +61,7 @@ function checkSignup(input: SignupInput): string | null {
   if (name.length > 60) return "Tên tối đa 60 ký tự";
   if (!validEmail(email)) return "Email không hợp lệ";
   if (input.password.length < 8) return "Mật khẩu cần ít nhất 8 ký tự";
+  if (!(await lookupQuota())) return TOO_MANY_TRIES;
   // Email admin chỉ đăng nhập bằng ADMIN_PASSWORD, không cho ai đăng ký chiếm trước
   if (email === envAdminEmail() || emailTaken(email)) return "Email này đã được đăng ký";
   return null;
@@ -69,7 +74,7 @@ function checkSignup(input: SignupInput): string | null {
 export async function lookupEmail(raw: string): Promise<{ exists: boolean } | { error: string }> {
   const email = raw.trim().toLowerCase();
   if (!validEmail(email)) return { error: "Email không hợp lệ" };
-  if (!allow(`lookup:ip:${await clientIp()}`, 30, 10 * 60 * 1000)) return { error: "Thử quá nhiều lần, chờ ít phút." };
+  if (!(await lookupQuota())) return { error: TOO_MANY_TRIES };
   return { exists: email === envAdminEmail() || emailTaken(email) };
 }
 
@@ -103,10 +108,12 @@ const MAILS = {
 } satisfies Record<string, Record<"vi" | "de", CodeMail>>;
 
 // Chống spam gửi mã tới hàng loạt email khác nhau (mỗi email đã có chờ 60 giây):
-// mỗi IP 10 mã / giờ, cả server 300 mã / giờ (giữ hạn mức gửi mail của Gmail / Workspace cho người thật)
+// mỗi IP 10 mã / giờ, cả server 300 mã / giờ (giữ hạn mức gửi mail của Gmail / Workspace cho người thật).
+// Mỗi khoá 10 mã / giờ: mỗi mã được thử 5 lần → giới hạn số lần đoán mã của 1 tài khoản, kể cả khi dùng nhiều IP
 const HOUR = 60 * 60 * 1000;
 const TOO_MANY = "Gửi mã quá nhiều lần. Thử lại sau ít phút.";
-const mailQuota = async () => allow(`mail:ip:${await clientIp()}`, 10, HOUR) && allow("mail:all", 300, HOUR);
+const mailQuota = async (key: string) =>
+  allow(`mail:ip:${await clientIp()}`, 10, HOUR) && allow(`mail:to:${key}`, 10, HOUR) && allow("mail:all", 300, HOUR);
 
 /** Còn phải chờ bao nhiêu giây mới được gửi mã mới cho khoá này (0 = gửi được) */
 function resendWait(key: string): number {
@@ -167,18 +174,18 @@ function verifyCode(key: string, code: string): string | null {
 
 /** Gửi mã xác nhận tới email đăng ký. Trả về lỗi hoặc null */
 export async function sendSignupCode(input: SignupInput): Promise<string | null> {
-  const error = checkSignup(input);
+  const error = await checkSignup(input);
   if (error) return error;
   const email = input.email.trim().toLowerCase();
   const wait = resendWait(email);
   if (wait > 0) return `Chờ ${wait} giây rồi gửi lại mã`;
-  if (!(await mailQuota())) return TOO_MANY;
+  if (!(await mailQuota(email))) return TOO_MANY;
   return issueCode(email, email, "signup", input.lang);
 }
 
 /** Tạo tài khoản sau khi đã nhập đúng mã gửi về email. Trả về id người dùng hoặc lỗi */
 export async function registerUser(input: SignupInput & { code: string }): Promise<number | string> {
-  const error = checkSignup(input);
+  const error = await checkSignup(input);
   if (error) return error;
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
@@ -207,20 +214,21 @@ function checkNewEmail(user: User, raw: string): { email: string } | { error: st
 
 /** Gửi mã tới email mới; tài khoản có mật khẩu phải nhập đúng mật khẩu. Trả về lỗi hoặc null */
 export async function sendEmailChangeCode(user: User, input: { email: string; password: string }): Promise<string | null> {
+  if (!allow(`email-change:u:${user.id}`, 10, LOCK_WINDOW)) return TOO_MANY_TRIES;
   const checked = checkNewEmail(user, input.email);
   if ("error" in checked) return checked.error;
-  if (!allow(`email-change:u:${user.id}`, 10, LOCK_WINDOW)) return "Thử quá nhiều lần, chờ ít phút.";
   const u = getUserWithHash({ id: user.id });
   if (!u || (u.hasPassword && !(await verifyPassword(input.password, u.passwordHash)))) return "Mật khẩu không đúng";
   const key = changeKey(user.id, checked.email);
   const wait = resendWait(key);
   if (wait > 0) return `Chờ ${wait} giây rồi gửi lại mã`;
-  if (!(await mailQuota())) return TOO_MANY;
+  if (!(await mailQuota(key))) return TOO_MANY;
   return issueCode(key, checked.email, "change", user.lang, user.name);
 }
 
 /** Nhập đúng mã → đổi email và báo cho địa chỉ cũ. Trả về lỗi hoặc null */
 export function confirmEmailChange(user: User, input: { email: string; code: string }): string | null {
+  if (!allow(`email-change:u:${user.id}`, 10, LOCK_WINDOW)) return TOO_MANY_TRIES;
   const checked = checkNewEmail(user, input.email);
   if ("error" in checked) return checked.error;
   const key = changeKey(user.id, checked.email);
@@ -260,7 +268,7 @@ export async function sendPasswordReset(input: { email: string; lang?: string | 
   const key = resetKey(email);
   const wait = resendWait(key);
   if (wait > 0) return `Chờ ${wait} giây rồi gửi lại mã`;
-  if (!(await mailQuota())) return TOO_MANY; // tính cả email lạ → không lộ email nào có tài khoản
+  if (!(await mailQuota(key))) return TOO_MANY; // tính cả email lạ → không lộ email nào có tài khoản
 
   const user = getUserWithHash({ email });
   if (!user || email === envAdminEmail()) {
@@ -281,6 +289,7 @@ export async function resetPasswordWithCode(input: { email: string; code: string
   const user = getUserWithHash({ email });
   if (!user || email === envAdminEmail()) return "Mã xác nhận không đúng";
   setUserPassword(user.id, await hashPassword(input.password)); // mọi phiên cũ trên các thiết bị hết hiệu lực
+  notifyPasswordChanged(user);
   // Vừa chứng minh sở hữu email: Google / Apple liên kết từ trước khi email được xác minh có thể là của người khác
   if (!user.emailVerified) {
     await dropOAuthLinks(user.id);
@@ -311,6 +320,8 @@ export async function oauthSignIn(input: {
   if (typeof profile === "string") return profile;
 
   let userId = getOAuthUserId(provider, profile.subject);
+  // Liên kết có từ trước khi email này được đặt làm ADMIN_EMAIL: không để Google / Apple thay cho ADMIN_PASSWORD
+  if (userId !== null && getUserWithHash({ id: userId })?.email === envAdminEmail()) return "Tài khoản admin chính chỉ đăng nhập bằng mật khẩu.";
   if (userId === null) {
     if (!profile.emailVerified) return "Tài khoản này không có email đã xác minh.";
     const email = profile.email;

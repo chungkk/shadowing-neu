@@ -4,14 +4,9 @@ import { redirect } from "next/navigation";
 import { authenticate, createSession, destroySession } from "@/lib/auth";
 import { authConfigured, lookupEmail, oauthSignIn, registerUser, resetPasswordWithCode, sendPasswordReset, sendSignupCode } from "@/lib/account";
 import { allow, clientIp } from "@/lib/rate-limit";
+import { safeNext } from "@/lib/safe-next";
 
 export type AuthState = { error?: string; email?: string; name?: string; ok?: boolean };
-
-/** Chỉ cho quay lại đường dẫn nội bộ (chặn open redirect kiểu "//evil.com") */
-const safeNext = (v: FormDataEntryValue | null) => {
-  const s = String(v ?? "");
-  return s.startsWith("/") && !s.startsWith("//") ? s : "/";
-};
 
 export async function login(_: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();

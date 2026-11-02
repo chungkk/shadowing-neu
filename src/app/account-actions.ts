@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { changePassword, destroySession, envAdminEmail, getCurrentUser, requireUser, verifyPassword } from "@/lib/auth";
+import { changePassword, destroySession, envAdminEmail, getCurrentUser, logoutEverywhere, requireUser, verifyPassword } from "@/lib/auth";
 import { addWord, aiWordMeaning, confirmEmailChange, editProfile, removeAccount, sendEmailChangeCode } from "@/lib/account";
 import { AVATAR_MAX_BYTES, imageType, removeAvatar, saveAvatar } from "@/lib/avatar";
 import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
@@ -42,6 +42,13 @@ export async function updatePassword(_: FormResult, formData: FormData): Promise
   if (next !== String(formData.get("confirm") ?? "")) return { error: "Mật khẩu nhập lại không khớp" };
   const error = await changePassword(user, current, next);
   return error ? { error } : { ok: "Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất." };
+}
+
+/** Đăng xuất mọi thiết bị khác (máy đang dùng vẫn đăng nhập) */
+export async function logoutOtherDevices(): Promise<FormResult> {
+  const user = await requireUser("/settings");
+  await logoutEverywhere(user.id);
+  return { ok: "Đã đăng xuất các thiết bị khác." };
 }
 
 /** Đổi ảnh đại diện (trường "file": JPEG / PNG / WebP ≤ 1 MB — trình duyệt đã cắt vuông + thu nhỏ) */

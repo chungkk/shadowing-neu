@@ -433,6 +433,10 @@ const vi = {
   "acc.avatarFailed": "Không đổi được ảnh đại diện",
   "acc.logout": "Đăng xuất",
   "acc.logoutConfirm": "Đăng xuất khỏi tài khoản?",
+  "acc.logoutOthers": "Đăng xuất các thiết bị khác",
+  "acc.logoutOthersConfirm": "Đăng xuất các thiết bị khác?",
+  "acc.logoutOthersBody": "Mọi thiết bị khác phải đăng nhập lại. Máy này vẫn giữ đăng nhập.",
+  "acc.logoutOthersDone": "Đã đăng xuất các thiết bị khác.",
   "acc.sectionAccount": "Tài khoản",
   "acc.memberSince": "Thành viên từ {date}",
   "acc.savedWords": "{n} từ đã lưu",
@@ -1064,6 +1068,10 @@ const de: Dict = {
   "acc.avatarFailed": "Profilbild konnte nicht geändert werden",
   "acc.logout": "Abmelden",
   "acc.logoutConfirm": "Vom Konto abmelden?",
+  "acc.logoutOthers": "Andere Geräte abmelden",
+  "acc.logoutOthersConfirm": "Andere Geräte abmelden?",
+  "acc.logoutOthersBody": "Alle anderen Geräte müssen sich neu anmelden. Dieses Gerät bleibt angemeldet.",
+  "acc.logoutOthersDone": "Andere Geräte wurden abgemeldet.",
   "acc.sectionAccount": "Konto",
   "acc.memberSince": "Mitglied seit {date}",
   "acc.savedWords": "{n} gespeicherte Wörter",
@@ -1297,6 +1305,39 @@ let current: Lang = deviceLang();
 export const t: TFn = (key, params) => translate(current, key, params);
 /** Ngôn ngữ đang dùng (đọc được ngoài React, luôn là giá trị mới nhất) */
 export const currentLang = () => current;
+
+// Lỗi đăng nhập / đăng ký: server chỉ trả tiếng Việt → dịch tại đây (lỗi chưa có trong bảng thì giữ nguyên)
+const SERVER_ERRORS_DE: Record<string, string> = {
+  "Sai email hoặc mật khẩu": "E-Mail oder Passwort ist falsch",
+  "Đăng nhập sai quá nhiều lần. Thử lại sau 10 phút.": "Zu viele Fehlversuche. Versuche es in 10 Minuten erneut.",
+  "Thử quá nhiều lần, chờ ít phút.": "Zu viele Versuche. Warte ein paar Minuten.",
+  "Nhập tên của bạn": "Gib deinen Namen ein",
+  "Tên tối đa 60 ký tự": "Der Name darf höchstens 60 Zeichen lang sein",
+  "Email không hợp lệ": "Ungültige E-Mail-Adresse",
+  "Mật khẩu cần ít nhất 8 ký tự": "Das Passwort braucht mindestens 8 Zeichen",
+  "Mật khẩu mới cần ít nhất 8 ký tự": "Das neue Passwort braucht mindestens 8 Zeichen",
+  "Email này đã được đăng ký": "Diese E-Mail ist bereits registriert",
+  "Email này đã được dùng": "Diese E-Mail wird bereits verwendet",
+  "Mã xác nhận đã hết hạn. Hãy gửi mã mới.": "Der Code ist abgelaufen. Fordere einen neuen an.",
+  "Nhập sai quá nhiều lần. Hãy gửi mã mới.": "Zu viele Fehlversuche. Fordere einen neuen Code an.",
+  "Mã xác nhận không đúng": "Der Code ist falsch",
+  "Gửi mã quá nhiều lần. Thử lại sau ít phút.": "Zu viele Codes angefordert. Versuche es in ein paar Minuten erneut.",
+  "Không gửi được email. Thử lại sau.": "E-Mail konnte nicht gesendet werden. Versuche es später erneut.",
+  "Mật khẩu hiện tại không đúng": "Das aktuelle Passwort ist falsch",
+  "Mật khẩu không đúng": "Das Passwort ist falsch",
+  "Đăng nhập không hợp lệ, thử lại.": "Anmeldung ungültig. Versuche es erneut.",
+  "Phiên đăng nhập đã hết hạn, thử lại.": "Die Anmeldung ist abgelaufen. Versuche es erneut.",
+  "Tài khoản này không có email đã xác minh.": "Dieses Konto hat keine bestätigte E-Mail-Adresse.",
+  "Không kết nối được Google / Apple, thử lại.": "Keine Verbindung zu Google / Apple. Versuche es erneut.",
+  "Không tạo được tài khoản, thử lại.": "Konto konnte nicht erstellt werden. Versuche es erneut.",
+};
+
+export function serverError(message: string): string {
+  if (current !== "de") return message;
+  const wait = message.match(/^Chờ (\d+) giây rồi gửi lại mã$/);
+  if (wait) return `Warte ${wait[1]} Sekunden, bevor du den Code erneut anforderst`;
+  return SERVER_ERRORS_DE[message] ?? message;
+}
 
 type I18n = { lang: Lang; setLang: (l: Lang) => void; t: TFn };
 const I18nContext = createContext<I18n | null>(null);

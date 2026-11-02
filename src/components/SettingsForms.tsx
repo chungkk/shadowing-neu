@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Camera, Download, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
-import { deleteAccount, deleteAvatar, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/account-actions";
+import { deleteAccount, deleteAvatar, logoutOtherDevices, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/account-actions";
 import { logout } from "@/app/auth-actions";
 import { clientApi } from "@/lib/client-api";
 import Avatar from "./Avatar";
@@ -203,6 +203,7 @@ export default function SettingsForms({
   const [profile, profileAction, savingProfile] = useActionState(updateProfile, {});
   const [pw, pwAction, savingPw] = useActionState(updatePassword, {});
   const [del, delAction, deleting] = useActionState(deleteAccount, {});
+  const [others, othersAction, loggingOut] = useActionState(logoutOtherDevices, {});
   const [avatarPending, startAvatar] = useTransition();
   const [avatarError, setAvatarError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -366,13 +367,22 @@ export default function SettingsForms({
         title="Đăng xuất"
         desc="Đăng xuất khỏi máy này. Sổ từ vựng và tiến độ vẫn được giữ trong tài khoản."
         footer={
-          <form action={logout}>
-            <button className="btn">
-              <LogOut className="size-4" /> Đăng xuất
-            </button>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <form action={logout}>
+              <button className="btn">
+                <LogOut className="size-4" /> Đăng xuất
+              </button>
+            </form>
+            <form action={othersAction}>
+              <button className="btn" disabled={loggingOut}>
+                {loggingOut ? "Đang xử lý…" : "Đăng xuất các thiết bị khác"}
+              </button>
+            </form>
+          </div>
         }
-      />
+      >
+        <Status state={others} />
+      </Section>
 
       {!fixedAdmin && (
         <Section

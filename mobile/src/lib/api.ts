@@ -1,7 +1,7 @@
 import type { Mastery } from "@shared/srs";
 import { File } from "expo-file-system";
 import type { Segment } from "@shared/subtitles";
-import { t } from "./i18n";
+import { serverError, t } from "./i18n";
 
 /** Gọi API /api/v1 của server web (Next.js). Lỗi → ném Error với thông báo tiếng Việt của server. */
 
@@ -195,7 +195,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     throw new ApiError(t("api.noConnection"), 0);
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(data.error ?? t("api.serverError", { status: res.status }), res.status, data);
+  if (!res.ok) throw new ApiError(data.error ? serverError(data.error) : t("api.serverError", { status: res.status }), res.status, data);
   if ((init.method ?? "GET") !== "GET" && /^\/vocab(\/|$)/.test(path)) vocabVersion++;
   if ((init.method ?? "GET") !== "GET" && /^\/lessons(\/|$)/.test(path)) lessonsVersion++;
   return data as T;
