@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CloudRain, Pickaxe, Puzzle, Volume2 } from "lucide-react";
+import { ArrowRight, CloudRain, Gem, Pickaxe, Puzzle, Volume2 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "@/components/Mascot";
 
@@ -66,6 +66,19 @@ const MatchArt = () => (
   </div>
 );
 
+const ArtikelArt = () => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#0b1a33] to-[#12264a] pt-5">
+    <span className="rounded-lg border border-white/20 bg-white/10 px-3 py-1 text-sm font-extrabold text-white">
+      ___ Hund <span className="font-medium text-white/60">con chó</span>
+    </span>
+    <div className="flex gap-2 text-xs font-extrabold text-white">
+      <span className="rounded-lg border border-sky-300 bg-sky-500/70 px-3 py-1.5 transition group-hover:-translate-y-0.5">der</span>
+      <span className="rounded-lg border border-rose-300 bg-rose-500/70 px-3 py-1.5">die</span>
+      <span className="rounded-lg border border-emerald-300 bg-emerald-500/70 px-3 py-1.5">das</span>
+    </div>
+  </div>
+);
+
 const GAMES: { href: string; title: string; description: string; icon: ComponentType<{ className?: string }>; art: ReactNode }[] = [
   {
     href: "/games/word-rain",
@@ -87,6 +100,13 @@ const GAMES: { href: string; title: string; description: string; icon: Component
     description: "Bấm từ tiếng Đức và nghĩa của nó để xoá cặp thẻ — nối đúng được thêm giờ, nối sai bị trừ giờ.",
     icon: Puzzle,
     art: <MatchArt />,
+  },
+  {
+    href: "/games/der-die-das",
+    title: "Der Die Das",
+    description: "Đặt kim cương rồi chọn đúng mạo từ cho từng danh từ — đúng liên tiếp thì hệ số tăng, chốt trước khi sai để mang kim cương về.",
+    icon: Gem,
+    art: <ArtikelArt />,
   },
 ];
 

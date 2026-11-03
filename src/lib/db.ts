@@ -198,6 +198,22 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, lesson_id)
     );
+    -- Ván game Der Die Das: payout − stake cộng thẳng vào điểm (getPoints), ván đang chơi đã trừ stake. Giữ vĩnh viễn như dict_points
+    CREATE TABLE IF NOT EXISTS artikel_rounds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      deck TEXT NOT NULL,
+      stake INTEGER NOT NULL,
+      words TEXT NOT NULL, -- [{ word, gender, meaning }, …] của ván đang chơi, xong ván thì xoá
+      correct INTEGER NOT NULL DEFAULT 0, -- số từ đúng liên tiếp
+      phase TEXT NOT NULL, -- 'word' | 'choose' | 'won' | 'lost'
+      deadline INTEGER NOT NULL DEFAULT 0, -- ms, hạn trả lời từ đang hiện
+      payout INTEGER NOT NULL DEFAULT 0, -- kim cương nhận về
+      started_at INTEGER NOT NULL, -- ms
+      ended_at INTEGER -- ms, NULL = đang chơi
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS artikel_rounds_active ON artikel_rounds (user_id) WHERE ended_at IS NULL; -- mỗi người 1 ván đang chơi
+    CREATE INDEX IF NOT EXISTS artikel_rounds_user ON artikel_rounds (user_id, started_at);
     -- Góp ý / báo lỗi gửi từ app (khách chưa đăng nhập cũng gửi được: user_id NULL)
     CREATE TABLE IF NOT EXISTS feedback (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -636,6 +652,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM dict_hints WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM lesson_unlocks WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM artikel_rounds WHERE user_id = ?").run(id);
   conn().prepare("UPDATE feedback SET user_id = NULL, email = '' WHERE user_id = ?").run(id); // giữ nội dung góp ý, bỏ liên kết người gửi
   conn().prepare("DELETE FROM users WHERE id = ?").run(id);
   rmSync(path.join(AVATAR_DIR, String(id)), { force: true }); // ảnh đại diện
@@ -663,6 +680,7 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     dictationPoints: rows("SELECT source, idx, pts, at FROM dict_points WHERE user_id = ? ORDER BY at"),
     dictationHints: rows("SELECT source, idx, n, pts, at FROM dict_hints WHERE user_id = ? ORDER BY at"),
     lessonUnlocks: rows("SELECT lesson_id, kind, cost, at FROM lesson_unlocks WHERE user_id = ?"),
+    artikelRounds: rows("SELECT deck, stake, correct, phase, payout, started_at, ended_at FROM artikel_rounds WHERE user_id = ? ORDER BY id"),
     feedback: rows("SELECT kind, message, created_at FROM feedback WHERE user_id = ? ORDER BY id"),
   };
 }
@@ -1322,7 +1340,7 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
 export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học) — có thể âm
 
 /**
- * Điểm = cộng của các câu đúng − điểm trừ khi xem từ − điểm đã trả để mở khoá bài (không tính vào "hôm nay":
+ * Điểm = cộng của các câu đúng − điểm trừ khi xem từ − điểm đã trả để mở khoá bài ± lời lỗ game Der Die Das (2 khoản sau không tính vào "hôm nay":
  * hôm nay chỉ đo điểm kiếm được) · tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
 export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Points {
   const dayStart = Date.parse(new Date(now - tzOffset * 60_000).toISOString().slice(0, 10)) + tzOffset * 60_000;
@@ -1332,9 +1350,10 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
          SELECT pts, at FROM dict_points WHERE user_id = ?
          UNION ALL SELECT -n * pts, at FROM dict_hints WHERE user_id = ?
          UNION ALL SELECT -cost, NULL FROM lesson_unlocks WHERE user_id = ?
+         UNION ALL SELECT payout - stake, NULL FROM artikel_rounds WHERE user_id = ?
        )`,
     )
-    .get(dayStart, userId, userId, userId) as Points;
+    .get(dayStart, userId, userId, userId, userId) as Points;
   return { total: r.total, today: r.today };
 }
 
@@ -1354,6 +1373,7 @@ export function getLeaderboard(userId: number, limit = 50): Leaderboard {
            SELECT user_id, pts FROM dict_points
            UNION ALL SELECT user_id, -n * pts FROM dict_hints
            UNION ALL SELECT user_id, -cost FROM lesson_unlocks
+           UNION ALL SELECT user_id, payout - stake FROM artikel_rounds
          ) GROUP BY user_id
        ) t JOIN users u ON u.id = t.user_id
        WHERE t.total > 0
@@ -1411,6 +1431,43 @@ export function awardDictWords(userId: number, source: string, idx: number, pts:
 export function chargeDictHints(userId: number, source: string, idx: number, n: number, tzOffset = 0): Points {
   conn().prepare("INSERT INTO dict_hints (user_id, source, idx, n, at, pts) VALUES (?, ?, ?, ?, ?, ?)").run(userId, source, idx, n, Date.now(), POINTS_HINT);
   return getPoints(userId, tzOffset);
+}
+
+// ---- Game Der Die Das (luật trong artikel-game.ts) ----
+
+export type ArtikelWord = { word: string; gender: "der" | "die" | "das"; meaning: string };
+export type ArtikelRound = { id: number; stake: number; words: ArtikelWord[]; correct: number; phase: "word" | "choose"; deadline: number };
+
+/** Ván đang chơi của 1 người */
+export function activeArtikelRound(userId: number): ArtikelRound | null {
+  const r = conn().prepare("SELECT id, stake, words, correct, phase, deadline FROM artikel_rounds WHERE user_id = ? AND ended_at IS NULL").get(userId) as
+    | (Omit<ArtikelRound, "words"> & { words: string })
+    | undefined;
+  return r ? { ...r, words: JSON.parse(r.words) } : null;
+}
+
+export function createArtikelRound(userId: number, deck: string, stake: number, words: ArtikelWord[], deadline: number, now: number) {
+  conn()
+    .prepare("INSERT INTO artikel_rounds (user_id, deck, stake, words, phase, deadline, started_at) VALUES (?, ?, ?, ?, 'word', ?, ?)")
+    .run(userId, deck, stake, JSON.stringify(words), deadline, now);
+}
+
+export function stepArtikelRound(id: number, correct: number, phase: "word" | "choose", deadline: number) {
+  conn().prepare("UPDATE artikel_rounds SET correct = ?, phase = ?, deadline = ? WHERE id = ?").run(correct, phase, deadline, id);
+}
+
+export function closeArtikelRound(id: number, phase: "won" | "lost", correct: number, payout: number, now: number) {
+  conn().prepare("UPDATE artikel_rounds SET phase = ?, correct = ?, payout = ?, ended_at = ?, words = '[]' WHERE id = ?").run(phase, correct, payout, now, id);
+}
+
+/** Từ mốc `since`: lời lỗ của các ván đã xong · số ván đã bắt đầu */
+export function artikelUsage(userId: number, since: number): { net: number; rounds: number } {
+  return conn()
+    .prepare(
+      `SELECT COALESCE(SUM(CASE WHEN ended_at >= ? THEN payout - stake END), 0) AS net, COALESCE(SUM(started_at >= ?), 0) AS rounds
+       FROM artikel_rounds WHERE user_id = ?`,
+    )
+    .get(since, since, userId) as { net: number; rounds: number };
 }
 
 // ---- Thống kê học tập (màn Thống kê trên app) ----

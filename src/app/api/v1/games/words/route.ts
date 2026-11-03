@@ -1,9 +1,6 @@
 import type { NextRequest } from "next/server";
-import { getDeck, isGameWord } from "@/lib/decks";
+import { getDeck, isGameWord, shortMeaning } from "@/lib/decks";
 import { fail } from "@/lib/api";
-
-/** Nghĩa ngắn cho giọt mưa: phần đầu trước ";", bỏ chú thích trong ngoặc ("khóa (cửa); hoàn thành…" → "khóa") */
-const shortMeaning = (m: string) => m.split(";")[0].replace(/\s*\([^)]*\)/g, "").trim() || m;
 
 /**
  * GET ?deck=<slug> → { topics, words } — từ của cả bộ cho game (Mưa từ vựng…): chỉ từ đơn (gõ được nhanh),

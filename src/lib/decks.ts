@@ -7,8 +7,10 @@ import {
   markDeckLearned,
   setSetting,
   vocabOverview,
+  type ArtikelWord,
   type NounGender,
 } from "./db";
+import { ARTIKEL_GOAL } from "./artikel";
 import aspekteNeuB2 from "@/content/decks/aspekte-neu-b2.json";
 import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";
@@ -107,6 +109,8 @@ const DECKS: Deck[] = RAW.map((d) => ({
   words: d.words.map(toWord),
 })).sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 
+const isArticle = (g: NounGender) => g === "der" || g === "die" || g === "das";
+
 /** Từ dùng được trong game chữ rơi: chỉ từ đơn (gõ được nhanh), có nghĩa */
 export const isGameWord = (w: Pick<DeckWord, "word" | "meaning">) => /^[\p{L}-]+$/u.test(w.word) && !!w.meaning;
 
@@ -120,6 +124,40 @@ export const listGameDecks = () =>
     if (!playable.length) return [];
     const used = new Set(playable.map((w) => w.topic));
     return [{ slug, title, level, wordCount: new Set(playable.map((w) => w.key)).size, topicCount: topics.filter((t) => used.has(t.id)).length }];
+  });
+
+/** Nghĩa ngắn cho game: phần đầu trước ";", bỏ chú thích trong ngoặc ("khóa (cửa); hoàn thành…" → "khóa") */
+export const shortMeaning = (m: string) => m.split(";")[0].replace(/\s*\([^)]*\)/g, "").trim() || m;
+
+/** Từ mà các bộ ghi nhiều mạo từ ("der / die See") — game Der Die Das bỏ qua, chọn mạo từ nào cũng có thể đúng */
+const ANY_GENDER = (() => {
+  const seen = new Map<string, NounGender>();
+  const clash = new Set<string>();
+  for (const w of DECKS.flatMap((d) => d.words)) {
+    if (!isArticle(w.gender)) continue;
+    const k = w.word.toLowerCase();
+    if (seen.has(k) && seen.get(k) !== w.gender) clash.add(k);
+    seen.set(k, w.gender);
+  }
+  return clash;
+})();
+
+/** Từ của bộ cho game Der Die Das: danh từ đơn có mạo từ rõ ràng, mỗi cách viết 1 lần */
+export function artikelWords(slug: string): ArtikelWord[] {
+  const words = new Map<string, ArtikelWord>();
+  for (const w of getDeck(slug)?.words ?? []) {
+    if (isGameWord(w) && isArticle(w.gender) && !ANY_GENDER.has(w.word.toLowerCase())) {
+      words.set(w.word.toLowerCase(), { word: w.word, gender: w.gender as ArtikelWord["gender"], meaning: shortMeaning(w.meaning) });
+    }
+  }
+  return [...words.values()];
+}
+
+/** Các bộ chơi được Der Die Das (bộ quá ít danh từ thì không đủ 1 ván) */
+export const listArtikelDecks = () =>
+  DECKS.flatMap(({ slug, title, level }) => {
+    const wordCount = artikelWords(slug).length;
+    return wordCount >= ARTIKEL_GOAL ? [{ slug, title, level, wordCount }] : [];
   });
 
 export const getDeck = (slug: string): Deck | null => DECKS.find((d) => d.slug === slug) ?? null;
@@ -137,7 +175,6 @@ const GROUPS = new Map(
 /** Các mục khác trong bộ có cùng cách viết */
 const siblings = (deck: Deck, w: DeckWord) => (GROUPS.get(deck.slug)?.get(w.word.toLowerCase()) ?? []).filter((s) => s.key !== w.key);
 const hasMeaning = (note: string, meaning: string) => note.toLowerCase().includes(meaning.toLowerCase());
-const isArticle = (g: NounGender) => g === "der" || g === "die" || g === "das";
 
 /** Mục này đã có trong sổ? "essen" / "Essen" cùng bộ là 2 từ khác nhau; từ đồng âm thì xem nghĩa của mục đã có nghĩa này chưa */
 function inNotes(deck: Deck, w: DeckWord, notes: Map<string, string>): boolean {
