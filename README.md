@@ -29,6 +29,22 @@ Quản lý tài khoản (cấp/bỏ quyền admin, xoá) ở `/admin/users`.
 
 Bản nháp chỉ admin xem được. Dữ liệu lưu trong SQLite (`data/shadow.db`, dùng `node:sqlite` có sẵn trong Node ≥ 22.5) — cần chạy trên server có ổ đĩa lưu lâu dài (VPS, Docker, Railway, Fly…), không phù hợp serverless như Vercel.
 
+### Backup tự động
+
+Cài hoặc cập nhật (chạy trên Mac, cần `ssh oracle`): `scripts/backup/install.sh`
+
+- **VPS** (cron 02:30 UTC): chụp `shadow.db` + ảnh đại diện vào `~/shadow-backup/archive`, giữ 7 bản. Log: `~/shadow-backup/backup.log`.
+- **Mac** (launchd 09:00, máy ngủ thì chạy khi thức dậy): tải về `~/Backups/shadow-new`, kiểm tra checksum + `quick_check`, giữ 60 bản. Log: `pull.log` cùng thư mục. Lỗi hoặc không có bản mới trong 3 ngày → hiện thông báo macOS.
+
+Bản backup có email và hash mật khẩu, đừng để vào thư mục đồng bộ cloud. Cache TTS không được backup (tạo lại được, nhưng tốn API).
+
+Khôi phục: dừng app trên Coolify, rồi trên VPS giải nén bản backup vào `~/restore` và chạy lệnh dưới, sau đó bật lại app:
+
+```bash
+docker run --rm -v mmmxvvm5awcsrqv8wdadovea-shadow-data:/data -v ~/restore:/r:ro node:24-slim \
+  sh -c 'rm -f /data/shadow.db-journal && cp /r/shadow.db /data/shadow.db && cp -r /r/avatars/. /data/avatars/ && chown -R 1000:1000 /data/shadow.db /data/avatars'
+```
+
 ### Whisper: tạo phụ đề bằng AI (tuỳ chọn)
 
 Copy `.env.example` → `.env.local` rồi điền API key (OpenAI hoặc Groq — Groq có free tier và nhanh hơn):
