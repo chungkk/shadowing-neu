@@ -184,6 +184,31 @@ export function checkSlots(reference: string, slots: readonly string[], revealed
   };
 }
 
+export const isOpenWord = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed";
+
+/** Ô chưa xong gần nhất theo hướng dir (hết thì quay vòng); không còn ô nào → giữ nguyên */
+export function nextOpenSlot(words: CheckedWord[], from: number, dir: 1 | -1 = 1): number {
+  const n = words.length;
+  for (let i = 1; i <= n; i++) {
+    const k = (from + dir * i + n * 2) % n;
+    if (isOpenWord(words[k])) return k;
+  }
+  return from;
+}
+
+/**
+ * Chữ đang gõ thuộc ô nào. Không có Space để bỏ qua từ: gõ trọn một từ ngay phía sau (mà không phải đang gõ dở từ hiện tại)
+ * → coi như đã bỏ sót các từ giữa, chữ vào đúng ô đó.
+ */
+export function slotForTyped(words: CheckedWord[], active: number, value: string): number {
+  const typed = normalizeWord(value);
+  if (!typed || normalizeWord(words[active].text).startsWith(typed)) return active;
+  for (let k = active + 1; k <= active + 3 && k < words.length; k++) {
+    if (isOpenWord(words[k]) && normalizeWord(words[k].text) === typed) return k;
+  }
+  return active;
+}
+
 /** Gợi ý cho 1 từ chưa đoán được: Dễ "G____", Vừa "*****", Khó "" */
 export function hintFor(word: string, level: DictationLevel): string {
   const core = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");

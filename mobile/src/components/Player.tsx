@@ -892,6 +892,7 @@ export default function Player({
               text={current.text}
               level={dictLevel}
               onReplay={() => playSegment(idx)}
+              onTogglePlay={togglePlay}
               onNext={() => dictNextIdx !== undefined && playSegment(dictNextIdx)}
               hasNext={dictNextIdx !== undefined}
               onDone={(correct, total) => dictFinished(idx, correct, total)}

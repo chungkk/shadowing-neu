@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
-import { checkSlots, hintFor, normalizeWord, POINTS_HINT, slotsFromInput, splitWords, type CheckedWord, type DictationLevel, type WordState } from "@/lib/dictation";
+import { checkSlots, hintFor, isOpenWord, nextOpenSlot, POINTS_HINT, slotForTyped, slotsFromInput, splitWords, type DictationLevel, type WordState } from "@/lib/dictation";
 import { emitPoints } from "@/lib/points";
 import { Gem } from "./PointsBadge";
 
@@ -17,18 +17,6 @@ const BOX: Record<WordState | "hint", string> = {
 
 /** Bản nháp 1 câu: chữ đã gõ + các từ đã bấm xem — giữ lại khi chuyển sang câu khác rồi quay về */
 export type DictDraft = { input: string; revealed: number[] };
-
-const isOpen = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed";
-
-/** Ô chưa xong gần nhất theo hướng dir (hết thì quay vòng); không còn ô nào → giữ nguyên */
-function nextOpen(words: CheckedWord[], from: number, dir: 1 | -1 = 1): number {
-  const n = words.length;
-  for (let i = 1; i <= n; i++) {
-    const k = (from + dir * i + n * 2) % n;
-    if (isOpen(words[k])) return k;
-  }
-  return from;
-}
 
 /**
  * Nghe chép chính tả 1 câu. Mỗi từ là 1 ô, gõ thẳng vào ô đang chọn (ô nhập thật ẩn đi); gõ đúng thì tự nhảy ô — không cần dấu cách,
@@ -74,7 +62,7 @@ export default function DictationPanel({
   const [revealed, setRevealed] = useState<Set<number>>(() => new Set(draft?.revealed ?? []));
   const result = useMemo(() => checkSlots(text, slots, revealed), [text, slots, revealed]);
   const [checked, setChecked] = useState(() => !!saved || (!!draft && result.done));
-  const [active, setActive] = useState(() => nextOpen(result.words, result.words.length - 1)); // ô đang gõ
+  const [active, setActive] = useState(() => nextOpenSlot(result.words, result.words.length - 1)); // ô đang gõ
   const [reported, setReported] = useState(!!saved);
   const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
   const [gained, setGained] = useState(0); // điểm vừa được ở câu này → chữ báo điểm, xong câu thì các ô từ nảy
@@ -122,26 +110,16 @@ export default function DictationPanel({
       next[active] = value;
       return setSlots(next);
     }
-    // Không có Space để bỏ qua từ: gõ trọn một từ ngay phía sau (mà không phải đang gõ dở từ hiện tại) → coi như đã bỏ sót các từ giữa
-    const typed = normalizeWord(value);
-    let at = active;
-    if (typed && !normalizeWord(refWords[active]).startsWith(typed)) {
-      for (let k = active + 1; k <= active + 3 && k < refWords.length; k++) {
-        if (isOpen(result.words[k]) && normalizeWord(refWords[k]) === typed) {
-          at = k;
-          break;
-        }
-      }
-    }
+    const at = slotForTyped(result.words, active, value);
     if (at !== active) next[active] = "";
     next[at] = value;
     const r = change(next, revealed);
-    setActive(r.words[at].state === "correct" ? nextOpen(r.words, at) : at);
+    setActive(r.words[at].state === "correct" ? nextOpenSlot(r.words, at) : at);
   };
   const check = () => {
     setChecked(true);
     if (result.done) finish();
-    else setActive(nextOpen(result.words, result.words.length - 1));
+    else setActive(nextOpenSlot(result.words, result.words.length - 1));
   };
   const submit = () => (result.done ? onNext() : check());
   /** Bấm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
@@ -149,7 +127,7 @@ export default function DictationPanel({
     const fresh = ks.filter((k) => !revealed.has(k) && result.words[k].state !== "correct");
     if (!fresh.length) return;
     const r = change(slots, new Set([...revealed, ...fresh]));
-    if (!isOpen(r.words[active])) setActive(nextOpen(r.words, active));
+    if (!isOpenWord(r.words[active])) setActive(nextOpenSlot(r.words, active));
     onHint?.(fresh.length);
   };
   const revealAll = () => reveal(result.words.map((_, k) => k));
@@ -212,7 +190,7 @@ export default function DictationPanel({
                 onTogglePlay();
               } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
                 e.preventDefault();
-                setActive(nextOpen(result.words, active, e.key === "ArrowRight" ? 1 : -1));
+                setActive(nextOpenSlot(result.words, active, e.key === "ArrowRight" ? 1 : -1));
               } else if (e.key === "Backspace" && !slots[active] && active > 0) {
                 // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
                 e.preventDefault();
