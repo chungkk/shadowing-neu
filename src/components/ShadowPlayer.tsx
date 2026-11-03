@@ -937,50 +937,61 @@ export default function ShadowPlayer({
           {mediaHidden && (
             <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
           )}
-          {/* Thanh công cụ ngay dưới video (cả Shadowing lẫn Chính tả) */}
-          <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-card-2/60 px-1.5 py-1.5 sm:gap-1 sm:px-2">
-            <button className="btn-icon" title="Câu trước (←)" onClick={prev} disabled={prevIdx === undefined}>
-              <ChevronLeft className="size-5" />
-            </button>
-            <button className="btn-icon" title="Phát lại câu" onClick={() => go(idx)}>
-              <RotateCcw className="size-5" />
-            </button>
-            <button className="btn-icon" title="Phát / dừng (Space)" onClick={togglePlay}>
-              {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
-            </button>
-            <button className="btn-icon" title="Câu sau (→)" onClick={next} disabled={nextIdx === undefined}>
-              <ChevronRight className="size-5" />
-            </button>
-            <div className="flex-1" />
-            <button
-              className="btn-icon w-auto gap-1 px-2 font-bold"
-              title="Tốc độ phát"
-              onClick={() => {
-                const r = RATES[(RATES.indexOf(settings.rate) + 1) % RATES.length];
-                update({ rate: r });
-                handleRef.current?.setRate(r);
-              }}
-            >
-              <Zap className="size-5" /> {settings.rate}×
-            </button>
-            <button
-              className={`btn-icon ${panel === "settings" ? "bg-foreground/10" : ""}`}
-              title="Cài đặt"
-              onClick={() => setPanel(panel === "settings" ? null : "settings")}
-            >
-              <Settings2 className="size-5" />
-            </button>
-            {/* Điện thoại không có bàn phím → ẩn bảng phím tắt */}
-            <button
-              className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-foreground/10" : ""}`}
-              title="Phím tắt"
-              onClick={() => setPanel(panel === "keys" ? null : "keys")}
-            >
-              <Keyboard className="size-5" />
-            </button>
-          </div>
+          {/* Thanh điều khiển ngay dưới video — Chính tả chỉ cần phát / nghe lại */}
+          {dictation ? (
+            <div className="flex gap-2 sm:gap-3">
+              <button className="btn btn-primary flex-1 py-3" title="Phát / dừng (Space)" onClick={togglePlay}>
+                {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Pause" : "Start"}
+              </button>
+              <button className="btn flex-1 py-3 tracking-wide uppercase" title="Nghe lại câu (Tab)" onClick={() => go(idx)}>
+                <RotateCcw className="size-5" /> Replay
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-card-2/60 px-1.5 py-1.5 sm:gap-1 sm:px-2">
+              <button className="btn-icon" title="Câu trước (←)" onClick={prev} disabled={prevIdx === undefined}>
+                <ChevronLeft className="size-5" />
+              </button>
+              <button className="btn-icon" title="Phát lại câu" onClick={() => go(idx)}>
+                <RotateCcw className="size-5" />
+              </button>
+              <button className="btn-icon" title="Phát / dừng (Space)" onClick={togglePlay}>
+                {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+              </button>
+              <button className="btn-icon" title="Câu sau (→)" onClick={next} disabled={nextIdx === undefined}>
+                <ChevronRight className="size-5" />
+              </button>
+              <div className="flex-1" />
+              <button
+                className="btn-icon w-auto gap-1 px-2 font-bold"
+                title="Tốc độ phát"
+                onClick={() => {
+                  const r = RATES[(RATES.indexOf(settings.rate) + 1) % RATES.length];
+                  update({ rate: r });
+                  handleRef.current?.setRate(r);
+                }}
+              >
+                <Zap className="size-5" /> {settings.rate}×
+              </button>
+              <button
+                className={`btn-icon ${panel === "settings" ? "bg-foreground/10" : ""}`}
+                title="Cài đặt"
+                onClick={() => setPanel(panel === "settings" ? null : "settings")}
+              >
+                <Settings2 className="size-5" />
+              </button>
+              {/* Điện thoại không có bàn phím → ẩn bảng phím tắt */}
+              <button
+                className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-foreground/10" : ""}`}
+                title="Phím tắt"
+                onClick={() => setPanel(panel === "keys" ? null : "keys")}
+              >
+                <Keyboard className="size-5" />
+              </button>
+            </div>
+          )}
 
-          {panel === "settings" && (
+          {!dictation && panel === "settings" && (
             <div className="grid gap-3 rounded-2xl border border-border bg-card-2/40 p-3 text-sm min-[400px]:grid-cols-2 sm:p-4">
               <label className="field">
                 Lặp mỗi câu
@@ -1040,7 +1051,7 @@ export default function ShadowPlayer({
               </label>
             </div>
           )}
-          {panel === "keys" && (
+          {!dictation && panel === "keys" && (
             <p className="rounded-2xl max-md:hidden border border-border bg-card-2/40 p-4 text-sm leading-7 text-muted">
               <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd>{" "}
               nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
