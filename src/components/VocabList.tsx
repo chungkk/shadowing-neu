@@ -113,15 +113,6 @@ function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
         <Stage v={v} now={now} />
       </div>
       <div className="col-start-2 row-start-1 flex items-center text-muted lg:col-start-4">
-        <a
-          href={`https://www.dict.cc/?s=${encodeURIComponent(v.word)}`}
-          target="_blank"
-          rel="noreferrer"
-          title="Tra dict.cc"
-          className="btn-icon size-8 text-muted hover:text-link"
-        >
-          <BookOpen className="size-4" />
-        </a>
         <button title="Dịch nghĩa bằng AI" className="btn-icon size-8 text-muted hover:text-amber" onClick={ai} disabled={aiPending}>
           <Sparkles className={`size-4 ${aiPending ? "animate-pulse text-amber" : ""}`} />
         </button>
