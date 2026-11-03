@@ -5,17 +5,18 @@ import { Image } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import Constants from "expo-constants";
-import { ActionSheetIOS, ActivityIndicator, Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Share, View } from "react-native";
+import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
 import { Row, Section } from "@/components/SettingsList";
 import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
-import { PointsBadge } from "@/components/Points";
+import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
 import { openLegal } from "@/lib/legal";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
 import { germanVoices, speakGerman, stopSpeaking } from "@/lib/speak";
@@ -152,7 +153,7 @@ function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" 
   const words = stats && Object.values(stats.mastery).reduce((a, b) => a + b, 0); // như web: không tính câu ⭐
   const num = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
   return (
-    <View style={{ backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 20, overflow: "hidden" }}>
+    <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 24, overflow: "hidden" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
         <Avatar user={user} />
         <View style={{ flex: 1, gap: 3 }}>
@@ -511,7 +512,7 @@ function Signed({ user }: { user: User }) {
 
       {!user.fixedAdmin && (
         <Section footer={t("acc.deleteSub")}>
-          <Row first icon="trash.fill" iconBg="rgba(220,38,38,0.25)" color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
+          <Row first icon="trash.fill" iconBg="rgba(232,56,79,0.25)" color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
             {hasPassword ? (
               <Input value={delPw} onChangeText={setDelPw} placeholder={t("acc.deletePw")} secureTextEntry autoComplete="current-password" textContentType="password" />
             ) : (
@@ -531,7 +532,8 @@ export default function SettingsScreen() {
   const { t } = useI18n();
   const { tablet } = useLayout();
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
+      <BrandBar />
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{
@@ -545,10 +547,7 @@ export default function SettingsScreen() {
           }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text style={[styles.h1, { flex: 1 }]}>{t("tabs.settings")}</Text>
-            <PointsBadge />
-          </View>
+          <Text style={styles.h1}>{t("tabs.settings")}</Text>
           {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
           {ready && !user && (
             <>

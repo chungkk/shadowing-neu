@@ -2,7 +2,8 @@ import { Image } from "expo-image";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { ModeBar, StudySession, type Mode } from "@/components/DeckStudy";
@@ -174,7 +175,7 @@ function TopicRow({ topic, first, last, onPress }: { topic: DeckTopic; first: bo
                   width: `${(topic.learned * 100) / topic.wordCount}%`,
                   height: "100%",
                   borderRadius: 2,
-                  backgroundColor: C.amber,
+                  backgroundColor: C.gold,
                 }}
               />
             </View>

@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Switch, View } from "react-native";
+import { Text } from "./Text";
 import { ErrorText, Input, styles } from "@/components/ui";
 import { api, ApiError, thumb, type LessonSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";

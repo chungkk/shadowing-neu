@@ -1,7 +1,8 @@
 import { Image } from "expo-image";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text, TextInput } from "./Text";
 import { blankExample, checkGuess, fullWord, hintOf, quizOptions, type StudyMode } from "@shared/deck-study";
 import { shuffle } from "@shared/review";
 import { Button } from "@/components/ui";
@@ -39,7 +40,7 @@ function SpeakButton({ w }: { w: DeckWord }) {
 
 /** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
 const Icon = ({ icon, image }: { icon: string; image?: string | null }) => (
-  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: "rgba(250,204,21,0.8)", alignItems: "center", justifyContent: "center" }}>
+  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: "rgba(251,191,36,0.8)", alignItems: "center", justifyContent: "center" }}>
     {image ? <Image source={{ uri: deckCover(image) }} style={{ width: 76, height: 76 }} contentFit="contain" /> : <Text style={{ fontSize: 48 }}>{icon}</Text>}
   </View>
 );
@@ -57,7 +58,7 @@ function Reveal({ w, ok, title }: { w: DeckWord; ok: boolean; title: string }) {
         borderRadius: 16,
         borderWidth: 2,
         borderColor: ok ? C.accent : C.red,
-        backgroundColor: ok ? "rgba(22,163,74,0.12)" : "rgba(220,38,38,0.12)",
+        backgroundColor: ok ? "rgba(23,128,63,0.12)" : "rgba(232,56,79,0.12)",
       }}
     >
       <Text

@@ -18,9 +18,9 @@ import {
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
-  Text,
   View,
 } from "react-native";
+import { Text } from "./Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
@@ -108,7 +108,7 @@ function Chip({ icon, iconOn, on, onPress, label, hint }: { icon: SFSymbol; icon
         borderWidth: 1,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: on ? "rgba(22,163,74,0.16)" : C.card2,
+        backgroundColor: on ? "rgba(23,128,63,0.16)" : C.card2,
         borderColor: on ? C.accent : C.border,
         opacity: pressed ? 0.7 : 1,
       })}
@@ -711,9 +711,9 @@ export default function Player({
         paddingVertical: 10,
         paddingHorizontal: 14,
         borderRadius: 12,
-        backgroundColor: "rgba(22,163,74,0.12)",
+        backgroundColor: "rgba(23,128,63,0.12)",
         borderWidth: 1,
-        borderColor: "rgba(22,163,74,0.35)",
+        borderColor: "rgba(23,128,63,0.35)",
       }}
     >
       <SymbolView name="arrow.uturn.forward.circle.fill" size={18} tintColor={C.accent} />
@@ -805,7 +805,7 @@ export default function Player({
   const roundPoints = dictPick.reduce((p, k) => p + (earned.has(k) ? POINTS_CORRECT : 0) - (spent[k] ?? 0) * POINTS_HINT, 0);
   const left = dictTotal - doneCount;
   const roundCard = dictation && (roundDone || !dictPick.length) && (
-    <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(22,163,74,0.12)", borderWidth: 1, borderColor: "rgba(22,163,74,0.35)" }}>
+    <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(23,128,63,0.12)", borderWidth: 1, borderColor: "rgba(23,128,63,0.35)" }}>
       {roundDone && (
         <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }}>
           {t("dict.roundDone", { n: dictPick.length, p: roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0 })}
@@ -988,7 +988,7 @@ export default function Player({
               borderRadius: 16,
               borderWidth: 2,
               borderColor: index === idx ? C.accent : C.border,
-              backgroundColor: index === idx ? "rgba(22,163,74,0.1)" : "transparent",
+              backgroundColor: index === idx ? "rgba(23,128,63,0.1)" : "transparent",
               gap: 6,
             }}
           >
@@ -1134,7 +1134,7 @@ export default function Player({
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: recState.isRecording ? C.red : "rgba(220,38,38,0.15)",
+                backgroundColor: recState.isRecording ? C.red : "rgba(232,56,79,0.15)",
                 alignItems: "center",
                 justifyContent: "center",
                 transform: [{ scale: pressed ? 0.92 : 1 }],

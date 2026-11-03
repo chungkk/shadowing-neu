@@ -1,13 +1,14 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { extractVideoId } from "@shared/youtube-id";
 import type { VideoHit } from "@shared/youtube-search";
 import { Button, Card, ErrorText, Input, styles } from "@/components/ui";
 import { thumb } from "@/lib/api";
-import { PointsBadge } from "@/components/Points";
+import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -97,10 +98,7 @@ export default function YouTubeScreen() {
 
   const header = (
     <View style={{ gap: 16, marginBottom: 16 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={[styles.h1, { flex: 1 }]}>{t("yt.title")}</Text>
-        <PointsBadge />
-      </View>
+      <Text style={styles.h1}>{t("yt.title")}</Text>
       <Card>
         <Text style={styles.muted}>{user ? t("yt.introUser") : t("yt.introGuest")}</Text>
         <Input
@@ -143,7 +141,8 @@ export default function YouTubeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
+      <BrandBar />
       {/* Chạm ra ngoài ô nhập → ẩn bàn phím (bàn phím không có nút "Xong", che mất thanh tab) */}
       <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>

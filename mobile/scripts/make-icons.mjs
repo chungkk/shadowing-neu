@@ -10,8 +10,9 @@ const sharp = require("sharp");
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "images");
 const WEB_OUT = path.join(process.cwd(), "src", "app");
 
-const BG_HI = "#1f2a24";
-const BG_LO = "#070b09";
+// Nền kem như giao diện web/app
+const BG_HI = "#fffdf9";
+const BG_LO = "#ffedd6";
 
 // Linh vật tắc kè đeo tai nghe (nền trong suốt, khung 1024); tâm hình nằm ở CX, CY.
 const MASCOT = (await readFile(path.join(OUT, "mascot.svg"), "utf8")).replace(/^<svg[^>]*>|<\/svg>\s*$/g, "");

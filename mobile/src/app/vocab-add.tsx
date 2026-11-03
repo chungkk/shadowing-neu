@@ -1,7 +1,8 @@
 import { Stack, router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { Button, ErrorText, Input, styles } from "@/components/ui";
 import { api, type VocabItem } from "@/lib/api";
 import { showError } from "@/lib/dialogs";
@@ -96,7 +97,7 @@ export default function VocabAddScreen() {
         contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 16, gap: 18, paddingBottom: 40 }}
       >
         {!!saved && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(22,163,74,0.14)" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(23,128,63,0.14)" }}>
             <SymbolView name="checkmark.circle.fill" size={16} tintColor={C.accent} />
             <Text style={{ flex: 1, color: C.accent, fontWeight: "700" }} numberOfLines={1}>
               {t("vocabAdd.saved", { w: saved })}
@@ -158,7 +159,7 @@ export default function VocabAddScreen() {
                 borderRadius: 99,
                 borderWidth: 1,
                 borderColor: C.amber,
-                backgroundColor: pressed ? "rgba(250,204,21,0.2)" : "rgba(250,204,21,0.1)",
+                backgroundColor: pressed ? "rgba(251,191,36,0.2)" : "rgba(251,191,36,0.1)",
                 opacity: !w || tooLong ? 0.4 : 1,
               })}
             >

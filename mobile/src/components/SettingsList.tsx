@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "./Text";
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 
 /** Nhóm kiểu Cài đặt iOS: tiêu đề nhỏ · khung bo góc chứa các dòng · chú thích bên dưới */
 export function Section({ title, footer, children }: { title?: string; footer?: ReactNode; children: ReactNode }) {
@@ -12,7 +13,7 @@ export function Section({ title, footer, children }: { title?: string; footer?: 
           {title}
         </Text>
       )}
-      <View style={{ backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 16, overflow: "hidden" }}>{children}</View>
+      <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 24, overflow: "hidden" }}>{children}</View>
       {!!footer && <Text style={{ color: C.muted, fontSize: 13, marginHorizontal: 14, lineHeight: 18 }}>{footer}</Text>}
     </View>
   );
@@ -96,7 +97,7 @@ export function Row({
           <SymbolView
             name={external ? "arrow.up.right" : open ? "chevron.down" : "chevron.right"}
             size={13}
-            tintColor="#4a5a50"
+            tintColor={C.muted}
             weight="semibold"
           />
         )}

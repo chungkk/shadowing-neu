@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Animated, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "./Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { locatePhrase } from "@shared/phrase-match";
 import { api, type WordDetail, type WordInfo } from "@/lib/api";
@@ -173,7 +174,7 @@ export function WordSheet({
                 {shown.word}
               </Text>
               {saved && (
-                <View style={{ backgroundColor: "rgba(250,204,21,0.15)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                <View style={{ backgroundColor: "rgba(251,191,36,0.15)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Text style={{ color: C.amber, fontSize: 12, fontWeight: "700" }}>{t("word.saved")}</Text>
                 </View>
               )}
@@ -304,9 +305,9 @@ export function WordSheet({
                               gap: 4,
                               padding: 12,
                               borderRadius: 12,
-                              backgroundColor: s.current ? "rgba(22,163,74,0.1)" : C.background,
+                              backgroundColor: s.current ? "rgba(23,128,63,0.1)" : C.background,
                               borderWidth: 1,
-                              borderColor: s.current ? "rgba(22,163,74,0.4)" : C.border,
+                              borderColor: s.current ? "rgba(23,128,63,0.4)" : C.border,
                             }}
                           >
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -341,7 +342,7 @@ export function WordSheet({
                     )}
                     {/* 💡 Mẹo nhớ + từ đi kèm → nghĩa */}
                     {(!!detail.data.tip || !!detail.data.cues?.length) && (
-                      <View style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(250,204,21,0.08)", borderWidth: 1, borderColor: "rgba(250,204,21,0.3)" }}>
+                      <View style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(251,191,36,0.08)", borderWidth: 1, borderColor: "rgba(251,191,36,0.3)" }}>
                         <Text style={{ color: C.amber, fontSize: 14, fontWeight: "700" }}>💡 {t("word.tip")}</Text>
                         {!!detail.data.tip && <Text style={{ color: C.text, fontSize: 15, lineHeight: 22 }}>{detail.data.tip}</Text>}
                         {detail.data.cues?.map((c, i) => (
@@ -507,7 +508,7 @@ function SpeakButton({
         borderRadius: 19,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: active ? C.accent : "rgba(22,163,74,0.15)",
+        backgroundColor: active ? C.accent : "rgba(23,128,63,0.15)",
         transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
@@ -520,7 +521,7 @@ function Skeleton({ widths, height }: { widths: `${number}%`[]; height: number }
   return (
     <View style={{ gap: 8, paddingVertical: 2 }}>
       {widths.map((w, i) => (
-        <View key={i} style={{ height, width: w, borderRadius: 6, backgroundColor: "rgba(238,245,239,0.08)" }} />
+        <View key={i} style={{ height, width: w, borderRadius: 6, backgroundColor: "rgba(85,48,63,0.08)" }} />
       ))}
     </View>
   );

@@ -3,7 +3,8 @@ import { Stack, router, useLocalSearchParams, useNavigation, usePreventRemove } 
 import { SymbolView } from "expo-symbols";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Button, Input, Segmented, styles } from "@/components/ui";
 import { api } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";

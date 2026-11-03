@@ -2,14 +2,15 @@ import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { ErrorText, styles } from "@/components/ui";
 import { api, deckCover, getVocabVersion, type DeckSummary } from "@/lib/api";
-import { PointsBadge } from "@/components/Points";
+import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 
@@ -38,9 +39,8 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
         alignItems: "center",
         gap: 14,
         padding: 14,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: C.border,
+        borderRadius: 24,
+        ...STICKER,
         backgroundColor: pressed ? C.card2 : C.card,
       })}
     >
@@ -85,7 +85,7 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
 
 /** Thẻ game từ vựng (Mưa từ vựng · Đào vàng) → màn chơi /game/<variant> */
 const GAMES = [
-  { variant: "rain", bg: "linear-gradient(to bottom, #0a1622, #0c2033, #0b2a40)", art: ["1f327-fe0f", "26f5"], tone: "#67e8f9" },
+  { variant: "rain", bg: "linear-gradient(to bottom, #0a1622, #0c2033, #0b2a40)", art: ["1f327-fe0f", "26f5"], tone: "#0e7490" },
   { variant: "gold", bg: "linear-gradient(to bottom, #2a3442 0%, #2a3442 34%, #6b4520 34%, #2e1c0b 100%)", art: ["1f477", "1fa99"], tone: C.amber },
 ] as const;
 
@@ -97,7 +97,7 @@ function GameCard({ game, width }: { game: (typeof GAMES)[number]; width: number
       onPress={() => router.push({ pathname: "/game/[variant]", params: { variant: game.variant } })}
       accessibilityRole="button"
       accessibilityLabel={t(`games.${game.variant}.title`)}
-      style={({ pressed }) => ({ width, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: pressed ? C.card2 : C.card, overflow: "hidden" })}
+      style={({ pressed }) => ({ width, borderRadius: 24, ...STICKER, backgroundColor: pressed ? C.card2 : C.card, overflow: "hidden" })}
     >
       <View style={{ height: 84, backgroundImage: game.bg, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
         <Image source={emoji(game.art[0])} style={{ width: 52, height: 52 }} />
@@ -131,9 +131,8 @@ function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
         width,
         padding: 10,
         gap: 10,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: C.border,
+        borderRadius: 24,
+        ...STICKER,
         backgroundColor: pressed ? C.card2 : C.card,
       })}
     >
@@ -153,7 +152,7 @@ function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
       {/* Tiến độ: phần đã học */}
       {saved > 0 && saved < deck.wordCount && (
         <View style={{ height: 3, borderRadius: 2, backgroundColor: C.card2, marginHorizontal: 2, marginTop: -4 }}>
-          <View style={{ width: `${(saved * 100) / deck.wordCount}%`, height: "100%", borderRadius: 2, backgroundColor: C.amber }} />
+          <View style={{ width: `${(saved * 100) / deck.wordCount}%`, height: "100%", borderRadius: 2, backgroundColor: C.gold }} />
         </View>
       )}
     </Pressable>
@@ -206,7 +205,8 @@ export default function VocabTab() {
   const cardW = Math.floor((inner - GAP * (cols - 1)) / cols);
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
+      <BrandBar />
       <ScrollView
         style={{ width: "100%", maxWidth: CONTENT_MAX + 2 * PAD, alignSelf: "center" }}
         contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: tablet ? 20 : 12, paddingBottom: 120, gap: 16 }}
@@ -224,7 +224,6 @@ export default function VocabTab() {
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Text style={[styles.h1, { flex: 1 }]}>{t("tabs.vocab")}</Text>
-          <PointsBadge />
           {/* Thêm từ tự do vào sổ */}
           {!!user && (
             <Pressable onPress={() => router.push("/vocab-add")} hitSlop={6} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel={t("vocab.add")}>

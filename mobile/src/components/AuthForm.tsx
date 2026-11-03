@@ -1,9 +1,11 @@
+import { Image } from "expo-image";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useEffect, useRef, useState, type ComponentRef, type Ref } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, Pressable, View, type TextInputProps } from "react-native";
+import { DISPLAY, Text, TextInput } from "./Text";
 import { useAuth } from "@/lib/auth";
 import { SocialLogin } from "@/components/SocialLogin";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -48,7 +50,7 @@ function Field({
         <SymbolView name={icon} size={18} tintColor={focused ? C.accent : C.muted} />
         <TextInput
           ref={ref}
-          placeholderTextColor="#5b6b60"
+          placeholderTextColor={C.muted}
           secureTextEntry={secure && hidden}
           {...props}
           onFocus={(e) => {
@@ -80,12 +82,14 @@ function PrimaryButton({ title, onPress, busy, disabled }: { title: string; onPr
       disabled={busy || disabled}
       style={({ pressed }) => ({
         height: 54,
-        borderRadius: 14,
+        borderRadius: 16,
         backgroundColor: C.accent,
+        ...STICKER,
+        boxShadow: `0 ${pressed ? 1 : 4}px 0 ${C.ink}`,
         alignItems: "center",
         justifyContent: "center",
-        opacity: busy || disabled ? 0.6 : pressed ? 0.85 : 1,
-        transform: [{ scale: pressed ? 0.98 : 1 }],
+        opacity: busy || disabled ? 0.6 : 1,
+        transform: [{ translateY: pressed ? 2 : 0 }],
       })}
     >
       {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>{title}</Text>}
@@ -150,7 +154,7 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
         >
           <SymbolView name={step === "code" ? "envelope.badge" : "key.fill"} size={32} tintColor="#fff" />
         </View>
-        <Text style={{ color: C.text, fontSize: 26, fontWeight: "800" }}>
+        <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 26, fontWeight: "800" }}>
           {step === "code" ? t("auth.resetTitle") : t("auth.forgotTitle")}
         </Text>
         <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", lineHeight: 21 }}>
@@ -336,24 +340,28 @@ export function AuthForm() {
     <View style={{ gap: 28, paddingTop: 24 }}>
       {/* Thương hiệu */}
       <View style={{ alignItems: "center", gap: 14 }}>
-        <View
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 22,
-            backgroundColor: C.accent,
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: C.accent,
-            shadowOpacity: 0.45,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 6 },
-          }}
-        >
-          <SymbolView name={codeStep ? "envelope.badge" : "waveform"} size={34} tintColor="#fff" weight="bold" />
-        </View>
+        {codeStep ? (
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 22,
+              backgroundColor: C.accent,
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: C.accent,
+              shadowOpacity: 0.45,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 6 },
+            }}
+          >
+            <SymbolView name="envelope.badge" size={34} tintColor="#fff" weight="bold" />
+          </View>
+        ) : (
+          <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 132, height: 132 }} />
+        )}
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Text style={{ color: C.text, fontSize: 26, fontWeight: "800" }}>
+          <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 26, fontWeight: "800" }}>
             {codeStep ? t("auth.codeTitle") : isRegister ? t("auth.createTitle") : t("auth.welcome")}
           </Text>
           <Text
@@ -455,9 +463,9 @@ export function AuthForm() {
               gap: 10,
               padding: 12,
               borderRadius: 12,
-              backgroundColor: "rgba(239,68,68,0.1)",
+              backgroundColor: "rgba(232,56,79,0.1)",
               borderWidth: 1,
-              borderColor: "rgba(239,68,68,0.3)",
+              borderColor: "rgba(232,56,79,0.3)",
             }}
           >
             <SymbolView name="exclamationmark.circle.fill" size={18} tintColor={C.redText} />
@@ -473,12 +481,14 @@ export function AuthForm() {
           style={({ pressed }) => ({
             height: 54,
             marginTop: 4,
-            borderRadius: 14,
+            borderRadius: 16,
             backgroundColor: C.accent,
+            ...STICKER,
+            boxShadow: `0 ${pressed ? 1 : 4}px 0 ${C.ink}`,
             alignItems: "center",
             justifyContent: "center",
-            opacity: busy || (codeStep && code.length !== 6) ? 0.6 : pressed ? 0.85 : 1,
-            transform: [{ scale: pressed ? 0.98 : 1 }],
+            opacity: busy || (codeStep && code.length !== 6) ? 0.6 : 1,
+            transform: [{ translateY: pressed ? 2 : 0 }],
           })}
         >
           {busy ? (

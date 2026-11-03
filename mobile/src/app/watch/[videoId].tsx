@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { LessonSheet } from "@/components/LessonSheet";
 import Player from "@/components/Player";
 import { Button } from "@/components/ui";

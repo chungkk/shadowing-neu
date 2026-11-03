@@ -12,11 +12,10 @@ import {
   ScrollView,
   SectionList,
   Share,
-  Text,
-  TextInput,
   View,
   type TextStyle,
 } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { isPhrase, isSentence, spokenWord } from "@shared/review";
@@ -916,7 +915,7 @@ export default function NotebookScreen() {
                     value={q}
                     onChangeText={setQ}
                     placeholder={t("vocab.search")}
-                    placeholderTextColor="#5b6b60"
+                    placeholderTextColor={C.muted}
                     autoCapitalize="none"
                     autoCorrect={false}
                     clearButtonMode="while-editing"

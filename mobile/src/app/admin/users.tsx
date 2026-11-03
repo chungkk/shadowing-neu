@@ -1,7 +1,8 @@
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { ErrorText, Segmented, styles } from "@/components/ui";
 import { api, type User } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
@@ -138,7 +139,7 @@ export default function UsersScreen() {
                 value={q}
                 onChangeText={setQ}
                 placeholder={t("admin.searchUsers")}
-                placeholderTextColor="#5b6b60"
+                placeholderTextColor={C.muted}
                 autoCapitalize="none"
                 autoCorrect={false}
                 clearButtonMode="while-editing"
@@ -169,7 +170,7 @@ export default function UsersScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: u.role === "admin" ? "rgba(250,204,21,0.15)" : C.card2,
+                backgroundColor: u.role === "admin" ? "rgba(251,191,36,0.15)" : C.card2,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -192,11 +193,11 @@ export default function UsersScreen() {
                 {u.email}
               </Text>
             </View>
-            <Text style={{ color: "#4a5a50", fontSize: 12 }}>
+            <Text style={{ color: C.muted, fontSize: 12 }}>
               {new Date(u.createdAt.replace(" ", "T") + "Z").toLocaleDateString(lang, { day: "numeric", month: "short", year: "2-digit" })}
             </Text>
             {u.locked ? (
-              <SymbolView name="lock.fill" size={13} tintColor="#4a5a50" />
+              <SymbolView name="lock.fill" size={13} tintColor={C.muted} />
             ) : (
               <SymbolView name="ellipsis" size={15} tintColor={C.muted} />
             )}

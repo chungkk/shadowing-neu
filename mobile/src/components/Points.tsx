@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
-import { AccessibilityInfo, Animated, Easing, Text, View } from "react-native";
+import { AccessibilityInfo, Animated, Easing, View } from "react-native";
+import { FONT, Text } from "./Text";
 import { api, type Points } from "@/lib/api";
+import { C } from "@/lib/theme";
 import { useAuth } from "@/lib/auth";
 import { setPointsTotal, usePoints } from "@/lib/points";
 import { POINTS_CORRECT } from "@shared/dictation";
@@ -26,7 +28,7 @@ export function Gem({ size = 20 }: { size?: number }) {
 }
 
 /** Màu điểm: xanh kim cương (chữ, viền) */
-export const GEM = "#38bdf8";
+export const GEM = C.gem;
 
 const SPARKS = Array.from({ length: 8 }, (_, k) => {
   const a = ((k * 45 + 22) * Math.PI) / 180;
@@ -68,8 +70,8 @@ export function PointsPill({ total, earned }: { total: number; earned: number })
         paddingVertical: 3,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "rgba(56,189,248,0.35)",
-        backgroundColor: "rgba(56,189,248,0.1)",
+        borderColor: "rgba(3,105,161,0.35)",
+        backgroundColor: "rgba(3,105,161,0.1)",
       }}
     >
       <Animated.Text
@@ -79,9 +81,10 @@ export function PointsPill({ total, earned }: { total: number; earned: number })
           right: "100%",
           marginRight: 6,
           color: GEM,
+          fontFamily: FONT,
           fontSize: 16,
           fontWeight: "900",
-          textShadowColor: "rgba(56,189,248,0.6)",
+          textShadowColor: "rgba(3,105,161,0.6)",
           textShadowRadius: 10,
           textShadowOffset: { width: 0, height: 0 },
           opacity: pop.interpolate({ inputRange: [0, 0.12, 0.7, 1], outputRange: [0, 1, 1, 0] }),

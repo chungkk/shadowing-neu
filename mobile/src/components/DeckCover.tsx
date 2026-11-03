@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { SymbolView } from "expo-symbols";
-import { Text, View, type ViewStyle } from "react-native";
+import { View, type ViewStyle } from "react-native";
+import { Text } from "./Text";
 import { deckCover, type DeckSummary } from "@/lib/api";
 import { LEVEL_COLORS } from "@/lib/theme";
 

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text, TextInput } from "./Text";
 import { SymbolView } from "expo-symbols";
 import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@shared/dictation";
 import { GEM, Gem } from "./Points";
@@ -9,11 +10,11 @@ import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 
 const BOX: Record<WordState | "hint", { border: string; bg: string; fg: string }> = {
-  correct: { border: C.accent, bg: "rgba(22,163,74,0.15)", fg: C.text },
-  close: { border: C.amber, bg: "rgba(250,204,21,0.1)", fg: C.amber },
-  wrong: { border: C.red, bg: "rgba(220,38,38,0.1)", fg: C.redText },
-  missing: { border: "rgba(220,38,38,0.6)", bg: "transparent", fg: C.muted },
-  revealed: { border: "rgba(250,204,21,0.6)", bg: "rgba(250,204,21,0.05)", fg: C.amber },
+  correct: { border: C.accent, bg: "rgba(23,128,63,0.15)", fg: C.text },
+  close: { border: C.amber, bg: "rgba(251,191,36,0.1)", fg: C.amber },
+  wrong: { border: C.red, bg: "rgba(232,56,79,0.1)", fg: C.redText },
+  missing: { border: "rgba(232,56,79,0.6)", bg: "transparent", fg: C.muted },
+  revealed: { border: "rgba(251,191,36,0.6)", bg: "rgba(251,191,36,0.05)", fg: C.amber },
   hint: { border: C.border, bg: C.background, fg: C.muted },
 };
 
@@ -223,7 +224,7 @@ export function DictationPanel({
             paddingRight: 9,
             paddingVertical: 2,
             borderRadius: 999,
-            backgroundColor: "rgba(56,189,248,0.15)",
+            backgroundColor: "rgba(3,105,161,0.15)",
           }}
         >
           <Gem size={16} />

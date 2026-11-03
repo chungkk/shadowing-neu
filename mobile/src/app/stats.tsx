@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Text } from "@/components/Text";
 import { GEM, Gem } from "@/components/Points";
 import { ErrorText, styles } from "@/components/ui";
 import { api, type Rate, type Stats } from "@/lib/api";
@@ -8,19 +9,19 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX } from "@/lib/layout";
 import { masteryMeta } from "@/lib/mastery";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 import type { Mastery } from "@shared/srs";
 
 const CHART_H = 96;
 /** Mức thành thạo có thứ tự → sắc độ 1 màu xanh (tối → sáng = thạo hơn); "Mới lưu" xám trung tính */
-const MASTERY_FILL: Record<Mastery, string> = { saved: "#3b4a41", learning: "#14532d", active: "#16a34a", mastered: "#4ade80" };
+const MASTERY_FILL: Record<Mastery, string> = { saved: "#ecd3bb", learning: "#86c79a", active: "#17803f", mastered: "#0e5a2b" };
 const MASTERY_ORDER: Mastery[] = ["saved", "learning", "active", "mastered"];
 
 const pct = (r: Rate) => (r.n ? `${Math.round((r.ok / r.n) * 100)}%` : "—");
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={{ backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 16, gap: 12 }}>
+    <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16, gap: 12 }}>
       <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{title}</Text>
       {children}
     </View>
@@ -29,7 +30,7 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 function Tile({ label, value, icon, color = C.text }: { label: string; value: string; icon?: ReactNode; color?: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, paddingVertical: 14, paddingHorizontal: 12, gap: 4 }}>
+    <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 24, ...STICKER, paddingVertical: 14, paddingHorizontal: 12, gap: 4 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         {icon}
         <Text style={{ color, fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{value}</Text>

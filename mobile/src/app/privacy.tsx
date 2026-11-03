@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Stack, useFocusEffect } from "expo-router";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync, type PermissionResponse } from "expo-audio";
-import { ActivityIndicator, Alert, AppState, Linking, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Linking, ScrollView, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Row, Section } from "@/components/SettingsList";
 import { styles } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -11,7 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { openLegal } from "@/lib/legal";
 import { FORM_MAX } from "@/lib/layout";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 
 function Pledge({ icon, children }: { icon: SFSymbol; children: string }) {
   return (
@@ -26,10 +27,10 @@ function Pledge({ icon, children }: { icon: SFSymbol; children: string }) {
 function Hero() {
   const { t } = useI18n();
   return (
-    <View style={{ backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 20, padding: 18, gap: 14 }}>
+    <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 24, padding: 18, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View
-          style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "rgba(22,163,74,0.16)", alignItems: "center", justifyContent: "center" }}
+          style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "rgba(23,128,63,0.16)", alignItems: "center", justifyContent: "center" }}
         >
           <SymbolView name="lock.shield.fill" size={26} tintColor={C.accent} />
         </View>

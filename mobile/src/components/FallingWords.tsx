@@ -3,7 +3,8 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { memo, useCallback, type ComponentRef, useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, Animated, AppState, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Animated, AppState, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { Text, TextInput } from "./Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fullWord } from "@shared/deck-study";
 import {
@@ -35,7 +36,7 @@ import { api, deckCover, type DeckSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
-import { C, LEVEL_COLORS } from "@/lib/theme";
+import { LEVEL_COLORS, NIGHT as C } from "@/lib/theme";
 
 /**
  * Game chữ rơi trong app (bản native của components/FallingWords trên web, chung luật chơi ở @shared/falling-words):

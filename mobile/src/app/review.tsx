@@ -3,7 +3,8 @@ import { Stack, router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   buildQueue,
@@ -35,7 +36,7 @@ import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLookup } from "@/lib/useLookup";
 import { groupBySaved } from "@/lib/vocabGroups";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 
 /** Mục sổ từ kèm lịch ôn (server cũ không gửi → từ mới) */
 type Word = VocabItem & { stage: number; dueAt: number | null };
@@ -50,9 +51,9 @@ const BLUE = C.phrase;
 type Tone = "idle" | "sel" | "right" | "wrong" | "dim";
 const TONES: Record<Tone, { border: string; bg: string; fg: string }> = {
   idle: { border: C.border, bg: C.card2, fg: C.text },
-  sel: { border: BLUE, bg: "rgba(56,189,248,0.15)", fg: BLUE },
-  right: { border: C.accent, bg: "rgba(22,163,74,0.18)", fg: "#4ade80" },
-  wrong: { border: C.red, bg: "rgba(220,38,38,0.15)", fg: C.redText },
+  sel: { border: BLUE, bg: "rgba(3,105,161,0.15)", fg: BLUE },
+  right: { border: C.accent, bg: "rgba(23,128,63,0.18)", fg: C.accent },
+  wrong: { border: C.red, bg: "rgba(232,56,79,0.15)", fg: C.redText },
   dim: { border: C.border, bg: C.card2, fg: C.muted },
 };
 
@@ -588,7 +589,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               editable={!feedback}
               autoFocus
               placeholder={t("review.typeHere")}
-              placeholderTextColor="#5b6b60"
+              placeholderTextColor={C.muted}
               autoCapitalize="none"
               autoCorrect={false}
               spellCheck={false}
@@ -731,7 +732,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       const tone = TONES[ok ? "right" : "wrong"];
       const praise = t("review.praise").split("|");
       return (
-        <View style={{ backgroundColor: ok ? "rgba(22,163,74,0.16)" : "rgba(220,38,38,0.14)", borderTopWidth: 2, borderColor: tone.border, padding: 16, gap: 10 }}>
+        <View style={{ backgroundColor: ok ? "rgba(23,128,63,0.16)" : "rgba(232,56,79,0.14)", borderTopWidth: 2, borderColor: tone.border, padding: 16, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.card, alignItems: "center", justifyContent: "center" }}>
               <SymbolView name={ok ? "checkmark" : "xmark"} size={18} weight="black" tintColor={tone.fg} />
@@ -825,7 +826,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               {stats.map((s) => (
                 <View key={s.label} style={{ flex: 1, borderWidth: 2, borderColor: s.color, borderRadius: 16, overflow: "hidden" }}>
                   <Text
-                    style={{ backgroundColor: s.color, color: C.background, textAlign: "center", fontSize: 11, fontWeight: "800", paddingVertical: 4, textTransform: "uppercase" }}
+                    style={{ backgroundColor: s.color, color: C.text, textAlign: "center", fontSize: 11, fontWeight: "800", paddingVertical: 4, textTransform: "uppercase" }}
                     numberOfLines={1}
                   >
                     {s.label}
@@ -1056,9 +1057,9 @@ function ChoiceRow({ icon, title, info, onPress }: { icon: SFSymbol; title: stri
 /** Thẻ nhiệm vụ hôm nay: icon · tên · tình trạng · nút hành động */
 function TaskCard({ icon, title, info, children }: { icon: SFSymbol; title: string; info: string; children: ReactNode }) {
   return (
-    <View style={{ backgroundColor: C.card, borderRadius: 20, borderWidth: 1, borderColor: C.border, padding: 16, gap: 14 }}>
+    <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(22,163,74,0.15)", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(23,128,63,0.15)", alignItems: "center", justifyContent: "center" }}>
           <SymbolView name={icon} size={18} tintColor={C.accent} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>

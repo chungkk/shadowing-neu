@@ -1,15 +1,16 @@
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import type { ComponentRef, ReactNode, Ref } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
-import { C, LEVEL_COLORS } from "@/lib/theme";
+import { ActivityIndicator, Pressable, StyleSheet, View, type TextInputProps, type ViewStyle } from "react-native";
+import { DISPLAY, Text, TextInput } from "./Text";
+import { C, LEVEL_COLORS, STICKER } from "@/lib/theme";
 
 type Variant = "primary" | "amber" | "red" | "plain";
 
-const VARIANTS: Record<Variant, { bg: string; border: string; fg: string; shadow: string }> = {
-  primary: { bg: C.accent, border: C.accent, fg: "#fff", shadow: C.accentDark },
-  amber: { bg: "rgba(250,204,21,0.1)", border: C.amber, fg: C.amber, shadow: "#854d0e" },
-  red: { bg: "rgba(220,38,38,0.15)", border: C.red, fg: C.redText, shadow: "#7f1d1d" },
-  plain: { bg: C.card2, border: C.border, fg: C.text, shadow: "transparent" },
+const VARIANTS: Record<Variant, { bg: string; fg: string }> = {
+  primary: { bg: C.accent, fg: "#fff" },
+  amber: { bg: C.gold, fg: "#000" },
+  red: { bg: C.red, fg: "#fff" },
+  plain: { bg: C.card, fg: C.text },
 };
 
 /** Nút lớn kiểu "nổi" (viền dưới đậm) giống bản web */
@@ -39,11 +40,9 @@ export function Button({
         styles.btn,
         {
           backgroundColor: v.bg,
-          borderColor: v.border,
-          borderBottomColor: variant === "plain" ? v.border : v.shadow,
-          borderBottomWidth: variant === "plain" ? 1 : pressed ? 2 : 4,
+          boxShadow: `0 ${pressed ? 1 : variant === "plain" ? 3 : 4}px 0 ${C.ink}`,
           opacity: disabled ? 0.4 : 1,
-          transform: [{ translateY: pressed && variant !== "plain" ? 2 : 0 }],
+          transform: [{ translateY: pressed ? 2 : 0 }],
         },
         style,
       ]}
@@ -91,10 +90,10 @@ export function Cta({
           gap: 10,
           paddingHorizontal: 20,
           backgroundColor: bg,
-          borderWidth: tone === "neutral" ? 1 : 0,
-          borderColor: C.border,
+          ...STICKER,
+          boxShadow: `0 ${pressed ? 1 : 4}px 0 ${C.ink}`,
           opacity: loading ? 0.7 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          transform: [{ translateY: pressed ? 2 : 0 }],
         },
         style,
       ]}
@@ -137,7 +136,7 @@ export function Segmented<T extends string>({
 export function LevelBadge({ level, style }: { level: string; style?: ViewStyle }) {
   const c = LEVEL_COLORS[level[0]] ?? LEVEL_COLORS.A;
   return (
-    <View style={[{ backgroundColor: c.bg, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }, style]}>
+    <View style={[{ backgroundColor: c.bg, borderRadius: 999, borderWidth: 2, borderColor: C.ink, paddingHorizontal: 8 }, style]}>
       <Text style={{ color: c.fg, fontWeight: "800", fontSize: 13 }}>{level}</Text>
     </View>
   );
@@ -167,8 +166,9 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: C.ink,
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
@@ -176,18 +176,18 @@ export const styles = StyleSheet.create({
   seg: { flexDirection: "row", backgroundColor: C.card2, borderRadius: 12, padding: 4, alignSelf: "center" },
   segItem: { borderRadius: 9, paddingVertical: 7, paddingHorizontal: 16 },
   segText: { fontWeight: "800", fontSize: 14 },
-  card: { backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 18, padding: 16, gap: 12 },
+  card: { backgroundColor: C.card, ...STICKER, borderRadius: 24, padding: 16, gap: 12 },
   input: {
-    backgroundColor: C.background,
-    borderColor: C.border,
-    borderWidth: 1,
-    borderRadius: 12,
+    backgroundColor: C.card,
+    borderColor: "rgba(85,48,63,0.4)",
+    borderWidth: 2,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: C.text,
     fontSize: 16,
   },
-  error: { color: C.redText, backgroundColor: "rgba(239,68,68,0.1)", padding: 10, borderRadius: 10, overflow: "hidden" },
-  h1: { color: C.text, fontSize: 24, fontWeight: "800" },
+  error: { color: C.redText, backgroundColor: "rgba(232,56,79,0.1)", padding: 10, borderRadius: 10, overflow: "hidden" },
+  h1: { color: C.text, fontFamily: DISPLAY, fontSize: 26, fontWeight: "800" },
   muted: { color: C.muted, fontSize: 14 },
 });

@@ -2,13 +2,14 @@ import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { DISPLAY, Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { PointsBadge } from "@/components/Points";
+import { BrandBar } from "@/components/Brand";
 import { LevelBadge, styles } from "@/components/ui";
 import { api, getLessonsVersion, thumb, type LessonSummary, type LockInfo, type ProgressSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { C, LEVELS } from "@/lib/theme";
+import { C, LEVELS, STICKER } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 import { usePoints } from "@/lib/points";
@@ -138,8 +139,8 @@ const isNew = (l: LessonSummary) => {
 function NewBadge() {
   const { t } = useI18n();
   return (
-    <View style={{ backgroundColor: "rgba(250,204,21,0.15)", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
-      <Text style={{ color: C.amber, fontWeight: "700", fontSize: 11 }}>{t("lessons.newest")}</Text>
+    <View style={{ backgroundColor: C.gold, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 }}>
+      <Text style={{ color: "#000", fontWeight: "700", fontSize: 11 }}>{t("lessons.newest")}</Text>
     </View>
   );
 }
@@ -155,7 +156,7 @@ function AccessBadge({ l, size }: { l: LessonSummary; size: number }) {
     );
   if (l.access === "free")
     return (
-      <View style={{ position: "absolute", top: 4, right: 4, backgroundColor: C.accent, borderRadius: 6, paddingHorizontal: 6 }} pointerEvents="none">
+      <View style={{ position: "absolute", top: 8, left: 8, backgroundColor: C.accent, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }} pointerEvents="none">
         <Text style={{ color: "#fff", fontWeight: "800", fontSize: 11 }}>{t("lock.free")}</Text>
       </View>
     );
@@ -163,57 +164,6 @@ function AccessBadge({ l, size }: { l: LessonSummary; size: number }) {
 }
 
 /** Hàng gọn: ảnh nhỏ bên trái, tên + cấp độ + số câu bên phải */
-function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
-  const { t } = useI18n();
-  return (
-    <Pressable
-      onPress={() => router.push(`/lesson/${l.id}`)}
-      accessibilityRole="button"
-      accessibilityLabel={lessonLabel(l, p, t)}
-      style={({ pressed }) => ({
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 14,
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-        borderRadius: 12,
-        backgroundColor: pressed ? C.card2 : "transparent",
-      })}
-    >
-      <View>
-        <Image
-          source={thumb(l.videoId)}
-          alt=""
-          style={{ width: 120, aspectRatio: 16 / 9, borderRadius: 10, backgroundColor: C.card2 }}
-          contentFit="cover"
-          transition={150}
-        />
-        <View style={{ position: "absolute", inset: 0, borderRadius: 10, overflow: "hidden" }} pointerEvents="none">
-          <ProgressBar p={p} />
-          <AccessBadge l={l} size={20} />
-        </View>
-        {!l.published && (
-          <View style={{ position: "absolute", bottom: 4, left: 4, backgroundColor: C.amber, borderRadius: 6, paddingHorizontal: 6 }}>
-            <Text style={{ fontWeight: "800", fontSize: 11 }}>{t("lessons.draft")}</Text>
-          </View>
-        )}
-      </View>
-      <View style={{ flex: 1, gap: 6 }}>
-        <Text style={{ color: C.text, fontWeight: "600", fontSize: 15, lineHeight: 20 }} numberOfLines={2}>
-          {l.title}
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <LevelBadge level={l.level} style={{ paddingHorizontal: 6, paddingVertical: 1 }} />
-          <Text style={{ color: C.muted, fontSize: 13 }}>{t("sentences", { n: sentences(l) })}</Text>
-          {isNew(l) && !p && <NewBadge />}
-          <ProgressText p={p} />
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
 /** Thẻ dọc trong lưới (iPad): ảnh to phía trên, tên + cấp độ bên dưới */
 function LessonCard({ l, width, p }: { l: LessonSummary; width: number; p?: ProgressSummary }) {
   const { t } = useI18n();
@@ -224,21 +174,19 @@ function LessonCard({ l, width, p }: { l: LessonSummary; width: number; p?: Prog
       accessibilityLabel={lessonLabel(l, p, t)}
       style={({ pressed }) => ({
         width,
-        borderRadius: 16,
-        overflow: "hidden",
+        borderRadius: 24,
         backgroundColor: pressed ? C.card2 : C.card,
-        borderWidth: 1,
-        borderColor: C.border,
-        transform: [{ scale: pressed ? 0.98 : 1 }],
+        ...STICKER,
+        transform: [{ translateY: pressed ? 2 : 0 }],
       })}
     >
       <View>
         {/* Thẻ rộng ~300pt (~600px trên Retina) → ảnh 480px cho đỡ mờ */}
-        <Image source={thumb(l.videoId, "hq")} alt="" style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: C.card2 }} contentFit="cover" transition={150} />
+        <Image source={thumb(l.videoId, "hq")} alt="" style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: C.card2, borderTopLeftRadius: 22, borderTopRightRadius: 22 }} contentFit="cover" transition={150} />
         <ProgressBar p={p} />
         <AccessBadge l={l} size={30} />
         {!l.published && (
-          <View style={{ position: "absolute", bottom: 8, left: 8, backgroundColor: C.amber, borderRadius: 6, paddingHorizontal: 6 }}>
+          <View style={{ position: "absolute", bottom: 8, left: 8, backgroundColor: C.gold, borderRadius: 6, paddingHorizontal: 6 }}>
             <Text style={{ fontWeight: "800", fontSize: 12 }}>{t("lessons.draft")}</Text>
           </View>
         )}
@@ -300,7 +248,9 @@ function Chip({ label, count, active, onPress }: { label: string; count: number;
         height: 34,
         paddingHorizontal: 14,
         borderRadius: 17,
-        backgroundColor: active ? C.accent : C.card2,
+        borderWidth: 2,
+        borderColor: C.ink,
+        backgroundColor: active ? C.accent : C.card,
       }}
     >
       <Text style={{ color: active ? "#fff" : C.text, fontWeight: "800", fontSize: 14 }}>{label}</Text>
@@ -331,7 +281,7 @@ export default function LessonsScreen() {
   const { width, tablet } = useLayout();
   const { t } = useI18n();
   // iPad: lưới thẻ, mỗi thẻ rộng khoảng 260–340pt (2 cột khi chia đôi màn hình, 4 cột khi nằm ngang)
-  const PAD = tablet ? 20 : 8;
+  const PAD = tablet ? 20 : 16;
   const GAP = 16;
   const columns = tablet ? Math.min(4, Math.max(2, Math.floor((width - PAD * 2 + GAP) / (260 + GAP)))) : 1;
   const cardWidth = (width - PAD * 2 - GAP * (columns - 1)) / columns;
@@ -416,14 +366,11 @@ export default function LessonsScreen() {
   }, [shown, columns]);
 
   const header = (
-    <View style={{ gap: 16, paddingHorizontal: tablet ? 0 : 8, paddingTop: tablet ? 20 : 8, paddingBottom: 4 }}>
+    <View style={{ gap: 16, paddingTop: tablet ? 20 : 12, paddingBottom: 4 }}>
       <View style={{ gap: 4 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ flex: 1, color: C.text, fontWeight: "800", fontSize: tablet ? 40 : 34 }} accessibilityRole="header">
-            {t("lessons.title")}
-          </Text>
-          <PointsBadge />
-        </View>
+        <Text style={{ color: C.text, fontFamily: DISPLAY, fontWeight: "800", fontSize: tablet ? 40 : 34 }} accessibilityRole="header">
+          {t("lessons.title")}
+        </Text>
         <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lessons.subtitle")}</Text>
       </View>
 
@@ -437,9 +384,9 @@ export default function LessonsScreen() {
             paddingVertical: 10,
             paddingHorizontal: 14,
             borderRadius: 12,
-            backgroundColor: "rgba(220,38,38,0.1)",
+            backgroundColor: "rgba(232,56,79,0.1)",
             borderWidth: 1,
-            borderColor: "rgba(220,38,38,0.35)",
+            borderColor: "rgba(232,56,79,0.35)",
           }}
         >
           <SymbolView name="wifi.exclamationmark" size={16} tintColor={C.redText} />
@@ -468,7 +415,7 @@ export default function LessonsScreen() {
       {continuing.length > 0 && (
         <View style={{ gap: 10 }}>
           <SectionTitle title={t("lessons.continueHeading")} />
-          <View style={{ backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" }}>
+          <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER }}>
             {(showAll ? continuing : continuing.slice(0, CONTINUE_SHOWN)).map(({ p, kind, id, lesson, videoId }, i, arr) => (
               <ContinueRow
                 key={p.source}
@@ -510,14 +457,14 @@ export default function LessonsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
+      <BrandBar />
       <FlatList
         data={rows}
         keyExtractor={(row) => row.map((l) => l.id).join("-")}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 120, gap: tablet ? GAP : 0 }} // chừa chỗ cho thanh tab nổi
-        ItemSeparatorComponent={tablet ? undefined : () => <View style={{ height: 1, backgroundColor: C.border, marginLeft: 142, marginRight: 8 }} />}
+        contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 120, gap: GAP }} // chừa chỗ cho thanh tab nổi
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -530,17 +477,13 @@ export default function LessonsScreen() {
           />
         }
         ListHeaderComponent={header}
-        renderItem={({ item: row }) =>
-          tablet ? (
-            <View style={{ flexDirection: "row", gap: GAP }}>
-              {row.map((l) => (
-                <LessonCard key={l.id} l={l} width={cardWidth} p={progressOf.get(`/lesson/${l.id}`)} />
-              ))}
-            </View>
-          ) : (
-            <LessonRow l={row[0]} p={progressOf.get(`/lesson/${row[0].id}`)} />
-          )
-        }
+        renderItem={({ item: row }) => (
+          <View style={{ flexDirection: "row", gap: GAP }}>
+            {row.map((l) => (
+              <LessonCard key={l.id} l={l} width={cardWidth} p={progressOf.get(`/lesson/${l.id}`)} />
+            ))}
+          </View>
+        )}
         ListEmptyComponent={
           lessons === null ? (
             error ? (
