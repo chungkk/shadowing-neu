@@ -12,6 +12,7 @@ import { AuthForm } from "@/components/AuthForm";
 import { Row, Section } from "@/components/SettingsList";
 import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
+import { PointsBadge } from "@/components/Points";
 import { useAuth } from "@/lib/auth";
 import { openLegal } from "@/lib/legal";
 import { C } from "@/lib/theme";
@@ -544,7 +545,10 @@ export default function SettingsScreen() {
           }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.h1}>{t("tabs.settings")}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={[styles.h1, { flex: 1 }]}>{t("tabs.settings")}</Text>
+            <PointsBadge />
+          </View>
           {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
           {ready && !user && (
             <>

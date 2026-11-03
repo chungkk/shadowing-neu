@@ -174,7 +174,7 @@ export default function StatsScreen() {
               <Tile
                 icon={<Gem size={24} />}
                 color={GEM}
-                value={`${s.points.total}`}
+                value={s.points.total.toLocaleString("vi-VN")}
                 label={`${t("stats.points")}${s.points.today ? ` · ${t("stats.pointsToday", { n: s.points.today > 0 ? `+${s.points.today}` : `−${-s.points.today}` })}` : ""}`}
               />
             )}

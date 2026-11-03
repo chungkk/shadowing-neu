@@ -7,6 +7,7 @@ import { extractVideoId } from "@shared/youtube-id";
 import type { VideoHit } from "@shared/youtube-search";
 import { Button, Card, ErrorText, Input, styles } from "@/components/ui";
 import { thumb } from "@/lib/api";
+import { PointsBadge } from "@/components/Points";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -96,7 +97,10 @@ export default function YouTubeScreen() {
 
   const header = (
     <View style={{ gap: 16, marginBottom: 16 }}>
-      <Text style={styles.h1}>{t("yt.title")}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Text style={[styles.h1, { flex: 1 }]}>{t("yt.title")}</Text>
+        <PointsBadge />
+      </View>
       <Card>
         <Text style={styles.muted}>{user ? t("yt.introUser") : t("yt.introGuest")}</Text>
         <Input

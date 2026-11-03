@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { ErrorText, styles } from "@/components/ui";
 import { api, deckCover, getVocabVersion, type DeckSummary } from "@/lib/api";
+import { PointsBadge } from "@/components/Points";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -223,6 +224,7 @@ export default function VocabTab() {
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Text style={[styles.h1, { flex: 1 }]}>{t("tabs.vocab")}</Text>
+          <PointsBadge />
           {/* Thêm từ tự do vào sổ */}
           {!!user && (
             <Pressable onPress={() => router.push("/vocab-add")} hitSlop={6} style={{ padding: 6 }} accessibilityRole="button" accessibilityLabel={t("vocab.add")}>

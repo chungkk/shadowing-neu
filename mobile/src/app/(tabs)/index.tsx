@@ -4,13 +4,16 @@ import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PointsBadge } from "@/components/Points";
 import { LevelBadge, styles } from "@/components/ui";
-import { api, getLessonsVersion, thumb, type LessonSummary, type ProgressSummary } from "@/lib/api";
+import { api, getLessonsVersion, thumb, type LessonSummary, type LockInfo, type ProgressSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C, LEVELS } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
+import { usePoints } from "@/lib/points";
 import { mergeProgress, useLocalProgress } from "@/lib/progress";
+import { FREE_PICKS } from "@shared/lesson-lock";
 
 const STALE_MS = 5 * 60_000; // mở tab: chỉ tải lại khi lâu chưa tải (tiến độ học trên máy này đã có sẵn qua @/lib/progress)
 const CONTINUE_SHOWN = 3; // "Tiếp tục học" thu gọn
@@ -306,6 +309,24 @@ function Chip({ label, count, active, onPress }: { label: string; count: number;
   );
 }
 
+/** Dòng giải thích khoá bài trên danh sách bài (admin bật khoá bài học) — như web */
+function LockNote({ lock, points }: { lock: LockInfo; points: number }) {
+  const { t } = useI18n();
+  const price = lock.price.toLocaleString("vi-VN");
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <SymbolView name="lock.fill" size={14} tintColor={C.muted} />
+      <Text style={{ flex: 1, color: C.muted, fontSize: 14, lineHeight: 20 }}>
+        {!lock.loggedIn
+          ? t("lock.noteGuest", { n: FREE_PICKS })
+          : lock.picksLeft > 0
+            ? t("lock.notePicks", { n: lock.picksLeft, price })
+            : t("lock.noteBuy", { price, points: points.toLocaleString("vi-VN") })}
+      </Text>
+    </View>
+  );
+}
+
 export default function LessonsScreen() {
   const { width, tablet } = useLayout();
   const { t } = useI18n();
@@ -317,6 +338,8 @@ export default function LessonsScreen() {
   const { user } = useAuth();
   const me = user?.id ?? null;
   const [lessons, setLessons] = useState<LessonSummary[] | null>(null);
+  const [lock, setLock] = useState<LockInfo | null>(null); // server cũ không gửi
+  const points = usePoints(user?.id); // số mới nhất: danh sách không tải lại mỗi lần học xong
   // Tiến độ tải từ server, kèm tài khoản của nó (đổi tài khoản → không dùng của người trước)
   const [server, setServer] = useState<{ user: number | null; list: ProgressSummary[] }>({ user: null, list: [] });
   const local = useLocalProgress(); // tiến độ vừa học trên máy này (có thể chưa lưu tới server)
@@ -333,12 +356,13 @@ export default function LessonsScreen() {
     try {
       setError("");
       const [l, p] = await Promise.all([
-        api<{ lessons: LessonSummary[] }>("/lessons"),
+        api<{ lessons: LessonSummary[]; lock?: LockInfo }>("/lessons"),
         // Lỗi tải tiến độ → null: giữ bản đang có thay vì xoá hết thanh tiến độ / "Tiếp tục học"
         me !== null ? api<{ progress: ProgressSummary[] }>("/progress").then((r) => r.progress, () => null) : [],
       ]);
       if (seq !== loadSeq.current) return;
       setLessons(l.lessons);
+      setLock(l.lock ?? null);
       // Cấp đang lọc không còn bài (admin xoá / chuyển về nháp) → nút lọc đó biến mất, bỏ lọc luôn
       // để không kẹt ở "Không tìm thấy bài nào" (hết sạch bài thì cả hàng nút lọc cũng ẩn)
       setLevel((cur) => (cur && l.lessons.some((x) => x.level === cur) ? cur : null));
@@ -394,9 +418,12 @@ export default function LessonsScreen() {
   const header = (
     <View style={{ gap: 16, paddingHorizontal: tablet ? 0 : 8, paddingTop: tablet ? 20 : 8, paddingBottom: 4 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: C.text, fontWeight: "800", fontSize: tablet ? 40 : 34 }} accessibilityRole="header">
-          {t("lessons.title")}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ flex: 1, color: C.text, fontWeight: "800", fontSize: tablet ? 40 : 34 }} accessibilityRole="header">
+            {t("lessons.title")}
+          </Text>
+          <PointsBadge />
+        </View>
         <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lessons.subtitle")}</Text>
       </View>
 
@@ -478,6 +505,7 @@ export default function LessonsScreen() {
       )}
 
       {lessons && shown.length > 0 && <SectionTitle title={level ? level : t("lessons.allHeading")} count={shown.length} />}
+      {lock?.enabled && <LockNote lock={lock} points={points ?? lock.points} />}
     </View>
   );
 

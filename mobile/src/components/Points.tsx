@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Image } from "expo-image";
+import { useFocusEffect } from "expo-router";
 import { AccessibilityInfo, Animated, Easing, Text, View } from "react-native";
+import { api, type Points } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { setPointsTotal, usePoints } from "@/lib/points";
 import { POINTS_CORRECT } from "@shared/dictation";
 
 /** Điểm chính tả (bản di động của PointsBadge trên web): chép đúng hết 1 câu → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 */
@@ -116,7 +120,21 @@ export function PointsPill({ total, earned }: { total: number; earned: number })
           </View>
         )}
       </View>
-      <Text style={{ color: GEM, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{total}</Text>
+      <Text style={{ color: GEM, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{total.toLocaleString("vi-VN")}</Text>
     </View>
   );
+}
+
+/** Huy hiệu tổng điểm trên đầu các tab (như thanh trên cùng của web): mở tab → lấy số mới nhất; khách không hiện */
+export function PointsBadge() {
+  const { user } = useAuth();
+  const id = user?.id;
+  const total = usePoints(id);
+  useFocusEffect(
+    useCallback(() => {
+      if (id === undefined) return;
+      api<Points>(`/points?tz=${new Date().getTimezoneOffset()}`).then((r) => setPointsTotal(id, r.total), () => {});
+    }, [id]),
+  );
+  return total === null ? null : <PointsPill total={total} earned={0} />;
 }
