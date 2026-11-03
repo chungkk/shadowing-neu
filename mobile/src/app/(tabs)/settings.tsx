@@ -432,6 +432,10 @@ function Signed({ user }: { user: User }) {
     <>
       <ProfileCard user={user} stats={stats} />
 
+      <Section>
+        <Row first icon="trophy.fill" iconBg="#d97706" title={t("board.title")} onPress={() => router.push("/leaderboard")} />
+      </Section>
+
       <Section title={t("acc.sectionAccount")}>
         <Row first icon="person.text.rectangle" iconBg="#2563eb" title={t("acc.profile")} open={panel === "profile"} onPress={() => toggle("profile")}>
           <Input value={name} onChangeText={setName} placeholder={t("acc.displayName")} autoComplete="name" textContentType="name" />

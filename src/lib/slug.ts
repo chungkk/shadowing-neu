@@ -2,7 +2,7 @@
 
 /** Tên thư mục / file ở gốc app — slug bài không được trùng (route tĩnh luôn thắng route [slug]) */
 const RESERVED = new Set([
-  "admin", "api", "lesson", "login", "register", "settings", "vocab", "watch", "forgot-password", "privacy", "terms",
+  "admin", "api", "lesson", "login", "register", "settings", "vocab", "watch", "forgot-password", "privacy", "terms", "leaderboard",
   "sitemap", "robots", "favicon", "icon", "apple-icon", "_next",
 ]);
 

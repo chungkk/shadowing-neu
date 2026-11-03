@@ -71,6 +71,10 @@ export type Stats = {
 /** Điểm chính tả (GET/POST /points): gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 · today theo giờ máy (có thể âm) */
 export type Points = { total: number; today: number };
 
+/** Bảng xếp hạng (GET /leaderboard): me.rank null = chưa có hạng */
+export type LeaderboardEntry = { rank: number; id: number; name: string; total: number };
+export type Leaderboard = { top: LeaderboardEntry[]; me: { rank: number | null; total: number }; players: number };
+
 export type Track = { languageCode: string; name: string; auto: boolean };
 export type Transcript = { videoId: string; title: string; track: Track; tracks: Track[]; segments: Segment[] };
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogOut, MessageSquare, Mic, Settings, Users } from "lucide-react";
+import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogOut, MessageSquare, Mic, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -16,6 +16,7 @@ const ITEMS: Item[] = [
   { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
   { href: "/sprechen", label: "Luyện nói", icon: Mic },
   { href: "/games", label: "Game", icon: Gamepad2 },
+  { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
 const BAR_ITEMS = ITEMS.filter((it) => it.href !== "/sprechen"); // thanh dưới đáy không có Luyện nói (chưa ra mắt)
 const USER_ITEMS: Item[] = [
@@ -76,7 +77,7 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-const HEADER_ITEMS = ITEMS.filter((it) => it.href === "/vocab" || it.href === "/games");
+const HEADER_ITEMS = ITEMS.filter((it) => it.href === "/vocab" || it.href === "/games" || it.href === "/leaderboard");
 
 /** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy) */
 export function HeaderNav() {

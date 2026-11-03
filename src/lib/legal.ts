@@ -16,7 +16,7 @@ export type LegalContent = {
   sections: { h: string; body: Block[] }[];
 };
 
-const UPDATED = { vi: "Cập nhật lần cuối: 1 tháng 11 năm 2026", de: "Zuletzt aktualisiert: 1. November 2026" };
+const UPDATED = { vi: "Cập nhật lần cuối: 3 tháng 11 năm 2026", de: "Zuletzt aktualisiert: 3. November 2026" };
 
 const privacy: Record<LegalLang, LegalContent> = {
   vi: {
@@ -53,6 +53,7 @@ const privacy: Record<LegalLang, LegalContent> = {
         body: [
           [
             "Cung cấp tính năng: đăng nhập, đồng bộ tiến độ và sổ từ vựng giữa app và web, lịch ôn tập, điểm.",
+            "Bảng xếp hạng: tên hiển thị và số điểm của bạn được hiện cho những người dùng đã đăng nhập khác. Email và ảnh đại diện không được hiện.",
             "Gửi email cần thiết: mã xác nhận, đặt lại mật khẩu, bản sao dữ liệu khi bạn yêu cầu. Chúng tôi không gửi email quảng cáo.",
             "Trả lời góp ý, sửa lỗi và cải thiện bài học.",
             "Bảo vệ dịch vụ khỏi spam, gian lận và lạm dụng.",
@@ -153,6 +154,7 @@ const privacy: Record<LegalLang, LegalContent> = {
         body: [
           [
             "Bereitstellung der Funktionen: Anmeldung, Synchronisierung von Fortschritt und Vokabelheft zwischen App und Web, Wiederholungsplan, Punkte.",
+            "Rangliste: Dein Anzeigename und deine Punktzahl werden anderen angemeldeten Nutzern angezeigt. E-Mail-Adresse und Profilbild werden nicht angezeigt.",
             "Notwendige E-Mails: Bestätigungscodes, Passwort zurücksetzen, Datenkopie auf Anfrage. Wir versenden keine Werbe-E-Mails.",
             "Beantwortung von Feedback, Fehlerbehebung und Verbesserung der Lektionen.",
             "Schutz des Dienstes vor Spam, Betrug und Missbrauch.",

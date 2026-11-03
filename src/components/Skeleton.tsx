@@ -215,3 +215,22 @@ export function DecksSkeleton() {
     </div>
   );
 }
+
+/** Bảng xếp hạng — khớp trang /leaderboard */
+export function LeaderboardSkeleton() {
+  return (
+    <div className="flex flex-col gap-5" aria-busy="true" aria-label="Đang tải bảng xếp hạng">
+      <Bone className="h-20 rounded-2xl" />
+      <div className="card flex flex-col divide-y divide-border overflow-hidden">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
+            <Bone className="size-8 rounded-full" />
+            <Bone className="size-9 rounded-full" />
+            <Bone className="h-4 flex-1" />
+            <Bone className="h-4 w-14" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

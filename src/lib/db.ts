@@ -1338,6 +1338,32 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
   return { total: r.total, today: r.today };
 }
 
+export type LeaderboardEntry = { rank: number; id: number; name: string; total: number };
+/** top: những người đứng đầu · me.rank: null = chưa có hạng (điểm ≤ 0) · players: số người có hạng */
+export type Leaderboard = { top: LeaderboardEntry[]; me: { rank: number | null; total: number }; players: number };
+
+/**
+ * Bảng xếp hạng theo đúng số điểm trên huy hiệu (getPoints): chỉ người có điểm > 0, bằng điểm thì cùng hạng.
+ * Chỉ trả tên + điểm — không có email; ảnh đại diện vẫn chỉ chính chủ / admin xem được (route /avatar).
+ */
+export function getLeaderboard(userId: number, limit = 50): Leaderboard {
+  const rows = conn()
+    .prepare(
+      `SELECT RANK() OVER (ORDER BY t.total DESC) AS rank, u.id, u.name, t.total FROM (
+         SELECT user_id, SUM(pts) AS total FROM (
+           SELECT user_id, pts FROM dict_points
+           UNION ALL SELECT user_id, -n * pts FROM dict_hints
+           UNION ALL SELECT user_id, -cost FROM lesson_unlocks
+         ) GROUP BY user_id
+       ) t JOIN users u ON u.id = t.user_id
+       WHERE t.total > 0
+       ORDER BY t.total DESC, u.id`,
+    )
+    .all() as LeaderboardEntry[];
+  const mine = rows.find((r) => r.id === userId);
+  return { top: rows.slice(0, limit), me: { rank: mine?.rank ?? null, total: mine?.total ?? getPoints(userId).total }, players: rows.length };
+}
+
 /** Các câu của 1 bài đã tính đủ điểm */
 export function getPointIdx(userId: number, source: string): number[] {
   return (conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? AND open = 0 ORDER BY idx").all(userId, source) as { idx: number }[]).map(
