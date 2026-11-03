@@ -20,7 +20,7 @@ export type DictDraft = { input: string; revealed: number[] };
 
 /**
  * Nghe chép chính tả 1 câu. Mỗi từ là 1 ô, gõ thẳng vào ô đang chọn (ô nhập thật ẩn đi); gõ đúng thì tự nhảy ô — không cần dấu cách,
- * Space chỉ phát / dừng video. Từ sai thì bấm ô khác hoặc ← → để đổi ô; bấm "Kiểm tra" để xem từ sai / thiếu.
+ * Space chỉ phát / dừng video. Từ sai thì bấm ô khác hoặc ← → để đổi ô, ↑ ↓ để đổi câu; bấm "Kiểm tra" để xem từ sai / thiếu.
  * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
  * Câu đã xong: bấm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
  * `onEarn` gọi mỗi lần gõ, trả về số điểm vừa được (+1 mỗi từ đúng mới) → huy hiệu điểm trên thanh trên cùng hiện "+N"; xong câu có điểm thì các ô từ nảy.
@@ -32,6 +32,8 @@ export default function DictationPanel({
   onReplay,
   onTogglePlay,
   onNext,
+  onPrevSentence,
+  onNextSentence,
   onDone,
   hasNext,
   draft,
@@ -47,6 +49,8 @@ export default function DictationPanel({
   onReplay: () => void;
   onTogglePlay: () => void; // Space khi đang gõ: phát / dừng video
   onNext: () => void;
+  onPrevSentence: () => void; // ↑ khi đang gõ: sang câu trước
+  onNextSentence: () => void; // ↓ khi đang gõ: sang câu sau
   onDone: (correct: number, total: number) => void;
   onEarn?: (correct: number, total: number, input: string, revealed: number[]) => number; // input, revealed: câu đang chép + các từ đã xem, server chấm lại
   hasNext: boolean;
@@ -191,6 +195,12 @@ export default function DictationPanel({
               } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
                 e.preventDefault();
                 setActive(nextOpenSlot(result.words, active, e.key === "ArrowRight" ? 1 : -1));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                onPrevSentence();
+              } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                onNextSentence();
               } else if (e.key === "Backspace" && !slots[active] && active > 0) {
                 // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
                 e.preventDefault();
@@ -273,7 +283,7 @@ export default function DictationPanel({
           ? result.done
             ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealedCount ? ` · xem ${revealedCount} từ` : ""}.${onWord ? " Bấm vào từ để tra nghĩa." : ""}`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
-          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, Space phát / dừng, bấm mắt để xem từ (${hintCost}).`}
+          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, bấm mắt để xem từ (${hintCost}).`}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên

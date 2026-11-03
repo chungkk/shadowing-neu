@@ -496,13 +496,16 @@ export default function ShadowPlayer({
       if ((e.target as HTMLElement).closest("input, select, textarea")) return;
       const { idx, recorder, nextIdx, prevIdx, picked } = live.current;
       if (picked) return;
+      const dictating = live.current.settings.practice === "dictation"; // chính tả: ↑ ↓ đổi câu, ← → dành cho đổi ô
       if (e.code === "Space") {
         e.preventDefault();
         if (playing) pause();
         else go(idx);
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === (dictating ? "ArrowUp" : "ArrowLeft")) {
+        if (dictating) e.preventDefault();
         if (prevIdx !== undefined) go(prevIdx);
-      } else if (e.key === "ArrowRight") {
+      } else if (e.key === (dictating ? "ArrowDown" : "ArrowRight")) {
+        if (dictating) e.preventDefault();
         if (nextIdx !== undefined) go(nextIdx);
       } else if (e.key === "r" || e.key === "R") {
         if (recorder.recordingKey !== null) recorder.stop();
@@ -1103,13 +1106,24 @@ export default function ShadowPlayer({
 
           {dictation && current && dictPick.length > 0 && (
             <>
-              <div className="flex items-center justify-between gap-3">
-                <span className="label text-link">
-                  {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
-                </span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted">
-                    Đã xong {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length} câu
+              <div className="flex items-center justify-between gap-2 sm:gap-3">
+                <div className="flex items-center gap-0.5">
+                  <button className="btn-icon size-9" title="Câu trước (↑)" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
+                    <ChevronLeft className="size-5" />
+                  </button>
+                  <span className="label whitespace-nowrap text-link max-sm:text-xs">
+                    {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
+                  </span>
+                  <button className="btn-icon size-9" title="Câu sau (↓)" aria-label="Câu sau" onClick={next} disabled={nextIdx === undefined}>
+                    <ChevronRight className="size-5" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xs whitespace-nowrap text-muted">
+                    <span className="max-sm:hidden">Đã xong </span>
+                    <span className="sm:hidden">Xong </span>
+                    {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length}
+                    <span className="max-sm:hidden"> câu</span>
                   </span>
                   {loggedIn && starButton(current.text, "size-[18px]")}
                 </div>
@@ -1121,6 +1135,8 @@ export default function ShadowPlayer({
                 onReplay={() => go(idx)}
                 onTogglePlay={togglePlay}
                 onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
+                onPrevSentence={prev}
+                onNextSentence={next}
                 onDone={(correct, total) => dictFinished(idx, correct, total)}
                 onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
                 onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
