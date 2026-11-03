@@ -1119,6 +1119,7 @@ export default function ShadowPlayer({
                 text={current.text}
                 level={settings.dictLevel}
                 onReplay={() => go(idx)}
+                onTogglePlay={togglePlay}
                 onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
                 onDone={(correct, total) => dictFinished(idx, correct, total)}
                 onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}

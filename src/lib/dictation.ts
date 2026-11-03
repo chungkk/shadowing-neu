@@ -159,6 +159,31 @@ export function checkDictation(reference: string, input: string, revealed: Reado
   };
 }
 
+/** Chuỗi `input` (mỗi ô cách nhau đúng 1 dấu cách, ô trống vẫn giữ chỗ) → các ô theo từng từ của câu */
+export function slotsFromInput(reference: string, input: string): string[] {
+  const parts = input.split(" ");
+  return splitWords(reference).map((_, k) => parts[k] ?? "");
+}
+
+/** Chấm theo từng ô: mỗi ô chỉ so với đúng từ ở vị trí đó. Ô nằm sẵn theo từ nên không có từ thừa. */
+export function checkSlots(reference: string, slots: readonly string[], revealed: ReadonlySet<number> = new Set()): CheckResult {
+  const words = splitWords(reference).map((text, k): CheckedWord => {
+    if (revealed.has(k)) return { text, state: "revealed" };
+    const typed = slots[k] ?? "";
+    const a = normalizeWord(text);
+    const b = normalizeWord(typed);
+    if (!b) return { text, state: "missing" };
+    return { text, typed, state: a === b ? "correct" : isClose(a, b) ? "close" : "wrong" };
+  });
+  return {
+    words,
+    extra: [],
+    correct: words.filter((w) => w.state === "correct").length,
+    total: words.length,
+    done: words.length > 0 && words.every((w) => w.state === "correct" || w.state === "revealed"),
+  };
+}
+
 /** Gợi ý cho 1 từ chưa đoán được: Dễ "G____", Vừa "*****", Khó "" */
 export function hintFor(word: string, level: DictationLevel): string {
   const core = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");

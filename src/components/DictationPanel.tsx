@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
-import { checkDictation, hintFor, POINTS_HINT, type DictationLevel, type WordState } from "@/lib/dictation";
+import { checkSlots, hintFor, normalizeWord, POINTS_HINT, slotsFromInput, splitWords, type CheckedWord, type DictationLevel, type WordState } from "@/lib/dictation";
 import { emitPoints } from "@/lib/points";
 import { Gem } from "./PointsBadge";
 
@@ -18,8 +18,21 @@ const BOX: Record<WordState | "hint", string> = {
 /** Bản nháp 1 câu: chữ đã gõ + các từ đã bấm xem — giữ lại khi chuyển sang câu khác rồi quay về */
 export type DictDraft = { input: string; revealed: number[] };
 
+const isOpen = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed";
+
+/** Ô chưa xong gần nhất theo hướng dir (hết thì quay vòng); không còn ô nào → giữ nguyên */
+function nextOpen(words: CheckedWord[], from: number, dir: 1 | -1 = 1): number {
+  const n = words.length;
+  for (let i = 1; i <= n; i++) {
+    const k = (from + dir * i + n * 2) % n;
+    if (isOpen(words[k])) return k;
+  }
+  return from;
+}
+
 /**
- * Nghe chép chính tả 1 câu. Gõ đúng từ nào hiện từ đó ngay; bấm "Kiểm tra" để xem từ sai / thiếu.
+ * Nghe chép chính tả 1 câu. Mỗi từ là 1 ô, gõ thẳng vào ô đang chọn (ô nhập thật ẩn đi); gõ đúng thì tự nhảy ô — không cần dấu cách,
+ * Space chỉ phát / dừng video. Từ sai thì bấm ô khác hoặc ← → để đổi ô; bấm "Kiểm tra" để xem từ sai / thiếu.
  * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
  * Câu đã xong: bấm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
  * `onEarn` gọi mỗi lần gõ, trả về số điểm vừa được (+1 mỗi từ đúng mới) → huy hiệu điểm trên thanh trên cùng hiện "+N"; xong câu có điểm thì các ô từ nảy.
@@ -29,6 +42,7 @@ export default function DictationPanel({
   text,
   level,
   onReplay,
+  onTogglePlay,
   onNext,
   onDone,
   hasNext,
@@ -43,6 +57,7 @@ export default function DictationPanel({
   text: string;
   level: DictationLevel;
   onReplay: () => void;
+  onTogglePlay: () => void; // Space khi đang gõ: phát / dừng video
   onNext: () => void;
   onDone: (correct: number, total: number) => void;
   onEarn?: (correct: number, total: number, input: string, revealed: number[]) => number; // input, revealed: câu đang chép + các từ đã xem, server chấm lại
@@ -54,17 +69,22 @@ export default function DictationPanel({
   onWord?: (word: string) => void; // câu đã xong: bấm vào từ → bảng tra từ
   translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
 }) {
-  const [input, setInput] = useState(() => draft?.input ?? (saved ? text : ""));
+  const refWords = useMemo(() => splitWords(text), [text]);
+  const [slots, setSlots] = useState(() => (draft ? slotsFromInput(text, draft.input) : saved ? refWords : refWords.map(() => "")));
   const [revealed, setRevealed] = useState<Set<number>>(() => new Set(draft?.revealed ?? []));
-  const [checked, setChecked] = useState(() => !!saved || (!!draft && checkDictation(text, draft.input, new Set(draft.revealed)).done));
+  const result = useMemo(() => checkSlots(text, slots, revealed), [text, slots, revealed]);
+  const [checked, setChecked] = useState(() => !!saved || (!!draft && result.done));
+  const [active, setActive] = useState(() => nextOpen(result.words, result.words.length - 1)); // ô đang gõ
   const [reported, setReported] = useState(!!saved);
   const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
-  const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
   const [gained, setGained] = useState(0); // điểm vừa được ở câu này → chữ báo điểm, xong câu thì các ô từ nảy
   const won = gained > 0 && result.done;
   // Mở câu → con trỏ vào ô gõ luôn, nhưng không cuộn trang (autoFocus kéo cả trang tới ô gõ, các phần khác nhảy theo)
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const focusInput = () => inputRef.current?.focus({ preventScroll: true });
+  useEffect(focusInput, []);
+  const [focused, setFocused] = useState(false); // ô nhập ẩn đang nhận phím: chỉ khi đó mới hiện con trỏ
+  const composing = useRef(false); // đang ghép chữ (bộ gõ, dấu ä…): chưa chấm, chưa nhảy ô
   const revealedCount = result.words.filter((w) => w.state === "revealed").length; // số từ đã bấm xem
   const hintCost = onHint ? `−${POINTS_HINT} điểm` : "tính là lỗi";
 
@@ -75,12 +95,13 @@ export default function DictationPanel({
       onDone(r.correct, r.total);
     }
   };
-  /** Cập nhật câu gõ / từ đã xem; đúng hết thì tự tính là xong */
-  const change = (nextInput: string, nextRevealed: Set<number>) => {
-    setInput(nextInput);
+  /** Cập nhật các ô / từ đã xem; đúng hết thì tự tính là xong */
+  const change = (nextSlots: string[], nextRevealed: Set<number>) => {
+    const nextInput = nextSlots.join(" ");
+    setSlots(nextSlots);
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
-    const r = checkDictation(text, nextInput, nextRevealed);
+    const r = checkSlots(text, nextSlots, nextRevealed);
     const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
     if (gain > 0) {
       setGained((g) => g + gain);
@@ -88,29 +109,61 @@ export default function DictationPanel({
     }
     setChecked(r.done);
     if (r.done) finish(r);
+    return r;
+  };
+  /** Gõ vào ô đang chọn; từ gõ đúng → nhảy sang ô chưa xong kế tiếp */
+  const type = (raw: string) => {
+    if (result.done || !refWords.length) return;
+    // Bàn phím ảo không báo phím Space qua keydown → nhận ra ở đây
+    if (raw === `${slots[active]} `) return onTogglePlay();
+    const value = raw.replace(/\s/g, "").replace(/^[^\p{L}\p{N}]+/u, ""); // dấu câu gõ theo thói quen ngay sau khi nhảy ô thì bỏ
+    const next = [...slots];
+    if (composing.current) {
+      next[active] = value;
+      return setSlots(next);
+    }
+    // Không có Space để bỏ qua từ: gõ trọn một từ ngay phía sau (mà không phải đang gõ dở từ hiện tại) → coi như đã bỏ sót các từ giữa
+    const typed = normalizeWord(value);
+    let at = active;
+    if (typed && !normalizeWord(refWords[active]).startsWith(typed)) {
+      for (let k = active + 1; k <= active + 3 && k < refWords.length; k++) {
+        if (isOpen(result.words[k]) && normalizeWord(refWords[k]) === typed) {
+          at = k;
+          break;
+        }
+      }
+    }
+    if (at !== active) next[active] = "";
+    next[at] = value;
+    const r = change(next, revealed);
+    setActive(r.words[at].state === "correct" ? nextOpen(r.words, at) : at);
   };
   const check = () => {
     setChecked(true);
     if (result.done) finish();
+    else setActive(nextOpen(result.words, result.words.length - 1));
   };
   const submit = () => (result.done ? onNext() : check());
   /** Bấm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
   const reveal = (ks: number[]) => {
     const fresh = ks.filter((k) => !revealed.has(k) && result.words[k].state !== "correct");
     if (!fresh.length) return;
-    change(input, new Set([...revealed, ...fresh]));
+    const r = change(slots, new Set([...revealed, ...fresh]));
+    if (!isOpen(r.words[active])) setActive(nextOpen(r.words, active));
     onHint?.(fresh.length);
   };
   const revealAll = () => reveal(result.words.map((_, k) => k));
   /** Làm lại câu này từ đầu (kết quả mới ghi đè khi làm xong) */
   const retry = () => {
-    setInput("");
+    setSlots(refWords.map(() => ""));
+    setActive(0);
     setRevealed(new Set());
     setChecked(false);
     setReported(false);
     setScore(undefined);
     setGained(0);
     onDraft(null);
+    focusInput();
   };
 
   return (
@@ -120,72 +173,117 @@ export default function DictationPanel({
           <span className="label text-link">Gõ những gì bạn nghe</span>
           <button
             className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
-            onClick={onReplay}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              onReplay();
+              focusInput();
+            }}
           >
             <RotateCcw className="size-3.5" /> Nghe lại <span className="max-md:hidden">(Tab)</span>
           </button>
         </div>
-        <textarea
-          ref={inputRef}
-          rows={3}
-          value={input}
-          onChange={(e) => change(e.target.value, revealed)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            } else if (e.key === "Tab") {
-              e.preventDefault();
-              onReplay();
-            }
-          }}
-          placeholder="Gõ câu tiếng Đức… (ae/oe/ue/ss thay cho ä/ö/ü/ß cũng được)"
-          className="w-full resize-none bg-transparent text-lg outline-none placeholder:text-muted/70"
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-        />
-      </div>
 
-      {/* Ô từng từ: đúng → hiện từ; chưa đúng → gợi ý theo mức độ, bấm vào ô để xem (tính là lỗi); xong → bấm để tra từ.
-          Bấm thẳng vào ô như app — không đặt nút xem riêng phía trên ô (mỗi dòng ô cao gấp đôi) */}
-      <div className="flex flex-wrap gap-2">
-        {result.words.map((w, k) => {
-          const shown = w.state === "correct" || w.state === "revealed";
-          const state = shown || checked ? w.state : "hint";
-          const box = `min-w-10 rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]} ${won ? "dict-win" : ""}`;
-          if (result.done && onWord)
+        {/* Ô từng từ: chưa gõ → gợi ý theo mức độ (đáp án ẩn), gõ tới đâu hiện trong ô tới đó; mắt phía trên ô để xem từ (tính là lỗi); xong → bấm để tra từ.
+            mouseDown giữ focus ở ô nhập ẩn để gõ tiếp được ngay */}
+        <div className="relative flex cursor-text flex-wrap gap-x-2 gap-y-4 pt-2" onClick={focusInput}>
+          <input
+            ref={inputRef}
+            aria-label="Gõ từ đang chọn"
+            value={slots[active] ?? ""}
+            readOnly={result.done}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onChange={(e) => type(e.target.value)}
+            onCompositionStart={() => (composing.current = true)}
+            onCompositionEnd={(e) => {
+              composing.current = false;
+              type(e.currentTarget.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return;
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submit();
+              } else if (e.key === "Tab") {
+                e.preventDefault();
+                onReplay();
+              } else if (e.code === "Space") {
+                e.preventDefault();
+                onTogglePlay();
+              } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                setActive(nextOpen(result.words, active, e.key === "ArrowRight" ? 1 : -1));
+              } else if (e.key === "Backspace" && !slots[active] && active > 0) {
+                // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
+                e.preventDefault();
+                for (let k = active - 1; k >= 0; k--) {
+                  if (!revealed.has(k)) {
+                    setActive(k);
+                    break;
+                  }
+                }
+              }
+            }}
+            className="absolute left-0 top-0 size-px text-base opacity-0"
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+          />
+          {result.words.map((w, k) => {
+            const shown = w.state === "correct" || w.state === "revealed";
+            const state = shown || checked ? w.state : "hint";
+            const isActive = k === active && !result.done;
+            const box = `min-h-9 min-w-10 max-w-full break-all rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]} ${won ? "dict-win" : ""} ${isActive ? "ring-2 ring-link/40" : ""}`;
+            if (result.done && onWord)
+              return (
+                <button
+                  key={k}
+                  className={`${box} cursor-pointer transition hover:brightness-125`}
+                  style={{ "--i": k } as CSSProperties}
+                  title="Tra nghĩa từ này"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onWord(w.text);
+                  }}
+                >
+                  {w.text}
+                </button>
+              );
+            if (w.state === "revealed" || result.done)
+              return (
+                <span key={k} className={box}>
+                  {w.text}
+                </span>
+              );
+            const typed = slots[k];
             return (
-              <button
-                key={k}
-                className={`${box} cursor-pointer transition hover:brightness-125`}
-                style={{ "--i": k } as CSSProperties}
-                title="Tra nghĩa từ này"
-                onClick={() => onWord(w.text)}
-              >
-                {w.text}
-              </button>
-            );
-          if (shown)
-            return (
-              <span key={k} className={box}>
-                {w.text}
+              <span key={k} className="relative max-w-full">
+                <button
+                  className={`${box} cursor-text ${typed && state === "hint" ? "text-foreground" : ""}`}
+                  title={`Bấm để gõ vào ô này${checked && typed ? ` · Bạn gõ: ${typed}` : ""}`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setActive(k)}
+                >
+                  {w.state === "correct" ? w.text : typed || (isActive && focused ? "" : hintFor(w.text, level) || "\u00A0")}
+                  {isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-link" />}
+                </button>
+                {w.state !== "correct" && (
+                  <button
+                    className="absolute -top-3 left-1/2 flex size-5 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-border bg-background text-muted transition after:absolute after:-inset-1 after:content-[''] hover:border-amber hover:text-amber"
+                    title={`Xem từ này (${hintCost})`}
+                    aria-label={`Xem từ này (${hintCost})`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => reveal([k])}
+                  >
+                    <Eye className="size-3" />
+                  </button>
+                )}
               </span>
             );
-          const hint = checked && w.typed ? w.typed : hintFor(w.text, level);
-          return (
-            <button
-              key={k}
-              className={`${box} cursor-pointer transition hover:border-amber hover:text-amber`}
-              title={`${checked && w.typed ? `Bạn gõ: ${w.typed} · ` : ""}Bấm để xem từ này (${hintCost})`}
-              onClick={() => reveal([k])}
-            >
-              {hint || <Eye className="mx-auto size-4" />}
-            </button>
-          );
-        })}
+          })}
+        </div>
       </div>
-      {checked && result.extra.length > 0 && <p className="text-sm text-red-400">Từ thừa: {result.extra.join(", ")}</p>}
       {result.done && translation && <p className="text-[15px] leading-relaxed text-muted">{translation}</p>}
       <p className="text-xs text-muted">
         {gained > 0 && (
@@ -197,7 +295,7 @@ export default function DictationPanel({
           ? result.done
             ? `🎉 Xong! Đúng ${score?.correct ?? result.correct}/${score?.total ?? result.total} từ${revealedCount ? ` · xem ${revealedCount} từ` : ""}.${onWord ? " Bấm vào từ để tra nghĩa." : ""}`
             : `Đúng ${result.correct}/${result.total} từ — sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại.`
-          : `Bấm vào ô để xem từ (${hintCost}). Enter hoặc nút Kiểm tra để chấm.`}
+          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, Space phát / dừng, bấm mắt để xem từ (${hintCost}).`}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
