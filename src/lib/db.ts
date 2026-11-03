@@ -2,7 +2,7 @@ import "server-only";
 import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { POINTS_CORRECT, POINTS_HINT } from "./dictation";
+import { POINTS_HINT, splitWords } from "./dictation";
 import { isReservedSlug, slugify } from "./slug";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import { mergeIntoSentences, type Segment } from "./subtitles";
@@ -26,6 +26,7 @@ export type Lesson = {
 export type LessonSummary = Omit<Lesson, "segments"> & {
   segmentCount: number; // số dòng phụ đề thô
   sentenceCount?: number; // số câu sau khi gộp (như màn học đếm) — chỉ có trong danh sách bài
+  wordCount?: number; // số từ để chép (mỗi từ đúng được điểm) — chỉ có trong danh sách bài
   duration?: number; // giây, tính đến hết dòng phụ đề cuối — chỉ có trong danh sách bài
 };
 
@@ -98,14 +99,15 @@ function open() {
       updated_at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, source, idx)
     );
-    -- Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +POINTS_CORRECT. Mỗi câu chỉ tính 1 lần (làm lại / học lại từ đầu
+    -- Điểm chính tả: gõ đúng 1 từ → +POINTS_CORRECT, mỗi từ của câu chỉ tính 1 lần (làm lại / học lại từ đầu
     -- không cộng thêm) và giữ vĩnh viễn (không bị xoá theo progress)
     CREATE TABLE IF NOT EXISTS dict_points (
       user_id INTEGER NOT NULL,
       source TEXT NOT NULL, -- "/lesson/3" | "/watch/<videoId>"
       idx INTEGER NOT NULL, -- câu (sau khi gộp câu)
       at INTEGER NOT NULL, -- ms
-      pts INTEGER NOT NULL DEFAULT 1, -- điểm được cộng (câu được điểm trước khi lên +2 giữ +1)
+      pts INTEGER NOT NULL DEFAULT 1, -- điểm được cộng (câu được điểm theo luật cũ giữ nguyên số đã cộng)
+      open INTEGER NOT NULL DEFAULT 0, -- 1 = câu còn từ chưa được điểm, gõ đúng thêm vẫn cộng (câu theo luật cũ đã khép)
       PRIMARY KEY (user_id, source, idx)
     );
     -- Điểm chính tả bị trừ: mỗi lần bấm xem từ (n từ) → −n × POINTS_HINT. Không giới hạn số lần, giữ vĩnh viễn như dict_points
@@ -115,7 +117,8 @@ function open() {
       source TEXT NOT NULL,
       idx INTEGER NOT NULL,
       n INTEGER NOT NULL, -- số từ xem ("Hiện tất cả" xem nhiều từ 1 lần)
-      at INTEGER NOT NULL -- ms
+      at INTEGER NOT NULL, -- ms
+      pts INTEGER NOT NULL DEFAULT 1 -- điểm trừ mỗi từ lúc xem (lần xem theo luật cũ giữ −1)
     );
     CREATE INDEX IF NOT EXISTS dict_hints_user ON dict_hints (user_id, at);
     -- Lịch sử ôn: mỗi lần ôn 1 dòng (không ghi đè) → đo độ chính xác nhớ lại, còn nhớ sau 7/30 ngày, hiệu quả từng dạng bài
@@ -247,6 +250,11 @@ function open() {
   // Điểm chính tả theo câu (trước đây mỗi câu đúng luôn +1)
   const pointCols = db.prepare("PRAGMA table_info(dict_points)").all() as { name: string }[];
   if (!pointCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_points ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
+  // Điểm theo từng từ: câu có thể mới được điểm một phần
+  if (!pointCols.some((c) => c.name === "open")) db.exec("ALTER TABLE dict_points ADD COLUMN open INTEGER NOT NULL DEFAULT 0");
+  // Điểm trừ khi xem từ lưu theo từng lần xem (trước đây luôn −1) — đổi mức trừ không ảnh hưởng các lần đã xem
+  const hintCols = db.prepare("PRAGMA table_info(dict_hints)").all() as { name: string }[];
+  if (!hintCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_hints ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
   // Chính tả: các câu của lượt đang làm (app chọn ngẫu nhiên 5–10 câu / lượt)
   if (!progressCols.some((c) => c.name === "dict_pick")) db.exec("ALTER TABLE progress ADD COLUMN dict_pick TEXT NOT NULL DEFAULT '[]'"); // [3, 17, 42, …]
   // Chính tả: lúc bắt đầu lượt đang làm (ms, 0 = chưa biết) → tính lại điểm của lượt khi mở lại bài
@@ -353,16 +361,17 @@ export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
 }
 
 /**
- * Số câu của bài sau khi gộp dòng phụ đề thành câu (đúng số màn học hiện "Câu 3/52") và thời lượng.
+ * Số câu của bài sau khi gộp dòng phụ đề thành câu (đúng số màn học hiện "Câu 3/52"), số từ để chép và thời lượng.
  * Tính 1 lần mỗi bài rồi giữ trong bộ nhớ; deploy lại (có thể đổi cách gộp) thì tự tính lại.
  */
-const statsCache = new Map<number, { sentenceCount: number; duration: number }>();
+const statsCache = new Map<number, { sentenceCount: number; wordCount: number; duration: number }>();
 function lessonStats(id: number) {
   let stats = statsCache.get(id);
   if (!stats) {
     const r = conn().prepare("SELECT segments FROM lessons WHERE id = ?").get(id) as { segments: string } | undefined;
     const segments: Segment[] = r ? JSON.parse(r.segments) : [];
-    stats = { sentenceCount: mergeIntoSentences(segments).length, duration: Math.max(0, ...segments.map((s) => s.end)) };
+    const sentences = mergeIntoSentences(segments);
+    stats = { sentenceCount: sentences.length, wordCount: sentences.reduce((n, s) => n + splitWords(s.text).length, 0), duration: Math.max(0, ...segments.map((s) => s.end)) };
     statsCache.set(id, stats);
   }
   return stats;
@@ -652,7 +661,7 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
     crazyReps: rows("SELECT source, idx, reps, passed, updated_at FROM crazy_reps WHERE user_id = ?"),
     dictationPoints: rows("SELECT source, idx, pts, at FROM dict_points WHERE user_id = ? ORDER BY at"),
-    dictationHints: rows("SELECT source, idx, n, at FROM dict_hints WHERE user_id = ? ORDER BY at"),
+    dictationHints: rows("SELECT source, idx, n, pts, at FROM dict_hints WHERE user_id = ? ORDER BY at"),
     lessonUnlocks: rows("SELECT lesson_id, kind, cost, at FROM lesson_unlocks WHERE user_id = ?"),
     feedback: rows("SELECT kind, message, created_at FROM feedback WHERE user_id = ? ORDER BY id"),
   };
@@ -1321,7 +1330,7 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
     .prepare(
       `SELECT COALESCE(SUM(pts), 0) AS total, COALESCE(SUM(CASE WHEN at >= ? THEN pts END), 0) AS today FROM (
          SELECT pts, at FROM dict_points WHERE user_id = ?
-         UNION ALL SELECT -n * ${POINTS_HINT}, at FROM dict_hints WHERE user_id = ?
+         UNION ALL SELECT -n * pts, at FROM dict_hints WHERE user_id = ?
          UNION ALL SELECT -cost, NULL FROM lesson_unlocks WHERE user_id = ?
        )`,
     )
@@ -1329,38 +1338,52 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
   return { total: r.total, today: r.today };
 }
 
-/** Các câu của 1 bài đã được tính điểm */
+/** Các câu của 1 bài đã tính đủ điểm */
 export function getPointIdx(userId: number, source: string): number[] {
-  return (conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? ORDER BY idx").all(userId, source) as { idx: number }[]).map(
+  return (conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? AND open = 0 ORDER BY idx").all(userId, source) as { idx: number }[]).map(
     (r) => r.idx,
   );
 }
 
+/** Các câu của 1 bài mới được điểm một phần: câu → số điểm đã cộng */
+export function getOpenPoints(userId: number, source: string): Record<number, number> {
+  const rows = conn().prepare("SELECT idx, pts FROM dict_points WHERE user_id = ? AND source = ? AND open = 1").all(userId, source) as { idx: number; pts: number }[];
+  return Object.fromEntries(rows.map((r) => [r.idx, r.pts]));
+}
+
 /** Điểm của lượt đang làm (để hiện lại khi mở lại bài): các câu được điểm + số từ đã xem của từng câu, tính từ lúc bắt đầu lượt */
-export function getRoundPoints(userId: number, source: string, p: Progress): { dictRoundEarned: number[]; dictRoundSpent: Record<number, number> } {
-  if (!p.dictRoundAt) return { dictRoundEarned: [], dictRoundSpent: {} }; // lượt bắt đầu trước khi có dict_round_at
+export function getRoundPoints(userId: number, source: string, p: Progress): { dictRoundEarned: number[]; dictRoundPts: Record<number, number>; dictRoundSpent: Record<number, number> } {
+  if (!p.dictRoundAt) return { dictRoundEarned: [], dictRoundPts: {}, dictRoundSpent: {} }; // lượt bắt đầu trước khi có dict_round_at
   const inRound = new Set(p.dictPick);
-  const earned = conn().prepare("SELECT idx FROM dict_points WHERE user_id = ? AND source = ? AND at >= ?").all(userId, source, p.dictRoundAt) as { idx: number }[];
+  const earned = conn().prepare("SELECT idx, pts FROM dict_points WHERE user_id = ? AND source = ? AND at >= ?").all(userId, source, p.dictRoundAt) as { idx: number; pts: number }[];
   const spent = conn()
     .prepare("SELECT idx, SUM(n) AS n FROM dict_hints WHERE user_id = ? AND source = ? AND at >= ? GROUP BY idx")
     .all(userId, source, p.dictRoundAt) as { idx: number; n: number }[];
   return {
     dictRoundEarned: earned.flatMap((r) => (inRound.has(r.idx) ? [r.idx] : [])),
+    dictRoundPts: Object.fromEntries(earned.flatMap((r) => (inRound.has(r.idx) ? [[r.idx, r.pts]] : []))),
     dictRoundSpent: Object.fromEntries(spent.flatMap((r) => (inRound.has(r.idx) ? [[r.idx, r.n]] : []))),
   };
 }
 
-/** +POINTS_CORRECT cho câu idx (câu đã tính rồi → awarded = false, không cộng) */
-export function awardDictPoint(userId: number, source: string, idx: number, tzOffset = 0): Points & { awarded: boolean } {
+/**
+ * Câu idx giờ đáng `pts` điểm (số từ đúng) → nâng điểm của câu lên mức đó; chỉ lên chứ không xuống nên gõ xoá gõ lại không cộng thêm.
+ * open = false: đã đúng hết, câu khép lại. Câu đã khép hoặc không có từ đúng mới → awarded = false, không cộng.
+ */
+export function awardDictWords(userId: number, source: string, idx: number, pts: number, open: boolean, tzOffset = 0): Points & { awarded: boolean } {
   const r = conn()
-    .prepare("INSERT OR IGNORE INTO dict_points (user_id, source, idx, at, pts) VALUES (?, ?, ?, ?, ?)")
-    .run(userId, source, idx, Date.now(), POINTS_CORRECT);
+    .prepare(
+      `INSERT INTO dict_points (user_id, source, idx, at, pts, open) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (user_id, source, idx) DO UPDATE SET at = excluded.at, pts = excluded.pts, open = excluded.open
+       WHERE dict_points.open = 1 AND excluded.pts > dict_points.pts`,
+    )
+    .run(userId, source, idx, Date.now(), pts, open ? 1 : 0);
   return { ...getPoints(userId, tzOffset), awarded: r.changes > 0 };
 }
 
 /** Xem n từ của câu idx → −n × POINTS_HINT */
 export function chargeDictHints(userId: number, source: string, idx: number, n: number, tzOffset = 0): Points {
-  conn().prepare("INSERT INTO dict_hints (user_id, source, idx, n, at) VALUES (?, ?, ?, ?, ?)").run(userId, source, idx, n, Date.now());
+  conn().prepare("INSERT INTO dict_hints (user_id, source, idx, n, at, pts) VALUES (?, ?, ?, ?, ?, ?)").run(userId, source, idx, n, Date.now(), POINTS_HINT);
   return getPoints(userId, tzOffset);
 }
 

@@ -7,9 +7,8 @@ import { api, type Points } from "@/lib/api";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/lib/auth";
 import { setPointsTotal, usePoints } from "@/lib/points";
-import { POINTS_CORRECT } from "@shared/dictation";
 
-/** Điểm chính tả (bản di động của PointsBadge trên web): chép đúng hết 1 câu → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 */
+/** Điểm chính tả (bản di động của PointsBadge trên web): gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 */
 
 /** Hệ thống đang bật "Giảm chuyển động" */
 function useReduceMotion() {
@@ -38,10 +37,10 @@ const SPARKS = Array.from({ length: 8 }, (_, k) => {
 const POP_MS = 1100;
 
 /**
- * Huy hiệu tổng điểm. `earned` tăng (vừa được điểm) → kim cương nảy, tia lấp lánh, "+2" bật lên ngay cạnh kim cương rồi mờ dần.
- * Giảm chuyển động → chỉ "+2" hiện rồi mờ.
+ * Huy hiệu tổng điểm. `earned` tăng (vừa được điểm) → kim cương nảy, tia lấp lánh, "+`gain`" bật lên ngay cạnh kim cương rồi mờ dần.
+ * Giảm chuyển động → chỉ "+`gain`" hiện rồi mờ.
  */
-export function PointsPill({ total, earned }: { total: number; earned: number }) {
+export function PointsPill({ total, earned, gain = 0 }: { total: number; earned: number; gain?: number }) {
   const reduce = useReduceMotion();
   const [bump] = useState(() => new Animated.Value(0));
   const [pop] = useState(() => new Animated.Value(0));
@@ -96,7 +95,7 @@ export function PointsPill({ total, earned }: { total: number; earned: number })
               ],
         }}
       >
-        +{POINTS_CORRECT}
+        +{gain}
       </Animated.Text>
       <View>
         <Animated.View style={{ transform: [{ scale }, { rotate }] }}>

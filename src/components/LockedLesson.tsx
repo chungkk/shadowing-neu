@@ -77,7 +77,7 @@ export function UnlockBox({
           </p>
           <p className="text-sm text-muted">
             Bạn đang có <span className="font-bold text-gem">{fmt(lock.points)}</span> kim cương.
-            {short && " Chép chính tả đúng hết 1 câu được +2 — luyện thêm ở các bài đã mở để đủ kim cương."}
+            {short && " Chép chính tả đúng mỗi từ được +1 — luyện thêm ở các bài đã mở để đủ kim cương."}
           </p>
           <button onClick={unlock} disabled={busy || short} className="btn btn-primary self-start">
             {done ? "Đang vào bài…" : pending ? "Đang mở…" : short ? `Cần thêm ${fmt(lock.price - lock.points)} kim cương` : `Đổi ${fmt(lock.price)} kim cương`}

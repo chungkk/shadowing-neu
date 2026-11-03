@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text, TextInput } from "./Text";
 import { SymbolView } from "expo-symbols";
-import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@shared/dictation";
+import { checkDictation, hintFor, POINTS_HINT, type DictationLevel, type WordState } from "@shared/dictation";
 import { GEM, Gem } from "./Points";
 import { Button } from "./ui";
 import { C } from "@/lib/theme";
@@ -25,10 +25,10 @@ export type DictDraft = { input: string; revealed: number[] };
 
 /**
  * Nghe chép chính tả 1 câu (bản di động của components/DictationPanel.tsx trên web).
- * Gõ đúng từ nào hiện từ đó; "Kiểm tra" để xem từ sai / thiếu; chạm 👁 để xem từ (tính là lỗi, có tài khoản thì −1 điểm: `onHint`).
+ * Gõ đúng từ nào hiện từ đó; "Kiểm tra" để xem từ sai / thiếu; chạm 👁 để xem từ (tính là lỗi, có tài khoản thì −2 điểm: `onHint`).
  * Câu đã làm xong (`saved`, kể cả lưu trên server từ lần trước) → hiện đủ câu + điểm, có nút "Làm lại";
  * chạm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
- * `onDone` trả về true = câu này được +2 điểm (chép đúng hết lần đầu) → hiệu ứng +2.
+ * `onEarn` gọi mỗi lần gõ, trả về số điểm vừa được (+1 mỗi từ đúng mới) → hiện "+N điểm".
  * Đang gõ: hàng phím ä ö ü ß chèn vào đúng chỗ con trỏ. `autoFocus`: sang câu mới khi bàn phím đang mở → gõ tiếp luôn.
  */
 export function DictationPanel({
@@ -42,6 +42,7 @@ export function DictationPanel({
   saved,
   onDraft,
   onHint,
+  onEarn,
   onWord,
   translation,
   autoFocus,
@@ -50,7 +51,8 @@ export function DictationPanel({
   level: DictationLevel;
   onReplay: () => void;
   onNext: () => void;
-  onDone: (correct: number, total: number, input: string) => boolean | void; // true = được +2 điểm · input: câu đã chép, server chấm lại
+  onDone: (correct: number, total: number) => void;
+  onEarn?: (correct: number, total: number, input: string, revealed: number[]) => number; // input, revealed: câu đang chép + các từ đã xem, server chấm lại
   hasNext: boolean;
   draft?: DictDraft; // bản nháp lần trước (trong phiên học này)
   saved?: { correct: number; total: number }; // kết quả đã lưu của câu này
@@ -70,7 +72,7 @@ export function DictationPanel({
   // Điểm hiển thị: lần làm này (nếu vừa làm xong) hoặc điểm đã lưu
   const [score, setScore] = useState(saved);
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
-  const [won, setWon] = useState(false); // vừa được điểm ở câu này
+  const [gained, setGained] = useState(0); // điểm vừa được ở câu này
   // Số từ đã bấm xem
   const revealedCount = result.words.filter((w) => w.state === "revealed").length;
   const [focused, setFocused] = useState(!!autoFocus);
@@ -83,13 +85,13 @@ export function DictationPanel({
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkDictation(text, nextInput, nextRevealed);
+    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
+    if (gain > 0) setGained((g) => g + gain);
     setChecked(r.done);
     if (r.done && !reported) {
       setReported(true);
       setScore({ correct: r.correct, total: r.total });
-      if (onDone(r.correct, r.total, nextInput) === true) {
-        setWon(true);
-      }
+      onDone(r.correct, r.total);
     }
   };
   /** Làm lại câu này từ đầu (kết quả mới sẽ ghi đè khi làm xong) */
@@ -99,7 +101,7 @@ export function DictationPanel({
     setChecked(false);
     setReported(false);
     setScore(undefined);
-    setWon(false);
+    setGained(0);
     onDraft(null);
   };
   /** Chạm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
@@ -213,7 +215,7 @@ export function DictationPanel({
       </View>
       {checked && result.extra.length > 0 && <Text style={{ color: C.redText }}>{t("dict.extra", { w: result.extra.join(", ") })}</Text>}
       {result.done && translation && <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{translation}</Text>}
-      {won && (
+      {gained > 0 && (
         <View
           style={{
             alignSelf: "flex-start",
@@ -228,7 +230,7 @@ export function DictationPanel({
           }}
         >
           <Gem size={16} />
-          <Text style={{ color: GEM, fontWeight: "800", fontSize: 12 }}>{t("dict.point", { n: POINTS_CORRECT })}</Text>
+          <Text style={{ color: GEM, fontWeight: "800", fontSize: 12 }}>{t("dict.point", { n: gained })}</Text>
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 12 }}>

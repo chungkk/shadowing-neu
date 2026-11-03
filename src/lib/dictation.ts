@@ -5,9 +5,9 @@
 
 export type DictationLevel = "easy" | "normal" | "hard";
 
-/** Điểm chính tả: chép đúng hết 1 câu (không xem từ nào) → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 */
-export const POINTS_CORRECT = 2;
-export const POINTS_HINT = 1;
+/** Điểm chính tả: gõ đúng 1 từ → +1 ngay (từ đã xem không tính), mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 */
+export const POINTS_CORRECT = 1;
+export const POINTS_HINT = 2;
 
 export type WordState =
   | "correct" // gõ đúng

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
-import { checkDictation, hintFor, POINTS_CORRECT, POINTS_HINT, type DictationLevel, type WordState } from "@/lib/dictation";
+import { checkDictation, hintFor, POINTS_HINT, type DictationLevel, type WordState } from "@/lib/dictation";
 import { emitPoints } from "@/lib/points";
 import { Gem } from "./PointsBadge";
 
@@ -22,8 +22,8 @@ export type DictDraft = { input: string; revealed: number[] };
  * Nghe chép chính tả 1 câu. Gõ đúng từ nào hiện từ đó ngay; bấm "Kiểm tra" để xem từ sai / thiếu.
  * Remount theo câu (key); dựng lại từ `draft` (nháp lần trước) hoặc `saved` (câu đã làm xong → hiện đủ câu + điểm).
  * Câu đã xong: bấm vào từ để tra nghĩa (`onWord`), có bản dịch câu nếu đang bật dịch.
- * `onDone` trả về true = câu này được +2 điểm (chép đúng hết lần đầu) → các ô từ nảy, huy hiệu điểm trên thanh trên cùng hiện "+2".
- * `onHint(n)`: vừa bấm xem n từ (mỗi từ −1 điểm) — chỉ truyền khi có tài khoản (được tính điểm).
+ * `onEarn` gọi mỗi lần gõ, trả về số điểm vừa được (+1 mỗi từ đúng mới) → huy hiệu điểm trên thanh trên cùng hiện "+N"; xong câu có điểm thì các ô từ nảy.
+ * `onHint(n)`: vừa bấm xem n từ (mỗi từ −2 điểm) — chỉ truyền khi có tài khoản (được tính điểm).
  */
 export default function DictationPanel({
   text,
@@ -36,6 +36,7 @@ export default function DictationPanel({
   saved,
   onDraft,
   onHint,
+  onEarn,
   onWord,
   translation,
 }: {
@@ -43,7 +44,8 @@ export default function DictationPanel({
   level: DictationLevel;
   onReplay: () => void;
   onNext: () => void;
-  onDone: (correct: number, total: number, input: string) => boolean | void; // true = được +2 điểm · input: câu đã chép, server chấm lại
+  onDone: (correct: number, total: number) => void;
+  onEarn?: (correct: number, total: number, input: string, revealed: number[]) => number; // input, revealed: câu đang chép + các từ đã xem, server chấm lại
   hasNext: boolean;
   draft?: DictDraft;
   saved?: { correct: number; total: number };
@@ -58,21 +60,19 @@ export default function DictationPanel({
   const [reported, setReported] = useState(!!saved);
   const [score, setScore] = useState(saved); // điểm lần làm này, hoặc điểm đã lưu
   const result = useMemo(() => checkDictation(text, input, revealed), [text, input, revealed]);
-  const [won, setWon] = useState(false); // vừa được điểm ở câu này → các ô từ nảy, chữ báo điểm
+  const [gained, setGained] = useState(0); // điểm vừa được ở câu này → chữ báo điểm, xong câu thì các ô từ nảy
+  const won = gained > 0 && result.done;
   // Mở câu → con trỏ vào ô gõ luôn, nhưng không cuộn trang (autoFocus kéo cả trang tới ô gõ, các phần khác nhảy theo)
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
   const revealedCount = result.words.filter((w) => w.state === "revealed").length; // số từ đã bấm xem
   const hintCost = onHint ? `−${POINTS_HINT} điểm` : "tính là lỗi";
 
-  const finish = (r = result, typed = input) => {
+  const finish = (r = result) => {
     if (!reported) {
       setReported(true);
       setScore({ correct: r.correct, total: r.total });
-      if (onDone(r.correct, r.total, typed) === true) {
-        setWon(true);
-        emitPoints({ delta: POINTS_CORRECT, earned: true });
-      }
+      onDone(r.correct, r.total);
     }
   };
   /** Cập nhật câu gõ / từ đã xem; đúng hết thì tự tính là xong */
@@ -81,8 +81,13 @@ export default function DictationPanel({
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkDictation(text, nextInput, nextRevealed);
+    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
+    if (gain > 0) {
+      setGained((g) => g + gain);
+      emitPoints({ delta: gain, earned: true });
+    }
     setChecked(r.done);
-    if (r.done) finish(r, nextInput);
+    if (r.done) finish(r);
   };
   const check = () => {
     setChecked(true);
@@ -104,7 +109,7 @@ export default function DictationPanel({
     setChecked(false);
     setReported(false);
     setScore(undefined);
-    setWon(false);
+    setGained(0);
     onDraft(null);
   };
 
@@ -183,9 +188,9 @@ export default function DictationPanel({
       {checked && result.extra.length > 0 && <p className="text-sm text-red-400">Từ thừa: {result.extra.join(", ")}</p>}
       {result.done && translation && <p className="text-[15px] leading-relaxed text-muted">{translation}</p>}
       <p className="text-xs text-muted">
-        {won && (
+        {gained > 0 && (
           <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-gem/15 px-2 py-0.5 font-extrabold text-gem">
-            <Gem className="size-3.5" /> +{POINTS_CORRECT} điểm
+            <Gem className="size-3.5" /> +{gained} điểm
           </span>
         )}
         {checked

@@ -49,7 +49,7 @@ export type Progress = {
   dictDone: Record<string, DictResult>;
   seen?: number[]; // các câu đã thực sự nghe (server cũ không gửi)
   dictPick?: number[]; // Chính tả: các câu của lượt đang làm (server cũ không gửi)
-  dictRoundEarned?: number[]; // các câu được điểm trong lượt đang làm (server cũ không gửi)
+  dictRoundPts?: Record<number, number>; // điểm được của từng câu trong lượt đang làm (server cũ không gửi)
   dictRoundSpent?: Record<number, number>; // số từ đã xem của từng câu trong lượt đang làm (server cũ không gửi)
   updatedAt: number;
 };
@@ -68,7 +68,7 @@ export type Stats = {
   forgotten: { id: number; word: string; meaning: string; lapses: number }[];
   points?: Points; // server cũ không gửi
 };
-/** Điểm chính tả (GET/POST /points): chép đúng hết 1 câu → +2, mỗi câu chỉ tính 1 lần; mỗi từ bấm xem → −1 · today theo giờ máy (có thể âm) */
+/** Điểm chính tả (GET/POST /points): gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 · today theo giờ máy (có thể âm) */
 export type Points = { total: number; today: number };
 
 export type Track = { languageCode: string; name: string; auto: boolean };

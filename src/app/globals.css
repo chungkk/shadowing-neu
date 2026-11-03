@@ -240,8 +240,8 @@ select {
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
-/* ---- Điểm chính tả: hiệu ứng khi chép đúng hết câu — các ô từ (DictationPanel) và huy hiệu điểm (PointsBadge) ---- */
-/* Tia lấp lánh quanh kim cương + "+2" bật lên cạnh huy hiệu rồi mờ dần */
+/* ---- Điểm chính tả: hiệu ứng khi câu được điểm — các ô từ (DictationPanel) và huy hiệu điểm (PointsBadge) ---- */
+/* Tia lấp lánh quanh kim cương + "+N" bật lên cạnh huy hiệu rồi mờ dần */
 .pt-burst {
   position: absolute;
   pointer-events: none;
@@ -471,7 +471,7 @@ select {
   .pt-spark {
     display: none;
   }
-  /* "+2" vẫn hiện (chỉ mờ dần, không bay) để biết vừa được điểm */
+  /* "+N" vẫn hiện (chỉ mờ dần, không bay) để biết vừa được điểm */
   .rain-hit {
     animation: pt-fade 700ms ease-out forwards;
   }

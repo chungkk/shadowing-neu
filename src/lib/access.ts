@@ -40,7 +40,7 @@ export function earnableFreePoints(): number {
   const free = new Set(lockSettings().free);
   return listLessons()
     .filter((l) => l.dictation && free.has(l.id))
-    .reduce((n, l) => n + (l.sentenceCount ?? 0) * POINTS_CORRECT, 0);
+    .reduce((n, l) => n + (l.wordCount ?? 0) * POINTS_CORRECT, 0);
 }
 
 /**
@@ -117,7 +117,7 @@ export function unlockLesson(user: User, lessonId: number, expected?: unknown): 
   if (expected === "pick") return { error: "Bạn đã hết lượt chọn miễn phí (có thể vừa dùng ở thiết bị khác). Chưa trừ kim cương nào — xem lại rồi mở lại nếu muốn.", status: 409 };
   if (info.points < LESSON_PRICE)
     return {
-      error: `Cần ${LESSON_PRICE.toLocaleString("vi-VN")} kim cương để mở bài này (bạn đang có ${info.points.toLocaleString("vi-VN")}). Chép chính tả đúng mỗi câu được +2.`,
+      error: `Cần ${LESSON_PRICE.toLocaleString("vi-VN")} kim cương để mở bài này (bạn đang có ${info.points.toLocaleString("vi-VN")}). Chép chính tả đúng mỗi từ được +1.`,
       status: 402,
     };
   addLessonUnlock(user.id, lessonId, "buy", LESSON_PRICE);
