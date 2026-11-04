@@ -11,7 +11,7 @@ import { setPointsTotal, usePoints } from "@/lib/points";
 /** Điểm chính tả (bản di động của PointsBadge trên web): gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 */
 
 /** Hệ thống đang bật "Giảm chuyển động" */
-function useReduceMotion() {
+export function useReduceMotion() {
   const [on, setOn] = useState(false);
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setOn).catch(() => {});

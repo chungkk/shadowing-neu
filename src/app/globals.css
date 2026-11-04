@@ -325,6 +325,36 @@ select {
     transform: none;
   }
 }
+/* Từ vừa gõ đúng: "dán" sticker xuống ô */
+.dict-stick {
+  animation: dict-stick 300ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes dict-stick {
+  from {
+    transform: scale(1.22);
+  }
+}
+/* Bong bóng thoại của linh vật (đuôi chĩa về phía linh vật) */
+.dict-bubble {
+  position: relative;
+}
+.dict-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  background: var(--card);
+  border-left: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  transform: translateY(-50%) rotate(45deg);
+}
+/* Tiến độ câu: dải sọc kẹo dài dần */
+.dict-progress {
+  background: repeating-linear-gradient(-45deg, var(--red) 0 7px, #fffaf3 7px 14px);
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 /* Huy hiệu: kim cương nảy, số mới lăn từ dưới lên, viền loé sáng */
 .points-bump {
   display: inline-flex;
@@ -463,6 +493,7 @@ select {
   .sheet-up,
   .pt-spark,
   .dict-win,
+  .dict-stick,
   .points-bump,
   .points-roll,
   .points-glow {

@@ -202,7 +202,7 @@ const MASCOT_PARTS = {
 };
 
 /** Linh vật ghép từ các lớp (scripts/make-mascot.mjs): sóng âm nhấp nháy, đuôi vẫy, thân thở, đầu lắc, mắt chớp — cùng nhịp bản web */
-function AnimatedMascot({ size, style }: { size: number; style?: ViewStyle }) {
+export function AnimatedMascot({ size, style }: { size: number; style?: ViewStyle }) {
   const sway = useLoop(2800, { back: true });
   const pulse = useLoop(1100, { back: true });
   const blink = useLoop(4200);

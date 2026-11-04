@@ -1,23 +1,37 @@
-import { useMemo, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Animated, Easing, Image as RNImage, Pressable, View } from "react-native";
+import { Image } from "expo-image";
 import { Text, TextInput } from "./Text";
 import { SymbolView } from "expo-symbols";
 import { checkSlots, hintFor, isOpenWord, nextOpenSlot, POINTS_HINT, slotForTyped, slotsFromInput, splitWords, type DictationLevel, type WordState } from "@shared/dictation";
-import { GEM, Gem } from "./Points";
+import { AnimatedMascot } from "./FallingWords";
+import { GEM, Gem, useReduceMotion } from "./Points";
 import { Button } from "./ui";
-import { C } from "@/lib/theme";
+import { C, STICKER } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 
 const BOX: Record<WordState | "hint", { border: string; bg: string; fg: string }> = {
-  correct: { border: C.accent, bg: "rgba(23,128,63,0.15)", fg: C.text },
+  correct: { border: C.ink, bg: "rgba(23,128,63,0.2)", fg: C.text },
   close: { border: C.amber, bg: "rgba(251,191,36,0.1)", fg: C.amber },
   wrong: { border: C.red, bg: "rgba(232,56,79,0.1)", fg: C.redText },
   missing: { border: "rgba(232,56,79,0.6)", bg: "transparent", fg: C.muted },
   revealed: { border: "rgba(251,191,36,0.6)", bg: "rgba(251,191,36,0.05)", fg: C.amber },
-  given: { border: C.border, bg: C.background, fg: C.text },
-  hint: { border: C.border, bg: C.background, fg: C.muted },
+  given: { border: "rgba(85,48,63,0.4)", bg: C.card2, fg: C.text },
+  hint: { border: "rgba(85,48,63,0.3)", bg: C.card, fg: C.muted },
 };
+const TILT = ["-1.5deg", "1deg", "-0.5deg", "1.5deg"];
+
+/** Từ vừa gõ đúng: "dán" sticker xuống ô */
+function Stick({ on, reduce, children }: { on: boolean; reduce: boolean; children: ReactNode }) {
+  const [scale] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (!on || reduce) return;
+    scale.setValue(1.22);
+    Animated.spring(scale, { toValue: 1, friction: 4, tension: 180, useNativeDriver: true }).start();
+  }, [on, reduce, scale]);
+  return <Animated.View style={{ alignItems: "center", maxWidth: "100%", transform: [{ scale }] }}>{children}</Animated.View>;
+}
 
 const UMLAUTS = ["ä", "ö", "ü", "ß"];
 
@@ -79,6 +93,24 @@ export function DictationPanel({
   // Điểm hiển thị: lần làm này (nếu vừa làm xong) hoặc điểm đã lưu
   const [score, setScore] = useState(saved);
   const [gained, setGained] = useState(0); // điểm vừa được ở câu này
+  const [stuck, setStuck] = useState(-1); // ô vừa gõ đúng → hiệu ứng dán sticker
+  // Linh vật học cùng: gõ đúng 1 từ thì nhảy, kiểm tra còn sai thì lắc đầu, vừa xong câu thì bật cao
+  const reduce = useReduceMotion();
+  const [lift] = useState(() => new Animated.Value(0));
+  const [turn] = useState(() => new Animated.Value(0));
+  const hop = (h: number) => {
+    if (reduce) return;
+    lift.setValue(0);
+    Animated.sequence([
+      Animated.timing(lift, { toValue: -h, duration: 130, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.spring(lift, { toValue: 0, friction: 4, tension: 160, useNativeDriver: true }),
+    ]).start();
+  };
+  const nope = () => {
+    if (reduce) return;
+    turn.setValue(0);
+    Animated.timing(turn, { toValue: 1, duration: 460, easing: Easing.linear, useNativeDriver: true }).start();
+  };
   // Số từ đã bấm xem
   const revealedCount = result.words.filter((w) => w.state === "revealed").length;
   const [focused, setFocused] = useState(!!autoFocus);
@@ -103,6 +135,7 @@ export function DictationPanel({
     if (r.done && !reported) {
       setReported(true);
       setScore({ correct: r.correct, total: r.total });
+      hop(18);
       onDone(r.correct, r.total);
     }
     return r;
@@ -121,6 +154,8 @@ export function DictationPanel({
     next[at] = value;
     const r = change(next, revealed);
     if (r.words[at].state === "correct") {
+      setStuck(at);
+      if (!r.done) hop(8);
       setActive(nextOpenSlot(r.words, at));
       justDone.current = raw;
     } else setActive(at);
@@ -134,6 +169,7 @@ export function DictationPanel({
     setReported(false);
     setScore(undefined);
     setGained(0);
+    setStuck(-1);
     onDraft(null);
     focusInput();
   };
@@ -147,18 +183,72 @@ export function DictationPanel({
   };
   const check = () => {
     setChecked(true);
-    if (!result.done) moveTo(nextOpenSlot(result.words, result.words.length - 1));
+    if (result.done) return;
+    nope();
+    moveTo(nextOpenSlot(result.words, result.words.length - 1));
   };
   const submit = () => (result.done ? onNext() : check());
 
+  const left = result.words.filter(isOpenWord).length;
+  const solved = result.total - left; // số từ đã xong (đúng + đã xem)
+  const shownScore = score ?? { correct: result.correct, total: result.total };
+  const praise = t("review.praise").split("|");
+  const nums = { c: shownScore.correct, n: shownScore.total };
+  const say = result.done
+    ? shownScore.correct === shownScore.total
+      ? t("dict.sayPerfect", { ...nums, praise: praise[text.length % praise.length] })
+      : t("dict.sayDone", { ...nums, r: revealedCount ? t("dict.revealed", { k: revealedCount }) : "" })
+    : checked
+      ? t("dict.sayPartial", { c: result.correct, n: result.total })
+      : solved
+        ? t("dict.sayLeft", { n: left })
+        : t("dict.sayIdle");
+
   return (
     <View style={{ gap: 12 }}>
-      <View style={{ backgroundColor: C.background, borderColor: C.border, borderWidth: 1, borderRadius: 16, padding: 14, gap: 8 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: C.amber, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>{t("dict.typeWhat")}</Text>
-          <Pressable onPress={onReplay}>
-            <Text style={{ color: C.amber, fontWeight: "700", fontSize: 12 }}>{t("dict.replay")}</Text>
+      <View style={{ ...STICKER, backgroundColor: C.card, borderRadius: 18, padding: 14, gap: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {/* Linh vật lật lại để nhìn và "nói" về phía bong bóng thoại */}
+          <Animated.View
+            style={{
+              transform: [{ translateY: lift }, { rotate: turn.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ["0deg", "-9deg", "8deg", "-4deg", "0deg"] }) }],
+            }}
+          >
+            <View style={{ width: 48, height: 48, transform: [{ scaleX: -1 }] }}>
+              {reduce ? <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 48, height: 48 }} /> : <AnimatedMascot size={48} />}
+            </View>
+          </Animated.View>
+          <View style={{ flexShrink: 1, justifyContent: "center" }}>
+            <View
+              style={{
+                position: "absolute",
+                left: -5,
+                width: 11,
+                height: 11,
+                backgroundColor: C.card,
+                borderLeftWidth: 2,
+                borderBottomWidth: 2,
+                borderColor: C.ink,
+                transform: [{ rotate: "45deg" }],
+                zIndex: 1,
+              }}
+            />
+            <View style={{ borderWidth: 2, borderColor: C.ink, borderRadius: 14, backgroundColor: C.card, paddingHorizontal: 10, paddingVertical: 6 }}>
+              <Text accessibilityLiveRegion="polite" style={{ color: C.text, fontWeight: "800", fontSize: 13 }}>
+                {say}
+              </Text>
+            </View>
+          </View>
+          <Pressable onPress={onReplay} hitSlop={6} style={{ marginLeft: "auto" }}>
+            <Text style={{ color: C.link, fontWeight: "800", fontSize: 12 }}>{t("dict.replay")}</Text>
           </Pressable>
+        </View>
+
+        {/* Tiến độ câu: dải sọc kẹo như thân linh vật */}
+        <View style={{ height: 12, borderRadius: 6, borderWidth: 2, borderColor: C.ink, backgroundColor: C.card2, overflow: "hidden" }}>
+          <View style={{ width: `${result.total ? (solved / result.total) * 100 : 0}%`, height: "100%", overflow: "hidden" }}>
+            <RNImage source={require("@/assets/images/candy-stripe.png")} resizeMode="repeat" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+          </View>
         </View>
 
         {/* Ô từng từ: chưa gõ → gợi ý theo mức độ (đáp án ẩn), gõ tới đâu hiện trong ô tới đó; mắt phía trên ô để xem từ; xong → chạm để tra từ */}
@@ -195,7 +285,7 @@ export function DictationPanel({
             const label = shown ? w.text : typed || (isActive ? "" : hintFor(w.text, level));
             const fg = typed && !shown && !checked ? C.text : b.fg;
             return (
-              <View key={k} style={{ alignItems: "center", maxWidth: "100%" }}>
+              <Stick key={k} on={k === stuck} reduce={reduce}>
                 <Pressable
                   disabled={(w.state === "revealed" || w.state === "given") && !result.done}
                   onPress={() => {
@@ -206,10 +296,13 @@ export function DictationPanel({
                   accessibilityLabel={shown ? w.text : typed || t("dict.hiddenWord")}
                   style={{
                     flexDirection: "row",
-                    borderColor: isActive ? C.link : b.border,
-                    backgroundColor: b.bg,
+                    borderColor: isActive ? C.link : typed && !shown && !checked ? "rgba(85,48,63,0.6)" : b.border,
+                    backgroundColor: isActive ? C.card : b.bg,
                     borderWidth: 2,
-                    borderRadius: 10,
+                    borderStyle: !shown && !typed && !isActive && (!checked || w.state === "missing") ? "dashed" : "solid",
+                    borderRadius: 12,
+                    boxShadow: isActive ? `0 3px 0 ${C.link}` : w.state === "correct" ? `0 2px 0 ${C.ink}` : undefined,
+                    transform: w.state === "correct" ? [{ rotate: TILT[k % TILT.length] }] : isActive ? [{ translateY: -2 }] : undefined,
                     paddingHorizontal: 8,
                     minHeight: 32,
                     minWidth: 40,
@@ -220,7 +313,7 @@ export function DictationPanel({
                   {!!label && <Text style={{ flexShrink: 1, color: fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>}
                   {isActive && <View style={{ width: 2, height: 16, marginLeft: 1, backgroundColor: C.link }} />}
                 </Pressable>
-                {isOpenWord(w) && !result.done && (
+                {k === active && isOpenWord(w) && !result.done && (
                   <Pressable
                     onPress={() => reveal([k])}
                     hitSlop={5}
@@ -232,17 +325,17 @@ export function DictationPanel({
                       width: 20,
                       height: 20,
                       borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: C.border,
-                      backgroundColor: C.background,
+                      borderWidth: 2,
+                      borderColor: C.ink,
+                      backgroundColor: C.card,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <SymbolView name="eye" size={12} tintColor={C.muted} />
+                    <SymbolView name="eye" size={12} tintColor={C.text} />
                   </Pressable>
                 )}
-              </View>
+              </Stick>
             );
           })}
         </Pressable>
@@ -299,14 +392,8 @@ export function DictationPanel({
       <Text style={{ color: C.muted, fontSize: 12 }}>
         {checked
           ? result.done
-            ? t("dict.done", {
-                c: score?.correct ?? result.correct,
-                n: score?.total ?? result.total,
-                r: revealedCount ? t("dict.revealed", { k: revealedCount }) : "",
-              }) +
-              " " +
-              t("dict.tapWord")
-            : t("dict.partial", { c: result.correct, n: result.total })
+            ? t("dict.tapWord")
+            : t("dict.fixHint")
           : onHint
             ? t("dict.tapHintCost", { n: POINTS_HINT })
             : t("dict.tapHint")}
