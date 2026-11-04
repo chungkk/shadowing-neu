@@ -158,9 +158,9 @@ const PRACTICES = [
   ["dictation", "Dictation"],
 ] as const;
 const DICT_LEVELS = [
-  ["easy", "Dễ", "Gợi ý chữ cái đầu"],
-  ["normal", "Vừa", "Gợi ý số chữ cái"],
-  ["hard", "Khó", "Không gợi ý"],
+  ["easy", "Dễ", "Gợi ý chữ cái đầu và số chữ cái"],
+  ["normal", "Vừa", "Gợi ý chữ cái đầu và số chữ cái"],
+  ["hard", "Khó", "Chỉ gợi ý chữ cái đầu"],
 ] as const;
 
 /** "Kamera," → "Kamera" (bỏ dấu câu quanh từ) */

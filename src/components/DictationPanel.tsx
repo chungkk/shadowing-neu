@@ -245,6 +245,7 @@ export default function DictationPanel({
                 </span>
               );
             const typed = slots[k];
+            const caret = isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-link" />;
             return (
               <span key={k} className="relative max-w-full">
                 <button
@@ -253,8 +254,10 @@ export default function DictationPanel({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setActive(k)}
                 >
-                  {w.state === "correct" ? w.text : typed || (isActive && focused ? "" : hintFor(w.text, level) || "\u00A0")}
-                  {isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-link" />}
+                  {/* Chưa gõ: con trỏ đứng trước gợi ý (phải gõ cả chữ cái đầu); ô đang chọn vẫn giữ gợi ý */}
+                  {!typed && caret}
+                  {w.state === "correct" ? w.text : typed || hintFor(w.text, level)}
+                  {!!typed && caret}
                 </button>
                 {w.state !== "correct" && (
                   <button

@@ -209,12 +209,11 @@ export function slotForTyped(words: CheckedWord[], active: number, value: string
   return active;
 }
 
-/** Gợi ý cho 1 từ chưa đoán được: Dễ "G____", Vừa "*****", Khó "" */
+/** Gợi ý cho 1 từ chưa đoán được, mức nào cũng có chữ cái đầu: Dễ "G____", Vừa "G****", Khó "G" (không lộ số chữ cái) */
 export function hintFor(word: string, level: DictationLevel): string {
   const core = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
-  if (level === "hard") return "";
-  if (level === "normal") return "*".repeat(core.length);
-  return core[0] + "_".repeat(Math.max(core.length - 1, 0));
+  if (level === "hard") return core[0];
+  return core[0] + (level === "normal" ? "*" : "_").repeat(Math.max(core.length - 1, 0));
 }
 
 // ---- Lượt chính tả: 5–10 câu ngẫu nhiên chưa chép ----

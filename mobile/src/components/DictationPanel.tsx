@@ -191,7 +191,8 @@ export function DictationPanel({
             const b = BOX[shown || checked ? w.state : "hint"];
             const isActive = k === active && focused && !result.done;
             const typed = slots[k];
-            const label = shown ? w.text : typed || (isActive ? "" : hintFor(w.text, level));
+            const label = shown ? w.text : typed || hintFor(w.text, level); // ô đang chọn vẫn giữ gợi ý
+            const caret = isActive && <View style={{ width: 2, height: 16, marginLeft: 1, backgroundColor: C.link }} />;
             const fg = typed && !shown && !checked ? C.text : b.fg;
             return (
               <View key={k} style={{ alignItems: "center", maxWidth: "100%" }}>
@@ -216,8 +217,10 @@ export function DictationPanel({
                     justifyContent: "center",
                   }}
                 >
-                  {!!label && <Text style={{ flexShrink: 1, color: fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>}
-                  {isActive && <View style={{ width: 2, height: 16, marginLeft: 1, backgroundColor: C.link }} />}
+                  {/* Chưa gõ: con trỏ đứng trước gợi ý (phải gõ cả chữ cái đầu) */}
+                  {!typed && caret}
+                  <Text style={{ flexShrink: 1, color: fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>
+                  {!!typed && caret}
                 </Pressable>
                 {isOpenWord(w) && !result.done && (
                   <Pressable
