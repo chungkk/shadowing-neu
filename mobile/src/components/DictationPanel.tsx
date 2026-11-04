@@ -15,6 +15,7 @@ const BOX: Record<WordState | "hint", { border: string; bg: string; fg: string }
   wrong: { border: C.red, bg: "rgba(232,56,79,0.1)", fg: C.redText },
   missing: { border: "rgba(232,56,79,0.6)", bg: "transparent", fg: C.muted },
   revealed: { border: "rgba(251,191,36,0.6)", bg: "rgba(251,191,36,0.05)", fg: C.amber },
+  given: { border: C.border, bg: C.background, fg: C.text },
   hint: { border: C.border, bg: C.background, fg: C.muted },
 };
 
@@ -96,7 +97,7 @@ export function DictationPanel({
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkSlots(text, nextSlots, nextRevealed);
-    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
+    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" || w.state === "given" ? [k] : []))) ?? 0;
     if (gain > 0) setGained((g) => g + gain);
     setChecked(r.done);
     if (r.done && !reported) {
@@ -127,7 +128,7 @@ export function DictationPanel({
   /** Làm lại câu này từ đầu (kết quả mới sẽ ghi đè khi làm xong) */
   const retry = () => {
     setSlots(refWords.map(() => ""));
-    moveTo(0);
+    moveTo(refWords.length > 1 ? 1 : 0); // từ đầu câu hiện sẵn
     setRevealed(new Set());
     setChecked(false);
     setReported(false);
@@ -138,7 +139,7 @@ export function DictationPanel({
   };
   /** Chạm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
   const reveal = (ks: number[]) => {
-    const fresh = ks.filter((k) => !revealed.has(k) && result.words[k].state !== "correct");
+    const fresh = ks.filter((k) => isOpenWord(result.words[k]));
     if (!fresh.length) return;
     const r = change(slots, new Set([...revealed, ...fresh]));
     if (!isOpenWord(r.words[active])) moveTo(nextOpenSlot(r.words, active));
@@ -171,7 +172,7 @@ export function DictationPanel({
             onKeyPress={({ nativeEvent: { key } }) => {
               // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
               if (key !== "Backspace" || slots[active] || result.done) return;
-              for (let k = active - 1; k >= 0; k--) {
+              for (let k = active - 1; k >= 1; k--) {
                 if (!revealed.has(k)) return moveTo(k);
               }
             }}
@@ -187,17 +188,16 @@ export function DictationPanel({
             style={{ position: "absolute", top: 0, left: 0, width: 1, height: 1, opacity: 0 }}
           />
           {result.words.map((w, k) => {
-            const shown = w.state === "correct" || w.state === "revealed";
+            const shown = w.state === "correct" || w.state === "revealed" || w.state === "given";
             const b = BOX[shown || checked ? w.state : "hint"];
             const isActive = k === active && focused && !result.done;
             const typed = slots[k];
-            const label = shown ? w.text : typed || hintFor(w.text, level); // ô đang chọn vẫn giữ gợi ý
-            const caret = isActive && <View style={{ width: 2, height: 16, marginLeft: 1, backgroundColor: C.link }} />;
+            const label = shown ? w.text : typed || (isActive ? "" : hintFor(w.text, level));
             const fg = typed && !shown && !checked ? C.text : b.fg;
             return (
               <View key={k} style={{ alignItems: "center", maxWidth: "100%" }}>
                 <Pressable
-                  disabled={w.state === "revealed" && !result.done}
+                  disabled={(w.state === "revealed" || w.state === "given") && !result.done}
                   onPress={() => {
                     if (result.done) return onWord(w.text);
                     moveTo(k);
@@ -217,10 +217,8 @@ export function DictationPanel({
                     justifyContent: "center",
                   }}
                 >
-                  {/* Chưa gõ: con trỏ đứng trước gợi ý (phải gõ cả chữ cái đầu) */}
-                  {!typed && caret}
-                  <Text style={{ flexShrink: 1, color: fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>
-                  {!!typed && caret}
+                  {!!label && <Text style={{ flexShrink: 1, color: fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>}
+                  {isActive && <View style={{ width: 2, height: 16, marginLeft: 1, backgroundColor: C.link }} />}
                 </Pressable>
                 {isOpenWord(w) && !result.done && (
                   <Pressable

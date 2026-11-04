@@ -12,6 +12,7 @@ const BOX: Record<WordState | "hint", string> = {
   wrong: "border-red bg-red/10 text-red-400",
   missing: "border-red/60 text-muted",
   revealed: "border-amber/60 bg-amber/5 text-amber",
+  given: "border-border bg-background/60 text-foreground",
   hint: "border-border bg-background/60 text-muted",
 };
 
@@ -94,7 +95,7 @@ export default function DictationPanel({
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkSlots(text, nextSlots, nextRevealed);
-    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
+    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" || w.state === "given" ? [k] : []))) ?? 0;
     if (gain > 0) {
       setGained((g) => g + gain);
       emitPoints({ delta: gain, earned: true });
@@ -128,7 +129,7 @@ export default function DictationPanel({
   const submit = () => (result.done ? onNext() : check());
   /** Bấm xem các từ ks (bỏ qua từ đã gõ đúng / đã xem) → hiện từ, trừ điểm */
   const reveal = (ks: number[]) => {
-    const fresh = ks.filter((k) => !revealed.has(k) && result.words[k].state !== "correct");
+    const fresh = ks.filter((k) => isOpenWord(result.words[k]));
     if (!fresh.length) return;
     const r = change(slots, new Set([...revealed, ...fresh]));
     if (!isOpenWord(r.words[active])) setActive(nextOpenSlot(r.words, active));
@@ -138,7 +139,7 @@ export default function DictationPanel({
   /** Làm lại câu này từ đầu (kết quả mới ghi đè khi làm xong) */
   const retry = () => {
     setSlots(refWords.map(() => ""));
-    setActive(0);
+    setActive(refWords.length > 1 ? 1 : 0); // từ đầu câu hiện sẵn
     setRevealed(new Set());
     setChecked(false);
     setReported(false);
@@ -204,7 +205,7 @@ export default function DictationPanel({
               } else if (e.key === "Backspace" && !slots[active] && active > 0) {
                 // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
                 e.preventDefault();
-                for (let k = active - 1; k >= 0; k--) {
+                for (let k = active - 1; k >= 1; k--) {
                   if (!revealed.has(k)) {
                     setActive(k);
                     break;
@@ -219,7 +220,7 @@ export default function DictationPanel({
             autoComplete="off"
           />
           {result.words.map((w, k) => {
-            const shown = w.state === "correct" || w.state === "revealed";
+            const shown = w.state === "correct" || w.state === "revealed" || w.state === "given";
             const state = shown || checked ? w.state : "hint";
             const isActive = k === active && !result.done;
             const box = `min-h-9 min-w-10 max-w-full break-all rounded-lg border-2 px-2 py-1 text-center font-mono text-base font-bold ${BOX[state]} ${won ? "dict-win" : ""} ${isActive ? "ring-2 ring-link/40" : ""}`;
@@ -238,14 +239,13 @@ export default function DictationPanel({
                   {w.text}
                 </button>
               );
-            if (w.state === "revealed" || result.done)
+            if (w.state === "revealed" || w.state === "given" || result.done)
               return (
                 <span key={k} className={box}>
                   {w.text}
                 </span>
               );
             const typed = slots[k];
-            const caret = isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-link" />;
             return (
               <span key={k} className="relative max-w-full">
                 <button
@@ -254,10 +254,8 @@ export default function DictationPanel({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setActive(k)}
                 >
-                  {/* Chưa gõ: con trỏ đứng trước gợi ý (phải gõ cả chữ cái đầu); ô đang chọn vẫn giữ gợi ý */}
-                  {!typed && caret}
-                  {w.state === "correct" ? w.text : typed || hintFor(w.text, level)}
-                  {!!typed && caret}
+                  {w.state === "correct" ? w.text : typed || (isActive && focused ? "" : hintFor(w.text, level) || "\u00A0")}
+                  {isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-link" />}
                 </button>
                 {w.state !== "correct" && (
                   <button

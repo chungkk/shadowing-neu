@@ -14,7 +14,8 @@ export type WordState =
   | "close" // sai 1–2 ký tự (lỗi gõ)
   | "wrong" // gõ từ khác
   | "missing" // chưa gõ / bỏ sót
-  | "revealed"; // người học bấm xem (tính là lỗi)
+  | "revealed" // người học bấm xem (tính là lỗi)
+  | "given"; // từ đầu câu hiện sẵn: không phải chép, không tính điểm, không tính lỗi
 
 export type CheckedWord = { text: string; state: WordState; typed?: string };
 
@@ -165,9 +166,13 @@ export function slotsFromInput(reference: string, input: string): string[] {
   return splitWords(reference).map((_, k) => parts[k] ?? "");
 }
 
-/** Chấm theo từng ô: mỗi ô chỉ so với đúng từ ở vị trí đó. Ô nằm sẵn theo từ nên không có từ thừa. */
+/**
+ * Chấm theo từng ô: mỗi ô chỉ so với đúng từ ở vị trí đó. Ô nằm sẵn theo từ nên không có từ thừa.
+ * Từ đầu câu hiện sẵn (video có khi lệch phụ đề, cần biết câu bắt đầu từ đâu) và không nằm trong `total`; câu chỉ 1 từ thì vẫn phải chép.
+ */
 export function checkSlots(reference: string, slots: readonly string[], revealed: ReadonlySet<number> = new Set()): CheckResult {
-  const words = splitWords(reference).map((text, k): CheckedWord => {
+  const words = splitWords(reference).map((text, k, all): CheckedWord => {
+    if (k === 0 && all.length > 1) return { text, state: "given" };
     if (revealed.has(k)) return { text, state: "revealed" };
     const typed = slots[k] ?? "";
     const a = normalizeWord(text);
@@ -179,12 +184,12 @@ export function checkSlots(reference: string, slots: readonly string[], revealed
     words,
     extra: [],
     correct: words.filter((w) => w.state === "correct").length,
-    total: words.length,
-    done: words.length > 0 && words.every((w) => w.state === "correct" || w.state === "revealed"),
+    total: words.filter((w) => w.state !== "given").length,
+    done: words.length > 0 && words.every((w) => !isOpenWord(w)),
   };
 }
 
-export const isOpenWord = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed";
+export const isOpenWord = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed" && w.state !== "given";
 
 /** Ô chưa xong gần nhất theo hướng dir (hết thì quay vòng); không còn ô nào → giữ nguyên */
 export function nextOpenSlot(words: CheckedWord[], from: number, dir: 1 | -1 = 1): number {
@@ -209,11 +214,12 @@ export function slotForTyped(words: CheckedWord[], active: number, value: string
   return active;
 }
 
-/** Gợi ý cho 1 từ chưa đoán được, mức nào cũng có chữ cái đầu: Dễ "G____", Vừa "G****", Khó "G" (không lộ số chữ cái) */
+/** Gợi ý cho 1 từ chưa đoán được: Dễ "G____", Vừa "*****", Khó "" */
 export function hintFor(word: string, level: DictationLevel): string {
   const core = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
-  if (level === "hard") return core[0];
-  return core[0] + (level === "normal" ? "*" : "_").repeat(Math.max(core.length - 1, 0));
+  if (level === "hard") return "";
+  if (level === "normal") return "*".repeat(core.length);
+  return core[0] + "_".repeat(Math.max(core.length - 1, 0));
 }
 
 // ---- Lượt chính tả: 5–10 câu ngẫu nhiên chưa chép ----
