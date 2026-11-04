@@ -78,7 +78,10 @@ export default function SiteFooter() {
               <Suspense>
                 <CurrentYear />
               </Suspense>{" "}
-              Deutsch Shadowing
+              Deutsch Shadowing · Một sản phẩm của{" "}
+              <a href="https://ckk.biz" className="underline underline-offset-2 hover:text-foreground">
+                ckk.biz
+              </a>
             </p>
             <p>Video thuộc quyền sở hữu của tác giả trên YouTube.</p>
           </div>
