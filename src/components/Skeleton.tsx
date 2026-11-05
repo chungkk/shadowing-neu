@@ -39,39 +39,49 @@ export function LessonGridSkeleton({ count = 8 }: { count?: number }) {
 export function PlayerSkeleton({ children }: { children?: ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-3 p-3 sm:gap-4 sm:p-4 md:p-6" aria-busy="true">
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Bone className="h-9 w-10 rounded-xl sm:w-28" />
-        <Bone className="h-7 min-w-0 flex-1 sm:max-w-md" />
+        <Bone className="h-6 min-w-0 flex-1 sm:max-w-md" />
+        <div className="flex gap-2 max-sm:basis-full">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Bone key={i} className="h-9 w-24 rounded-xl" />
+          ))}
+        </div>
       </div>
       {children}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.85fr)] xl:grid-rows-[auto]">
-        {/* Video + thanh điều khiển */}
-        <div className="sticker self-start overflow-hidden lg:col-start-1 lg:row-start-1">
-          <Bone className="aspect-video rounded-none" />
-          <Bone className="h-[60px] rounded-none border-t-2 border-ink" />
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+        {/* Cột 1: video + thanh điều khiển */}
+        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
+          <div className="flex items-center justify-between">
+            <Bone className="h-4 w-14" />
+            <Bone className="h-8 w-20" />
+          </div>
+          <Bone className="aspect-video rounded-2xl" />
+          <Bone className="h-13 rounded-2xl" />
         </div>
-        {/* Sân khấu */}
-        <div className="sticker flex flex-col gap-4 self-start overflow-hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 xl:row-span-1">
-          <Bone className="h-12 rounded-none" />
-          <div className="flex flex-col gap-4 p-3.5 sm:p-5">
-            <Bone className="h-14 w-2/3 rounded-2xl" />
-            <Bone className="h-7 w-full" />
-            <Bone className="h-7 w-3/4" />
-            <div className="grid grid-cols-3 gap-1 pt-4">
-              {Array.from({ length: 3 }, (_, i) => (
-                <Bone key={i} className="mx-auto size-[60px] rounded-full" />
-              ))}
-            </div>
-            <Bone className="h-13 rounded-2xl" />
+        {/* Cột 2: câu hiện tại */}
+        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
+          <Bone className="mx-auto h-9 w-52 rounded-xl" />
+          <div className="flex min-h-40 flex-col gap-3 rounded-2xl border border-border bg-background/60 p-4 sm:min-h-48 sm:p-5">
+            <Bone className="h-4 w-24" />
+            <Bone className="h-5 w-full" />
+            <Bone className="h-5 w-3/4" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Bone className="h-12 rounded-xl" />
+            <Bone className="h-12 rounded-xl" />
           </div>
         </div>
-        {/* Transcript */}
-        <div className="card flex flex-col gap-3 max-sm:p-3 lg:col-start-1 lg:row-start-2 xl:col-start-3 xl:row-start-1">
-          <Bone className="h-6 w-32" />
-          <Bone className="h-3 rounded-full" />
+        {/* Cột 3: transcript */}
+        <div className="card flex flex-col gap-3 max-sm:p-3 lg:col-span-2 xl:col-span-1">
+          <div className="flex items-center justify-between">
+            <Bone className="h-4 w-24" />
+            <Bone className="h-7 w-12" />
+          </div>
+          <Bone className="h-2 rounded-full" />
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="flex items-start gap-2.5 p-2">
-              <Bone className="size-7 shrink-0 rounded-full" />
+            <div key={i} className="flex flex-col gap-2 rounded-xl border border-border p-3">
+              <Bone className="h-3 w-10" />
               <Bone className={`h-4 ${i % 2 ? "w-4/5" : "w-full"}`} />
             </div>
           ))}
@@ -192,8 +202,8 @@ export function DecksSkeleton() {
       <Bone className="h-[5.5rem] w-full rounded-2xl" />
       <section className="flex flex-col gap-3">
         <Bone className="h-7 w-44" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-          {Array.from({ length: 3 }, (_, i) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-2.5 sm:p-3">
               <Bone className="aspect-[16/10] w-full rounded-xl" />
               <Bone className="h-5 w-3/4" />

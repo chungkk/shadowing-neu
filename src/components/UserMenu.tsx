@@ -16,7 +16,7 @@ export default async function UserMenu() {
   // Chỉ 1 nút: popup đăng nhập đã có nút chuyển sang đăng ký
   if (!user) {
     return (
-      <LoginLink href="/login" className="btn btn-sun max-sm:px-3">
+      <LoginLink href="/login" className="btn max-sm:px-3">
         Đăng nhập
       </LoginLink>
     );

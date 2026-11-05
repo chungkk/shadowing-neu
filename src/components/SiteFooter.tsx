@@ -23,7 +23,7 @@ const COLUMNS = [
   },
 ];
 
-const linkClass = "text-sm transition hover:text-gold hover:underline underline-offset-4";
+const linkClass = "text-sm text-foreground/85 transition hover:text-foreground hover:underline";
 
 /** Email liên hệ đọc lúc chạy (biến môi trường trên VPS, không phải lúc build); chưa cấu hình thì ẩn */
 async function Contact() {
@@ -45,25 +45,20 @@ async function CurrentYear() {
 /** Chân trang toàn site — nền và dải cờ tràn hết chiều ngang, chỉ nội dung chừa lề khi thanh chia sẻ đang mở (share-gutter) */
 export default function SiteFooter() {
   return (
-    <footer className="footer-plum">
+    <footer className="bg-sidebar">
       <div className="candy-stripe h-2.5" />
       <div className="share-gutter">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-6 pb-8 md:px-6 md:pb-10">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
-              <Link href="/" className="flex w-fit items-center gap-2 font-display text-3xl leading-none font-extrabold">
-                <Mascot className="size-24" />
-                <span>
-                  Deutsch
-                  <br />
-                  <span className="text-gold">Shadowing</span>
-                </span>
+              <Link href="/" className="flex w-fit items-center gap-1.5 font-display text-xl font-extrabold">
+                <Mascot className="size-12" /> Deutsch Shadowing
               </Link>
               <p className="max-w-sm text-sm text-muted">Luyện nghe, nói và chép chính tả tiếng Đức với video thật.</p>
             </div>
             {COLUMNS.map((c) => (
               <nav key={c.title} aria-label={c.title} className="flex flex-col items-start gap-2.5">
-                <p className="font-display text-lg font-extrabold text-gold">{c.title}</p>
+                <p className="text-xs font-extrabold tracking-wider text-muted uppercase">{c.title}</p>
                 {c.links.map((l) => (
                   <Link key={l.href} href={l.href} className={linkClass}>
                     {l.label}
@@ -84,7 +79,7 @@ export default function SiteFooter() {
                 <CurrentYear />
               </Suspense>{" "}
               Deutsch Shadowing · Một sản phẩm của{" "}
-              <a href="https://ckk.biz" className="underline underline-offset-2 hover:text-gold">
+              <a href="https://ckk.biz" className="underline underline-offset-2 hover:text-foreground">
                 ckk.biz
               </a>
             </p>

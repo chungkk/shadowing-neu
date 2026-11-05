@@ -1,9 +1,13 @@
-/** Màu cấp độ A1–C2 theo nhóm (A xanh lá, B xanh dương, C tím): lớp gán --pop dùng cho nhãn, nút lọc, thẻ bài, bìa bộ từ */
-export const levelPop = (level: string) => ({ A: "pop-leaf", B: "pop-aqua", C: "pop-lilac" })[level[0]] ?? "pop-leaf";
+/** Nhãn cấp độ A1–C2, màu theo nhóm (A xanh lá, B xanh dương, C tím) */
+const COLORS: Record<string, string> = {
+  A: "bg-emerald-200 text-emerald-900",
+  B: "bg-sky-200 text-sky-900",
+  C: "bg-violet-200 text-violet-900",
+};
 
 export default function LevelBadge({ level, className = "" }: { level: string; className?: string }) {
   return (
-    <span className={`rotate-3 rounded-full border-2 border-ink bg-[var(--pop)] px-2 text-sm font-extrabold text-[#2b1520] ${levelPop(level)} ${className}`}>
+    <span className={`rounded-full border-2 border-ink px-2 text-sm font-extrabold ${COLORS[level[0]] ?? COLORS.A} ${className}`}>
       {level}
     </span>
   );

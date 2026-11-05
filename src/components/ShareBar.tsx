@@ -79,7 +79,7 @@ export default function ShareBar() {
     return (
       <button
         title="Hiện nút chia sẻ"
-        className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 cursor-pointer flex-col items-center gap-1.5 rounded-l-xl border-2 border-r-0 border-ink bg-card px-1.5 py-3 text-foreground shadow-[0_3px_0_var(--ink)] transition hover:bg-gold max-md:hidden"
+        className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 cursor-pointer flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 text-muted shadow-lg transition hover:text-foreground max-md:hidden"
         onClick={() => setOpen(true)}
       >
         <ChevronLeft className="size-4" />
@@ -92,7 +92,7 @@ export default function ShareBar() {
     <aside
       data-share-open
       aria-label="Chia sẻ trang này"
-      className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-2.5 rounded-l-2xl border-2 border-r-0 border-ink bg-card p-2.5 shadow-[0_4px_0_var(--ink)] max-md:hidden"
+      className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-2.5 rounded-l-2xl border border-r-0 border-border bg-card/95 p-2.5 shadow-xl shadow-black/40 backdrop-blur max-md:hidden"
     >
       <button title="Chia sẻ" className={`${round} border-2 border-border text-foreground hover:border-accent hover:text-accent`} onClick={shareNative}>
         <Share2 className="size-[18px]" />

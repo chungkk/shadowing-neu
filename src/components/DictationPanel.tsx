@@ -189,9 +189,9 @@ export default function DictationPanel({
         : "Gõ những gì bạn nghe";
 
   return (
-    <div data-dict={result.done ? "done" : checked ? "check" : "type"} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-3">
-        <div className="flex min-h-14 items-center gap-2">
+        <div className="flex min-h-11 items-center gap-2">
           {/* Linh vật lật lại để nhìn và "nói" về phía bong bóng thoại */}
           <span ref={mascotRef} className="relative -my-1.5 -ml-1 shrink-0">
             <Mascot animated className="size-14 -scale-x-100" />
@@ -203,18 +203,18 @@ export default function DictationPanel({
               </span>
             )}
           </span>
-          <p key={say} role="status" className="dict-bubble bubble-pop ml-1 min-w-0 rounded-2xl border-2 border-ink bg-card px-3 py-1.5 text-sm leading-snug font-extrabold text-foreground">
+          <p role="status" className="dict-bubble ml-1 min-w-0 rounded-2xl border-2 border-ink bg-card px-3 py-1.5 text-sm leading-snug font-extrabold text-foreground">
             {say}
           </p>
           <button
-            className="btn btn-sun ml-auto shrink-0 px-3 py-2"
+            className="btn ml-auto shrink-0 px-2.5 py-1.5 text-xs text-link"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               onReplay();
               focusInput();
             }}
           >
-            <RotateCcw className="size-4" /> Nghe lại <kbd className="text-foreground max-md:hidden">Tab</kbd>
+            <RotateCcw className="size-3.5" /> Nghe lại <span className="max-md:hidden">(Tab)</span>
           </button>
         </div>
 
@@ -225,7 +225,7 @@ export default function DictationPanel({
 
         {/* Ô từng từ: chưa gõ → gợi ý theo mức độ (đáp án ẩn), gõ tới đâu hiện trong ô tới đó; mắt phía trên ô để xem từ (tính là lỗi); xong → bấm để tra từ.
             mouseDown giữ focus ở ô nhập ẩn để gõ tiếp được ngay */}
-        <div className="relative flex min-h-24 cursor-text flex-wrap content-start gap-x-2 gap-y-4 pt-3" onClick={focusInput}>
+        <div className="relative flex cursor-text flex-wrap gap-x-2 gap-y-4 pt-2" onClick={focusInput}>
           <input
             ref={inputRef}
             aria-label="Gõ từ đang chọn"
@@ -281,7 +281,7 @@ export default function DictationPanel({
             const state = shown || checked ? w.state : "hint";
             const isActive = k === active && !result.done;
             const typedNow = !!slots[k] && state === "hint";
-            const box = `min-h-10 min-w-11 max-w-full break-all rounded-xl border-2 px-2.5 py-1 text-center font-mono text-lg font-bold transition ${BOX[state]} ${typedNow ? "border-solid border-ink/60 text-foreground" : ""} ${won ? "dict-win" : k === stuck ? "dict-stick" : ""} ${checked && !result.done && (w.state === "wrong" || w.state === "close") ? "shake" : ""} ${isActive ? "-translate-y-0.5 border-solid border-link bg-card shadow-[0_3px_0_var(--link)]" : ""}`;
+            const box = `min-h-9 min-w-10 max-w-full break-all rounded-xl border-2 px-2 py-1 text-center font-mono text-base font-bold transition ${BOX[state]} ${typedNow ? "border-solid border-ink/60 text-foreground" : ""} ${won ? "dict-win" : k === stuck ? "dict-stick" : ""} ${checked && !result.done && (w.state === "wrong" || w.state === "close") ? "shake" : ""} ${isActive ? "-translate-y-0.5 border-solid border-link bg-card shadow-[0_3px_0_var(--link)]" : ""}`;
             const tilt = { rotate: w.state === "correct" ? TILT[k % TILT.length] : undefined };
             if (result.done && onWord)
               return (
@@ -334,21 +334,18 @@ export default function DictationPanel({
         </div>
       </div>
       {result.done && translation && <p className="text-[15px] leading-relaxed text-muted">{translation}</p>}
-      {gained > 0 && (
-        <p className="inline-flex w-fit items-center gap-1 rounded-full bg-gem/15 px-2 py-0.5 text-xs font-extrabold text-gem">
-          <Gem className="size-3.5" /> +{gained} điểm
-        </p>
-      )}
-      {checked ? (
-        <p className="text-xs text-muted">{result.done ? onWord && "Bấm vào từ để tra nghĩa." : "Sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại."}</p>
-      ) : (
-        <div className="flex flex-col gap-1 text-xs text-muted">
-          <p>Gõ đúng tự sang ô sau, ae/oe/ue/ss thay ä/ö/ü/ß cũng được. Bấm mắt để xem từ ({hintCost}).</p>
-          <p className="leading-6 max-md:hidden">
-            <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> đổi ô · <kbd>↑</kbd> <kbd>↓</kbd> đổi câu · <kbd>Enter</kbd> kiểm tra
-          </p>
-        </div>
-      )}
+      <p className="text-xs text-muted">
+        {gained > 0 && (
+          <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-gem/15 px-2 py-0.5 font-extrabold text-gem">
+            <Gem className="size-3.5" /> +{gained} điểm
+          </span>
+        )}
+        {checked
+          ? result.done
+            ? onWord && "Bấm vào từ để tra nghĩa."
+            : "Sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại."
+          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, bấm mắt để xem từ (${hintCost}).`}
+      </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
           — cùng một hàng để "Kiểm tra" không bị đẩy xuống dưới màn hình */}
