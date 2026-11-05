@@ -3,10 +3,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   CirclePause,
-  Clock,
   Eye,
   EyeOff,
   Keyboard,
@@ -20,6 +20,7 @@ import {
   Star,
   VideoOff,
   Volume2,
+  X,
   Zap,
 } from "lucide-react";
 import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
@@ -35,7 +36,9 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import YouTubePlayer from "./YouTubePlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
+import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
+import { SoundMark, SoundWave } from "./SoundBars";
 import WordPopup from "./WordPopup";
 
 type Settings = {
@@ -89,62 +92,47 @@ type Progress = {
 };
 type VocabItem = { id: number; word: string; meaning: string; context: string };
 
-/** Nút bật/tắt: nhãn cố định + công tắc gạt (điện thoại: bỏ công tắc cho gọn, bật thì viền xanh) */
-function Toggle({
+/** Công tắc dạng chip, đặt ngay cạnh thứ nó tác động: bật thì nền màu + viền đậm */
+function Chip({
   on,
   onToggle,
   icon: Icon,
   label,
   title,
-  disabled,
 }: {
   on: boolean;
   onToggle: () => void;
   icon: typeof Star;
   label: ReactNode;
   title?: string;
-  disabled?: boolean;
 }) {
   return (
-    <button
-      role="switch"
-      aria-checked={on}
-      className={`btn ${on ? "max-sm:border-accent max-sm:text-accent" : ""}`}
-      onClick={onToggle}
-      disabled={disabled}
-      title={title}
-    >
-      <Icon className={`size-4 ${on ? "fill-accent/20 text-accent" : "text-muted"}`} />
-      {label}
-      <span className={`relative ml-1 h-5 w-9 shrink-0 rounded-full transition-colors max-sm:hidden ${on ? "bg-accent" : "bg-foreground/15"}`}>
-        <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : ""}`} />
-      </span>
+    <button role="switch" aria-checked={on} className={`chip ${on ? "chip-on" : ""}`} onClick={onToggle} title={title}>
+      <Icon className="size-4" />
+      <span>{label}</span>
     </button>
   );
 }
 
-/** Nhóm nút chọn 1 trong nhiều (Shadowing/Chính tả, Dễ/Vừa/Khó…) */
+/** Nhóm nút chọn 1 trong nhiều (Dễ / Vừa / Khó) */
 function Segmented<T extends string>({
   options,
   value,
   onChange,
-  className = "",
 }: {
   options: readonly (readonly [T, string, string?])[]; // [giá trị, nhãn, tooltip]
   value: T;
   onChange: (v: T) => void;
-  className?: string;
 }) {
   return (
-    <div className={`flex rounded-xl bg-card-2 p-1 text-sm font-bold ${className}`}>
+    <div className="flex shrink-0 rounded-full border-2 border-ink bg-card p-0.5 text-sm font-extrabold">
       {options.map(([v, label, title]) => (
         <button
           key={v}
           title={title}
+          aria-pressed={value === v}
           onClick={() => onChange(v)}
-          className={`cursor-pointer rounded-lg px-4 py-1.5 transition ${
-            value === v ? "bg-accent text-white" : "text-muted hover:text-foreground"
-          }`}
+          className={`cursor-pointer rounded-full px-3 py-1 transition ${value === v ? "bg-ink text-white" : "text-muted hover:text-foreground"}`}
         >
           {label}
         </button>
@@ -153,9 +141,39 @@ function Segmented<T extends string>({
   );
 }
 
+/** 1 bước trong vòng Nghe → Nói → So sánh: nút tròn lớn, bước đang tới lượt thì đổi màu theo sân khấu */
+function Step({
+  icon: Icon,
+  label,
+  keyHint,
+  active,
+  recording,
+  disabled,
+  onClick,
+}: {
+  icon: typeof Star;
+  label: string;
+  keyHint: string;
+  active: boolean;
+  recording?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button className={`step ${active ? "step-on" : ""} ${recording ? "step-rec" : ""}`} onClick={onClick} disabled={disabled} aria-current={active ? "step" : undefined}>
+      <span className="step-dot">
+        <Icon className="size-6" />
+      </span>
+      <span className="flex items-center gap-1.5 text-sm font-extrabold">
+        {label} <kbd className="max-md:hidden">{keyHint}</kbd>
+      </span>
+    </button>
+  );
+}
+
 const PRACTICES = [
-  ["shadow", "Shadowing"],
-  ["dictation", "Dictation"],
+  ["shadow", "Shadowing", Mic],
+  ["dictation", "Dictation", Keyboard],
 ] as const;
 const DICT_LEVELS = [
   ["easy", "Dễ", "Gợi ý chữ cái đầu"],
@@ -202,7 +220,7 @@ function SentenceText({
               e.stopPropagation();
               click();
             }}
-            className={`cursor-pointer rounded px-0.5 transition hover:bg-accent/20 ${cls}`}
+            className={`cursor-pointer rounded px-0.5 transition hover:bg-[var(--stage)] ${cls}`}
           >
             {w}
           </button>
@@ -841,7 +859,7 @@ export default function ShadowPlayer({
       <button
         title={on ? "Bỏ đánh dấu câu" : "Đánh dấu câu"}
         aria-pressed={on}
-        className={`cursor-pointer transition hover:scale-110 ${on ? "text-amber" : "text-muted hover:text-foreground"}`}
+        className={`relative cursor-pointer transition after:absolute after:-inset-1.5 hover:scale-110 ${on ? "text-amber" : "text-muted hover:text-foreground"}`}
         onClick={(e) => {
           e.stopPropagation();
           void toggleStar(text);
@@ -882,100 +900,79 @@ export default function ShadowPlayer({
       </button>
     ));
 
+  // Vòng luyện nói: sân khấu đổi màu theo việc người học cần làm lúc này (tắc kè đổi màu)
+  const heard = seen.has(idx);
+  const hasRecording = !!recorder.recordings[idx];
+  const step = dictation ? "dict" : isRecording || gap ? "speak" : playing ? "listen" : hasRecording ? "compare" : heard ? "speak" : "listen";
+  const coach = isRecording
+    ? "Đang ghi âm, nói đi!"
+    : gap
+      ? "Đến lượt bạn nói!"
+      : playing
+        ? "Nghe kỹ nhé…"
+        : hasRecording
+          ? "Nghe lại xem giống chưa?"
+          : heard
+            ? "Đến lượt bạn, thử nói theo nhé!"
+            : "Nghe câu này trước nhé.";
+  const sentenceNav = (prevKey: string, nextKey: string) => (
+    <div className="flex min-w-0 items-center gap-0.5">
+      <button className="btn-icon size-9" title={`Câu trước (${prevKey})`} aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
+        <ChevronLeft className="size-5" />
+      </button>
+      <span className="font-display text-base font-extrabold whitespace-nowrap">
+        {queue?.includes(idx) ? (
+          <>
+            Câu {queue.indexOf(idx) + 1}/{queue.length} <span className="text-sm font-bold opacity-70">#{idx + 1}</span>
+          </>
+        ) : (
+          `Câu ${idx + 1}/${segments.length}`
+        )}
+      </span>
+      <button className="btn-icon size-9" title={`Câu sau (${nextKey})`} aria-label="Câu sau" onClick={next} disabled={nextIdx === undefined}>
+        <ChevronRight className="size-5" />
+      </button>
+    </div>
+  );
+
   return (
-    <div className="share-wide mx-auto flex w-full max-w-[1800px] flex-col gap-3 p-3 sm:gap-4 sm:p-4 md:p-6">
-      {/* Dòng tiêu đề — điện thoại: nút quay lại chỉ còn icon, các nút bật/tắt thành 1 hàng cuộn ngang */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+    <div data-step={step} className="lesson share-wide mx-auto flex w-full max-w-[1800px] flex-col gap-3 p-3 sm:gap-4 sm:p-4 md:p-6">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Link href={backHref} className="btn shrink-0 max-sm:px-2.5" title="Quay lại">
           <ChevronLeft className="size-4" /> <span className="max-sm:hidden">Quay lại</span>
         </Link>
-        <h1 className="min-w-0 flex-1 text-base leading-snug font-extrabold text-link max-sm:line-clamp-2 sm:truncate sm:text-lg" title={title}>
+        <h1 className="min-w-0 text-lg leading-tight font-extrabold max-sm:line-clamp-2 sm:truncate sm:text-2xl" title={title}>
           {title}
         </h1>
-        {level && <LevelBadge level={level} />}
-        {allowDictation && (
-          <Segmented options={PRACTICES} value={settings.practice} onChange={changePractice} className="max-sm:w-full max-sm:*:flex-1" />
-        )}
-        <div className="scroll-row flex gap-2 max-sm:-mx-3 max-sm:basis-full max-sm:px-3 max-sm:*:px-3 max-sm:*:py-1.5 sm:flex-wrap">
-          <Toggle
-            on={mediaHidden}
-            onToggle={() => update(dictation ? { dictHideMedia: !mediaHidden } : { hideMedia: !mediaHidden })}
-            icon={VideoOff}
-            label="Ẩn video"
-            title="Ẩn video — chỉ nghe tiếng"
-          />
-          {/* Ẩn chữ / Câu ⭐ chỉ dùng cho Shadowing — Chính tả vẫn giữ nút (mờ) để các nút không nhảy chỗ khi đổi chế độ */}
-          <Toggle
-            on={settings.hideText && !dictation}
-            onToggle={toggleHideText}
-            icon={EyeOff}
-            label="Ẩn chữ"
-            disabled={dictation}
-            title={dictation ? "Chỉ dùng ở chế độ Shadowing" : "Ẩn chữ — chỉ nghe rồi nói theo (H)"}
-          />
-          <Toggle
-            on={settings.showTranslation}
-            onToggle={() => update({ showTranslation: !settings.showTranslation })}
-            icon={Languages}
-            label="Bản dịch"
-            title="Hiện bản dịch tiếng Việt dưới mỗi câu"
-          />
-          {loggedIn && (
-            <Toggle
-              on={starredOnly}
-              onToggle={toggleStarredOnly}
-              icon={Star}
-              label="Câu ⭐"
-              disabled={dictation}
-              title={dictation ? "Chỉ dùng ở chế độ Shadowing" : "Chỉ hiện câu đã đánh dấu ⭐"}
-            />
-          )}
-        </div>
+        {level && <LevelBadge level={level} className="shrink-0" />}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
-        {/* Cột 1: video + điều khiển */}
-        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
-          <div className="flex items-center justify-between">
-            <span className="label">Video</span>
-            <span className="pill bg-card-2 px-3 py-1.5 text-base text-link">
-              <Clock className="size-4" /> {formatTime(time)}
-            </span>
-          </div>
-          <div className={mediaHidden ? "h-0 overflow-hidden" : "overflow-hidden rounded-2xl"}>
-            {/* Chính tả: tắt phụ đề YouTube (phụ đề = đáp án) */}
-            <YouTubePlayer videoId={videoId} onReady={onReady} captions={!dictation} />
-          </div>
-          {mediaHidden && (
-            <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
-          )}
-          {/* Thanh điều khiển ngay dưới video — Chính tả chỉ cần phát / nghe lại */}
-          {dictation ? (
-            <div className="flex gap-2 sm:gap-3">
-              <button className="btn btn-primary flex-1 py-3" title="Phát / dừng (Space)" onClick={togglePlay}>
-                {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Pause" : "Start"}
-              </button>
-              <button className="btn flex-1 py-3 tracking-wide uppercase" title="Nghe lại câu (Tab)" onClick={() => go(idx)}>
-                <RotateCcw className="size-5" /> Replay
-              </button>
+      {/* lg: video + transcript bên trái, sân khấu bên phải · xl: 3 cột · điện thoại: video → sân khấu → transcript */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.85fr)] xl:grid-rows-[auto]">
+        {/* Video + thanh điều khiển gắn liền như một chiếc máy phát */}
+        <div className="flex min-w-0 flex-col gap-3 self-start max-lg:contents lg:col-start-1 lg:row-start-1">
+          <div className="sticker overflow-hidden">
+            <div className={mediaHidden ? "h-0 overflow-hidden" : "[&>div]:rounded-none"}>
+              {/* Chính tả: tắt phụ đề YouTube (phụ đề = đáp án) */}
+              <YouTubePlayer videoId={videoId} onReady={onReady} captions={!dictation} />
             </div>
-          ) : (
-            <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-card-2/60 px-1.5 py-1.5 sm:gap-1 sm:px-2">
-              <button className="btn-icon" title="Câu trước (←)" onClick={prev} disabled={prevIdx === undefined}>
-                <ChevronLeft className="size-5" />
-              </button>
-              <button className="btn-icon" title="Phát lại câu" onClick={() => go(idx)}>
-                <RotateCcw className="size-5" />
-              </button>
-              <button className="btn-icon" title="Phát / dừng (Space)" onClick={togglePlay}>
+            {mediaHidden && (
+              <div className="relative flex h-32 items-end justify-center overflow-hidden bg-[var(--stage)] px-4 transition-colors duration-300">
+                <SoundWave className={`absolute inset-x-4 bottom-0 h-24 ${playing ? "" : "[&_i]:[animation-play-state:paused]"}`} />
+                <Mascot animated className="relative size-28 translate-y-2" />
+              </div>
+            )}
+            <div className="flex items-center gap-0.5 border-t-2 border-ink bg-card-2 p-2 sm:gap-1">
+              <button className="btn btn-sun size-11 rounded-full p-0" title="Phát / dừng (Space)" aria-label={playing ? "Dừng" : "Phát"} onClick={togglePlay}>
                 {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
               </button>
-              <button className="btn-icon" title="Câu sau (→)" onClick={next} disabled={nextIdx === undefined}>
-                <ChevronRight className="size-5" />
+              <button className="btn-icon" title="Phát lại câu (Tab khi đang chép)" aria-label="Phát lại câu" onClick={() => go(idx)}>
+                <RotateCcw className="size-5" />
               </button>
+              <span className="ml-1 font-mono text-sm font-bold tabular-nums">{formatTime(time)}</span>
               <div className="flex-1" />
               <button
-                className="btn-icon w-auto gap-1 px-2 font-bold"
+                className="btn-icon w-auto gap-1 px-2 font-extrabold"
                 title="Tốc độ phát"
                 onClick={() => {
                   const r = RATES[(RATES.indexOf(settings.rate) + 1) % RATES.length];
@@ -986,389 +983,383 @@ export default function ShadowPlayer({
                 <Zap className="size-5" /> {settings.rate}×
               </button>
               <button
-                className={`btn-icon ${panel === "settings" ? "bg-foreground/10" : ""}`}
-                title="Cài đặt"
-                onClick={() => setPanel(panel === "settings" ? null : "settings")}
+                className={`btn-icon ${mediaHidden ? "bg-[var(--stage)]" : ""}`}
+                role="switch"
+                aria-checked={mediaHidden}
+                title="Ẩn video — chỉ nghe tiếng"
+                aria-label="Ẩn video"
+                onClick={() => update(dictation ? { dictHideMedia: !mediaHidden } : { hideMedia: !mediaHidden })}
               >
-                <Settings2 className="size-5" />
+                <VideoOff className="size-5" />
               </button>
+              {!dictation && (
+                <button className={`btn-icon ${panel === "settings" ? "bg-foreground/10" : ""}`} title="Cài đặt" aria-label="Cài đặt" onClick={() => setPanel(panel === "settings" ? null : "settings")}>
+                  <Settings2 className="size-5" />
+                </button>
+              )}
               {/* Điện thoại không có bàn phím → ẩn bảng phím tắt */}
-              <button
-                className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-foreground/10" : ""}`}
-                title="Phím tắt"
-                onClick={() => setPanel(panel === "keys" ? null : "keys")}
-              >
-                <Keyboard className="size-5" />
-              </button>
+              {!dictation && (
+                <button className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-foreground/10" : ""}`} title="Phím tắt" aria-label="Phím tắt" onClick={() => setPanel(panel === "keys" ? null : "keys")}>
+                  <Keyboard className="size-5" />
+                </button>
+              )}
             </div>
-          )}
-
-          {!dictation && panel === "settings" && (
-            <div className="grid gap-3 rounded-2xl border border-border bg-card-2/40 p-3 text-sm min-[400px]:grid-cols-2 sm:p-4">
-              <label className="field">
-                Lặp mỗi câu
-                <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
-                  {[1, 2, 3, 5].map((r) => (
-                    <option key={r} value={r}>
-                      {r} lần
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Nghỉ để nói
-                <select value={settings.gapFactor} onChange={(e) => update({ gapFactor: Number(e.target.value) })}>
-                  <option value={0}>Không</option>
-                  <option value={1}>1× độ dài câu</option>
-                  <option value={1.2}>1.2×</option>
-                  <option value={1.5}>1.5×</option>
-                  <option value={2}>2×</option>
-                </select>
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={settings.autoNext}
-                  onChange={(e) => update({ autoNext: e.target.checked })}
-                />
-                Tự sang câu tiếp
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={settings.autoRecord}
-                  onChange={(e) => update({ autoRecord: e.target.checked })}
-                />
-                Tự ghi âm khi nghỉ
-              </label>
-              <label className="check min-[400px]:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={settings.merge}
-                  onChange={(e) => {
-                    // Danh sách câu thay đổi → dừng và về câu đầu
-                    pause();
-                    setIdx(0);
-                    setDictDone({});
-                    setDictPick([]);
-                    setEarned({});
-                    setSpent({});
-                    setSeen(new Set());
-                    setRevealed(new Set());
-                    roundInit.current = false;
-                    update({ merge: e.target.checked });
-                  }}
-                />
-                Gộp các dòng phụ đề thành câu hoàn chỉnh
-              </label>
-            </div>
-          )}
-          {!dictation && panel === "keys" && (
-            <p className="rounded-2xl max-md:hidden border border-border bg-card-2/40 p-4 text-sm leading-7 text-muted">
-              <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd>{" "}
-              nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
-            </p>
-          )}
-
-          {children}
-        </div>
-
-        {/* Cột 2: luyện tập câu hiện tại */}
-        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
-          <div className="flex justify-center">
-            {dictation ? (
-              <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
-            ) : (
-              // 1 nút bật/tắt thay cho cặp "Từng câu / Liên tục" (như nút "Tự dừng sau mỗi câu" của app)
-              <Toggle
-                on={settings.mode === "segment"}
-                onToggle={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
-                icon={CirclePause}
-                label="Tự dừng sau mỗi câu"
-                title={settings.mode === "segment" ? "Đang dừng sau mỗi câu — bấm để phát liên tục" : "Đang phát liên tục — bấm để dừng sau mỗi câu"}
-              />
+            {!dictation && panel === "settings" && (
+              <div className="grid gap-3 border-t-2 border-ink p-3 text-sm min-[400px]:grid-cols-2 sm:p-4">
+                <label className="field">
+                  Lặp mỗi câu
+                  <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
+                    {[1, 2, 3, 5].map((r) => (
+                      <option key={r} value={r}>
+                        {r} lần
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Nghỉ để nói
+                  <select value={settings.gapFactor} onChange={(e) => update({ gapFactor: Number(e.target.value) })}>
+                    <option value={0}>Không</option>
+                    <option value={1}>1× độ dài câu</option>
+                    <option value={1.2}>1.2×</option>
+                    <option value={1.5}>1.5×</option>
+                    <option value={2}>2×</option>
+                  </select>
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={settings.autoNext} onChange={(e) => update({ autoNext: e.target.checked })} />
+                  Tự sang câu tiếp
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={settings.autoRecord} onChange={(e) => update({ autoRecord: e.target.checked })} />
+                  Tự ghi âm khi nghỉ
+                </label>
+                <label className="check min-[400px]:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={settings.merge}
+                    onChange={(e) => {
+                      // Danh sách câu thay đổi → dừng và về câu đầu
+                      pause();
+                      setIdx(0);
+                      setDictDone({});
+                      setDictPick([]);
+                      setEarned({});
+                      setSpent({});
+                      setSeen(new Set());
+                      setRevealed(new Set());
+                      roundInit.current = false;
+                      update({ merge: e.target.checked });
+                    }}
+                  />
+                  Gộp các dòng phụ đề thành câu hoàn chỉnh
+                </label>
+              </div>
+            )}
+            {!dictation && panel === "keys" && (
+              <p className="border-t-2 border-ink p-4 text-sm leading-7 text-muted max-md:hidden">
+                <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd> nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
+              </p>
             )}
           </div>
+          {/* Điện thoại: mô tả xuống cuối để câu đang luyện nằm ngay dưới video */}
+          {children && <div className="max-lg:order-last">{children}</div>}
+        </div>
 
-          {resumed !== null && (
-            <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
-              <span className="flex-1 font-semibold">
-                Tiếp tục từ câu {resumed + 1}/{segments.length}
-              </span>
-              <button className="cursor-pointer font-bold text-amber hover:underline" onClick={restartProgress}>
-                Học lại từ đầu
-              </button>
-              <button className="cursor-pointer text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng">
-                ✕
-              </button>
+        {/* Sân khấu: câu đang luyện. Thẻ chế độ gắn vào mép trên, dải màu đổi theo trạng thái */}
+        <section className="flex min-w-0 flex-col self-start lg:col-start-2 lg:row-span-2 lg:row-start-1 xl:row-span-1">
+          {allowDictation && (
+            <div className="relative z-10 -mb-0.5 flex items-end gap-1.5 px-4" role="group" aria-label="Chế độ luyện tập">
+              {PRACTICES.map(([v, label, Icon]) => (
+                <button key={v} aria-pressed={settings.practice === v} className={`mode-tab ${settings.practice === v ? "mode-tab-on" : ""}`} onClick={() => settings.practice !== v && changePractice(v)}>
+                  <Icon className="size-[18px]" /> {label}
+                </button>
+              ))}
             </div>
           )}
-
-          {dictation && current && dictPick.length > 0 && (
-            <>
-              <div className="flex items-center justify-between gap-2 sm:gap-3">
-                <div className="flex items-center gap-0.5">
-                  <button className="btn-icon size-9" title="Câu trước (↑)" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
-                    <ChevronLeft className="size-5" />
-                  </button>
-                  <span className="label whitespace-nowrap text-link max-sm:text-xs">
-                    {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
-                  </span>
-                  <button className="btn-icon size-9" title="Câu sau (↓)" aria-label="Câu sau" onClick={next} disabled={nextIdx === undefined}>
-                    <ChevronRight className="size-5" />
-                  </button>
+          <div className="sticker overflow-hidden">
+            {dictation && current && dictPick.length > 0 && (
+              <div className="stage-band flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  {sentenceNav("↑", "↓")}
+                  <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
                 </div>
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="text-xs whitespace-nowrap text-muted">
-                    <span className="max-sm:hidden">Đã xong </span>
-                    <span className="sm:hidden">Xong </span>
-                    {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length}
-                    <span className="max-sm:hidden"> câu</span>
+                <div className="flex items-center gap-1.5 pl-2">
+                  {dictPick.map((k) => (
+                    <span key={k} aria-hidden className={`size-3 rounded-full border-2 border-ink ${dictDone[k] ? "bg-ink" : "bg-card"} ${k === idx ? "scale-125 outline-2 outline-offset-1 outline-ink" : ""}`} />
+                  ))}
+                  <span className="ml-auto text-xs font-bold whitespace-nowrap">
+                    Xong {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length}
                   </span>
                   {loggedIn && starButton(current.text, "size-[18px]")}
                 </div>
               </div>
-              <DictationPanel
-                key={`${idx}-${settings.merge}-${dictEpoch}`}
-                text={current.text}
-                level={settings.dictLevel}
-                onReplay={() => go(idx)}
-                onTogglePlay={togglePlay}
-                onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
-                onPrevSentence={prev}
-                onNextSentence={next}
-                onDone={(correct, total) => dictFinished(idx, correct, total)}
-                onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
-                onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
-                hasNext={dictNextIdx !== undefined}
-                draft={dictDrafts[idx]}
-                saved={dictDone[idx]}
-                onWord={(w) => pickWord(w)}
-                translation={settings.showTranslation ? trText(current.text) : undefined}
-                onDraft={(d) =>
-                  setDictDrafts((prev) => {
-                    const drafts = { ...prev };
-                    if (d) drafts[idx] = d;
-                    else delete drafts[idx];
-                    return drafts;
-                  })
-                }
-              />
-            </>
-          )}
-
-          {dictation && ready && (roundDone || !dictPick.length) && (
-            <div className="flex flex-col gap-2.5 rounded-2xl border border-accent/35 bg-accent/10 p-4">
-              {roundDone && (
-                <p className="text-base font-extrabold">
-                  🎉 Xong lượt {dictPick.length} câu — đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
-                </p>
-              )}
-              {roundDone && roundPoints !== 0 && (
-                <p className="inline-flex items-center gap-2 self-start rounded-full border border-gem/35 bg-gem/10 py-1 pr-3 pl-1.5 text-sm font-extrabold text-gem">
-                  <Gem className="size-6" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} điểm lượt này
-                </p>
-              )}
-              <p className="text-sm text-muted">
-                {left > 0
-                  ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.`
-                  : `Bạn đã chép hết ${dictTotal} câu của bài này 👏`}
-              </p>
-              <button className="btn btn-primary py-3" onClick={left > 0 ? newRound : restartProgress}>
-                {left > 0 ? (
-                  <>
-                    Lượt mới <ChevronRight className="size-5" />
-                  </>
-                ) : (
-                  "Học lại từ đầu"
-                )}
-              </button>
-            </div>
-          )}
-
-          {!dictation && (
-            <>
-              {/* Câu hiện tại: bấm vào từ để tra / lưu, bấm cụm từ (xanh) để xem cả cụm */}
-              <div className="flex min-h-40 flex-col gap-3 rounded-2xl border border-border bg-background/60 p-4 sm:min-h-48 sm:p-5">
-                <div className="flex items-center gap-3">
-                  <span className="label flex-1 text-link">
-                    {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
-                  </span>
-                  {current && <span className="text-xs text-muted">{formatTime(current.start)}</span>}
-                  {current && settings.hideText && revealButton(idx)}
-                  {current && loggedIn && !curHidden && starButton(current.text)}
+            )}
+            {!dictation && current && (
+              <div className="stage-band flex items-center justify-between gap-2">
+                {sentenceNav("←", "→")}
+                <div className="flex items-center gap-3 pr-1">
+                  <span className="font-mono text-xs font-bold tabular-nums">{formatTime(current.start)}</span>
+                  {settings.hideText && revealButton(idx)}
+                  {loggedIn && !curHidden && starButton(current.text)}
                 </div>
-                {current && (
-                  // Đang ẩn chữ: di chuột để xem; bấm (hoặc chạm trên điện thoại) để hiện hẳn câu này — chưa tra từ được khi còn mờ
-                  <p
-                    className={`text-xl leading-relaxed font-bold transition sm:text-2xl ${
-                      curHidden ? "cursor-pointer blur-md select-none hover:blur-none [&_button]:pointer-events-none" : ""
-                    }`}
-                    title={curHidden ? "Di chuột để xem · bấm để hiện câu này" : undefined}
-                    onClick={curHidden ? () => setRevealed((r) => new Set(r).add(idx)) : undefined}
-                  >
-                    <SentenceText
-                      text={current.text}
-                      phrases={curPhrases ?? []}
-                      saved={saved}
-                      onWord={(w) => pickWord(w)}
-                      onPhrase={(p) => pickPhrase(p, current.text)}
-                    />
+                {gap && <div key={gap.id} className="gap-bar candy-bar absolute inset-x-0 bottom-0 h-1.5" style={{ animationDuration: `${gap.ms}ms` }} />}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-4 p-3.5 sm:p-5">
+              {resumed !== null && (
+                <div className="flex items-center gap-2 rounded-xl bg-card-2 px-3 py-2 text-sm">
+                  <span className="flex-1 font-bold">
+                    Tiếp tục từ câu {resumed + 1}/{segments.length}
+                  </span>
+                  <button className="cursor-pointer font-extrabold text-amber hover:underline" onClick={restartProgress}>
+                    Học lại từ đầu
+                  </button>
+                  <button className="cursor-pointer text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng" aria-label="Đóng">
+                    <X className="size-4" />
+                  </button>
+                </div>
+              )}
+
+              {dictation && current && dictPick.length > 0 && (
+                <DictationPanel
+                  key={`${idx}-${settings.merge}-${dictEpoch}`}
+                  text={current.text}
+                  level={settings.dictLevel}
+                  onReplay={() => go(idx)}
+                  onTogglePlay={togglePlay}
+                  onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
+                  onPrevSentence={prev}
+                  onNextSentence={next}
+                  onDone={(correct, total) => dictFinished(idx, correct, total)}
+                  onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
+                  onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
+                  hasNext={dictNextIdx !== undefined}
+                  draft={dictDrafts[idx]}
+                  saved={dictDone[idx]}
+                  onWord={(w) => pickWord(w)}
+                  translation={settings.showTranslation ? trText(current.text) : undefined}
+                  onDraft={(d) =>
+                    setDictDrafts((prev) => {
+                      const drafts = { ...prev };
+                      if (d) drafts[idx] = d;
+                      else delete drafts[idx];
+                      return drafts;
+                    })
+                  }
+                />
+              )}
+
+              {dictation && ready && (roundDone || !dictPick.length) && (
+                <div className="flex flex-col gap-3 rounded-2xl bg-[color-mix(in_srgb,var(--leaf)_40%,var(--card))] p-4">
+                  <div className="flex items-center gap-2">
+                    <Mascot animated className="-my-1 size-16 -scale-x-100" />
+                    <div className="flex min-w-0 flex-col gap-1">
+                      {roundDone ? (
+                        <p className="font-display text-lg leading-tight font-extrabold">
+                          Xong lượt {dictPick.length} câu, đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
+                        </p>
+                      ) : (
+                        <p className="font-display text-lg leading-tight font-extrabold">Sẵn sàng chép lượt mới?</p>
+                      )}
+                      {roundDone && roundPoints !== 0 && (
+                        <p className="inline-flex w-fit items-center gap-1.5 text-sm font-extrabold text-gem">
+                          <Gem className="size-5" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} điểm lượt này
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm">
+                    {left > 0 ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.` : `Bạn đã chép hết ${dictTotal} câu của bài này!`}
                   </p>
-                )}
-                {current && !curHidden && curPhrases && <div className="flex flex-col gap-1">{phraseRows(curPhrases, current.text)}</div>}
-                {current && !curHidden && showPhr && !curPhrases && (
-                  <p className="text-sm text-muted">{phrError ? `⚠ ${phrError}` : "Đang tìm cụm từ…"}</p>
-                )}
-                {current && (settings.showTranslation || trShown.has(idx)) && <p className="text-base text-muted">{trText(current.text)}</p>}
-                <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {current && !settings.showTranslation && !trShown.has(idx) && (
-                    <button
-                      className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
-                      onClick={() => {
-                        setTrShown((s) => new Set(s).add(idx));
-                        void translateFrom(idx);
-                      }}
-                    >
-                      <Languages className="size-4" /> Dịch câu này
-                    </button>
-                  )}
-                  {current && (trError || tr[current.text] === "") && (
-                    <a
-                      className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:underline"
-                      target="_blank"
-                      rel="noreferrer"
-                      href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
-                      title={trError}
-                    >
-                      Mở Google Dịch ↗
-                    </a>
-                  )}
-                  <span className="ml-auto text-xs font-bold text-amber">
-                    {gap ? (isRecording ? "🎙 Đến lượt bạn — đang ghi âm…" : "🗣 Đến lượt bạn nói…") : ""}
-                  </span>
+                  <button className="btn btn-primary py-3" onClick={left > 0 ? newRound : restartProgress}>
+                    {left > 0 ? (
+                      <>
+                        Lượt mới <ChevronRight className="size-5" />
+                      </>
+                    ) : (
+                      "Học lại từ đầu"
+                    )}
+                  </button>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
-                  {gap && (
-                    <div
-                      key={gap.id}
-                      className="gap-bar h-full bg-amber"
-                      style={{ animationDuration: `${gap.ms}ms` }}
+              )}
+
+              {!dictation && current && (
+                <>
+                  <div className="flex min-h-14 items-center gap-2">
+                    <Mascot animated className="-my-1 -ml-1 size-14 -scale-x-100" />
+                    <p key={coach} role="status" className="dict-bubble bubble-pop ml-1 min-w-0 rounded-2xl border-2 border-ink bg-card px-3 py-1.5 text-sm leading-snug font-extrabold">
+                      {coach}
+                    </p>
+                  </div>
+
+                  {/* Bấm vào từ để tra / lưu, bấm cụm từ (xanh) để xem cả cụm. Đang ẩn chữ: di chuột để xem; bấm (hoặc chạm) để hiện hẳn câu này */}
+                  <div className="flex min-h-32 flex-col gap-2.5">
+                    <p
+                      className={`font-display text-2xl leading-snug font-bold transition sm:text-[1.75rem] ${
+                        curHidden ? "cursor-pointer blur-md select-none hover:blur-none [&_button]:pointer-events-none" : ""
+                      }`}
+                      title={curHidden ? "Di chuột để xem · bấm để hiện câu này" : undefined}
+                      onClick={curHidden ? () => setRevealed((r) => new Set(r).add(idx)) : undefined}
+                    >
+                      <SentenceText text={current.text} phrases={curPhrases ?? []} saved={saved} onWord={(w) => pickWord(w)} onPhrase={(p) => pickPhrase(p, current.text)} />
+                    </p>
+                    {!curHidden && curPhrases && curPhrases.length > 0 && <div className="flex flex-col gap-1">{phraseRows(curPhrases, current.text)}</div>}
+                    {!curHidden && showPhr && !curPhrases && <p className="text-sm text-muted">{phrError ? `⚠ ${phrError}` : "Đang tìm cụm từ…"}</p>}
+                    {(settings.showTranslation || trShown.has(idx)) && <p className="text-base text-muted">{trText(current.text)}</p>}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden">
+                      {!settings.showTranslation && !trShown.has(idx) && (
+                        <button
+                          className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
+                          onClick={() => {
+                            setTrShown((s) => new Set(s).add(idx));
+                            void translateFrom(idx);
+                          }}
+                        >
+                          <Languages className="size-4" /> Dịch câu này
+                        </button>
+                      )}
+                      {(trError || tr[current.text] === "") && (
+                        <a
+                          className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                          href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
+                          title={trError}
+                        >
+                          Mở Google Dịch ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="steps">
+                    <Step icon={playing ? Pause : Play} label={playing ? "Dừng" : "Nghe"} keyHint="Space" active={step === "listen"} onClick={togglePlay} />
+                    <Step
+                      icon={isRecording ? Square : Mic}
+                      label={isRecording ? "Dừng ghi" : "Nói"}
+                      keyHint="R"
+                      active={step === "speak"}
+                      recording={isRecording}
+                      onClick={() => (isRecording ? recorder.stop() : void recorder.start(idx))}
                     />
-                  )}
-                </div>
+                    <Step icon={Volume2} label="So sánh" keyHint="P" active={step === "compare"} disabled={!hasRecording} onClick={() => recorder.play(idx)} />
+                  </div>
+
+                  <button className="btn btn-primary py-3.5 text-base" disabled={nextIdx === undefined} onClick={next}>
+                    Câu tiếp theo <ChevronRight className="size-5" />
+                  </button>
+                </>
+              )}
+
+              <div className="scroll-row -mx-3.5 flex gap-2 px-3.5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+                <Chip on={settings.showTranslation} onToggle={() => update({ showTranslation: !settings.showTranslation })} icon={Languages} label="Bản dịch" title="Hiện bản dịch tiếng Việt dưới mỗi câu" />
+                {!dictation && <Chip on={settings.hideText} onToggle={toggleHideText} icon={EyeOff} label="Ẩn chữ" title="Ẩn chữ — chỉ nghe rồi nói theo (H)" />}
+                {!dictation && (
+                  // 1 nút bật/tắt thay cho cặp "Từng câu / Liên tục" (như nút "Tự dừng sau mỗi câu" của app)
+                  <Chip
+                    on={settings.mode === "segment"}
+                    onToggle={() => update({ mode: settings.mode === "segment" ? "free" : "segment" })}
+                    icon={CirclePause}
+                    label={
+                      <>
+                        Tự dừng<span className="max-sm:hidden"> sau mỗi câu</span>
+                      </>
+                    }
+                    title={settings.mode === "segment" ? "Đang dừng sau mỗi câu — bấm để phát liên tục" : "Đang phát liên tục — bấm để dừng sau mỗi câu"}
+                  />
+                )}
               </div>
-
-              {/* Ghi âm */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  className={`btn btn-red py-3 ${isRecording ? "animate-pulse bg-red text-white" : ""}`}
-                  onClick={() => (isRecording ? recorder.stop() : recorder.start(idx))}
-                >
-                  {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
-                  {isRecording ? "Dừng ghi" : "Ghi âm"}
-                </button>
-                <button
-                  className="btn py-3 uppercase"
-                  disabled={!recorder.recordings[idx]}
-                  onClick={() => recorder.play(idx)}
-                >
-                  <Volume2 className="size-5" /> Nghe lại
-                </button>
-              </div>
-
-              <button className="btn btn-primary py-3.5 text-base" disabled={nextIdx === undefined} onClick={next}>
-                Câu tiếp theo <ChevronRight className="size-5" />
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Cột 3: toàn bộ transcript (Chính tả: chỉ các câu của lượt đang làm) */}
-        <div className="card flex max-h-[75dvh] flex-col gap-3 max-sm:p-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
-          <div className="flex items-center justify-between">
-            <span className="label">{dictation ? "Lượt Dictation" : starredOnly ? "Câu đã đánh dấu ⭐" : "Transcript"}</span>
-            {/* Chính tả: % tính trên cả bài (không phải lượt) — ghi rõ để khỏi lẫn với "Đã xong x/y câu" của lượt */}
-            <span className="pill bg-card-2 px-3 py-1 text-sm" title={dictation ? "Số câu đã chép trong cả bài" : "Số câu đã nghe"}>
-              {dictation ? `Cả bài ${progress}%` : `${progress}%`}
-            </span>
+            </div>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-card-2">
-            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
+        </section>
+
+        {/* Transcript: đường đi qua các câu, linh vật đứng ở câu đang học (Chính tả: chỉ các câu của lượt đang làm) */}
+        <section className="card flex max-h-[75dvh] min-h-0 min-w-0 flex-col gap-2.5 max-sm:p-3 lg:col-start-1 lg:row-start-2 lg:max-h-[80dvh] xl:sticky xl:top-4 xl:col-start-3 xl:row-start-1 xl:max-h-[calc(100vh-7rem)]">
+          <div className="flex items-center gap-2">
+            <h2 className="flex min-w-0 items-center truncate text-lg font-extrabold">
+              <SoundMark className="mr-1" />
+              {dictation ? "Lượt Dictation" : starredOnly ? "Câu đã đánh dấu" : "Transcript"}
+            </h2>
+            <div className="flex-1" />
+            {loggedIn && !dictation && <Chip on={starredOnly} onToggle={toggleStarredOnly} icon={Star} label="Câu sao" title="Chỉ hiện câu đã đánh dấu sao" />}
           </div>
-          <div ref={listRef} className="relative -mx-1 flex flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-1 py-1 sm:gap-3">
+          {/* Chính tả: % tính trên cả bài (không phải lượt) — ghi rõ để khỏi lẫn với "Xong x/y" của lượt */}
+          <div className="flex items-center gap-2" title={dictation ? "Số câu đã chép trong cả bài" : "Số câu đã nghe"}>
+            <div className="h-3 flex-1 overflow-hidden rounded-full border-2 border-ink bg-card-2">
+              <div className="candy-bar h-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-sm font-extrabold whitespace-nowrap tabular-nums">{dictation ? `Cả bài ${progress}%` : `${progress}%`}</span>
+          </div>
+          <div ref={listRef} className="relative -mx-1 flex flex-1 flex-col overflow-y-auto overscroll-contain px-1 py-1">
             {segments.map((s, i) => {
               if (inQueue && !inQueue.has(i)) return null;
-              // Chính tả: câu chưa làm thì che chữ; Shadowing: theo nút "Ẩn chữ" (bấm 👁 để xem từng câu)
+              // Chính tả: câu chưa làm thì che chữ; Shadowing: theo nút "Ẩn chữ" (bấm mắt để xem từng câu)
               const hidden = dictation ? !dictDone[i] : settings.hideText && !revealed.has(i);
               const phrases = showPhr && !hidden ? (phr[s.text] ?? []) : [];
+              const passed = dictation ? !!dictDone[i] : seen.has(i);
               return (
-                <div
-                  key={i}
-                  data-idx={i}
-                  onClick={() => go(i)}
-                  className={`cursor-pointer rounded-2xl border-2 p-3 transition sm:p-4 ${
-                    i === idx ? "border-accent bg-accent/10" : "border-border hover:border-accent/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="pill bg-card-2 text-foreground">#{i + 1}</span>
-                    <span className="font-mono text-xs text-muted">{formatTime(s.start)}</span>
-                    {dictation && dictDone[i] && (
-                      <span className="pill bg-accent/15 text-accent">
-                        ✓ {dictDone[i].correct}/{dictDone[i].total}
-                      </span>
-                    )}
-                    {dictation && pointIdx.has(i) && (
-                      <span title="Câu này đã được tính điểm">
-                        <Gem className="size-4" />
-                      </span>
-                    )}
-                    <span className="flex-1" />
-                    {recorder.recordings[i] && (
-                      <button
-                        className="cursor-pointer text-link hover:text-foreground"
-                        title="Nghe bản ghi của bạn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          recorder.play(i);
-                        }}
-                      >
-                        <Volume2 className="size-5" />
-                      </button>
-                    )}
-                    {!dictation && settings.hideText && revealButton(i)}
-                    {loggedIn && !hidden && starButton(s.text, "size-[18px]")}
-                  </div>
-                  {/* Chính tả: câu chưa chép không hiện "****" — dấu sao lộ số từ, độ dài từ, dấu câu (mức Khó thành vô nghĩa) */}
-                  <p
-                    className={`mt-2 text-sm leading-relaxed ${
-                      hidden ? (dictation ? "text-muted italic" : "font-mono tracking-wider text-muted") : ""
-                    }`}
-                  >
-                    {hidden ? (
-                      dictation ? (
-                        i === idx ? "Đang chép…" : "Chưa chép"
+                <div key={i} data-idx={i} onClick={() => go(i)} className={`trow ${i === idx ? "trow-on" : ""}`}>
+                  <span className={`trow-dot ${passed ? "trow-passed" : ""}`}>{i === idx ? <Mascot className="size-9 max-w-none" /> : i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    {/* Chính tả: câu chưa chép không hiện "****" — dấu sao lộ số từ, độ dài từ, dấu câu (mức Khó thành vô nghĩa) */}
+                    <p className={`text-[15px] leading-snug ${i === idx ? "font-bold" : ""} ${hidden ? (dictation ? "text-muted italic" : "font-mono tracking-wider text-muted") : ""}`}>
+                      {hidden ? (
+                        dictation ? (
+                          i === idx ? "Đang chép…" : "Chưa chép"
+                        ) : (
+                          mask(s.text)
+                        )
                       ) : (
-                        mask(s.text)
-                      )
-                    ) : (
-                      <SentenceText text={s.text} phrases={phrases} saved={i === idx ? saved : undefined} onPhrase={(p) => pickPhrase(p, s.text)} />
+                        <SentenceText text={s.text} phrases={phrases} saved={i === idx ? saved : undefined} onPhrase={(p) => pickPhrase(p, s.text)} />
+                      )}
+                    </p>
+                    {phrases.length > 0 && <div className="mt-1 flex flex-col gap-0.5">{phraseRows(phrases, s.text, true)}</div>}
+                    {/* Bản dịch: ẩn chữ (Shadowing) vẫn cho xem nghĩa; Chính tả chưa chép thì không lộ */}
+                    {settings.showTranslation && tr[s.text] && !(dictation && hidden) && <span className="mt-1 block text-xs text-muted">{tr[s.text]}</span>}
+                    {dictation && dictDone[i] && (
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-extrabold text-accent">
+                        <Check className="size-3.5" /> {dictDone[i].correct}/{dictDone[i].total}
+                        {pointIdx.has(i) && (
+                          <span title="Câu này đã được tính điểm">
+                            <Gem className="ml-1 size-4" />
+                          </span>
+                        )}
+                      </span>
                     )}
-                  </p>
-                  {phrases.length > 0 && <div className="mt-1 flex flex-col gap-0.5">{phraseRows(phrases, s.text, true)}</div>}
-                  {/* Bản dịch: ẩn chữ (Shadowing) vẫn cho xem nghĩa; Chính tả chưa chép thì không lộ */}
-                  {settings.showTranslation && tr[s.text] && !(dictation && hidden) && (
-                    <span className="mt-1 block text-xs text-muted">{tr[s.text]}</span>
-                  )}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-mono text-[11px] leading-5 text-muted tabular-nums">{formatTime(s.start)}</span>
+                    <div className="flex items-center gap-1.5">
+                      {recorder.recordings[i] && (
+                        <button
+                          className="cursor-pointer text-link hover:text-foreground"
+                          title="Nghe bản ghi của bạn"
+                          aria-label="Nghe bản ghi của bạn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            recorder.play(i);
+                          }}
+                        >
+                          <Volume2 className="size-[18px]" />
+                        </button>
+                      )}
+                      {!dictation && settings.hideText && revealButton(i)}
+                      {loggedIn && !hidden && starButton(s.text, "size-[18px]")}
+                    </div>
+                  </div>
                 </div>
               );
             })}
             {starredOnly && !starredIdx.length && (
-              <p className="mt-6 text-center text-sm text-muted">Chưa có câu nào được đánh dấu ⭐ trong bài này.</p>
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Mascot className="size-20" />
+                <p className="text-sm text-muted">Chưa có câu nào được đánh dấu sao trong bài này.</p>
+              </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
 
       <WordPopup

@@ -244,6 +244,115 @@ select {
     transform-origin: bottom;
     animation: wave-talk 2.2s ease-in-out infinite;
   }
+  /* Màn học: --stage đổi theo việc người học cần làm, dải màu sân khấu + dòng transcript đổi theo */
+  .lesson {
+    --stage: var(--aqua);
+  }
+  .lesson[data-step="speak"] {
+    --stage: var(--candy);
+  }
+  .lesson[data-step="compare"] {
+    --stage: var(--leaf);
+  }
+  .lesson[data-step="dict"] {
+    --stage: var(--sun);
+  }
+  .lesson:has([data-dict="check"]) {
+    --stage: var(--candy);
+  }
+  .lesson:has([data-dict="done"]) {
+    --stage: var(--leaf);
+  }
+  .stage-band {
+    @apply relative border-b-2 border-ink bg-[var(--stage)] px-1.5 py-1.5 text-[#2b1520] transition-colors duration-300 sm:px-2.5;
+  }
+  /* Thẻ chế độ: thẻ đang chọn liền với dải màu bên dưới */
+  .mode-tab {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-t-2xl border-2 border-ink bg-card-2 px-4 pt-1.5 pb-1 font-display text-base font-extrabold text-muted transition-colors duration-300 hover:text-foreground max-sm:flex-1;
+  }
+  .mode-tab-on {
+    @apply border-b-[var(--stage)] bg-[var(--stage)] pt-2.5 pb-1.5 text-[#2b1520] hover:text-[#2b1520];
+  }
+  .chip {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-ink/25 bg-card px-3 py-1.5 text-[13px] font-bold whitespace-nowrap text-muted transition hover:border-ink hover:text-foreground;
+  }
+  .chip-on {
+    @apply border-ink bg-[var(--sun)] text-[#2b1520] shadow-[0_2px_0_var(--ink)];
+  }
+  /* Vòng Nghe → Nói → So sánh: các nút tròn nối với nhau bằng đường đứt */
+  .steps {
+    @apply relative grid grid-cols-3 gap-1;
+  }
+  .steps::before {
+    content: "";
+    position: absolute;
+    left: 16.6%;
+    right: 16.6%;
+    top: 30px;
+    border-top: 3px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+  .step {
+    @apply relative flex cursor-pointer flex-col items-center gap-1.5 text-muted transition disabled:cursor-not-allowed;
+  }
+  .step:disabled .step-dot {
+    @apply border-ink/30 text-ink/40 shadow-none;
+  }
+  .step:disabled {
+    @apply text-muted/70;
+  }
+  .step-dot {
+    @apply flex size-[60px] items-center justify-center rounded-full border-2 border-ink bg-card text-foreground shadow-[0_3px_0_var(--ink)];
+    transition:
+      transform 220ms cubic-bezier(0.3, 1.6, 0.5, 1),
+      background-color 300ms ease-out;
+  }
+  .step:not(:disabled):hover .step-dot {
+    transform: translateY(-2px);
+  }
+  .step:not(:disabled):active .step-dot {
+    @apply shadow-[0_1px_0_var(--ink)];
+    transform: translateY(2px);
+  }
+  .step-on {
+    @apply text-foreground;
+  }
+  .step-on .step-dot {
+    @apply bg-[var(--stage)] text-[#2b1520];
+    transform: scale(1.1);
+  }
+  .step-rec .step-dot {
+    @apply bg-red text-white;
+    animation: rec-ring 1.2s ease-out infinite;
+  }
+  /* Dòng transcript: chấm số nối thành một đường, câu đang học nổi lên như sticker */
+  .trow {
+    @apply relative flex cursor-pointer items-start gap-2.5 rounded-2xl border-2 border-transparent px-2 py-2.5 transition-colors hover:bg-card-2;
+  }
+  .trow::before {
+    content: "";
+    position: absolute;
+    left: 21px;
+    top: 0;
+    bottom: 0;
+    border-left: 2px solid var(--border);
+  }
+  .trow-on {
+    @apply border-ink shadow-[0_3px_0_var(--ink)] hover:bg-[color-mix(in_srgb,var(--stage)_45%,var(--card))];
+    z-index: 1;
+    background: color-mix(in srgb, var(--stage) 45%, var(--card));
+  }
+  .trow-on::before {
+    display: none;
+  }
+  .trow-dot {
+    @apply relative flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-border bg-card text-xs font-extrabold text-muted tabular-nums;
+  }
+  .trow-passed {
+    @apply border-ink bg-[var(--leaf)] text-[#2b1520];
+  }
+  .trow-on .trow-dot {
+    @apply border-0 bg-transparent;
+  }
   .card {
     @apply rounded-3xl border-2 border-ink bg-card p-4 shadow-[0_4px_0_var(--ink)];
   }
@@ -328,6 +437,14 @@ select {
   from {
     transform: translateY(6px) rotate(-6deg) scale(0.7);
     opacity: 0;
+  }
+}
+@keyframes rec-ring {
+  0% {
+    box-shadow: 0 3px 0 var(--ink), 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 3px 0 var(--ink), 0 0 0 14px transparent;
   }
 }
 @keyframes wave-talk {
@@ -647,6 +764,7 @@ select {
   .gold-pull,
   .bubble-pop,
   .mascot-hop,
+  .step-rec .step-dot,
   .sound-wave i {
     animation: none;
   }
