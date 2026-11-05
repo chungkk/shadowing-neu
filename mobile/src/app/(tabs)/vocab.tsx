@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { MascotMessage } from "@/components/Mascot";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -86,7 +87,7 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
 /** Thẻ game từ vựng (Mưa từ vựng · Đào vàng) → màn chơi /game/<variant> */
 const GAMES = [
   { variant: "rain", bg: "linear-gradient(to bottom, #0a1622, #0c2033, #0b2a40)", art: ["1f327-fe0f", "26f5"], tone: "#0e7490" },
-  { variant: "gold", bg: "linear-gradient(to bottom, #2a3442 0%, #2a3442 34%, #6b4520 34%, #2e1c0b 100%)", art: ["1f477", "1fa99"], tone: C.amber },
+  { variant: "gold", bg: "linear-gradient(to bottom, #2a3442 0%, #2a3442 34%, #6b4520 34%, #2e1c0b 100%)", art: ["1f477", "1fa99"], tone: "#a85605" },
 ] as const;
 
 function GameCard({ game, width }: { game: (typeof GAMES)[number]; width: number }) {
@@ -144,7 +145,7 @@ function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
         <SymbolView name="square.stack.3d.up" size={14} tintColor={C.muted} />
         <Text style={{ flex: 1, color: C.muted, fontSize: 14, fontWeight: "600" }}>{deck.wordCount}</Text>
         {saved > 0 && (
-          <Text style={{ color: saved >= deck.wordCount ? C.accent : C.amber, fontSize: 13, fontWeight: "700" }}>
+          <Text style={{ color: saved >= deck.wordCount ? C.accentText : C.amber, fontSize: 13, fontWeight: "700" }}>
             {saved >= deck.wordCount ? "✓" : `${saved}/${deck.wordCount}`}
           </Text>
         )}
@@ -213,7 +214,7 @@ export default function VocabTab() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            tintColor={C.accent}
+            tintColor={C.accentText}
             onRefresh={async () => {
               setRefreshing(true);
               await load();
@@ -260,7 +261,7 @@ export default function VocabTab() {
             </View>
           </View>
         ))}
-        {decks && !decks.length && <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("decks.empty")}</Text>}
+        {decks && !decks.length && <MascotMessage text={t("decks.empty")} />}
       </ScrollView>
     </SafeAreaView>
   );

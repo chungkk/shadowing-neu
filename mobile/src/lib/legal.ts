@@ -11,7 +11,7 @@ export const legalUrl = (doc: LegalDoc) => `${API_URL}/${doc}${currentLang() ===
 
 export function openLegal(doc: LegalDoc) {
   WebBrowser.openBrowserAsync(legalUrl(doc), {
-    controlsColor: C.accent,
+    controlsColor: C.accentText,
     toolbarColor: C.background,
     presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
   }).catch((e) => showError(e));

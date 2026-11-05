@@ -42,6 +42,12 @@ const vi = {
   "tabs.settings": "Cài đặt",
 
   // Bài học
+  "theme.title": "Giao diện",
+  "theme.light": "Sáng",
+  "theme.dark": "Tối",
+  "theme.toLight": "Chuyển sang giao diện sáng",
+  "theme.toDark": "Chuyển sang giao diện tối ấm",
+  "hero.hello": "Hallo! Cùng nói nào!",
   "lessons.title": "Bài học",
   "lessons.subtitle": "Nghe từng câu, nói theo hoặc chép chính tả.",
   "lessons.all": "Tất cả",
@@ -690,6 +696,12 @@ const de: Dict = {
   "tabs.vocab": "Vokabeln",
   "tabs.settings": "Einstellungen",
 
+  "theme.title": "Design",
+  "theme.light": "Hell",
+  "theme.dark": "Dunkel",
+  "theme.toLight": "Zum hellen Design wechseln",
+  "theme.toDark": "Zum warmen dunklen Design wechseln",
+  "hero.hello": "Hallo! Sprechen wir!",
   "lessons.title": "Lektionen",
   "lessons.subtitle": "Satz für Satz hören, nachsprechen oder als Diktat schreiben.",
   "lessons.all": "Alle",

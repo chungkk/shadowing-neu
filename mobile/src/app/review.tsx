@@ -1,4 +1,5 @@
 import { useAudioPlayer } from "expo-audio";
+import { Mascot, MascotMessage } from "@/components/Mascot";
 import { Stack, router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
@@ -36,7 +37,7 @@ import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLookup } from "@/lib/useLookup";
 import { groupBySaved } from "@/lib/vocabGroups";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, alpha, themed } from "@/lib/theme";
 
 /** Mục sổ từ kèm lịch ôn (server cũ không gửi → từ mới) */
 type Word = VocabItem & { stage: number; dueAt: number | null };
@@ -47,15 +48,14 @@ const say = (text: string, slow?: boolean) => speakGerman(text, { slow }).catch(
 
 // ---- Thành phần giao diện ----
 
-const BLUE = C.phrase;
 type Tone = "idle" | "sel" | "right" | "wrong" | "dim";
-const TONES: Record<Tone, { border: string; bg: string; fg: string }> = {
+const TONES = themed((): Record<Tone, { border: string; bg: string; fg: string }> => ({
   idle: { border: C.border, bg: C.card2, fg: C.text },
-  sel: { border: BLUE, bg: "rgba(3,105,161,0.15)", fg: BLUE },
-  right: { border: C.accent, bg: "rgba(23,128,63,0.18)", fg: C.accent },
-  wrong: { border: C.red, bg: "rgba(232,56,79,0.15)", fg: C.redText },
+  sel: { border: C.phrase, bg: alpha(C.gem, 0.15), fg: C.phrase },
+  right: { border: C.accentText, bg: alpha(C.accent, 0.18), fg: C.accentText },
+  wrong: { border: C.red, bg: alpha(C.red, 0.15), fg: C.redText },
   dim: { border: C.border, bg: C.card2, fg: C.muted },
-};
+}));
 
 /** Ô / nút kiểu "nổi" có viền dưới dày (giống bài học Duolingo) */
 function Tile({
@@ -138,7 +138,7 @@ function Context({ text, word, blank, fill, size = 15, color = C.muted }: { text
     <Text style={base}>
       <Words text={text.slice(0, i)} context={text} />
       {blank ? (
-        <Text style={{ color: fill ? BLUE : C.muted, fontWeight: "800", textDecorationLine: "underline" }}>
+        <Text style={{ color: fill ? C.phrase : C.muted, fontWeight: "800", textDecorationLine: "underline" }}>
           {fill ? ` ${fill} ` : " " + "_".repeat(Math.min(Math.max(end - i, 5), 12)) + " "}
         </Text>
       ) : (
@@ -156,12 +156,12 @@ function SpeakButton({ text, big }: { text: string; big?: boolean }) {
   if (big)
     return (
       <Tile onPress={() => say(text)} style={{ width: 56, height: 56 }}>
-        <SymbolView name="speaker.wave.2.fill" size={26} tintColor={BLUE} />
+        <SymbolView name="speaker.wave.2.fill" size={26} tintColor={C.phrase} />
       </Tile>
     );
   return (
     <Pressable onPress={() => say(text)} hitSlop={10} accessibilityLabel={t("vocab.listen")}>
-      <SymbolView name="speaker.wave.2.fill" size={20} tintColor={BLUE} />
+      <SymbolView name="speaker.wave.2.fill" size={20} tintColor={C.phrase} />
     </Pressable>
   );
 }
@@ -176,9 +176,9 @@ function ListenButtons({ word }: { word: string }) {
           width: 104,
           height: 104,
           borderRadius: 24,
-          backgroundColor: BLUE,
+          backgroundColor: C.gemFill,
           borderBottomWidth: pressed ? 2 : 6,
-          borderColor: "#0369a1",
+          borderColor: C.gemDark,
           alignItems: "center",
           justifyContent: "center",
           transform: [{ translateY: pressed ? 3 : 0 }],
@@ -187,7 +187,7 @@ function ListenButtons({ word }: { word: string }) {
         <SymbolView name="speaker.wave.3.fill" size={48} tintColor="#fff" />
       </Pressable>
       <Tile onPress={() => say(word, true)} style={{ width: 60, height: 60 }}>
-        <SymbolView name="tortoise.fill" size={26} tintColor={BLUE} />
+        <SymbolView name="tortoise.fill" size={26} tintColor={C.phrase} />
       </Tile>
     </View>
   );
@@ -732,7 +732,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       const tone = TONES[ok ? "right" : "wrong"];
       const praise = t("review.praise").split("|");
       return (
-        <View style={{ backgroundColor: ok ? "rgba(23,128,63,0.16)" : "rgba(232,56,79,0.14)", borderTopWidth: 2, borderColor: tone.border, padding: 16, gap: 10 }}>
+        <View style={{ backgroundColor: ok ? alpha(C.accent, 0.16) : alpha(C.red, 0.14), borderTopWidth: 2, borderColor: tone.border, padding: 16, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.card, alignItems: "center", justifyContent: "center" }}>
               <SymbolView name={ok ? "checkmark" : "xmark"} size={18} weight="black" tintColor={tone.fg} />
@@ -787,8 +787,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 
   const stats = [
     { label: t("review.xp"), value: `⚡ ${xp}`, color: C.amber },
-    { label: t("review.accuracy"), value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: C.accent },
-    { label: t("review.time"), value: `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`, color: BLUE },
+    { label: t("review.accuracy"), value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: C.accentText },
+    { label: t("review.time"), value: `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`, color: C.phrase },
   ];
 
   return (
@@ -817,7 +817,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 
         {done ? (
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", gap: 18, padding: 24 }}>
-            <Text style={{ fontSize: 64 }}>{wrong.length ? "💪" : "🏆"}</Text>
+            <Mascot size={132} animated bob />
             <View style={{ alignItems: "center", gap: 4 }}>
               <Text style={{ color: C.amber, fontSize: 28, fontWeight: "800", textAlign: "center" }}>{practice ? t("review.practiceDone") : t("review.finished")}</Text>
               {!practice && streak > 0 && <Text style={{ color: C.amber, fontWeight: "800" }}>🔥 {t("review.streak", { n: streak })}</Text>}
@@ -826,7 +826,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               {stats.map((s) => (
                 <View key={s.label} style={{ flex: 1, borderWidth: 2, borderColor: s.color, borderRadius: 16, overflow: "hidden" }}>
                   <Text
-                    style={{ backgroundColor: s.color, color: C.text, textAlign: "center", fontSize: 11, fontWeight: "800", paddingVertical: 4, textTransform: "uppercase" }}
+                    style={{ backgroundColor: s.color, color: C.background, textAlign: "center", fontSize: 11, fontWeight: "800", paddingVertical: 4, textTransform: "uppercase" }}
                     numberOfLines={1}
                   >
                     {s.label}
@@ -963,8 +963,8 @@ export default function ReviewScreen() {
         contentContainerStyle={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", padding: tablet ? 24 : 16, gap: 12, paddingBottom: 60 }}
       >
         <ErrorText>{error}</ErrorText>
-        {!items && !error && <ActivityIndicator color={C.accent} style={{ marginTop: 24 }} />}
-        {items && !items.length && <Text style={[styles.muted, { textAlign: "center", marginTop: 40 }]}>{t("vocab.empty")}</Text>}
+        {!items && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 24 }} />}
+        {items && !items.length && <MascotMessage text={t("vocab.empty")} marginTop={32} />}
         {!!items?.length && (
           <>
             {/* Từ vựng: nút chính → ôn ngay các mục cần ôn; dòng phụ → chọn từ lưu theo từng ngày */}
@@ -1044,7 +1044,7 @@ function ChoiceRow({ icon, title, info, onPress }: { icon: SFSymbol; title: stri
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <SymbolView name={icon} size={16} tintColor={C.accent} />
+      <SymbolView name={icon} size={16} tintColor={C.accentText} />
       <Text style={{ flex: 1, color: C.text, fontSize: 16, fontWeight: "600" }} numberOfLines={1}>
         {title}
       </Text>
@@ -1059,8 +1059,8 @@ function TaskCard({ icon, title, info, children }: { icon: SFSymbol; title: stri
   return (
     <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(23,128,63,0.15)", alignItems: "center", justifyContent: "center" }}>
-          <SymbolView name={icon} size={18} tintColor={C.accent} />
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: alpha(C.accent, 0.15), alignItems: "center", justifyContent: "center" }}>
+          <SymbolView name={icon} size={18} tintColor={C.accentText} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ color: C.text, fontSize: 17, fontWeight: "700" }}>{title}</Text>

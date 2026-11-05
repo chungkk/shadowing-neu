@@ -6,7 +6,7 @@ export default function TabLayout() {
   const { t } = useI18n();
   return (
     // iPad: thanh tab trên cùng, có thể mở thành sidebar (không ảnh hưởng iPhone)
-    <NativeTabs tintColor={C.accent} backgroundColor={C.background} labelStyle={{ color: C.muted }} sidebarAdaptable>
+    <NativeTabs tintColor={C.accentText} backgroundColor={C.background} labelStyle={{ color: C.muted }} sidebarAdaptable>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t("tabs.lessons")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "books.vertical", selected: "books.vertical.fill" }} md="school" />

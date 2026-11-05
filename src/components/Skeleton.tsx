@@ -196,7 +196,6 @@ export function FormSkeleton({ fields = 4 }: { fields?: number }) {
 export function DecksSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Đang tải bộ từ vựng">
-      <Bone className="h-[5.5rem] w-full rounded-2xl" />
       <section className="flex flex-col gap-3">
         <Bone className="h-7 w-44" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">

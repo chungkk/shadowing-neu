@@ -12,12 +12,12 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { openLegal } from "@/lib/legal";
 import { FORM_MAX } from "@/lib/layout";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, alpha } from "@/lib/theme";
 
 function Pledge({ icon, children }: { icon: SFSymbol; children: string }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <SymbolView name={icon} size={15} tintColor={C.accent} weight="semibold" />
+      <SymbolView name={icon} size={15} tintColor={C.accentText} weight="semibold" />
       <Text style={{ color: C.text, fontSize: 15, fontWeight: "600" }}>{children}</Text>
     </View>
   );
@@ -30,9 +30,9 @@ function Hero() {
     <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 24, padding: 18, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View
-          style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "rgba(23,128,63,0.16)", alignItems: "center", justifyContent: "center" }}
+          style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: alpha(C.accent, 0.16), alignItems: "center", justifyContent: "center" }}
         >
-          <SymbolView name="lock.shield.fill" size={26} tintColor={C.accent} />
+          <SymbolView name="lock.shield.fill" size={26} tintColor={C.accentText} />
         </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ color: C.text, fontSize: 18, fontWeight: "800" }}>{t("priv.heroTitle")}</Text>
@@ -112,7 +112,7 @@ export default function PrivacyScreen() {
             title={t("priv.mic")}
             subtitle={t("priv.micSub")}
             value={micValue}
-            valueColor={mic?.granted ? C.accent : C.muted}
+            valueColor={mic?.granted ? C.accentText : C.muted}
             onPress={onMic}
           />
           <Row icon="gearshape.fill" iconBg="#475569" title={t("priv.systemSettings")} external onPress={() => Linking.openSettings().catch(() => {})} />

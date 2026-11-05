@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
-import { C } from "@/lib/theme";
+import { C, alpha, themed } from "@/lib/theme";
 
 // Kết quả đã hỏi trong phiên này (ngôn ngữ + từ + câu) → mở lại không phải chờ
 const meanings = new Map<string, WordInfo>();
@@ -174,7 +174,7 @@ export function WordSheet({
                 {shown.word}
               </Text>
               {saved && (
-                <View style={{ backgroundColor: "rgba(251,191,36,0.15)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                <View style={{ backgroundColor: alpha(C.gold, 0.15), borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Text style={{ color: C.amber, fontSize: 12, fontWeight: "700" }}>{t("word.saved")}</Text>
                 </View>
               )}
@@ -305,16 +305,16 @@ export function WordSheet({
                               gap: 4,
                               padding: 12,
                               borderRadius: 12,
-                              backgroundColor: s.current ? "rgba(23,128,63,0.1)" : C.background,
+                              backgroundColor: s.current ? alpha(C.accent, 0.1) : C.background,
                               borderWidth: 1,
-                              borderColor: s.current ? "rgba(23,128,63,0.4)" : C.border,
+                              borderColor: s.current ? alpha(C.accent, 0.4) : C.border,
                             }}
                           >
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                               <Text style={{ flex: 1, color: C.text, fontSize: 16, fontWeight: "700" }}>
                                 {i + 1}. {s.meaning}
                               </Text>
-                              {s.current && <Text style={{ color: C.accent, fontSize: 11, fontWeight: "700" }}>{t("word.inThisSentence")}</Text>}
+                              {s.current && <Text style={{ color: C.accentText, fontSize: 11, fontWeight: "700" }}>{t("word.inThisSentence")}</Text>}
                             </View>
                             {!!s.use && <Text style={{ color: C.amber, fontSize: 14, fontWeight: "600" }}>{s.use}</Text>}
                             <Pressable onPress={() => speak(plain(s.de))} onLongPress={() => speak(plain(s.de), true)} accessibilityRole="button">
@@ -342,7 +342,7 @@ export function WordSheet({
                     )}
                     {/* 💡 Mẹo nhớ + từ đi kèm → nghĩa */}
                     {(!!detail.data.tip || !!detail.data.cues?.length) && (
-                      <View style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(251,191,36,0.08)", borderWidth: 1, borderColor: "rgba(251,191,36,0.3)" }}>
+                      <View style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: alpha(C.gold, 0.08), borderWidth: 1, borderColor: alpha(C.gold, 0.3) }}>
                         <Text style={{ color: C.amber, fontSize: 14, fontWeight: "700" }}>💡 {t("word.tip")}</Text>
                         {!!detail.data.tip && <Text style={{ color: C.text, fontSize: 15, lineHeight: 22 }}>{detail.data.tip}</Text>}
                         {detail.data.cues?.map((c, i) => (
@@ -432,7 +432,7 @@ function markWord(sentence: string, word: string, parts?: string[]) {
 
 /** Hiện chữ, phần **…** tô vàng đậm */
 /** Tiêu đề nhỏ của từng phần trong tab Giải thích */
-const sectionLabel = { color: C.muted, fontSize: 12, fontWeight: "700" as const, letterSpacing: 1, textTransform: "uppercase" as const };
+const sectionLabel = themed(() => ({ color: C.muted, fontSize: 12, fontWeight: "700" as const, letterSpacing: 1, textTransform: "uppercase" as const }));
 
 function Rich({ text, style }: { text: string; style: object }) {
   return (
@@ -473,7 +473,7 @@ function ExampleRow({
       style={({ pressed }) => ({ flexDirection: "row", gap: 10, opacity: pressed ? 0.6 : 1 })}
     >
       <View style={{ paddingTop: label ? 22 : 4 }}>
-        <SymbolView name={playing ? "speaker.wave.2.fill" : "play.fill"} size={12} tintColor={C.accent} />
+        <SymbolView name={playing ? "speaker.wave.2.fill" : "play.fill"} size={12} tintColor={C.accentText} />
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         {!!label && <Text style={{ color: C.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>{label}</Text>}
@@ -508,11 +508,11 @@ function SpeakButton({
         borderRadius: 19,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: active ? C.accent : "rgba(23,128,63,0.15)",
+        backgroundColor: active ? C.accent : alpha(C.accent, 0.15),
         transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
-      <SymbolView name={active ? "speaker.wave.3.fill" : "speaker.wave.2.fill"} size={16} tintColor={active ? "#fff" : C.accent} />
+      <SymbolView name={active ? "speaker.wave.3.fill" : "speaker.wave.2.fill"} size={16} tintColor={active ? "#fff" : C.accentText} />
     </Pressable>
   );
 }
@@ -521,7 +521,7 @@ function Skeleton({ widths, height }: { widths: `${number}%`[]; height: number }
   return (
     <View style={{ gap: 8, paddingVertical: 2 }}>
       {widths.map((w, i) => (
-        <View key={i} style={{ height, width: w, borderRadius: 6, backgroundColor: "rgba(85,48,63,0.08)" }} />
+        <View key={i} style={{ height, width: w, borderRadius: 6, backgroundColor: alpha(C.inkLine, 0.08) }} />
       ))}
     </View>
   );
@@ -532,7 +532,7 @@ function ErrorRow({ text, onRetry, retryLabel }: { text: string; onRetry: () => 
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
       <Text style={{ flex: 1, color: C.redText }}>{text}</Text>
       <Pressable onPress={onRetry} hitSlop={8}>
-        <Text style={{ color: C.accent, fontWeight: "800" }}>{retryLabel}</Text>
+        <Text style={{ color: C.accentText, fontWeight: "800" }}>{retryLabel}</Text>
       </Pressable>
     </View>
   );

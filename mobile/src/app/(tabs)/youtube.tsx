@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { MascotMessage } from "@/components/Mascot";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Pressable, View } from "react-native";
@@ -52,7 +53,7 @@ function VideoRow({ v, onPress }: { v: VideoHit; onPress: () => void }) {
         </Text>
         <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>
           {[v.views, v.published].filter(Boolean).join(" · ")}
-          {v.captions && <Text style={{ color: C.accent, fontWeight: "800" }}> · CC</Text>}
+          {v.captions && <Text style={{ color: C.accentText, fontWeight: "800" }}> · CC</Text>}
         </Text>
       </View>
     </Pressable>
@@ -130,7 +131,7 @@ export default function YouTubeScreen() {
           {!user && (
             <Text style={styles.muted}>
               {t("yt.guestCta")}{" "}
-              <Text style={{ color: C.accent, fontWeight: "800" }} onPress={() => router.push("/settings")}>
+              <Text style={{ color: C.accentText, fontWeight: "800" }} onPress={() => router.push("/settings")}>
                 {t("loginOrRegister")}
               </Text>
             </Text>
@@ -154,9 +155,9 @@ export default function YouTubeScreen() {
             ListHeaderComponent={header}
             ListEmptyComponent={
               searching ? (
-                <ActivityIndicator color={C.accent} style={{ marginTop: 24 }} />
+                <ActivityIndicator color={C.accentText} style={{ marginTop: 24 }} />
               ) : results ? (
-                <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("yt.noResults")}</Text>
+                <MascotMessage text={t("yt.noResults")} />
               ) : undefined
             }
             keyboardShouldPersistTaps="handled"

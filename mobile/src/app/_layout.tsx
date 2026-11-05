@@ -2,20 +2,20 @@ import { DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { DISPLAY } from "@/components/Text";
 import { AuthProvider } from "@/lib/auth";
-import { C } from "@/lib/theme";
+import { ThemeRoot } from "@/components/ThemeRoot";
+import { C, isDark } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 
-const theme = {
-  ...DefaultTheme,
-  colors: { ...DefaultTheme.colors, background: C.background, card: C.card, primary: C.accent, text: C.text, border: C.border },
-};
-
-export default function RootLayout() {
+/** Dựng lại khi đổi giao diện (ThemeRoot), nên đọc màu trực tiếp ở đây */
+function AppStack() {
+  const theme = {
+    ...DefaultTheme,
+    dark: isDark(),
+    colors: { ...DefaultTheme.colors, background: C.background, card: C.card, primary: C.accentText, text: C.text, border: C.border },
+  };
   return (
-    <I18nProvider>
-      <AuthProvider>
         <ThemeProvider value={theme}>
-          <StatusBar style="dark" />
+          <StatusBar style={isDark() ? "light" : "dark"} />
           <Stack screenOptions={{ headerTintColor: C.link, headerTitleStyle: { color: C.text, fontFamily: DISPLAY, fontWeight: "800" }, headerBackButtonDisplayMode: "minimal" }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="lesson/[id]" options={{ title: "" }} />
@@ -32,6 +32,16 @@ export default function RootLayout() {
             <Stack.Screen name="feedback" options={{ title: "", presentation: "modal" }} />
           </Stack>
         </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <I18nProvider>
+      <AuthProvider>
+        <ThemeRoot>
+          <AppStack />
+        </ThemeRoot>
       </AuthProvider>
     </I18nProvider>
   );

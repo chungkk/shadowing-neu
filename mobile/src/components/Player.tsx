@@ -26,7 +26,8 @@ import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-nativ
 import { formatTime, mergeIntoSentences, type Segment } from "@shared/subtitles";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { DictationPanel, type DictDraft } from "./DictationPanel";
-import { GEM, Gem, PointsPill } from "./Points";
+import { Mascot } from "./Mascot";
+import { Gem, PointsPill } from "./Points";
 import { WordSheet } from "./WordSheet";
 import { Button, Label, Segmented } from "./ui";
 import { isSentence } from "@shared/review";
@@ -37,7 +38,7 @@ import { pickDictation } from "@/lib/dictPick";
 import { addPoints, setPointsTotal, usePoints } from "@/lib/points";
 import { noteProgress, progressSaved } from "@/lib/progress";
 import { prefetchGerman } from "@/lib/speak";
-import { C } from "@/lib/theme";
+import { C, alpha, stageBg } from "@/lib/theme";
 import { hasWords, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@shared/dictation";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
@@ -108,13 +109,13 @@ function Chip({ icon, iconOn, on, onPress, label, hint }: { icon: SFSymbol; icon
         borderWidth: 1,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: on ? "rgba(23,128,63,0.16)" : C.card2,
+        backgroundColor: on ? alpha(C.accent, 0.16) : C.card2,
         borderColor: on ? C.accent : C.border,
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <SymbolView name={on && iconOn ? iconOn : icon} size={14} tintColor={on ? C.accent : C.muted} weight="semibold" />
-      <Text style={{ color: on ? C.accent : C.text, fontSize: 14, fontWeight: "700" }}>{label}</Text>
+      <SymbolView name={on && iconOn ? iconOn : icon} size={14} tintColor={on ? C.accentText : C.muted} weight="semibold" />
+      <Text style={{ color: on ? C.accentText : C.text, fontSize: 14, fontWeight: "700" }}>{label}</Text>
     </Pressable>
   );
 }
@@ -719,12 +720,12 @@ export default function Player({
         paddingVertical: 10,
         paddingHorizontal: 14,
         borderRadius: 12,
-        backgroundColor: "rgba(23,128,63,0.12)",
+        backgroundColor: alpha(C.accent, 0.12),
         borderWidth: 1,
-        borderColor: "rgba(23,128,63,0.35)",
+        borderColor: alpha(C.accent, 0.35),
       }}
     >
-      <SymbolView name="arrow.uturn.forward.circle.fill" size={18} tintColor={C.accent} />
+      <SymbolView name="arrow.uturn.forward.circle.fill" size={18} tintColor={C.accentText} />
       <Text style={{ flex: 1, color: C.text, fontSize: 14, fontWeight: "600" }}>
         {t("player.resumed", { i: resumed + 1, n: segments.length })}
       </Text>
@@ -813,7 +814,7 @@ export default function Player({
   const roundPoints = dictPick.reduce((p, k) => p + (earned[k] ?? 0) - (spent[k] ?? 0) * POINTS_HINT, 0);
   const left = dictTotal - doneCount;
   const roundCard = dictation && (roundDone || !dictPick.length) && (
-    <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: "rgba(23,128,63,0.12)", borderWidth: 1, borderColor: "rgba(23,128,63,0.35)" }}>
+    <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: alpha(C.accent, 0.12), borderWidth: 1, borderColor: alpha(C.accent, 0.35) }}>
       {roundDone && (
         <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }}>
           {t("dict.roundDone", { n: dictPick.length, p: roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0 })}
@@ -822,7 +823,7 @@ export default function Player({
       {roundDone && roundPoints !== 0 && (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Gem size={22} />
-          <Text style={{ color: GEM, fontSize: 15, fontWeight: "800" }}>{t("dict.roundPoints", { n: roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}` })}</Text>
+          <Text style={{ color: C.gem, fontSize: 15, fontWeight: "800" }}>{t("dict.roundPoints", { n: roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}` })}</Text>
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 14 }}>
@@ -875,7 +876,7 @@ export default function Player({
               <View style={{ flexDirection: "row", gap: 4 }} accessibilityLabel={t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })}>
                 {queue.map((k) => {
                   const r = dictDone[k];
-                  const color = r ? (r.correct === r.total ? C.accent : C.amber) : k === idx ? C.text : C.border;
+                  const color = r ? (r.correct === r.total ? C.accentText : C.amber) : k === idx ? C.text : C.border;
                   return (
                     <Pressable key={k} onPress={() => k !== idx && playSegment(k)} hitSlop={{ top: 10, bottom: 10 }} style={{ flex: 1, paddingVertical: 2 }}>
                       <View style={{ height: 5, borderRadius: 3, backgroundColor: color, opacity: k === idx && !r ? 1 : 0.9 }} />
@@ -980,6 +981,8 @@ export default function Player({
       // Đang gõ chính tả: chừa chỗ dưới đáy để cuộn được ô nhập lên sát video
       contentContainerStyle={{ paddingHorizontal: tablet ? 20 : 16, paddingBottom: typing ? 400 : 40 }}
       renderItem={({ item, index }) => {
+        // Dòng đang học đổi màu theo việc cần làm, như --stage của web
+        const stage = dictation ? C.sun : recState.isRecording ? C.candy : recordings[idx] ? C.leaf : C.aqua;
         // Shadowing ẩn chữ: che tới khi bấm 👁
         const hidden = hideText && !revealed.has(index);
         const starred = stars.has(item.text.toLowerCase());
@@ -997,13 +1000,14 @@ export default function Player({
               padding: tablet ? 16 : 14,
               borderRadius: 16,
               borderWidth: 2,
-              borderColor: index === idx ? C.accent : C.border,
-              backgroundColor: index === idx ? "rgba(23,128,63,0.1)" : "transparent",
+              borderColor: index === idx ? C.ink : C.border,
+              backgroundColor: index === idx ? stageBg(stage) : "transparent",
+              boxShadow: index === idx ? `0 3px 0 ${C.ink}` : undefined,
               gap: 6,
             }}
           >
             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-              <Text style={{ color: C.text, fontWeight: "800" }}>#{index + 1}</Text>
+              {index === idx ? <Mascot size={30} style={{ marginVertical: -4 }} /> : <Text style={{ color: C.text, fontWeight: "800" }}>#{index + 1}</Text>}
               <Text style={{ color: C.muted, fontSize: 12 }}>{formatTime(item.start)}</Text>
               <View style={{ flex: 1 }} />
               {recordings[index] && (
@@ -1144,7 +1148,7 @@ export default function Player({
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: recState.isRecording ? C.red : "rgba(232,56,79,0.15)",
+                backgroundColor: recState.isRecording ? C.red : alpha(C.red, 0.15),
                 alignItems: "center",
                 justifyContent: "center",
                 transform: [{ scale: pressed ? 0.92 : 1 }],

@@ -1,30 +1,31 @@
 import { Stack } from "expo-router";
+import { MascotMessage } from "@/components/Mascot";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
-import { GEM, Gem } from "@/components/Points";
+import { Gem } from "@/components/Points";
 import { ErrorText, styles } from "@/components/ui";
 import { api, avatarSource, type Leaderboard, type LeaderboardEntry } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX } from "@/lib/layout";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, alpha, themed } from "@/lib/theme";
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 /** Nền · chữ của số hạng 3 người đầu */
-const PODIUM: [string, string][] = [
-  [C.amber, "#fff"],
+const PODIUM = themed((): [string, string][] => [
+  [C.amber, C.onAmber],
   [C.border, C.text],
-  ["rgba(217,119,6,0.25)", C.amber],
-];
+  [alpha(C.amber, 0.25), C.amber],
+]);
 
 /** Ảnh đại diện chỉ chính chủ xem được → người khác hiện chữ cái đầu tên */
 function Face({ name, url, size }: { name: string; url?: string | null; size: number }) {
   if (url) return <Image source={avatarSource(url)} alt="" style={{ width: size, height: size, borderRadius: size / 2 }} contentFit="cover" />;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.amber, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: "#fff", fontSize: size * 0.45, fontWeight: "800" }}>{name.trim()[0]?.toUpperCase() ?? "?"}</Text>
+      <Text style={{ color: C.onAmber, fontSize: size * 0.45, fontWeight: "800" }}>{name.trim()[0]?.toUpperCase() ?? "?"}</Text>
     </View>
   );
 }
@@ -51,10 +52,10 @@ function BoardRow({ r, first, mine, url }: { r: LeaderboardEntry; first: boolean
       <Face name={r.name} url={mine ? url : null} size={34} />
       <Text style={{ flex: 1, color: C.text, fontSize: 15, fontWeight: "700" }} numberOfLines={1}>
         {r.name}
-        {mine && <Text style={{ color: C.accent }}> ({t("board.you")})</Text>}
+        {mine && <Text style={{ color: C.accentText }}> ({t("board.you")})</Text>}
       </Text>
       <Gem size={18} />
-      <Text style={{ color: GEM, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{fmt(r.total)}</Text>
+      <Text style={{ color: C.gem, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{fmt(r.total)}</Text>
     </View>
   );
 }
@@ -89,7 +90,7 @@ export default function LeaderboardScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            tintColor={C.accent}
+            tintColor={C.accentText}
             onRefresh={async () => {
               setRefreshing(true);
               await load();
@@ -99,7 +100,7 @@ export default function LeaderboardScreen() {
         }
       >
         <ErrorText>{error}</ErrorText>
-        {!board && !error && <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />}
+        {!board && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
         {board && user && (
           <>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16 }}>
@@ -118,11 +119,11 @@ export default function LeaderboardScreen() {
                 )}
               </View>
               <Gem size={22} />
-              <Text style={{ color: GEM, fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{fmt(board.me.total)}</Text>
+              <Text style={{ color: C.gem, fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{fmt(board.me.total)}</Text>
             </View>
 
             {board.top.length === 0 ? (
-              <Text style={[styles.muted, { textAlign: "center", marginTop: 16 }]}>{t("board.empty")}</Text>
+              <MascotMessage text={t("board.empty")} />
             ) : (
               <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, overflow: "hidden" }}>
                 {board.top.map((r, i) => (

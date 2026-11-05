@@ -1,4 +1,5 @@
 import { router, Stack, useFocusEffect } from "expo-router";
+import { Mascot } from "@/components/Mascot";
 import { SymbolView } from "expo-symbols";
 import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
@@ -25,7 +26,7 @@ import { WordSheet } from "@/components/WordSheet";
 import { api, getVocabVersion, type VocabItem } from "@/lib/api";
 import { notice, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
-import { C } from "@/lib/theme";
+import { C, themed } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, FORM_MAX, useLayout } from "@/lib/layout";
 import { masteryMeta, masteryOfItem } from "@/lib/mastery";
@@ -54,7 +55,7 @@ const ARTICLE = /^(der|die|das|sich|ein|eine) /i;
 /** Khoá xếp A–Z: bỏ mạo từ / "sich" đầu ("der Hund" xếp ở H) */
 const sortKey = (w: string) => norm(w).replace(ARTICLE, "");
 /** Màu mạo từ theo giống (quy ước hay dùng khi học tiếng Đức): der xanh dương · die đỏ · das xanh lá */
-const GENDER: Record<string, string> = { der: C.phrase, die: C.redText, das: C.accent };
+const GENDER = themed((): Record<string, string> => ({ der: C.phrase, die: C.redText, das: C.accentText }));
 
 const kindOf = (v: VocabItem): Kind => (isSentence(v) ? "sentence" : isPhrase(v) ? "phrase" : "word");
 const byNewest = (a: VocabItem, b: VocabItem) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id;
@@ -336,7 +337,7 @@ function VocabRow({
       >
         {/* Đang chọn nhiều: ô chọn · bình thường: chấm màu = mức nhớ */}
         {selecting ? (
-          <SymbolView name={checked ? "checkmark.circle.fill" : "circle"} size={22} tintColor={checked ? C.accent : C.muted} />
+          <SymbolView name={checked ? "checkmark.circle.fill" : "circle"} size={22} tintColor={checked ? C.accentText : C.muted} />
         ) : (
           <View
             style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color, alignSelf: sentence ? "flex-start" : "center", marginTop: sentence ? 9 : 0 }}
@@ -371,7 +372,7 @@ function VocabRow({
         </View>
         {!selecting && (
           <Pressable onPress={speak} hitSlop={6} style={{ padding: 10 }} accessibilityLabel={t("vocab.listen")}>
-            <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2"} size={17} tintColor={speaking ? C.accent : C.muted} />
+            <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2"} size={17} tintColor={speaking ? C.accentText : C.muted} />
           </Pressable>
         )}
       </Pressable>
@@ -836,7 +837,7 @@ export default function NotebookScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            tintColor={C.accent}
+            tintColor={C.accentText}
             onRefresh={async () => {
               setRefreshing(true);
               await load();
@@ -992,7 +993,7 @@ export default function NotebookScreen() {
         ListEmptyComponent={
           items ? (
             <View style={{ alignItems: "center", gap: 10, marginTop: 40, paddingHorizontal: 24 }}>
-              <SymbolView name={filtered ? "magnifyingglass" : "bookmark"} size={36} tintColor={C.muted} />
+              <Mascot size={96} animated bob />
               <Text style={[styles.muted, { textAlign: "center" }]}>
                 {query ? t("vocab.notFound", { q }) : filtered ? t("vocab.noMatch") : t("vocab.empty")}
               </Text>

@@ -2,16 +2,16 @@ import { SymbolView, type SFSymbol } from "expo-symbols";
 import type { ComponentRef, ReactNode, Ref } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View, type TextInputProps, type ViewStyle } from "react-native";
 import { DISPLAY, Text, TextInput } from "./Text";
-import { C, LEVEL_COLORS, STICKER } from "@/lib/theme";
+import { C, LEVEL_COLORS, STICKER, alpha, themed, isDark } from "@/lib/theme";
 
 type Variant = "primary" | "amber" | "red" | "plain";
 
-const VARIANTS: Record<Variant, { bg: string; fg: string }> = {
+const VARIANTS = themed((): Record<Variant, { bg: string; fg: string }> => ({
   primary: { bg: C.accent, fg: "#fff" },
   amber: { bg: C.gold, fg: "#000" },
   red: { bg: C.red, fg: "#fff" },
   plain: { bg: C.card, fg: C.text },
-};
+}));
 
 /** Nút lớn kiểu "nổi" (viền dưới đậm) giống bản web */
 export function Button({
@@ -159,8 +159,16 @@ export function ErrorText({ children }: { children?: string }) {
   return <Text style={styles.error}>{children}</Text>;
 }
 
-export const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background },
+export const styles = themed(() => StyleSheet.create({
+  // Chấm bi nhạt như giấy dán sticker; giao diện tối thêm vầng đèn vàng phía trên
+  screen: {
+    flex: 1,
+    backgroundColor: C.background,
+    backgroundImage: isDark()
+      ? `radial-gradient(${alpha(C.text, 0.05)} 1.5px, transparent 1.5px), radial-gradient(circle at 50% 0%, ${alpha(C.gold, 0.13)}, transparent 70%)`
+      : `radial-gradient(${alpha(C.ink, 0.08)} 1.5px, transparent 1.5px)`,
+    backgroundSize: isDark() ? "22px 22px, 100% 100%" : "22px 22px",
+  },
   btn: {
     flexDirection: "row",
     alignItems: "center",
@@ -179,7 +187,7 @@ export const styles = StyleSheet.create({
   card: { backgroundColor: C.card, ...STICKER, borderRadius: 24, padding: 16, gap: 12 },
   input: {
     backgroundColor: C.card,
-    borderColor: "rgba(85,48,63,0.4)",
+    borderColor: alpha(C.inkLine, 0.4),
     borderWidth: 2,
     borderRadius: 16,
     paddingHorizontal: 14,
@@ -187,7 +195,7 @@ export const styles = StyleSheet.create({
     color: C.text,
     fontSize: 16,
   },
-  error: { color: C.redText, backgroundColor: "rgba(232,56,79,0.1)", padding: 10, borderRadius: 10, overflow: "hidden" },
+  error: { color: C.redText, backgroundColor: alpha(C.red, 0.1), padding: 10, borderRadius: 10, overflow: "hidden" },
   h1: { color: C.text, fontFamily: DISPLAY, fontSize: 26, fontWeight: "800" },
   muted: { color: C.muted, fontSize: 14 },
-});
+}));

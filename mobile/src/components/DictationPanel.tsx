@@ -4,22 +4,22 @@ import { Image } from "expo-image";
 import { Text, TextInput } from "./Text";
 import { SymbolView } from "expo-symbols";
 import { checkSlots, hintFor, isOpenWord, nextOpenSlot, POINTS_HINT, slotForTyped, slotsFromInput, splitWords, type DictationLevel, type WordState } from "@shared/dictation";
-import { AnimatedMascot } from "./FallingWords";
-import { GEM, Gem, useReduceMotion } from "./Points";
+import { AnimatedMascot } from "./Mascot";
+import { Gem, useReduceMotion } from "./Points";
 import { Button } from "./ui";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, alpha, themed } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 
-const BOX: Record<WordState | "hint", { border: string; bg: string; fg: string }> = {
-  correct: { border: C.ink, bg: "rgba(23,128,63,0.2)", fg: C.text },
-  close: { border: C.amber, bg: "rgba(251,191,36,0.1)", fg: C.amber },
-  wrong: { border: C.red, bg: "rgba(232,56,79,0.1)", fg: C.redText },
-  missing: { border: "rgba(232,56,79,0.6)", bg: "transparent", fg: C.muted },
-  revealed: { border: "rgba(251,191,36,0.6)", bg: "rgba(251,191,36,0.05)", fg: C.amber },
-  given: { border: "rgba(85,48,63,0.4)", bg: C.card2, fg: C.text },
-  hint: { border: "rgba(85,48,63,0.3)", bg: C.card, fg: C.muted },
-};
+const BOX = themed((): Record<WordState | "hint", { border: string; bg: string; fg: string }> => ({
+  correct: { border: C.ink, bg: alpha(C.accent, 0.2), fg: C.text },
+  close: { border: C.amber, bg: alpha(C.gold, 0.1), fg: C.amber },
+  wrong: { border: C.red, bg: alpha(C.red, 0.1), fg: C.redText },
+  missing: { border: alpha(C.red, 0.6), bg: "transparent", fg: C.muted },
+  revealed: { border: alpha(C.gold, 0.6), bg: alpha(C.gold, 0.05), fg: C.amber },
+  given: { border: alpha(C.inkLine, 0.4), bg: C.card2, fg: C.text },
+  hint: { border: alpha(C.inkLine, 0.3), bg: C.card, fg: C.muted },
+}));
 const TILT = ["-1.5deg", "1deg", "-0.5deg", "1.5deg"];
 
 /** Từ vừa gõ đúng: "dán" sticker xuống ô */
@@ -296,7 +296,7 @@ export function DictationPanel({
                   accessibilityLabel={shown ? w.text : typed || t("dict.hiddenWord")}
                   style={{
                     flexDirection: "row",
-                    borderColor: isActive ? C.link : typed && !shown && !checked ? "rgba(85,48,63,0.6)" : b.border,
+                    borderColor: isActive ? C.link : typed && !shown && !checked ? alpha(C.inkLine, 0.6) : b.border,
                     backgroundColor: isActive ? C.card : b.bg,
                     borderWidth: 2,
                     borderStyle: !shown && !typed && !isActive && (!checked || w.state === "missing") ? "dashed" : "solid",
@@ -382,11 +382,11 @@ export function DictationPanel({
             paddingRight: 9,
             paddingVertical: 2,
             borderRadius: 999,
-            backgroundColor: "rgba(3,105,161,0.15)",
+            backgroundColor: alpha(C.gem, 0.15),
           }}
         >
           <Gem size={16} />
-          <Text style={{ color: GEM, fontWeight: "800", fontSize: 12 }}>{t("dict.point", { n: gained })}</Text>
+          <Text style={{ color: C.gem, fontWeight: "800", fontSize: 12 }}>{t("dict.point", { n: gained })}</Text>
         </View>
       )}
       <Text style={{ color: C.muted, fontSize: 12 }}>

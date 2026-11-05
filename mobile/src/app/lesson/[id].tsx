@@ -126,7 +126,7 @@ export default function LessonScreen() {
   if (!lesson) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        {error ? <Text style={{ color: C.redText, textAlign: "center" }}>{error}</Text> : <ActivityIndicator color={C.accent} />}
+        {error ? <Text style={{ color: C.redText, textAlign: "center" }}>{error}</Text> : <ActivityIndicator color={C.accentText} />}
       </View>
     );
   }

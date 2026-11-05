@@ -3,7 +3,8 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { memo, useCallback, type ComponentRef, useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, Animated, AppState, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Animated, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { AnimatedMascot, useLoop } from "./Mascot";
 import { Text, TextInput } from "./Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fullWord } from "@shared/deck-study";
@@ -117,22 +118,6 @@ const PEBBLES = Array.from({ length: 34 }, (_, i) => ({ left: rand(i, 11) * 100,
 const GEMS = Array.from({ length: 6 }, (_, i) => ({ left: 4 + rand(i, 16) * 88, top: 20 + rand(i, 17) * 70, code: i % 2 ? "1f48e" : "1faa8" }));
 
 /** Giá trị chạy vòng 0 → 1 (→ 0 nếu back) mãi mãi — cho hiệu ứng nền */
-function useLoop(duration: number, { back = false, delay = 0 } = {}) {
-  const [v] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    const ease = back ? Easing.inOut(Easing.ease) : Easing.linear;
-    const seq = back
-      ? Animated.sequence([Animated.timing(v, { toValue: 1, duration: duration / 2, easing: ease, useNativeDriver: true }), Animated.timing(v, { toValue: 0, duration: duration / 2, easing: ease, useNativeDriver: true })])
-      : Animated.timing(v, { toValue: 1, duration, easing: ease, useNativeDriver: true });
-    const loop = Animated.loop(seq, { iterations: -1, resetBeforeIteration: !back });
-    const timer = setTimeout(() => loop.start(), delay);
-    return () => {
-      clearTimeout(timer);
-      loop.stop();
-    };
-  }, [v, duration, back, delay]);
-  return v;
-}
 
 /** Nhấp nhô (thuyền, chim, thợ mỏ) */
 function Bob({ children, style, fast }: { children: ReactNode; style?: ViewStyle; fast?: boolean }) {
@@ -188,45 +173,6 @@ function Star({ s }: { s: (typeof STARS)[number] }) {
         opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.15, 1] }),
       }}
     />
-  );
-}
-
-const MASCOT_PARTS = {
-  waves: require("@/assets/images/mascot-parts/waves.png"),
-  branch: require("@/assets/images/mascot-parts/branch.png"),
-  tail: require("@/assets/images/mascot-parts/tail.png"),
-  body: require("@/assets/images/mascot-parts/body.png"),
-  head: require("@/assets/images/mascot-parts/head.png"),
-  eyes: require("@/assets/images/mascot-parts/eyes.png"),
-  legs: require("@/assets/images/mascot-parts/legs.png"),
-};
-
-/** Linh vật ghép từ các lớp (scripts/make-mascot.mjs): sóng âm nhấp nháy, đuôi vẫy, thân thở, đầu lắc, mắt chớp — cùng nhịp bản web */
-export function AnimatedMascot({ size, style }: { size: number; style?: ViewStyle }) {
-  const sway = useLoop(2800, { back: true });
-  const pulse = useLoop(1100, { back: true });
-  const blink = useLoop(4200);
-  const layer = { position: "absolute", top: 0, left: 0, width: size, height: size } as const;
-  return (
-    <View pointerEvents="none" style={[{ width: size, height: size }, style]}>
-      <Animated.View style={[layer, { transformOrigin: "12.7% 45.5%", transform: [{ scaleY: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] }) }] }]}>
-        <Image source={MASCOT_PARTS.waves} style={{ width: size, height: size }} />
-      </Animated.View>
-      <Image source={MASCOT_PARTS.branch} style={layer} />
-      <Animated.View style={[layer, { transformOrigin: "79.2% 64.9%", transform: [{ rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "7deg"] }) }] }]}>
-        <Image source={MASCOT_PARTS.tail} style={{ width: size, height: size }} />
-      </Animated.View>
-      <Animated.View style={[layer, { transformOrigin: "68.8% 68.8%", transform: [{ scale: sway.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] }) }] }]}>
-        <Image source={MASCOT_PARTS.body} style={{ width: size, height: size }} />
-      </Animated.View>
-      <Animated.View style={[layer, { transformOrigin: "62.1% 51.7%", transform: [{ rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ["-3deg", "4deg"] }) }] }]}>
-        <Image source={MASCOT_PARTS.head} style={{ width: size, height: size }} />
-        <Animated.View style={[layer, { transformOrigin: "50% 29.6%", transform: [{ scaleY: blink.interpolate({ inputRange: [0, 0.92, 0.96, 1], outputRange: [1, 1, 0.08, 1] }) }] }]}>
-          <Image source={MASCOT_PARTS.eyes} style={{ width: size, height: size }} />
-        </Animated.View>
-      </Animated.View>
-      <Image source={MASCOT_PARTS.legs} style={layer} />
-    </View>
   );
 }
 

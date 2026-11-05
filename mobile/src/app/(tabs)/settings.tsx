@@ -11,12 +11,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
 import { Row, Section } from "@/components/SettingsList";
+import { useSwitchTheme } from "@/components/ThemeRoot";
 import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
 import { openLegal } from "@/lib/legal";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, useScheme, alpha } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
 import { germanVoices, speakGerman, stopSpeaking } from "@/lib/speak";
@@ -164,7 +165,7 @@ function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" 
             {user.email}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-            <Pill color={user.role === "admin" ? C.amber : C.accent}>{user.role === "admin" ? t("acc.admin") : t("acc.student")}</Pill>
+            <Pill color={user.role === "admin" ? C.amber : C.accentText}>{user.role === "admin" ? t("acc.admin") : t("acc.student")}</Pill>
             <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>
               {t("acc.memberSince", { date: monthYear(user.createdAt, lang) })}
             </Text>
@@ -193,9 +194,9 @@ function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" 
             borderTopColor: C.border,
           }}
         >
-          <SymbolView name="chart.bar.fill" size={13} tintColor={C.accent} />
-          <Text style={{ color: C.accent, fontSize: 14, fontWeight: "700" }}>{t("acc.viewStats")}</Text>
-          <SymbolView name="chevron.right" size={11} tintColor={C.accent} weight="semibold" />
+          <SymbolView name="chart.bar.fill" size={13} tintColor={C.accentText} />
+          <Text style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}>{t("acc.viewStats")}</Text>
+          <SymbolView name="chevron.right" size={11} tintColor={C.accentText} weight="semibold" />
         </View>
       </Pressable>
     </View>
@@ -225,11 +226,20 @@ function SettingsSection() {
     }, []),
   );
 
+  const scheme = useScheme();
+  const switchTheme = useSwitchTheme();
   const voiceNote = voices === null ? undefined : voices ? t(Platform.OS === "ios" ? "voice.note" : "voice.noteAndroid") : t("voice.none");
   return (
     <Section title={t("acc.sectionSettings")} footer={voiceNote}>
       <Row
         first
+        icon={scheme === "dark" ? "moon.fill" : "sun.max.fill"}
+        iconBg="#b45309"
+        title={t("theme.title")}
+        chevron={false}
+        trailing={<Segmented shrink options={[["light", t("theme.light")], ["dark", t("theme.dark")]]} value={scheme} onChange={switchTheme} />}
+      />
+      <Row
         icon="globe"
         iconBg="#0891b2"
         title={t("acc.language")}
@@ -250,7 +260,7 @@ function SettingsSection() {
           title={t("voice.title")}
           value={t("voice.auto")}
           chevron={false}
-          trailing={<SymbolView name="play.circle.fill" size={22} tintColor={C.accent} />}
+          trailing={<SymbolView name="play.circle.fill" size={22} tintColor={C.accentText} />}
           onPress={() => speakGerman(t("voice.sample")).catch(() => {})}
         />
       )}
@@ -299,7 +309,7 @@ function MoreSections() {
 function Consent() {
   const { t } = useI18n();
   const link = (doc: "terms" | "privacy", label: string) => (
-    <Text style={{ color: C.accent, fontWeight: "700" }} onPress={() => openLegal(doc)} accessibilityRole="link">
+    <Text style={{ color: C.accentText, fontWeight: "700" }} onPress={() => openLegal(doc)} accessibilityRole="link">
       {label}
     </Text>
   );
@@ -423,7 +433,7 @@ function Signed({ user }: { user: User }) {
   const feedback = (
     <>
       <ErrorText>{err}</ErrorText>
-      {!!msg && <Text style={{ color: C.accent, fontWeight: "600" }}>{msg}</Text>}
+      {!!msg && <Text style={{ color: C.accentText, fontWeight: "600" }}>{msg}</Text>}
     </>
   );
   const nameChanged = name.trim() !== user.name;
@@ -516,7 +526,7 @@ function Signed({ user }: { user: User }) {
 
       {!user.fixedAdmin && (
         <Section footer={t("acc.deleteSub")}>
-          <Row first icon="trash.fill" iconBg="rgba(232,56,79,0.25)" color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
+          <Row first icon="trash.fill" iconBg={alpha(C.red, 0.25)} color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
             {hasPassword ? (
               <Input value={delPw} onChangeText={setDelPw} placeholder={t("acc.deletePw")} secureTextEntry autoComplete="current-password" textContentType="password" />
             ) : (

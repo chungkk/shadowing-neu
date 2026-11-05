@@ -11,17 +11,17 @@ import { Button, ErrorText, LevelBadge, styles } from "@/components/ui";
 import { api, deckCover, type Deck, type DeckTopic, type DeckWord } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { notice, showError } from "@/lib/dialogs";
-import { C } from "@/lib/theme";
+import { C, themed } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 
 /** Màu mạo từ theo giống — như sổ từ: der xanh dương · die đỏ · das xanh lá */
-const GENDER: Record<string, string> = {
+const GENDER = themed((): Record<string, string> => ({
   der: C.phrase,
   die: C.redText,
-  das: C.accent,
-};
+  das: C.accentText,
+}));
 /** Chế độ học chọn lần trước (giữ khi mở chủ đề khác trong lúc dùng app) */
 let lastMode: Mode = "guess";
 
@@ -95,7 +95,7 @@ function WordRow({
           )}
         </View>
         <Pressable onPress={onSpeak} hitSlop={6} style={{ padding: 10 }} accessibilityLabel={t("vocab.listen")}>
-          <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2"} size={17} tintColor={speaking ? C.accent : C.muted} />
+          <SymbolView name={speaking ? "stop.fill" : "speaker.wave.2"} size={17} tintColor={speaking ? C.accentText : C.muted} />
         </Pressable>
         {canAdd && (
           <Pressable
@@ -107,9 +107,9 @@ function WordRow({
             accessibilityLabel={w.saved ? t("decks.inNotebook") : t("decks.addWord")}
           >
             {busy ? (
-              <ActivityIndicator size="small" color={C.accent} />
+              <ActivityIndicator size="small" color={C.accentText} />
             ) : (
-              <SymbolView name={w.saved ? "checkmark.circle.fill" : "plus.circle"} size={22} tintColor={w.saved ? C.accent : C.text} />
+              <SymbolView name={w.saved ? "checkmark.circle.fill" : "plus.circle"} size={22} tintColor={w.saved ? C.accentText : C.text} />
             )}
           </Pressable>
         )}
@@ -163,7 +163,7 @@ function TopicRow({ topic, first, last, onPress }: { topic: DeckTopic; first: bo
           <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>
             {t("decks.words", { n: topic.wordCount })}
             {topic.learned > 0 && (
-              <Text style={{ color: done ? C.accent : C.amber }}>
+              <Text style={{ color: done ? C.accentText : C.amber }}>
                 {done ? "  ✓" : `  ·  ${t("decks.progress", { s: topic.learned, n: topic.wordCount })}`}
               </Text>
             )}
@@ -388,7 +388,7 @@ export default function DeckScreen() {
         ListHeaderComponent={
           <View style={{ gap: 14, paddingTop: 8, paddingBottom: 18 }}>
             <ErrorText>{error}</ErrorText>
-            {!deck && !error && <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />}
+            {!deck && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
             {topicHeader}
             {deck && !deck.topic && (
               <>

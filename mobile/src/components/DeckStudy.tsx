@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { Mascot } from "@/components/Mascot";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -7,7 +8,7 @@ import { blankExample, checkGuess, fullWord, hintOf, quizOptions, type StudyMode
 import { shuffle } from "@shared/review";
 import { Button } from "@/components/ui";
 import { deckCover, type DeckWord } from "@/lib/api";
-import { C } from "@/lib/theme";
+import { C, alpha, themed } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
 import { speakGerman } from "@/lib/speak";
 
@@ -16,7 +17,7 @@ export const MODES: Mode[] = ["guess", "flash", "quiz", "reverse", "listen", "li
 export const modeLabel = (m: Mode, t: TFn) => t(`study.${m}`);
 
 /** Màu mạo từ theo giống — như sổ từ: der xanh dương · die đỏ · das xanh lá */
-const GENDER: Record<string, string> = { der: C.phrase, die: C.redText, das: C.accent };
+const GENDER = themed((): Record<string, string> => ({ der: C.phrase, die: C.redText, das: C.accentText }));
 const say = (w: DeckWord, speed?: number) => speakGerman(fullWord(w), speed ? { speed } : {}).catch(() => {});
 
 function German({ w, size }: { w: DeckWord; size: number }) {
@@ -40,7 +41,7 @@ function SpeakButton({ w }: { w: DeckWord }) {
 
 /** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
 const Icon = ({ icon, image }: { icon: string; image?: string | null }) => (
-  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: "rgba(251,191,36,0.8)", alignItems: "center", justifyContent: "center" }}>
+  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: alpha(C.gold, 0.8), alignItems: "center", justifyContent: "center" }}>
     {image ? <Image source={{ uri: deckCover(image) }} style={{ width: 76, height: 76 }} contentFit="contain" /> : <Text style={{ fontSize: 48 }}>{icon}</Text>}
   </View>
 );
@@ -58,12 +59,12 @@ function Reveal({ w, ok, title }: { w: DeckWord; ok: boolean; title: string }) {
         borderRadius: 16,
         borderWidth: 2,
         borderColor: ok ? C.accent : C.red,
-        backgroundColor: ok ? "rgba(23,128,63,0.12)" : "rgba(232,56,79,0.12)",
+        backgroundColor: ok ? alpha(C.accent, 0.12) : alpha(C.red, 0.12),
       }}
     >
       <Text
         style={{
-          color: ok ? C.accent : C.redText,
+          color: ok ? C.accentText : C.redText,
           fontWeight: "800",
           fontSize: 13,
           letterSpacing: 0.5,
@@ -334,7 +335,7 @@ export function StudySession({
   if (!w)
     return (
       <View style={{ alignItems: "center", gap: 12, paddingVertical: 24 }}>
-        <Text style={{ fontSize: 56 }}>🎉</Text>
+        <Mascot size={120} animated bob />
         <Text style={{ color: C.text, fontSize: 20, fontWeight: "800", textAlign: "center" }}>
           {t(practice ? "study.practiceDone" : "study.doneTitle")}
         </Text>
@@ -351,7 +352,7 @@ export function StudySession({
   return (
     <View style={{ gap: 12 }}>
       {w.saved && !practice && (
-        <Text style={{ alignSelf: "center", color: C.accent, fontSize: 12, fontWeight: "700" }}>{t("decks.inNotebook")}</Text>
+        <Text style={{ alignSelf: "center", color: C.accentText, fontSize: 12, fontWeight: "700" }}>{t("decks.inNotebook")}</Text>
       )}
       <StudyCard
         key={seq}

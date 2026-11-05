@@ -2,19 +2,23 @@ import { Stack } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
-import { GEM, Gem } from "@/components/Points";
+import { Gem } from "@/components/Points";
 import { ErrorText, styles } from "@/components/ui";
 import { api, type Rate, type Stats } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX } from "@/lib/layout";
 import { masteryMeta } from "@/lib/mastery";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, themed, isDark } from "@/lib/theme";
 import type { Mastery } from "@shared/srs";
 
 const CHART_H = 96;
 /** Mức thành thạo có thứ tự → sắc độ 1 màu xanh (tối → sáng = thạo hơn); "Mới lưu" xám trung tính */
-const MASTERY_FILL: Record<Mastery, string> = { saved: "#ecd3bb", learning: "#86c79a", active: "#17803f", mastered: "#0e5a2b" };
+const MASTERY_FILL = themed((): Record<Mastery, string> =>
+  isDark()
+    ? { saved: C.border, learning: "#2f7a4d", active: "#4fb077", mastered: "#8adea6" } // nền tối: thạo hơn thì sáng hơn
+    : { saved: "#ecd3bb", learning: "#86c79a", active: "#17803f", mastered: "#0e5a2b" },
+);
 const MASTERY_ORDER: Mastery[] = ["saved", "learning", "active", "mastered"];
 
 const pct = (r: Rate) => (r.n ? `${Math.round((r.ok / r.n) * 100)}%` : "—");
@@ -154,7 +158,7 @@ export default function StatsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            tintColor={C.accent}
+            tintColor={C.accentText}
             onRefresh={async () => {
               setRefreshing(true);
               await load();
@@ -164,7 +168,7 @@ export default function StatsScreen() {
         }
       >
         <ErrorText>{error}</ErrorText>
-        {!s && !error && <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />}
+        {!s && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
         {s && (
           <>
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -174,7 +178,7 @@ export default function StatsScreen() {
             {s.points && (
               <Tile
                 icon={<Gem size={24} />}
-                color={GEM}
+                color={C.gem}
                 value={s.points.total.toLocaleString("vi-VN")}
                 label={`${t("stats.points")}${s.points.today ? ` · ${t("stats.pointsToday", { n: s.points.today > 0 ? `+${s.points.today}` : `−${-s.points.today}` })}` : ""}`}
               />

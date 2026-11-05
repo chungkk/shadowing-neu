@@ -98,7 +98,7 @@ export default function WatchScreen() {
           </>
         ) : (
           <>
-            <ActivityIndicator color={C.accent} />
+            <ActivityIndicator color={C.accentText} />
             <Text style={{ color: C.muted, textAlign: "center" }}>{t(step)}</Text>
           </>
         )}

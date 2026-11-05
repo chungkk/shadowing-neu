@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, View, type TextInputProps } from "react-n
 import { DISPLAY, Text, TextInput } from "./Text";
 import { useAuth } from "@/lib/auth";
 import { SocialLogin } from "@/components/SocialLogin";
-import { C, STICKER } from "@/lib/theme";
+import { C, STICKER, alpha } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,7 +47,7 @@ function Field({
           backgroundColor: C.background,
         }}
       >
-        <SymbolView name={icon} size={18} tintColor={focused ? C.accent : C.muted} />
+        <SymbolView name={icon} size={18} tintColor={focused ? C.accentText : C.muted} />
         <TextInput
           ref={ref}
           placeholderTextColor={C.muted}
@@ -216,7 +216,7 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
         )}
 
         {!!error && <Text style={{ color: C.redText, fontSize: 14 }}>{error}</Text>}
-        {!!notice && <Text style={{ color: C.accent, fontSize: 14, textAlign: "center" }}>{notice}</Text>}
+        {!!notice && <Text style={{ color: C.accentText, fontSize: 14, textAlign: "center" }}>{notice}</Text>}
 
         {step === "email" ? (
           <PrimaryButton title={t("auth.sendResetCode")} onPress={() => send()} busy={busy} disabled={invalidEmail} />
@@ -227,10 +227,10 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
         {step === "code" && (
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Pressable onPress={() => setStep("email")} hitSlop={8}>
-              <Text style={{ color: C.accent, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
+              <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
             </Pressable>
             <Pressable onPress={() => send(true)} disabled={cooldown > 0 || busy} hitSlop={8}>
-              <Text style={{ color: cooldown > 0 ? C.muted : C.accent, fontSize: 15, fontWeight: "700" }}>
+              <Text style={{ color: cooldown > 0 ? C.muted : C.accentText, fontSize: 15, fontWeight: "700" }}>
                 {cooldown > 0 ? t("auth.resendIn", { s: cooldown }) : t("auth.resend")}
               </Text>
             </Pressable>
@@ -239,7 +239,7 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
       </View>
 
       <Pressable onPress={onBack} hitSlop={8} style={{ alignSelf: "center" }}>
-        <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800" }}>← {t("auth.backToLogin")}</Text>
+        <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "800" }}>← {t("auth.backToLogin")}</Text>
       </Pressable>
     </View>
   );
@@ -451,7 +451,7 @@ export function AuthForm() {
         )}
         {mode === "login" && (
           <Pressable onPress={() => setMode("forgot")} hitSlop={8} style={{ alignSelf: "flex-end", marginTop: -6 }}>
-            <Text style={{ color: C.accent, fontSize: 14, fontWeight: "700" }}>{t("auth.forgot")}</Text>
+            <Text style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}>{t("auth.forgot")}</Text>
           </Pressable>
         )}
 
@@ -463,9 +463,9 @@ export function AuthForm() {
               gap: 10,
               padding: 12,
               borderRadius: 12,
-              backgroundColor: "rgba(232,56,79,0.1)",
+              backgroundColor: alpha(C.red, 0.1),
               borderWidth: 1,
-              borderColor: "rgba(232,56,79,0.3)",
+              borderColor: alpha(C.red, 0.3),
             }}
           >
             <SymbolView name="exclamationmark.circle.fill" size={18} tintColor={C.redText} />
@@ -473,7 +473,7 @@ export function AuthForm() {
           </View>
         )}
 
-        {!!notice && <Text style={{ color: C.accent, fontSize: 14, textAlign: "center" }}>{notice}</Text>}
+        {!!notice && <Text style={{ color: C.accentText, fontSize: 14, textAlign: "center" }}>{notice}</Text>}
 
         <Pressable
           onPress={codeStep ? () => confirm() : submit}
@@ -507,10 +507,10 @@ export function AuthForm() {
       {codeStep && (
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -12 }}>
           <Pressable onPress={() => setStep("info")} hitSlop={8}>
-            <Text style={{ color: C.accent, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
+            <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
           </Pressable>
           <Pressable onPress={() => sendCode(true)} disabled={cooldown > 0 || busy} hitSlop={8}>
-            <Text style={{ color: cooldown > 0 ? C.muted : C.accent, fontSize: 15, fontWeight: "700" }}>
+            <Text style={{ color: cooldown > 0 ? C.muted : C.accentText, fontSize: 15, fontWeight: "700" }}>
               {cooldown > 0 ? t("auth.resendIn", { s: cooldown }) : t("auth.resend")}
             </Text>
           </Pressable>
@@ -521,7 +521,7 @@ export function AuthForm() {
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 6 }}>
         <Text style={{ color: C.muted, fontSize: 15 }}>{isRegister ? t("auth.hasAccount") : t("auth.noAccount")}</Text>
         <Pressable onPress={switchMode} hitSlop={8}>
-          <Text style={{ color: C.accent, fontSize: 15, fontWeight: "800" }}>{isRegister ? t("login") : t("auth.signupFree")}</Text>
+          <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "800" }}>{isRegister ? t("login") : t("auth.signupFree")}</Text>
         </Pressable>
       </View>
 

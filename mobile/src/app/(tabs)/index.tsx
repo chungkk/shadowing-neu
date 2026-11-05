@@ -1,15 +1,17 @@
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
-import { SymbolView, type SFSymbol } from "expo-symbols";
+import { SymbolView } from "expo-symbols";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { DISPLAY, Text } from "@/components/Text";
+import { Hero } from "@/components/Hero";
+import { Mascot } from "@/components/Mascot";
+import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandBar } from "@/components/Brand";
 import { LevelBadge, styles } from "@/components/ui";
 import { api, getLessonsVersion, thumb, type LessonSummary, type LockInfo, type ProgressSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { C, LEVELS, STICKER } from "@/lib/theme";
+import { C, LEVELS, STICKER, alpha } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 import { usePoints } from "@/lib/points";
@@ -60,7 +62,7 @@ function ProgressText({ p }: { p?: ProgressSummary }) {
   const { t } = useI18n();
   const n = percent(p);
   if (!n) return null;
-  return <Text style={{ color: n >= 100 ? C.accent : C.amber, fontSize: 13, fontWeight: "800" }}>{n >= 100 ? `✓ ${t("lessons.finished")}` : `${n}%`}</Text>;
+  return <Text style={{ color: n >= 100 ? C.accentText : C.amber, fontSize: 13, fontWeight: "800" }}>{n >= 100 ? `✓ ${t("lessons.finished")}` : `${n}%`}</Text>;
 }
 
 /**
@@ -111,10 +113,10 @@ function ContinueRow({
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Text style={{ color: C.muted, fontSize: 13 }}>{at}</Text>
-          {!!n && <Text style={{ color: C.accent, fontSize: 13, fontWeight: "700" }}>{n}%</Text>}
+          {!!n && <Text style={{ color: C.accentText, fontSize: 13, fontWeight: "700" }}>{n}%</Text>}
         </View>
       </View>
-      <SymbolView name="play.circle.fill" size={28} tintColor={C.accent} />
+      <SymbolView name="play.circle.fill" size={28} tintColor={C.accentText} />
     </Pressable>
   );
 }
@@ -187,7 +189,7 @@ function LessonCard({ l, width, p }: { l: LessonSummary; width: number; p?: Prog
         <AccessBadge l={l} size={30} />
         {!l.published && (
           <View style={{ position: "absolute", bottom: 8, left: 8, backgroundColor: C.gold, borderRadius: 6, paddingHorizontal: 6 }}>
-            <Text style={{ fontWeight: "800", fontSize: 12 }}>{t("lessons.draft")}</Text>
+            <Text style={{ color: "#000", fontWeight: "800", fontSize: 12 }}>{t("lessons.draft")}</Text>
           </View>
         )}
       </View>
@@ -220,11 +222,11 @@ function SkeletonRow() {
   );
 }
 
-function EmptyState({ icon, title, text, action }: { icon: SFSymbol; title: string; text?: string; action?: { label: string; onPress: () => void } }) {
+function EmptyState({ title, text, action }: { title: string; text?: string; action?: { label: string; onPress: () => void } }) {
   return (
     <View style={{ alignItems: "center", gap: 10, paddingVertical: 48, paddingHorizontal: 24 }}>
-      <SymbolView name={icon} size={40} tintColor={C.muted} />
-      <Text style={{ color: C.text, fontWeight: "800", fontSize: 17 }}>{title}</Text>
+      <Mascot size={104} animated bob />
+      <Text style={{ color: C.text, fontWeight: "800", fontSize: 17, textAlign: "center" }}>{title}</Text>
       {!!text && <Text style={[styles.muted, { textAlign: "center" }]}>{text}</Text>}
       {action && (
         <Pressable onPress={action.onPress} style={{ marginTop: 6, backgroundColor: C.accent, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 }}>
@@ -367,12 +369,7 @@ export default function LessonsScreen() {
 
   const header = (
     <View style={{ gap: 16, paddingTop: tablet ? 20 : 12, paddingBottom: 4 }}>
-      <View style={{ gap: 4 }}>
-        <Text style={{ color: C.text, fontFamily: DISPLAY, fontWeight: "800", fontSize: tablet ? 40 : 34 }} accessibilityRole="header">
-          {t("lessons.title")}
-        </Text>
-        <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lessons.subtitle")}</Text>
-      </View>
+      <Hero />
 
       {/* Tải lại thất bại khi đã có danh sách → báo nhỏ, vẫn giữ danh sách cũ */}
       {!!error && lessons && (
@@ -384,9 +381,9 @@ export default function LessonsScreen() {
             paddingVertical: 10,
             paddingHorizontal: 14,
             borderRadius: 12,
-            backgroundColor: "rgba(232,56,79,0.1)",
+            backgroundColor: alpha(C.red, 0.1),
             borderWidth: 1,
-            borderColor: "rgba(232,56,79,0.35)",
+            borderColor: alpha(C.red, 0.35),
           }}
         >
           <SymbolView name="wifi.exclamationmark" size={16} tintColor={C.redText} />
@@ -441,10 +438,10 @@ export default function LessonsScreen() {
                   backgroundColor: pressed ? C.card2 : "transparent",
                 })}
               >
-                <Text style={{ color: C.accent, fontSize: 14, fontWeight: "700" }}>
+                <Text style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}>
                   {showAll ? t("lessons.showLess") : t("lessons.showAll", { n: continuing.length })}
                 </Text>
-                <SymbolView name={showAll ? "chevron.up" : "chevron.down"} size={12} tintColor={C.accent} weight="semibold" />
+                <SymbolView name={showAll ? "chevron.up" : "chevron.down"} size={12} tintColor={C.accentText} weight="semibold" />
               </Pressable>
             )}
           </View>
@@ -468,7 +465,7 @@ export default function LessonsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            tintColor={C.accent}
+            tintColor={C.accentText}
             onRefresh={async () => {
               setRefreshing(true);
               await load();
@@ -487,7 +484,7 @@ export default function LessonsScreen() {
         ListEmptyComponent={
           lessons === null ? (
             error ? (
-              <EmptyState icon="wifi.exclamationmark" title={t("lessons.loadError")} text={error} action={{ label: t("retry"), onPress: load }} />
+              <EmptyState title={t("lessons.loadError")} text={error} action={{ label: t("retry"), onPress: load }} />
             ) : (
               <View>
                 {Array.from({ length: 6 }, (_, i) => (
@@ -497,13 +494,12 @@ export default function LessonsScreen() {
             )
           ) : level ? (
             <EmptyState
-              icon="magnifyingglass"
               title={t("lessons.noResults")}
               text={t("lessons.noResultsHint")}
               action={{ label: t("lessons.clearFilter"), onPress: () => setLevel(null) }}
             />
           ) : (
-            <EmptyState icon="books.vertical" title={t("lessons.empty")} text={t("lessons.emptyHint")} />
+            <EmptyState title={t("lessons.empty")} text={t("lessons.emptyHint")} />
           )
         }
       />

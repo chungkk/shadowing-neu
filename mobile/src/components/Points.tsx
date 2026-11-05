@@ -4,7 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { AccessibilityInfo, Animated, Easing, View } from "react-native";
 import { FONT, Text } from "./Text";
 import { api, type Points } from "@/lib/api";
-import { C } from "@/lib/theme";
+import { C, alpha, themed } from "@/lib/theme";
 import { useAuth } from "@/lib/auth";
 import { setPointsTotal, usePoints } from "@/lib/points";
 
@@ -26,14 +26,11 @@ export function Gem({ size = 20 }: { size?: number }) {
   return <Image source={require("@/assets/images/gem.svg")} style={{ width: size, height: size }} />;
 }
 
-/** Màu điểm: xanh kim cương (chữ, viền) */
-export const GEM = C.gem;
-
-const SPARKS = Array.from({ length: 8 }, (_, k) => {
+const SPARKS = themed(() => Array.from({ length: 8 }, (_, k) => {
   const a = ((k * 45 + 22) * Math.PI) / 180;
   const d = k % 2 ? 16 : 24;
-  return { x: Math.cos(a) * d, y: Math.sin(a) * d, c: k % 3 === 0 ? GEM : k % 3 === 1 ? "#f9a8d4" : "#f0f9ff" };
-});
+  return { x: Math.cos(a) * d, y: Math.sin(a) * d, c: k % 3 === 0 ? C.gem : k % 3 === 1 ? "#f9a8d4" : "#f0f9ff" };
+}));
 const POP_MS = 1100;
 
 /**
@@ -69,8 +66,8 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
         paddingVertical: 3,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "rgba(3,105,161,0.35)",
-        backgroundColor: "rgba(3,105,161,0.1)",
+        borderColor: alpha(C.gem, 0.35),
+        backgroundColor: alpha(C.gem, 0.1),
       }}
     >
       <Animated.Text
@@ -79,11 +76,11 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
           position: "absolute",
           right: "100%",
           marginRight: 6,
-          color: GEM,
+          color: C.gem,
           fontFamily: FONT,
           fontSize: 16,
           fontWeight: "900",
-          textShadowColor: "rgba(3,105,161,0.6)",
+          textShadowColor: alpha(C.gem, 0.6),
           textShadowRadius: 10,
           textShadowOffset: { width: 0, height: 0 },
           opacity: pop.interpolate({ inputRange: [0, 0.12, 0.7, 1], outputRange: [0, 1, 1, 0] }),
@@ -122,7 +119,7 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
           </View>
         )}
       </View>
-      <Text style={{ color: GEM, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{total.toLocaleString("vi-VN")}</Text>
+      <Text style={{ color: C.gem, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{total.toLocaleString("vi-VN")}</Text>
     </View>
   );
 }

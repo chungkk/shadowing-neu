@@ -10,5 +10,5 @@ export function masteryMeta(m: Mastery, t: TFn) {
   if (m === "saved") return { label: t("review.stage.new"), color: C.muted };
   if (m === "learning") return { label: t("review.stage.learning"), color: C.redText };
   if (m === "active") return { label: t("review.stage.good"), color: C.amber };
-  return { label: t("review.stage.mastered"), color: C.accent };
+  return { label: t("review.stage.mastered"), color: C.accentText };
 }

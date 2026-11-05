@@ -9,7 +9,7 @@ import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX } from "@/lib/layout";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 
 type AdminUser = User & { locked: boolean }; // locked: chính mình / admin cố định → không sửa được
 
@@ -123,7 +123,7 @@ export default function UsersScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            tintColor={C.accent}
+            tintColor={C.accentText}
             onRefresh={async () => {
               setRefreshing(true);
               await load();
@@ -170,7 +170,7 @@ export default function UsersScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: u.role === "admin" ? "rgba(251,191,36,0.15)" : C.card2,
+                backgroundColor: u.role === "admin" ? alpha(C.gold, 0.15) : C.card2,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -203,7 +203,7 @@ export default function UsersScreen() {
             )}
           </Pressable>
         )}
-        ListEmptyComponent={users ? <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("admin.noUsers")}</Text> : <ActivityIndicator color={C.accent} />}
+        ListEmptyComponent={users ? <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("admin.noUsers")}</Text> : <ActivityIndicator color={C.accentText} />}
       />
     </View>
   );

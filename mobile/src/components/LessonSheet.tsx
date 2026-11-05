@@ -6,7 +6,7 @@ import { Text } from "./Text";
 import { ErrorText, Input, styles } from "@/components/ui";
 import { api, ApiError, thumb, type LessonSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { C, LEVEL_COLORS, LEVELS } from "@/lib/theme";
+import { C, LEVEL_COLORS, LEVELS, themed } from "@/lib/theme";
 
 type Editable = Pick<LessonSummary, "id" | "title" | "level" | "description" | "published" | "dictation">;
 
@@ -96,10 +96,10 @@ export function LessonSheet({
           <Text style={{ color: C.text, fontSize: 17, fontWeight: "700" }}>{editing ? t("addLesson.editTitle") : t("addLesson.title")}</Text>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
             {busy ? (
-              <ActivityIndicator color={C.accent} />
+              <ActivityIndicator color={C.accentText} />
             ) : (
               <Pressable onPress={save} disabled={!title.trim()} hitSlop={10}>
-                <Text style={{ color: title.trim() ? C.accent : C.muted, fontSize: 16, fontWeight: "800" }}>{t("addLesson.save")}</Text>
+                <Text style={{ color: title.trim() ? C.accentText : C.muted, fontSize: 16, fontWeight: "800" }}>{t("addLesson.save")}</Text>
               </Pressable>
             )}
           </View>
@@ -169,4 +169,4 @@ export function LessonSheet({
   );
 }
 
-const label = { color: C.muted, fontSize: 13, fontWeight: "700" as const, letterSpacing: 0.5, textTransform: "uppercase" as const };
+const label = themed(() => ({ color: C.muted, fontSize: 13, fontWeight: "700" as const, letterSpacing: 0.5, textTransform: "uppercase" as const }));

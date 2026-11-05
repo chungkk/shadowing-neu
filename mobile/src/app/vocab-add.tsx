@@ -9,7 +9,7 @@ import { showError } from "@/lib/dialogs";
 import { useI18n } from "@/lib/i18n";
 import { FORM_MAX } from "@/lib/layout";
 import { speakGerman } from "@/lib/speak";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 
 /**
  * Thêm từ tự do vào sổ từ vựng (không cần gặp trong bài học): điền từ / cụm từ / câu, câu ví dụ (không bắt buộc),
@@ -97,9 +97,9 @@ export default function VocabAddScreen() {
         contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 16, gap: 18, paddingBottom: 40 }}
       >
         {!!saved && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12, backgroundColor: "rgba(23,128,63,0.14)" }}>
-            <SymbolView name="checkmark.circle.fill" size={16} tintColor={C.accent} />
-            <Text style={{ flex: 1, color: C.accent, fontWeight: "700" }} numberOfLines={1}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12, backgroundColor: alpha(C.accent, 0.14) }}>
+            <SymbolView name="checkmark.circle.fill" size={16} tintColor={C.accentText} />
+            <Text style={{ flex: 1, color: C.accentText, fontWeight: "700" }} numberOfLines={1}>
               {t("vocabAdd.saved", { w: saved })}
             </Text>
           </View>
@@ -128,7 +128,7 @@ export default function VocabAddScreen() {
               style={{ padding: 6, opacity: w ? 1 : 0.35 }}
               accessibilityLabel={t("vocab.listen")}
             >
-              <SymbolView name="speaker.wave.2.fill" size={20} tintColor={C.accent} />
+              <SymbolView name="speaker.wave.2.fill" size={20} tintColor={C.accentText} />
             </Pressable>
           </View>
           {tooLong && <ErrorText>{t("vocabAdd.tooLong")}</ErrorText>}
@@ -159,7 +159,7 @@ export default function VocabAddScreen() {
                 borderRadius: 99,
                 borderWidth: 1,
                 borderColor: C.amber,
-                backgroundColor: pressed ? "rgba(251,191,36,0.2)" : "rgba(251,191,36,0.1)",
+                backgroundColor: pressed ? alpha(C.gold, 0.2) : alpha(C.gold, 0.1),
                 opacity: !w || tooLong ? 0.4 : 1,
               })}
             >
