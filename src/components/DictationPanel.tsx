@@ -189,7 +189,7 @@ export default function DictationPanel({
         : "Gõ những gì bạn nghe";
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-dict={result.done ? "done" : checked ? "check" : "type"} className="flex flex-col gap-3">
       <div className="flex flex-col gap-3">
         <div className="flex min-h-11 items-center gap-2">
           {/* Linh vật lật lại để nhìn và "nói" về phía bong bóng thoại */}

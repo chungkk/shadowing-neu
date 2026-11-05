@@ -74,14 +74,11 @@ export function PlayerSkeleton({ children }: { children?: ReactNode }) {
         </div>
         {/* Cột 3: transcript */}
         <div className="card flex flex-col gap-3 max-sm:p-3 lg:col-span-2 xl:col-span-1">
-          <div className="flex items-center justify-between">
-            <Bone className="h-4 w-24" />
-            <Bone className="h-7 w-12" />
-          </div>
-          <Bone className="h-2 rounded-full" />
+          <Bone className="h-6 w-32" />
+          <Bone className="h-3 rounded-full" />
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-xl border border-border p-3">
-              <Bone className="h-3 w-10" />
+            <div key={i} className="flex items-start gap-2.5 p-2">
+              <Bone className="size-7 shrink-0 rounded-full" />
               <Bone className={`h-4 ${i % 2 ? "w-4/5" : "w-full"}`} />
             </div>
           ))}

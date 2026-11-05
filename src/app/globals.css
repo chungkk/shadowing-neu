@@ -23,6 +23,11 @@
   --amber: #a85605; /* đủ đậm để làm chữ trên nền kem; nền nút dùng --gold */
   --amber-dark: #7a3e04;
   --gold: #fbbf24;
+  /* Màu nhấn của dòng đang học trong transcript */
+  --candy: #ffb3bd;
+  --sun: #ffd15c;
+  --leaf: #93e4a8;
+  --aqua: #a5e1f5;
   --red: #e8384f;
   --red-dark: #8f2036;
   --red-400: #c81e3a; /* chữ đỏ (lỗi, xoá) */
@@ -207,6 +212,67 @@ select {
   .candy-stripe {
     @apply border-y-2 border-ink;
     background: repeating-linear-gradient(-45deg, var(--red) 0 10px, var(--stripe) 10px 20px);
+  }
+  .candy-bar {
+    background: repeating-linear-gradient(-45deg, var(--red) 0 6px, var(--stripe) 6px 12px);
+  }
+  /* Bộ 3 vạch sóng âm cạnh tiêu đề mục */
+  .sound-mark {
+    @apply inline-flex h-[1em] shrink-0 items-center gap-[0.14em] pr-[0.2em];
+  }
+  .sound-mark i {
+    width: 0.2em;
+    border-radius: 99px;
+    background: var(--red);
+    box-shadow: 0.09em 0.09em 0 var(--gold);
+  }
+  /* Màn học: --stage đổi theo việc người học cần làm, dòng đang học trong transcript đổi màu theo */
+  .lesson {
+    --stage: var(--aqua);
+  }
+  .lesson[data-step="speak"] {
+    --stage: var(--candy);
+  }
+  .lesson[data-step="compare"] {
+    --stage: var(--leaf);
+  }
+  .lesson[data-step="dict"] {
+    --stage: var(--sun);
+  }
+  .lesson:has([data-dict="check"]) {
+    --stage: var(--candy);
+  }
+  .lesson:has([data-dict="done"]) {
+    --stage: var(--leaf);
+  }
+  /* Dòng transcript: chấm số nối thành một đường, câu đang học nổi lên như sticker */
+  .trow {
+    @apply relative flex cursor-pointer items-start gap-2.5 rounded-2xl border-2 border-transparent px-2 py-2.5 transition-colors hover:bg-card-2;
+  }
+  .trow::before {
+    content: "";
+    position: absolute;
+    left: 21px;
+    top: 0;
+    bottom: 0;
+    border-left: 2px solid var(--border);
+  }
+  .trow-on {
+    @apply border-ink shadow-[0_3px_0_var(--ink)] hover:bg-[color-mix(in_srgb,var(--stage)_45%,var(--card))];
+    z-index: 1;
+    background: color-mix(in srgb, var(--stage) 45%, var(--card));
+  }
+  .trow-on::before {
+    display: none;
+  }
+  .trow-dot {
+    @apply relative flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-border bg-card text-xs font-extrabold text-muted tabular-nums;
+  }
+  .trow-passed {
+    @apply border-ink bg-[var(--leaf)] text-[#2b1520];
+  }
+  .trow-on .trow-dot {
+    @apply border-0 bg-transparent;
   }
   .btn-icon {
     @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-40;
