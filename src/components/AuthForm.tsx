@@ -221,7 +221,7 @@ export default function AuthForm({
         <div className="flex flex-col gap-4 px-5 pt-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-8 md:p-10">
           <div className="text-center">
             <h1 className="text-2xl font-extrabold sm:text-3xl">{title}</h1>
-            <p className="mt-2 text-link">{subtitle}</p>
+            <p className="mt-2 text-muted">{subtitle}</p>
           </div>
 
           {step === "email" ? (
@@ -243,8 +243,8 @@ export default function AuthForm({
 
         {/* Hình minh hoạ */}
         <div className="relative hidden items-center justify-center bg-card-2 md:flex">
-          <div className="absolute size-72 rounded-full bg-accent/15" />
-          <Mascot className="bob relative size-64" />
+          <div className="absolute size-72 rounded-full border-2 border-ink bg-gold" />
+          <Mascot animated className="relative size-64" />
           <div className="absolute top-[30%] right-[14%] rotate-6 rounded-3xl rounded-bl-md border-2 border-ink bg-gold px-5 py-3 text-2xl font-extrabold text-black">
             Hallo!
           </div>
@@ -286,7 +286,7 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
 }
 
 function CloseButton({ onClose }: { onClose?: () => void }) {
-  const className = "btn-icon absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-10 text-link";
+  const className = "btn-icon absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-10";
   if (onClose) {
     return (
       <button type="button" title="Đóng" className={className} onClick={onClose}>

@@ -34,7 +34,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
   return (
     <section className="flex flex-col gap-4 sm:gap-5">
       <SectionHeader title="Tiếp tục học" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="pop-cycle grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {items.map(({ p, href, title, videoId }) => {
           const n = percent(p);
           const dictCount = Object.keys(p.dictDone).length;
@@ -45,11 +45,11 @@ export default function ContinueLearning({ userId }: { userId: number }) {
               href={href}
               className="group sticker sticker-link flex items-center gap-3 p-3"
             >
-              <div className="relative w-24 shrink-0 overflow-hidden rounded-lg bg-black sm:w-28">
+              <div className="relative w-24 shrink-0 overflow-hidden rounded-xl border-2 border-ink bg-black sm:w-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
-                  <div className="h-full bg-accent" style={{ width: `${n}%` }} />
+                <div className="absolute inset-x-0 bottom-0 h-2 border-t-2 border-ink bg-card-2">
+                  <div className="candy-bar h-full" style={{ width: `${n}%` }} />
                 </div>
                 <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                   <Play className="size-7 fill-white text-white" />
@@ -59,7 +59,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
                 <h3 className="line-clamp-2 text-sm font-extrabold leading-snug">{title}</h3>
                 <p className="flex items-center gap-2 text-xs text-muted">
                   {at}
-                  {!!n && <span className="font-bold text-accent">{n}%</span>}
+                  {!!n && <span className="font-extrabold text-foreground">{n}%</span>}
                 </p>
               </div>
             </Link>

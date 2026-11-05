@@ -8,22 +8,22 @@ import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
 
-type Item = { href: string; label: string; icon: ComponentType<{ className?: string }> };
+type Item = { href: string; label: string; icon: ComponentType<{ className?: string }>; pop?: string; short?: string };
 type NavUser = AvatarUser & { role: string };
 
 const ITEMS: Item[] = [
-  { href: "/", label: "Trang chủ", icon: House },
-  { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
-  { href: "/sprechen", label: "Luyện nói", icon: Mic },
-  { href: "/games", label: "Game", icon: Gamepad2 },
-  { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
+  { href: "/", label: "Trang chủ", icon: House, pop: "pop-sun" },
+  { href: "/vocab", label: "Từ vựng", icon: BookMarked, pop: "pop-leaf" }, // kho bộ từ xem được khi chưa đăng nhập
+  { href: "/sprechen", label: "Luyện nói", icon: Mic, pop: "pop-candy" },
+  { href: "/games", label: "Game", icon: Gamepad2, pop: "pop-aqua" },
+  { href: "/leaderboard", label: "Xếp hạng", icon: Trophy, pop: "pop-lilac" },
 ];
 const BAR_ITEMS = ITEMS.filter((it) => it.href !== "/sprechen"); // thanh dưới đáy không có Luyện nói (chưa ra mắt)
 const USER_ITEMS: Item[] = [
   { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },
 ];
 const ADMIN_ITEMS: Item[] = [
-  { href: "/admin", label: "Quản lý bài học", icon: ListVideo },
+  { href: "/admin", label: "Quản lý bài học", short: "Quản lý", icon: ListVideo },
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
@@ -53,11 +53,16 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
           href={it.href}
           title={it.label}
           aria-current={it.href === current ? "page" : undefined}
-          className={`flex size-11 items-center justify-center rounded-2xl transition ${
-            it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
-          }`}
+          className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 text-[11px] font-bold ${it.pop ?? "pop-sun"}`}
         >
-          <it.icon className="size-6" />
+          <span
+            className={`flex h-8 w-12 items-center justify-center rounded-full border-2 transition ease-out ${
+              it.href === current ? "-translate-y-0.5 border-ink bg-[var(--pop)] shadow-[0_2px_0_var(--ink)] motion-reduce:translate-y-0" : "border-transparent"
+            }`}
+          >
+            <it.icon className="size-5" />
+          </span>
+          <span className="max-w-full truncate">{it.short ?? it.label}</span>
         </Link>
       ))}
     </SidebarFrame>
@@ -66,7 +71,7 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t-2 border-ink bg-card px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t-2 border-ink bg-card px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
       {children}
     </nav>
   );
@@ -92,11 +97,12 @@ export function HeaderNavFrame({ current }: { current?: string }) {
         <Link
           key={it.href}
           href={it.href}
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
-            it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
+          aria-current={it.href === current ? "page" : undefined}
+          className={`flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-sm font-bold whitespace-nowrap transition ease-out hover:-translate-y-0.5 hover:bg-[var(--pop)] motion-reduce:hover:translate-y-0 ${it.pop} ${
+            it.href === current ? "border-ink bg-[var(--pop)] shadow-[0_2px_0_var(--ink)]" : "border-transparent"
           }`}
         >
-          <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
+          <it.icon className="size-[18px] max-lg:hidden" />
           {it.label}
         </Link>
       ))}
@@ -147,8 +153,8 @@ export function UserDropdown({ user }: { user: NavUser }) {
 
   const trigger = (
     <>
-      {admin && <span className="pill bg-amber/15 text-amber max-sm:hidden">ADMIN</span>}
-      <span className="max-w-40 truncate font-bold max-sm:max-w-28 max-[380px]:hidden">{user.name}</span>
+      {admin && <span className="pill bg-amber/15 text-amber max-lg:hidden">ADMIN</span>}
+      <span className="max-w-40 truncate font-bold max-sm:max-w-28 max-[380px]:hidden md:max-lg:hidden">{user.name}</span>
       <Avatar user={user} className="size-9 text-lg sm:size-10" />
     </>
   );
@@ -158,11 +164,9 @@ export function UserDropdown({ user }: { user: NavUser }) {
       key={it.href}
       href={it.href}
       role="menuitem"
-      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold transition ${
-        it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
-      }`}
+      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold transition hover:bg-[var(--pop)] ${it.pop ?? "pop-sun"} ${it.href === current ? "bg-[var(--pop)]" : ""}`}
     >
-      <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
+      <it.icon className="size-[18px]" />
       {it.label}
     </Link>
   );

@@ -24,7 +24,7 @@ export default function YouTubeUrlForm() {
     >
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
-          className="input min-w-0 flex-1"
+          className="input min-w-0 flex-1 border-ink"
           placeholder="Dán link video YouTube…"
           aria-label="Link video YouTube"
           inputMode="url"
@@ -38,7 +38,7 @@ export default function YouTubeUrlForm() {
           {pending ? "Đang lấy phụ đề…" : "Bắt đầu"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="w-fit rounded-xl bg-card px-3 py-1 text-sm font-bold text-red-400">{error}</p>}
     </form>
   );
 }

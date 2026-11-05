@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CloudRain, Gem, Pickaxe, Puzzle, Volume2 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "@/components/Mascot";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "Game từ vựng",
@@ -113,11 +114,11 @@ const GAMES: { href: string; title: string; description: string; icon: Component
 export default function GamesPage() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Game từ vựng</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <PageHeader title="Game từ vựng" say="Spielen wir!" pop="pop-aqua" />
+      <div className="pop-cycle grid gap-5 sm:grid-cols-2">
         {GAMES.map((g) => (
           <Link key={g.href} href={g.href} className="group sticker sticker-link flex flex-col overflow-hidden">
-            <div className="theme-night relative h-40 overflow-hidden border-b-2 border-ink">
+            <div className="theme-night relative h-44 overflow-hidden border-b-2 border-ink">
               {g.art}
               <span className="absolute top-2.5 right-2.5 rounded-full border border-cyan-300/50 bg-black/60 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-cyan-200 uppercase">
                 1 người chơi
@@ -125,7 +126,7 @@ export default function GamesPage() {
             </div>
             <div className="flex flex-1 flex-col gap-3 p-4">
               <h2 className="flex items-center gap-2.5 text-lg font-extrabold">
-                <span className="flex size-8 items-center justify-center rounded-full border border-amber/40 text-amber">
+                <span className="flex size-9 -rotate-6 items-center justify-center rounded-xl border-2 border-ink bg-[var(--pop)]">
                   <g.icon className="size-4" />
                 </span>
                 {g.title}

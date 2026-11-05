@@ -24,6 +24,12 @@
   --phrase: #0369a1; /* cụm từ cố định AI tìm thấy */
   --gem: #0369a1; /* điểm chính tả (kim cương) */
   --gem-dark: #075985;
+  /* Màu "đổi da" của tắc kè: thẻ đổi sang màu này khi rê chuột, cũng là nền các băng tiêu đề (chữ ink luôn đủ tương phản) */
+  --candy: #ffb3bd;
+  --sun: #ffd15c;
+  --leaf: #93e4a8;
+  --aqua: #a5e1f5;
+  --lilac: #d9c8ff;
 }
 
 /* Màn chơi game và tranh minh hoạ game: vẽ riêng cho nền đêm nên giữ bảng màu tối */
@@ -50,6 +56,15 @@
   --phrase: #38bdf8;
   --gem: #38bdf8;
   --gem-dark: #0369a1;
+  color: var(--foreground);
+}
+
+/* Chân trang nền mận: chốt trang bằng màu tối như viền linh vật */
+.footer-plum {
+  --foreground: #fff6e9;
+  --muted: #e0c6ce;
+  --border: #76505f;
+  background: #43232f;
   color: var(--foreground);
 }
 
@@ -80,7 +95,16 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  scrollbar-color: color-mix(in srgb, var(--ink) 45%, transparent) var(--sidebar);
+}
+::selection {
+  background: var(--gold);
+  color: #2b1520;
+}
+
 body {
+  caret-color: var(--red);
   background: var(--background);
   color: var(--foreground);
   /* Chấm bi nhạt như giấy dán sticker */
@@ -105,6 +129,11 @@ select {
   h1,
   h2 {
     font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 3px solid var(--link);
+    outline-offset: 2px;
   }
 }
 
@@ -113,9 +142,107 @@ select {
   .sticker {
     @apply rounded-3xl border-2 border-ink bg-card shadow-[0_4px_0_var(--ink)];
   }
-  /* Thẻ bấm được: nhấc lên và nghiêng nhẹ khi rê chuột */
+  /* Bảng màu đổi da: gán --pop cho thẻ, băng tiêu đề, mục menu */
+  .pop-candy {
+    --pop: var(--candy);
+  }
+  .pop-sun {
+    --pop: var(--sun);
+  }
+  .pop-leaf {
+    --pop: var(--leaf);
+  }
+  .pop-aqua {
+    --pop: var(--aqua);
+  }
+  .pop-lilac {
+    --pop: var(--lilac);
+  }
+  /* Lưới thẻ: mỗi thẻ một màu, lần lượt */
+  .pop-cycle > :nth-child(4n + 1) {
+    --pop: var(--candy);
+  }
+  .pop-cycle > :nth-child(4n + 2) {
+    --pop: var(--aqua);
+  }
+  .pop-cycle > :nth-child(4n + 3) {
+    --pop: var(--sun);
+  }
+  .pop-cycle > :nth-child(4n + 4) {
+    --pop: var(--leaf);
+  }
+  /* Thẻ bấm được: rê chuột thì nhấc lên, nghiêng và đổi màu như tắc kè (nền ngả --pop, thêm 1 lớp bóng màu) */
   .sticker-link {
-    @apply transition hover:-translate-y-1 hover:-rotate-1 hover:shadow-[0_7px_0_var(--ink)] active:translate-y-0.5 active:rotate-0 active:shadow-[0_1px_0_var(--ink)] motion-reduce:hover:rotate-0;
+    transition:
+      transform 220ms cubic-bezier(0.3, 1.6, 0.5, 1),
+      box-shadow 220ms cubic-bezier(0.3, 1.6, 0.5, 1),
+      background-color 160ms ease-out;
+  }
+  .sticker-link:hover {
+    transform: translateY(-4px) rotate(-1deg);
+    background-color: color-mix(in srgb, var(--pop, var(--sun)) 38%, var(--card));
+    box-shadow:
+      0 4px 0 var(--ink),
+      0 10px 0 var(--pop, var(--sun));
+  }
+  .sticker-link:nth-child(even):hover {
+    transform: translateY(-4px) rotate(1deg);
+  }
+  .sticker-link:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  /* Bong bóng thoại của linh vật: bubble-right đuôi chĩa sang phải, bubble-down đuôi chĩa xuống */
+  .bubble {
+    @apply relative w-fit rounded-2xl border-2 border-ink shadow-[0_3px_0_var(--ink)];
+  }
+  .bubble::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+  }
+  .bubble-right::after {
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-45deg);
+  }
+  .bubble-down::after {
+    left: 50%;
+    bottom: -8px;
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .bubble-pop {
+    animation: bubble-pop 420ms cubic-bezier(0.3, 1.7, 0.5, 1) both;
+  }
+  /* Tiến độ: dải sọc kẹo như thân linh vật */
+  .candy-bar {
+    background: repeating-linear-gradient(-45deg, var(--red) 0 6px, #fffaf3 6px 12px);
+  }
+  /* Bộ 3 vạch sóng âm cạnh tiêu đề mục */
+  .sound-mark {
+    @apply inline-flex h-[1em] shrink-0 items-center gap-[0.14em] pr-[0.2em];
+  }
+  .sound-mark i {
+    width: 0.2em;
+    border-radius: 99px;
+    background: var(--red);
+    box-shadow: 0.09em 0.09em 0 var(--gold);
+  }
+  /* Dải sóng âm lớn trong hero: mọc từ đáy lên */
+  .sound-wave {
+    @apply flex items-end justify-between;
+  }
+  .sound-wave i {
+    width: 3.2%;
+    border-radius: 99px 99px 0 0;
+    background: #fffaf3;
+    box-shadow: 4px 0 0 var(--red);
+    transform-origin: bottom;
+    animation: wave-talk 2.2s ease-in-out infinite;
   }
   .card {
     @apply rounded-3xl border-2 border-ink bg-card p-4 shadow-[0_4px_0_var(--ink)];
@@ -130,6 +257,9 @@ select {
   /* Nút lớn kiểu "nổi" có viền dưới đậm */
   .btn-primary {
     @apply bg-accent tracking-wide text-white uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-110;
+  }
+  .btn-sun {
+    @apply bg-gold text-black hover:brightness-105;
   }
   .btn-amber {
     @apply bg-gold tracking-wide text-black uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-105;
@@ -191,6 +321,43 @@ select {
 @keyframes fill {
   to {
     width: 100%;
+  }
+}
+
+@keyframes bubble-pop {
+  from {
+    transform: translateY(6px) rotate(-6deg) scale(0.7);
+    opacity: 0;
+  }
+}
+@keyframes wave-talk {
+  50% {
+    transform: scaleY(0.6);
+  }
+}
+/* Bấm vào linh vật: nhảy lên, chạm đất nhún xuống */
+.mascot-hop {
+  animation: mascot-hop 520ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+@keyframes mascot-hop {
+  30% {
+    transform: translateY(-16px) rotate(-5deg);
+  }
+  65% {
+    transform: translateY(0) scale(1.05, 0.93);
+  }
+}
+
+/* Điện thoại: thẻ bộ từ lẻ cuối nhóm trải hết hàng, bìa thấp lại để trang không quá dài */
+@media (max-width: 39.99rem) {
+  .deck-card:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+  .deck-card:last-child:nth-child(odd) .deck-cover {
+    aspect-ratio: 5 / 2;
+  }
+  .deck-card:last-child:nth-child(odd) .deck-cover img {
+    width: 34%;
   }
 }
 
@@ -477,8 +644,16 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .hook-swing,
-  .gold-pull {
+  .gold-pull,
+  .bubble-pop,
+  .mascot-hop,
+  .sound-wave i {
     animation: none;
+  }
+  .sticker-link:hover,
+  .sticker-link:nth-child(even):hover,
+  .sticker-link:active {
+    transform: none;
   }
   .twinkle {
     animation: none;

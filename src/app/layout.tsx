@@ -52,10 +52,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
           <header className="relative z-30 flex h-14 items-center gap-3 bg-card px-3 pb-2 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
             <div className="candy-stripe absolute inset-x-0 bottom-0 h-2.5" />
-            <Link href="/" className="flex items-center gap-1.5 font-display text-xl font-extrabold">
-              <Mascot className="size-11 max-md:hidden" />
+            <Link href="/" className="group flex items-center gap-1 font-display text-xl font-extrabold sm:gap-1.5">
+              <Mascot className="size-10 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:-rotate-6 motion-reduce:transform-none sm:size-12" />
               <span>
-                <span className="hidden sm:inline">Deutsch </span>Shadowing
+                <span className="hidden sm:inline md:max-lg:hidden">Deutsch </span>
+                <span className="text-red-400">Shadowing</span>
               </span>
             </Link>
             <Suspense fallback={<HeaderNavFrame />}>

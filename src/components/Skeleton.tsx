@@ -202,8 +202,8 @@ export function DecksSkeleton() {
       <Bone className="h-[5.5rem] w-full rounded-2xl" />
       <section className="flex flex-col gap-3">
         <Bone className="h-7 w-44" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          {Array.from({ length: 3 }, (_, i) => (
             <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-2.5 sm:p-3">
               <Bone className="aspect-[16/10] w-full rounded-xl" />
               <Bone className="h-5 w-3/4" />
