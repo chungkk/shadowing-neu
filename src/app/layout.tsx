@@ -56,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
-          <header className="relative z-30 flex h-14 items-center gap-3 bg-card px-3 pb-2 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
+          <header className="relative z-30 flex h-14 items-center gap-3 bg-card dark:bg-sidebar px-3 pb-2 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
             <div className="candy-stripe absolute inset-x-0 bottom-0 h-2.5" />
             <Link href="/" className="flex items-center gap-1.5 font-display text-xl font-extrabold">
               <Mascot className="size-11 max-md:hidden" />
