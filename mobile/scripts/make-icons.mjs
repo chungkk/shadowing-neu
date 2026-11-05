@@ -21,9 +21,16 @@ const CX = 473.5, CY = 503.5;
 function mark({ scale = 1 } = {}) {
   return `<g transform="translate(512 512) scale(${scale}) translate(${-CX} ${-CY})">${MASCOT}</g>`;
 }
-/** Phần đầu nhân vật cho favicon: cả cảnh không đọc được ở 16–32px. */
+/**
+ * Favicon: chỉ phần đầu linh vật, nền trong suốt — cả cảnh không đọc được ở 16–32px.
+ * Tách riêng nhóm m-head (bỏ bóng đổ xuống cành) thay vì cắt khung, nên thân/cành không bị xén dở.
+ * Khung của đầu sau khi tách: x 185–767, y 102–639.
+ */
 function headMark() {
-  return `<g clip-path="url(#round)"><g transform="scale(${1024 / 600}) translate(-225 -100)">${MASCOT}</g></g>`;
+  const defs = MASCOT.match(/<defs>[\s\S]*?<\/defs>/)[0];
+  const head = MASCOT.slice(MASCOT.indexOf('<g id="m-head">'), MASCOT.indexOf('<g id="m-legs">'))
+    .replace(/<ellipse[^>]*filter="url\(#drop\)"\/>/, "");
+  return `${defs}<g transform="translate(512 512) scale(${1000 / 582}) translate(-476 -370.5)">${head}</g>`;
 }
 
 const svg = (body, bg = "") => `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
@@ -32,15 +39,12 @@ const svg = (body, bg = "") => `<svg xmlns="http://www.w3.org/2000/svg" width="1
       <stop offset="0" stop-color="${BG_HI}"/>
       <stop offset="1" stop-color="${BG_LO}"/>
     </radialGradient>
-    <clipPath id="round"><rect width="1024" height="1024" rx="225"/></clipPath>
   </defs>
   ${bg}
   ${body}
 </svg>`;
 
 const DARK_BG = `<rect width="1024" height="1024" fill="url(#bg)"/>`;
-// Favicon web: góc bo như icon app
-const WEB_BG = `<rect width="1024" height="1024" rx="225" fill="url(#bg)"/>`;
 const WEB_MARK = headMark();
 
 /** Giữ lại nét sáng làm độ đục: icon đơn sắc vẫn thấy mặt thay vì một khối đặc. */
@@ -102,10 +106,10 @@ await Promise.all([
   png("android-icon-foreground.png", svg(mark({ scale: 0.72 }))),
   png("android-icon-background.png", svg("", DARK_BG), { flatten: BG_LO }),
   monochrome("android-icon-monochrome.png", svg(mark({ scale: 0.72 }))),
-  png("favicon.png", svg(WEB_MARK, WEB_BG), { resize: 48 }),
+  png("favicon.png", svg(WEB_MARK), { resize: 48 }),
   // Web (Next.js file conventions trong src/app)
-  writeFile(path.join(WEB_OUT, "icon.svg"), svg(WEB_MARK, WEB_BG)).then(() => console.log("✓ src/app/icon.svg")),
-  ico(path.join(WEB_OUT, "favicon.ico"), svg(WEB_MARK, WEB_BG), [16, 32, 48]),
+  writeFile(path.join(WEB_OUT, "icon.svg"), svg(WEB_MARK)).then(() => console.log("✓ src/app/icon.svg")),
+  ico(path.join(WEB_OUT, "favicon.ico"), svg(WEB_MARK), [16, 32, 48]),
   // iOS tự bo góc → nền vuông, không trong suốt
   png(path.join(WEB_OUT, "apple-icon.png"), svg(mark(), DARK_BG), { flatten: BG_LO, resize: 180 }),
 ]);

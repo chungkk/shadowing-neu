@@ -4,11 +4,9 @@
       <stop offset="0" stop-color="#fffdf9"/>
       <stop offset="1" stop-color="#ffedd6"/>
     </radialGradient>
-    <clipPath id="round"><rect width="1024" height="1024" rx="225"/></clipPath>
   </defs>
-  <rect width="1024" height="1024" rx="225" fill="url(#bg)"/>
-  <g clip-path="url(#round)"><g transform="scale(1.7066666666666668) translate(-225 -100)">
-<defs>
+  
+  <defs>
   <linearGradient id="lens" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6f7f4"/><stop offset="1" stop-color="#b9e0da"/></linearGradient>
   <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
   <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a3c"/><stop offset="1" stop-color="#5c3a28"/></linearGradient>
@@ -18,33 +16,8 @@
   <clipPath id="cHead"><path d="M192 424 C194 396 236 368 258 306 C288 228 360 202 430 200 C560 195 640 285 636 410 C632 540 540 640 415 632 C325 626 262 572 222 486 C208 462 190 450 192 424 Z"/></clipPath>
   <clipPath id="cMouth"><path d="M232 442 C330 468 480 462 590 402 C590 505 510 598 412 592 C330 586 268 520 232 442 Z"/></clipPath>
   <clipPath id="cHat"><path d="M418 208 C440 130 560 110 640 170 C690 210 700 280 672 330 C600 262 510 225 418 208 Z"/></clipPath>
-</defs>
-<g id="m-waves"><g id="m-bar-1"><rect x="62" y="427" width="38" height="100" rx="19" fill="#fbbf24"/><rect x="51" y="416" width="38" height="100" rx="19" fill="#f43f5e"/><rect x="40" y="405" width="38" height="100" rx="19" fill="#ffffff"/></g><g id="m-bar-2"><rect x="122" y="367" width="38" height="220" rx="19" fill="#fbbf24"/><rect x="111" y="356" width="38" height="220" rx="19" fill="#f43f5e"/><rect x="100" y="345" width="38" height="220" rx="19" fill="#ffffff"/></g><g id="m-bar-3"><rect x="182" y="412" width="38" height="130" rx="19" fill="#fbbf24"/><rect x="171" y="401" width="38" height="130" rx="19" fill="#f43f5e"/><rect x="160" y="390" width="38" height="130" rx="19" fill="#ffffff"/></g></g>
-<g transform="translate(64 -14) scale(.97)">
-  <g id="m-branch">
-  <path d="M150 716 C330 690 620 690 845 722" fill="none" stroke="#55303f" stroke-width="48" stroke-linecap="round"/>
-  <path d="M150 716 C330 690 620 690 845 722" fill="none" stroke="url(#wood)" stroke-width="32" stroke-linecap="round"/>
-  <g id="m-leaf"><path d="M210 702 C190 660 215 630 262 628 C272 668 250 700 210 702 Z" fill="#7ccf8e" stroke="#55303f" stroke-width="9" stroke-linejoin="round"/></g>
-  </g>
-
-  <g id="m-tail">
-  <path d="M770 700 C815 800 765 925 645 935 C545 943 480 865 512 795 C538 738 625 735 650 790 C668 836 628 862 600 846" fill="none" stroke="#55303f" stroke-width="60" stroke-linecap="round"/>
-  <path d="M770 700 C815 800 765 925 645 935 C545 943 480 865 512 795 C538 738 625 735 650 790 C668 836 628 862 600 846" fill="none" stroke="#fffaf3" stroke-width="46" stroke-linecap="round"/>
-  <path d="M770 700 C815 800 765 925 645 935 C545 943 480 865 512 795 C538 738 625 735 650 790 C668 836 628 862 600 846" fill="none" stroke="#e8384f" stroke-width="46" stroke-dasharray="58 58"/>
-  </g>
-
-  <g id="m-body">
-  <path d="M560 372 C640 325 765 375 805 495 C840 605 805 705 722 750 C650 785 560 745 530 655 C500 565 500 440 560 372 Z" fill="#fffaf3" stroke="#55303f" stroke-width="13" stroke-linejoin="round"/>
-  <g clip-path="url(#cBody)">
-    <path d="M740 300 L850 400 L500 760 L420 690 Z" fill="#e8384f"/>
-    <path d="M880 500 L930 600 L650 860 L570 800 Z" fill="#e8384f"/>
-    <ellipse cx="800" cy="640" rx="85" ry="210" fill="#55303f" opacity=".13" filter="url(#soft)"/>
-  </g>
-  <path d="M560 372 C640 325 765 375 805 495 C840 605 805 705 722 750 C650 785 560 745 530 655 C500 565 500 440 560 372 Z" fill="none" stroke="#55303f" stroke-width="13" stroke-linejoin="round"/>
-  </g>
-
-  <g id="m-head">
-  <ellipse cx="430" cy="645" rx="170" ry="26" fill="#55303f" opacity=".22" filter="url(#drop)"/>
+</defs><g transform="translate(512 512) scale(1.7182130584192439) translate(-476 -370.5)"><g id="m-head">
+  
   <rect x="372" y="158" width="62" height="80" rx="28" fill="url(#gold)" stroke="#55303f" stroke-width="12"/>
   <path d="M192 424 C194 396 236 368 258 306 C288 228 360 202 430 200 C560 195 640 285 636 410 C632 540 540 640 415 632 C325 626 262 572 222 486 C208 462 190 450 192 424 Z" fill="#fffaf3" stroke="#55303f" stroke-width="13" stroke-linejoin="round"/>
   <g clip-path="url(#cHead)"><ellipse cx="600" cy="560" rx="160" ry="120" fill="#55303f" opacity=".12" filter="url(#soft)"/></g>
@@ -84,14 +57,5 @@
   <path d="M466 258 C480 246 496 242 512 244" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".8"/>
   </g>
 
-  <g id="m-legs">
-  <path d="M592 610 C570 650 566 680 572 716" fill="none" stroke="#55303f" stroke-width="84" stroke-linecap="round"/>
-  <path d="M592 610 C570 650 566 680 572 716" fill="none" stroke="#fffaf3" stroke-width="60" stroke-linecap="round"/>
-  <path d="M556 728 L558 744 M586 730 L586 746" stroke="#55303f" stroke-width="8" stroke-linecap="round"/>
-  <path d="M738 640 C716 672 706 696 712 726" fill="none" stroke="#55303f" stroke-width="84" stroke-linecap="round"/>
-  <path d="M738 640 C716 672 706 696 712 726" fill="none" stroke="#fffaf3" stroke-width="60" stroke-linecap="round"/>
-  <path d="M696 738 L698 754 M726 740 L726 756" stroke="#55303f" stroke-width="8" stroke-linecap="round"/>
   </g>
-</g>
-</g></g>
 </svg>
