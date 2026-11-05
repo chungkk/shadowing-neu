@@ -49,6 +49,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Áp giao diện đã chọn trước khi trình duyệt vẽ trang, tránh nháy nền sáng */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Tải sẵn linh vật của màn tải trang: mạng chậm mới hiện màn này, lúc đó không kịp tải hình nữa */}
+        <link rel="prefetch" href="/mascot-loading.svg" as="image" />
       </head>
       <body className="flex min-h-full">
         <Suspense fallback={<SidebarSkeleton />}>

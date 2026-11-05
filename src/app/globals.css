@@ -561,6 +561,17 @@ select {
     transform: translateY(110vh);
   }
 }
+/* Màn tải trang (app/loading.tsx): chờ 250ms mới hiện, trang tải nhanh sẽ không nháy linh vật */
+.page-loader {
+  animation: page-loader-in 200ms ease-out 250ms backwards;
+}
+@keyframes page-loader-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 .bob {
   animation: bob 2.4s ease-in-out infinite;
 }
@@ -620,6 +631,7 @@ select {
     display: none;
   }
   .bob,
+  .page-loader,
   .shake,
   .sheet-fade,
   .sheet-up,
