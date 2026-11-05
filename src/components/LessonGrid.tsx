@@ -92,12 +92,12 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
             Shadowing{l.dictation && " · Dictation"} · {l.sentences} câu
           </p>
           {l.percent >= 100 ? (
-            <p className="flex items-center gap-1 text-xs font-bold text-accent">
+            <p className="flex items-center gap-1 text-xs font-bold text-accent-text">
               <CircleCheck className="size-4" /> Đã học xong
             </p>
           ) : (
             l.percent > 0 && (
-              <div className="flex items-center gap-2 text-xs font-bold text-accent">
+              <div className="flex items-center gap-2 text-xs font-bold text-accent-text">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-2">
                   <div className="h-full rounded-full bg-accent" style={{ width: `${l.percent}%` }} />
                 </div>
@@ -179,7 +179,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
       }`}
     >
       {lv ?? "Tất cả"}
-      <span className={level === lv ? "text-white/75" : "text-muted"}>{count}</span>
+      <span className={level === lv ? "text-white/75 dark:text-white" : "text-muted"}>{count}</span>
     </button>
   );
 

@@ -35,7 +35,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
             <Link
               key={e.key}
               href={`?key=${encodeURIComponent(e.key)}`}
-              className={`btn ${e.key === current.key ? "border-accent text-accent" : ""}`}
+              className={`btn ${e.key === current.key ? "border-accent text-accent-text" : ""}`}
             >
               {label(e.t)}
             </Link>

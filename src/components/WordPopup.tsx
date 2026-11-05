@@ -185,7 +185,7 @@ export default function WordPopup({
               {...speakProps(word)}
               title="Nghe phát âm (giữ hoặc Shift + bấm để nghe chậm)"
               className={`press inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full transition active:scale-90 ${
-                speaking === word ? "bg-accent text-white" : "bg-accent/15 text-accent"
+                speaking === word ? "bg-accent text-white" : "bg-accent/15 text-accent-text"
               }`}
             >
               <Volume2 className="size-4" />
@@ -270,7 +270,7 @@ export default function WordPopup({
                             <span className="flex-1 font-bold">
                               {i + 1}. {s.meaning}
                             </span>
-                            {s.current && <span className="text-[11px] font-bold text-accent">Trong câu này</span>}
+                            {s.current && <span className="text-[11px] font-bold text-accent-text">Trong câu này</span>}
                           </div>
                           {!!s.use && <Rich text={s.use} className="text-sm font-semibold text-amber" />}
                           <button {...speakProps(plain(s.de))} className="press cursor-pointer text-left hover:opacity-80" title="Bấm để nghe · giữ để nghe chậm">
@@ -399,7 +399,7 @@ function ExampleRow({ label, de, tr, playing, ...press }: { label?: string; de: 
   return (
     <button {...press} className="press flex cursor-pointer gap-2.5 text-left transition hover:opacity-80 active:opacity-60" title="Bấm để nghe · giữ để nghe chậm">
       <span className={label ? "pt-[22px]" : "pt-1"}>
-        {playing ? <Volume2 className="size-3.5 text-accent" /> : <Play className="size-3 fill-accent text-accent" />}
+        {playing ? <Volume2 className="size-3.5 text-accent-text" /> : <Play className="size-3 fill-accent text-accent-text" />}
       </span>
       <span className="flex flex-1 flex-col gap-0.5">
         {!!label && <span className="text-[11px] font-extrabold tracking-wider text-muted">{label}</span>}
@@ -424,7 +424,7 @@ function ErrorRow({ text, onRetry }: { text: string; onRetry: () => void }) {
   return (
     <div className="flex items-center gap-3">
       <span className="flex-1 text-red-400">{text}</span>
-      <button onClick={onRetry} className="cursor-pointer font-extrabold text-accent hover:underline">
+      <button onClick={onRetry} className="cursor-pointer font-extrabold text-accent-text hover:underline">
         Thử lại
       </button>
     </div>

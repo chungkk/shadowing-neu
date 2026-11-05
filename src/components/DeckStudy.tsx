@@ -19,7 +19,7 @@ const noop = () => () => {};
 /** Đáp án trắc nghiệm / thứ tự ôn lại là ngẫu nhiên → chỉ vẽ trên trình duyệt (khỏi lệch hydrate) */
 const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
 
-const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
+const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
 
 /** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
 function Picture({ w, icon, className = "size-28" }: { w: DeckWord; icon: string; className?: string }) {
@@ -60,7 +60,7 @@ function SpeakButton({ w, big }: { w: DeckWord; big?: boolean }) {
 function Reveal({ w, tone, title }: { w: DeckWord; tone: "ok" | "bad"; title: string }) {
   return (
     <div className={`flex w-full flex-col items-center gap-1.5 rounded-2xl border-2 p-4 text-center ${tone === "ok" ? "border-accent/60 bg-accent/10" : "border-red/60 bg-red/10"}`}>
-      <p className={`text-sm font-extrabold tracking-wide uppercase ${tone === "ok" ? "text-accent" : "text-red-400"}`}>{title}</p>
+      <p className={`text-sm font-extrabold tracking-wide uppercase ${tone === "ok" ? "text-accent-text" : "text-red-400"}`}>{title}</p>
       <div className="flex items-center gap-1">
         <German w={w} className="text-2xl font-extrabold" />
         <SpeakButton w={w} />
@@ -155,7 +155,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <p className="text-sm font-bold text-muted">{mode === "quiz" ? "Chọn nghĩa đúng" : "Chọn từ tiếng Đức đúng"}</p>
         <div className="grid w-full max-w-xl gap-2.5 sm:grid-cols-2">
           {options.map((o) => {
-            const state = picked === null ? "" : o === right ? "border-accent bg-accent/15 text-accent" : o === picked ? "border-red bg-red/15 text-red-400" : "opacity-50";
+            const state = picked === null ? "" : o === right ? "border-accent bg-accent/15 text-accent-text" : o === picked ? "border-red bg-red/15 text-red-400" : "opacity-50";
             return (
               <button
                 key={o}
@@ -312,7 +312,7 @@ function Session({
     );
   return (
     <div className="flex flex-col gap-3">
-      {w.saved && !practice && <p className="self-center rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent">Đã có trong sổ</p>}
+      {w.saved && !practice && <p className="self-center rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent-text">Đã có trong sổ</p>}
       <StudyCard
         key={seq}
         w={w}
@@ -430,7 +430,7 @@ export default function DeckStudy({
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-card-2 text-xl">{t.icon}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-extrabold">{t.title}</span>
-                    <span className={`text-xs font-bold ${s >= n ? "text-accent" : "text-muted"}`}>
+                    <span className={`text-xs font-bold ${s >= n ? "text-accent-text" : "text-muted"}`}>
                       {s}/{n} từ{s >= n && " ✓"}
                     </span>
                   </span>

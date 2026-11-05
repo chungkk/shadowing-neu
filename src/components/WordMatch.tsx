@@ -376,7 +376,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                         ))}
                       </ul>
                       {saved ? (
-                        <p className="mt-2 text-center text-sm font-bold text-accent">{saved}</p>
+                        <p className="mt-2 text-center text-sm font-bold text-accent-text">{saved}</p>
                       ) : loggedIn ? (
                         <>
                           {saveError && <p className="mt-2 text-center text-sm text-red-400">{saveError}</p>}

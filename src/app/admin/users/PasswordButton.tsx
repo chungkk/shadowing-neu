@@ -29,7 +29,7 @@ export default function PasswordButton({ userId, email }: { userId: number; emai
 
   return (
     <>
-      <button className={`btn ${open ? "border-accent text-accent" : ""}`} onClick={() => setOpen(!open)}>
+      <button className={`btn ${open ? "border-accent text-accent-text" : ""}`} onClick={() => setOpen(!open)}>
         <KeyRound className="size-4" /> Đổi mật khẩu
       </button>
       {open && (
@@ -57,14 +57,14 @@ export default function PasswordButton({ userId, email }: { userId: number; emai
               <Dices className="size-4" />
             </button>
             <button type="button" className="btn" title="Sao chép" onClick={copy} disabled={!password}>
-              {copied ? <Check className="size-4 text-accent" /> : <Copy className="size-4" />}
+              {copied ? <Check className="size-4 text-accent-text" /> : <Copy className="size-4" />}
             </button>
             <button className="btn btn-primary" disabled={pending || password.length < 8}>
               {pending ? "Đang lưu…" : "Lưu"}
             </button>
           </div>
           {state.error && <p className="text-sm text-red-400">{state.error}</p>}
-          {state.ok && <p className="text-sm text-accent">{state.ok}</p>}
+          {state.ok && <p className="text-sm text-accent-text">{state.ok}</p>}
         </form>
       )}
     </>

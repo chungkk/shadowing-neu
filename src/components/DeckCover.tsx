@@ -12,7 +12,7 @@ export default function DeckCover({ deck, big, className = "" }: { deck: Pick<De
   const color = COLORS[deck.level[0]] ?? COLORS.A;
   const r = big ? "rounded-l-md rounded-r-2xl" : "rounded-l-sm rounded-r-xl";
   return (
-    <div className={`relative aspect-[16/10] ${className}`}>
+    <div className={`relative aspect-[16/10] dark:brightness-[.85] ${className}`}>
       {/* Mép giấy lộ ra bên phải & dưới */}
       <div className={`absolute inset-0 top-1.5 left-1.5 bg-stone-300 ${r}`} />
       <div className={`absolute inset-0 top-0.75 left-0.75 right-0.75 bottom-0.75 border-r-2 border-b-2 border-stone-200 bg-stone-50 ${r}`} />

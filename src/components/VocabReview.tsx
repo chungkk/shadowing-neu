@@ -87,7 +87,7 @@ const tone = (state: "idle" | "sel" | "right" | "wrong" | "dim") =>
   ({
     idle: "border-border bg-card-2 hover:bg-foreground/5",
     sel: "border-link bg-link/15 text-link",
-    right: "border-accent bg-accent/15 text-accent",
+    right: "border-accent bg-accent/15 text-accent-text",
     wrong: "border-red bg-red/15 text-red-400",
     dim: "border-border bg-card-2 opacity-40",
   })[state];
@@ -135,7 +135,7 @@ function SpeakButton({ text, tts, big }: { text: string; tts: boolean; big?: boo
 function ListenButtons({ word }: { word: string }) {
   return (
     <div className="flex items-end justify-center gap-3">
-      <button className={`${tile} flex size-24 items-center justify-center border-link bg-link text-white`} onClick={() => speak(word, 0.85)} title="Nghe lại">
+      <button className={`${tile} flex size-24 items-center justify-center border-link bg-link text-on-link`} onClick={() => speak(word, 0.85)} title="Nghe lại">
         <Volume2 className="size-12" />
       </button>
       <button className={`${tile} ${tone("idle")} flex size-14 items-center justify-center text-link`} onClick={() => speak(word, 0.5)} title="Nghe chậm">
@@ -545,7 +545,7 @@ export default function VocabReview({
             </p>
             <input
               ref={inputRef}
-              className={`input rounded-2xl border-2 text-center text-xl font-bold ${feedback ? (feedback.ok ? "border-accent text-accent" : "border-red text-red-400 line-through") : ""}`}
+              className={`input rounded-2xl border-2 text-center text-xl font-bold ${feedback ? (feedback.ok ? "border-accent text-accent-text" : "border-red text-red-400 line-through") : ""}`}
               placeholder="Gõ bằng tiếng Đức…"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
@@ -693,11 +693,11 @@ export default function VocabReview({
       return (
         <div className={`border-t-2 ${ok ? "border-accent/40 bg-accent/15" : "border-red/40 bg-red/15"}`}>
           <div className="pb-safe mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:p-6">
-            <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card sm:flex ${ok ? "text-accent" : "text-red-400"}`}>
+            <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card sm:flex ${ok ? "text-accent-text" : "text-red-400"}`}>
               {ok ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className={`text-xl font-extrabold ${ok ? "text-accent" : "text-red-400"}`}>
+              <p className={`text-xl font-extrabold ${ok ? "text-accent-text" : "text-red-400"}`}>
                 {ok ? (feedback.note ?? PRAISE[step.id % PRAISE.length]) : "Đáp án đúng:"}
               </p>
               {feedback.combo >= 3 && feedback.combo % 3 === 0 && (
@@ -707,7 +707,7 @@ export default function VocabReview({
               )}
               {kind !== "match" && (
                 <div className="mt-1 flex items-center gap-1">
-                  <p className={`font-bold wrap-anywhere ${ok ? "text-accent" : "text-red-400"}`}>
+                  <p className={`font-bold wrap-anywhere ${ok ? "text-accent-text" : "text-red-400"}`}>
                     {v.word}
                     {v.meaning && <span className="font-normal opacity-80"> — {v.meaning}</span>}
                   </p>
@@ -770,7 +770,7 @@ export default function VocabReview({
 
   const stats = [
     { icon: Zap, label: "Tổng XP", value: String(xp), color: "border-amber text-amber" },
-    { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "border-accent text-accent" },
+    { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "border-accent text-accent-text" },
     { icon: Clock, label: "Thời gian", value: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, color: "border-link text-link" },
   ];
 

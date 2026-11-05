@@ -9,7 +9,7 @@ async function ContactEmail() {
   await connection();
   const email = contactEmail();
   return email ? (
-    <a href={`mailto:${email}`} className="font-bold text-accent hover:underline">
+    <a href={`mailto:${email}`} className="font-bold text-accent-text hover:underline">
       {email}
     </a>
   ) : (
@@ -70,7 +70,7 @@ export default function LegalPage({ doc, lang }: { doc: LegalDoc; lang: LegalLan
                 <Text s={b} />
               </p>
             ) : (
-              <ul key={i} className="flex list-disc flex-col gap-2 pl-5 leading-relaxed text-foreground/85 marker:text-accent">
+              <ul key={i} className="flex list-disc flex-col gap-2 pl-5 leading-relaxed text-foreground/85 marker:text-accent-text">
                 {b.map((li) => (
                   <li key={li}>
                     <Text s={li} />

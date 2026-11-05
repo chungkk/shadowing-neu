@@ -76,7 +76,7 @@ export default function Sprechen({ me }: { me: { id: number; name: string } }) {
       {error && <Notice text={error} tone="red" onClose={() => setError("")} />}
       {invite && (
         <div className="card flex flex-wrap items-center gap-3 border-accent">
-          <PhoneCall className="size-6 text-accent" />
+          <PhoneCall className="size-6 text-accent-text" />
           <p className="flex-1 font-bold">Bạn được mời vào một phòng luyện nói riêng.</p>
           <button
             className="btn btn-primary"
@@ -143,7 +143,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
   return (
     <section className="card flex flex-col gap-5 p-5">
       <div className="flex flex-col gap-3">
-        <h2 className="label text-accent">Trình độ của bạn</h2>
+        <h2 className="label text-accent-text">Trình độ của bạn</h2>
         <div className="flex flex-wrap gap-2">
           {LEVELS.map((l) => (
             <button key={l} className={`${chip(l === level)} min-w-12`} onClick={() => setLevel(l)} disabled={s.waiting}>
@@ -153,7 +153,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <h2 className="label text-accent">
+        <h2 className="label text-accent-text">
           Chủ đề muốn nói <span className="font-bold tracking-normal text-muted normal-case">(không bắt buộc)</span>
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 text-center">
           <span className="relative flex size-12 items-center justify-center">
             <span className="absolute inset-0 animate-ping rounded-full bg-accent/40 motion-reduce:animate-none" />
-            <Mic className="relative size-6 text-accent" />
+            <Mic className="relative size-6 text-accent-text" />
           </span>
           <p className="font-bold">Đang tìm bạn luyện nói trình độ {level}…</p>
           <p className="text-xs text-muted">Giữ trang này mở. Khi có người, cuộc gọi tự bắt đầu.</p>
@@ -204,7 +204,7 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
       }}
     >
       <h2 className="flex items-center gap-2 font-extrabold">
-        <Users className="size-5 text-accent" /> Tạo phòng
+        <Users className="size-5 text-accent-text" /> Tạo phòng
       </h2>
       <label className="field text-sm font-bold">
         Tên phòng
@@ -233,7 +233,7 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
               o.on ? "border-accent bg-accent/10" : "border-border hover:border-accent"
             }`}
           >
-            <o.icon className={`size-4 ${o.on ? "text-accent" : "text-muted"}`} />
+            <o.icon className={`size-4 ${o.on ? "text-accent-text" : "text-muted"}`} />
             <span className="flex flex-col">
               <span className="text-sm font-bold">{o.label}</span>
               <span className="text-xs text-muted">{o.hint}</span>
@@ -256,7 +256,7 @@ function RoomList({ rooms, busy, run, me }: { rooms: RoomView[]; busy: boolean; 
   return (
     <section className="card flex flex-col gap-3 p-5">
       <h2 className="flex items-center gap-2 font-extrabold">
-        <Users className="size-5 text-accent" /> Phòng đang mở
+        <Users className="size-5 text-accent-text" /> Phòng đang mở
         <span className="ml-auto text-xs font-bold text-muted">tự cập nhật</span>
       </h2>
       {!rooms.length && <p className="py-6 text-center text-sm text-muted">Chưa có phòng nào. Tạo phòng đầu tiên nhé!</p>}
@@ -268,7 +268,7 @@ function RoomList({ rooms, busy, run, me }: { rooms: RoomView[]; busy: boolean; 
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <p className="flex flex-wrap items-center gap-2">
                 <span className="truncate font-bold">{r.name}</span>
-                <span className="pill bg-accent/15 text-accent">{r.level}</span>
+                <span className="pill bg-accent/15 text-accent-text">{r.level}</span>
                 <span className={`text-xs font-bold ${full ? "text-red-400" : "text-muted"}`}>
                   {r.members.length}/{r.max}
                 </span>
@@ -328,7 +328,7 @@ function Room({
           <h2 className="flex items-center gap-2 text-xl font-extrabold">
             {room.private ? <Lock className="size-5 text-muted" /> : <Globe className="size-5 text-muted" />}
             <span className="truncate">{room.name}</span>
-            <span className="pill bg-accent/15 text-accent">{room.level}</span>
+            <span className="pill bg-accent/15 text-accent-text">{room.level}</span>
           </h2>
           <p className="text-sm text-muted">
             {room.members.length}/{room.max} người{room.topics.length ? ` · ${room.topics.join(" · ")}` : ""}
@@ -376,7 +376,7 @@ function Room({
       </div>
 
       <section className="card flex flex-col gap-2">
-        <h3 className="label text-accent">Gợi ý để bắt đầu</h3>
+        <h3 className="label text-accent-text">Gợi ý để bắt đầu</h3>
         <p className="text-lg font-bold">{list[promptIdx % list.length]}</p>
         <button className="btn self-start" onClick={() => setPromptIdx((i) => i + 1)}>
           Câu khác

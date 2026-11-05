@@ -14,14 +14,14 @@ export type Tone = "cyan" | "amber";
 
 const TONE = {
   cyan: {
-    text: "text-cyan-800",
+    text: "text-cyan-800 dark:text-cyan-300",
     icon: "border-ink bg-cyan-200 text-cyan-900",
     banner: "border-cyan-700/30 bg-cyan-500/10",
-    selected: "border-ink bg-cyan-200/60 shadow-[0_4px_0_var(--ink)]",
-    hover: "hover:border-cyan-600",
+    selected: "border-ink bg-cyan-200/60 dark:bg-cyan-400/25 shadow-[0_4px_0_var(--ink)]",
+    hover: "hover:border-cyan-600 dark:hover:border-cyan-300",
     badge: "border-2 border-ink bg-cyan-300 text-black",
     bar: "bg-cyan-500",
-    button: "bg-cyan-600 text-white shadow-[0_4px_0_var(--ink)] active:shadow-[0_1px_0_var(--ink)]",
+    button: "bg-cyan-600 dark:bg-cyan-700 text-white shadow-[0_4px_0_var(--ink)] active:shadow-[0_1px_0_var(--ink)]",
   },
   amber: {
     text: "text-amber",

@@ -27,7 +27,7 @@ async function Users() {
                 </div>
                 <div className="flex flex-wrap gap-x-2 text-xs text-muted">
                   <span className="min-w-0 truncate">{u.email}</span>
-                  <span className={u.role === "admin" ? "font-semibold text-accent" : ""}>
+                  <span className={u.role === "admin" ? "font-semibold text-accent-text" : ""}>
                     {u.role === "admin" ? "Admin" : "Học viên"}
                   </span>
                   <span>{u.createdAt.slice(0, 10)}</span>

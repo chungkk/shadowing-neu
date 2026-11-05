@@ -7,8 +7,10 @@ import LoginDialogSlot from "@/components/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
 import ShareBar from "@/components/ShareBar";
 import SiteFooter from "@/components/SiteFooter";
+import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
 import { SITE_URL } from "@/lib/site";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -43,7 +45,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="vi" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Áp giao diện đã chọn trước khi trình duyệt vẽ trang, tránh nháy nền sáng */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="flex min-h-full">
         <Suspense fallback={<SidebarSkeleton />}>
           <SidebarWithUser />
@@ -61,7 +67,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Suspense fallback={<HeaderNavFrame />}>
               <HeaderNav />
             </Suspense>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <ThemeToggle />
               <Suspense>
                 <UserMenu />
               </Suspense>

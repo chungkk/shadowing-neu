@@ -59,7 +59,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
                 <h3 className="line-clamp-2 text-sm font-extrabold leading-snug">{title}</h3>
                 <p className="flex items-center gap-2 text-xs text-muted">
                   {at}
-                  {!!n && <span className="font-bold text-accent">{n}%</span>}
+                  {!!n && <span className="font-bold text-accent-text">{n}%</span>}
                 </p>
               </div>
             </Link>

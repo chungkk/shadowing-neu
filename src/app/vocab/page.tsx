@@ -66,7 +66,7 @@ function DeckCard({ deck, learned }: { deck: DeckSummary; learned: number | null
       <div className="flex items-center gap-1.5 px-0.5 text-sm font-bold text-muted">
         <Layers className="size-4" />
         <span className="flex-1">{deck.wordCount} từ</span>
-        {!!learned && <span className={done ? "text-accent" : "text-amber"}>{done ? "✓" : `${learned}/${deck.wordCount}`}</span>}
+        {!!learned && <span className={done ? "text-accent-text" : "text-amber"}>{done ? "✓" : `${learned}/${deck.wordCount}`}</span>}
       </div>
       {/* Tiến độ: phần đã học */}
       {!!learned && !done && (

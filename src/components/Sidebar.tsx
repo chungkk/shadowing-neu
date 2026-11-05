@@ -93,7 +93,7 @@ export function HeaderNavFrame({ current }: { current?: string }) {
           key={it.href}
           href={it.href}
           className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
-            it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
+            it.href === current ? "bg-accent/15 text-accent-text" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
           }`}
         >
           <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
@@ -159,7 +159,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
       href={it.href}
       role="menuitem"
       className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold transition ${
-        it.href === current ? "bg-accent/15 text-accent" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
+        it.href === current ? "bg-accent/15 text-accent-text" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
       }`}
     >
       <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />

@@ -11,7 +11,7 @@ import { LoginLink } from "./LoginDialog";
 type Word = DeckWord & { saved: boolean; learned: boolean };
 
 /** Màu mạo từ theo giống — như app: der xanh dương · die đỏ · das xanh lá */
-const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
+const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
 const article = (w: DeckWord) => (w.gender === "der" || w.gender === "die" || w.gender === "das" ? w.gender : "");
 
 // Bộ cả nghìn từ vẽ hết 1 lần thì trang rất nặng → hiện dần
@@ -78,7 +78,7 @@ export default function DeckWords({
           </Link>
         )}
         {msg.ok && (
-          <Link href="/vocab/notebook" className="text-sm font-bold text-accent hover:underline">
+          <Link href="/vocab/notebook" className="text-sm font-bold text-accent-text hover:underline">
             {msg.ok}
           </Link>
         )}
@@ -116,7 +116,7 @@ export default function DeckWords({
                   type="button"
                   title={w.saved ? "Đã có trong sổ" : "Thêm vào sổ"}
                   disabled={w.saved || adding || busy === "all"}
-                  className={`btn-icon size-9 shrink-0 ${w.saved ? "text-accent" : "text-foreground"}`}
+                  className={`btn-icon size-9 shrink-0 ${w.saved ? "text-accent-text" : "text-foreground"}`}
                   onClick={() => add([w.key], false)}
                 >
                   {adding ? <Loader2 className="size-4 animate-spin" /> : w.saved ? <Check className="size-5" /> : <Plus className="size-5" />}

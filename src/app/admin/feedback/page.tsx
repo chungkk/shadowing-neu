@@ -7,7 +7,7 @@ import DeleteButton from "../DeleteButton";
 import { ListSkeleton } from "@/components/Skeleton";
 
 const KIND: Record<FeedbackKind, { label: string; className: string }> = {
-  idea: { label: "Góp ý", className: "text-accent" },
+  idea: { label: "Góp ý", className: "text-accent-text" },
   bug: { label: "Báo lỗi", className: "text-red-400" },
   content: { label: "Nội dung", className: "text-amber" },
   other: { label: "Khác", className: "text-muted" },

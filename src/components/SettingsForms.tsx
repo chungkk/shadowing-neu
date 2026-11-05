@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 
 function Status({ state }: { state: FormResult }) {
   if (state.error) return <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>;
-  if (state.ok) return <p className="rounded-xl bg-accent/15 p-3 text-sm text-accent">{state.ok}</p>;
+  if (state.ok) return <p className="rounded-xl bg-accent/15 p-3 text-sm text-accent-text">{state.ok}</p>;
   return null;
 }
 
@@ -265,7 +265,7 @@ export default function SettingsForms({
             <p className="truncate text-sm text-muted">{user.email}</p>
           </div>
           <div className="flex flex-wrap gap-2 max-sm:justify-center">
-            <span className={`pill ${user.admin ? "bg-amber/15 text-amber" : "bg-accent/15 text-accent"}`}>{user.admin ? "Quản trị viên" : "Học viên"}</span>
+            <span className={`pill ${user.admin ? "bg-amber/15 text-amber" : "bg-accent/15 text-accent-text"}`}>{user.admin ? "Quản trị viên" : "Học viên"}</span>
             <span className="pill bg-card-2 text-muted">Tham gia {joined(user.createdAt)}</span>
             {!hasPassword && <span className="pill bg-card-2 text-muted">Đăng nhập bằng Google / Apple</span>}
           </div>

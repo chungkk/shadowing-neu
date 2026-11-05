@@ -25,7 +25,7 @@ const COLOR: Record<Artikel, string> = {
   die: "bg-rose-500 text-white",
   das: "bg-emerald-600 text-white",
 };
-const TEXT: Record<Artikel, string> = { der: "text-sky-600", die: "text-rose-600", das: "text-emerald-600" };
+const TEXT: Record<Artikel, string> = { der: "text-sky-600 dark:text-sky-300", die: "text-rose-600 dark:text-rose-300", das: "text-emerald-600 dark:text-emerald-300" };
 
 const Diamonds = ({ n }: { n: number }) => (
   <span className="inline-flex items-center gap-1 font-extrabold text-gem tabular-nums">
@@ -128,7 +128,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
       }
     />
   );
-  const errorLine = error && <p className="text-center text-sm font-bold text-red-500">{error}</p>;
+  const errorLine = error && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{error}</p>;
 
   if (!loggedIn) {
     return (
@@ -197,7 +197,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
         <div className="sticker flex flex-col gap-4 p-5 text-center">
           {reveal && (
             <div>
-              <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-emerald-600">
+              <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-emerald-600 dark:text-emerald-300">
                 <Check className="size-4" strokeWidth={3} /> Chính xác
               </p>
               <p className="mt-1 text-2xl font-black break-words">
@@ -233,7 +233,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
         <div className="sticker flex flex-col gap-2 p-5 text-center">
           {reveal && !reveal.correct && (
             <>
-              <p className="inline-flex items-center justify-center gap-1.5 text-sm font-extrabold text-red-500">
+              <p className="inline-flex items-center justify-center gap-1.5 text-sm font-extrabold text-red-500 dark:text-red-400">
                 <X className="size-4" strokeWidth={3} /> {reveal.timedOut ? "Hết giờ" : "Chưa đúng"}
               </p>
               <p className="text-2xl font-black break-words">
@@ -282,7 +282,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
                 key={d.slug}
                 aria-pressed={d.slug === current?.slug}
                 onClick={() => setDeck(d.slug)}
-                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-2.5 text-left transition ${d.slug === current?.slug ? "border-ink bg-cyan-200/60" : "border-border bg-card hover:border-cyan-600"}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-2.5 text-left transition ${d.slug === current?.slug ? "border-ink bg-cyan-200/60 dark:bg-cyan-400/25" : "border-border bg-card hover:border-cyan-600"}`}
               >
                 <LevelTile level={d.level} />
                 <span className="min-w-0">

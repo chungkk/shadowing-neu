@@ -52,7 +52,7 @@ async function Board() {
                 <Avatar user={{ id: r.id, name: r.name, avatarAt: mine ? user.avatarAt : null }} className="size-9 text-base" />
                 <span className="min-w-0 flex-1 truncate font-bold">
                   {r.name}
-                  {mine && <span className="ml-1.5 text-sm font-bold text-accent">(Bạn)</span>}
+                  {mine && <span className="ml-1.5 text-sm font-bold text-accent-text">(Bạn)</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 font-extrabold text-gem tabular-nums">
                   <Gem className="size-5" /> {fmt(r.total)}

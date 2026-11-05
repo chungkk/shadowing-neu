@@ -122,7 +122,7 @@ const THEME = {
 type Theme = (typeof THEME)[Variant];
 
 /** Màu theo giống — như trang bộ từ: der xanh dương · die đỏ · das xanh lá */
-const GENDER_TEXT: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent" };
+const GENDER_TEXT: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
 
 /** Số giả ngẫu nhiên cố định để server & trình duyệt vẽ nền giống nhau */
 const rand = (i: number, n: number) => (((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1) + 1) % 1;
@@ -638,7 +638,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                       </span>
                     )}
                     {done ? (
-                      <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent" : "text-red-400"}`}>{fullWord(d.w)}</span>
+                      <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent-text" : "text-red-400"}`}>{fullWord(d.w)}</span>
                     ) : (
                       <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
                     )}
@@ -774,7 +774,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                           ))}
                         </ul>
                         {saved ? (
-                          <p className="mt-2 text-center text-sm font-bold text-accent">{saved}</p>
+                          <p className="mt-2 text-center text-sm font-bold text-accent-text">{saved}</p>
                         ) : loggedIn ? (
                           <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
                             <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn

@@ -19,10 +19,10 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
   const short = earnable < LESSON_PRICE; // bài miễn phí không kiếm đủ kim cương để mở 1 bài
   return (
     <div className="card flex flex-wrap items-center gap-3 p-4">
-      <Lock className={`size-5 shrink-0 ${enabled ? "text-accent" : "text-muted"}`} />
+      <Lock className={`size-5 shrink-0 ${enabled ? "text-accent-text" : "text-muted"}`} />
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-bold">
-          Khoá bài học: {enabled ? <span className="text-accent">đang bật</span> : <span className="text-muted">đang tắt — mọi bài đều mở</span>}
+          Khoá bài học: {enabled ? <span className="text-accent-text">đang bật</span> : <span className="text-muted">đang tắt — mọi bài đều mở</span>}
         </p>
         <p className="text-xs text-muted">
           Khách chỉ học {freeCount} bài “Miễn phí” (chọn ở từng bài bên dưới). Người đã đăng nhập chọn thêm {FREE_PICKS} bài, sau đó{" "}
@@ -96,7 +96,7 @@ async function Dashboard() {
               <form action={toggleLessonPublished.bind(null, l.id, !l.published)}>
                 <button
                   title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
-                  className={`btn ${l.published ? "text-accent" : "text-muted"}`}
+                  className={`btn ${l.published ? "text-accent-text" : "text-muted"}`}
                 >
                   {l.published ? "● Đã đăng" : "○ Nháp"}
                 </button>
@@ -105,7 +105,7 @@ async function Dashboard() {
               <form action={toggleFreeLesson.bind(null, l.id, !free.has(l.id))}>
                 <button
                   title={free.has(l.id) ? "Bấm để bỏ miễn phí" : "Bấm để cho khách học miễn phí bài này"}
-                  className={`btn ${free.has(l.id) ? "text-accent" : "text-muted"}`}
+                  className={`btn ${free.has(l.id) ? "text-accent-text" : "text-muted"}`}
                 >
                   {free.has(l.id) ? "● Miễn phí" : "○ Miễn phí"}
                 </button>

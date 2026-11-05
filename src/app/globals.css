@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* dark: chỉ theo nút chọn giao diện (data-theme trên <html>), không theo cài đặt của hệ điều hành */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Giao diện theo linh vật: nền kem · viền nâu mận (ink) · đỏ kẹo (ghi âm / xoá) · xanh lá (chính) · vàng tai nghe (nhấn) */
 :root {
   color-scheme: light;
@@ -14,6 +17,9 @@
   --link: #0f766e;
   --accent: #17803f;
   --accent-dark: #0e5a2b;
+  --accent-text: #17803f; /* chữ màu xanh; --accent là nền nút chữ trắng */
+  --on-link: #ffffff; /* chữ trên nền --link */
+  --stripe: #fffaf3; /* vạch sáng của dải sọc kẹo */
   --amber: #a85605; /* đủ đậm để làm chữ trên nền kem; nền nút dùng --gold */
   --amber-dark: #7a3e04;
   --gold: #fbbf24;
@@ -24,6 +30,39 @@
   --phrase: #0369a1; /* cụm từ cố định AI tìm thấy */
   --gem: #0369a1; /* điểm chính tả (kim cương) */
   --gem-dark: #075985;
+}
+
+/* Giao diện tối ấm: nâu ca cao lấy từ viền linh vật, như bàn học dưới ánh đèn vàng buổi tối */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #241a1c;
+  --sidebar: #1c1416;
+  --foreground: #f9ecdf;
+  --ink: #5c4248;
+  --card: #32252a;
+  --card-2: #3f2f33;
+  --border: #4e3b40;
+  --muted: #cdb7aa;
+  --link: #83d8cc;
+  --accent: #1d8048;
+  --accent-dark: #0f4f2b;
+  --accent-text: #8adea6;
+  --on-link: #16211f;
+  --stripe: #efdcc6;
+  --amber: #f6c26b;
+  --amber-dark: #ffdc9a;
+  --gold: #f5b93c;
+  --red: #cf3a4e;
+  --red-dark: #7a1f30;
+  --red-400: #ff9ca7;
+  --red-300: #ffb7bf;
+  --phrase: #93d2f7;
+  --gem: #93d2f7;
+  --gem-dark: #2c6f95;
+  scrollbar-color: var(--ink) var(--sidebar);
+}
+[data-theme="dark"] ::selection {
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
 }
 
 /* Màn chơi game và tranh minh hoạ game: vẽ riêng cho nền đêm nên giữ bảng màu tối */
@@ -40,6 +79,7 @@
   --link: #facc15;
   --accent: #16a34a;
   --accent-dark: #14532d;
+  --accent-text: #16a34a;
   --amber: #facc15;
   --amber-dark: #854d0e;
   --gold: #facc15;
@@ -51,6 +91,17 @@
   --gem: #38bdf8;
   --gem-dark: #0369a1;
   color: var(--foreground);
+}
+/* Khung màn chơi trong giao diện tối ấm: cùng tông ca cao với trang */
+[data-theme="dark"] .theme-night {
+  --background: #1c1416;
+  --sidebar: #161012;
+  --ink: #4e3b40;
+  --card: #2a1f23;
+  --card-2: #32252a;
+  --border: #4e3b40;
+  --muted: #cdb7aa;
+  --foreground: #f9ecdf;
 }
 
 @theme inline {
@@ -68,6 +119,8 @@
   --color-link: var(--link);
   --color-accent: var(--accent);
   --color-accent-dark: var(--accent-dark);
+  --color-accent-text: var(--accent-text);
+  --color-on-link: var(--on-link);
   --color-amber: var(--amber);
   --color-amber-dark: var(--amber-dark);
   --color-red: var(--red);
@@ -91,6 +144,19 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Tối ấm: chấm bi sáng nhạt thay cho chấm tối, thêm vầng đèn vàng phía trên trang */
+[data-theme="dark"] body {
+  background-image: radial-gradient(color-mix(in srgb, var(--foreground) 5%, transparent) 1.5px, transparent 1.5px);
+}
+[data-theme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(70rem 32rem at 50% -6rem, color-mix(in srgb, var(--gold) 13%, transparent), transparent);
 }
 
 /* Bỏ trễ chạm / zoom khi chạm 2 lần vào nút trên điện thoại */
@@ -140,7 +206,7 @@ select {
   /* Dải sọc kẹo như thân linh vật */
   .candy-stripe {
     @apply border-y-2 border-ink;
-    background: repeating-linear-gradient(-45deg, var(--red) 0 10px, #fffaf3 10px 20px);
+    background: repeating-linear-gradient(-45deg, var(--red) 0 10px, var(--stripe) 10px 20px);
   }
   .btn-icon {
     @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-40;
@@ -352,7 +418,7 @@ select {
 }
 /* Tiến độ câu: dải sọc kẹo dài dần */
 .dict-progress {
-  background: repeating-linear-gradient(-45deg, var(--red) 0 7px, #fffaf3 7px 14px);
+  background: repeating-linear-gradient(-45deg, var(--red) 0 7px, var(--stripe) 7px 14px);
   transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* Huy hiệu: kim cương nảy, số mới lăn từ dưới lên, viền loé sáng */

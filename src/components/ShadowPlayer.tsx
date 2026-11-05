@@ -109,12 +109,12 @@ function Toggle({
     <button
       role="switch"
       aria-checked={on}
-      className={`btn ${on ? "max-sm:border-accent max-sm:text-accent" : ""}`}
+      className={`btn ${on ? "max-sm:border-accent max-sm:text-accent-text" : ""}`}
       onClick={onToggle}
       disabled={disabled}
       title={title}
     >
-      <Icon className={`size-4 ${on ? "fill-accent/20 text-accent" : "text-muted"}`} />
+      <Icon className={`size-4 ${on ? "fill-accent/20 text-accent-text" : "text-muted"}`} />
       {label}
       <span className={`relative ml-1 h-5 w-9 shrink-0 rounded-full transition-colors max-sm:hidden ${on ? "bg-accent" : "bg-foreground/15"}`}>
         <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : ""}`} />
@@ -1315,7 +1315,7 @@ export default function ShadowPlayer({
                     <span className="pill bg-card-2 text-foreground">#{i + 1}</span>
                     <span className="font-mono text-xs text-muted">{formatTime(s.start)}</span>
                     {dictation && dictDone[i] && (
-                      <span className="pill bg-accent/15 text-accent">
+                      <span className="pill bg-accent/15 text-accent-text">
                         ✓ {dictDone[i].correct}/{dictDone[i].total}
                       </span>
                     )}
