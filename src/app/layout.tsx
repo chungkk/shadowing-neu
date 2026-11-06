@@ -51,6 +51,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Tải sẵn linh vật của màn tải trang: mạng chậm mới hiện màn này, lúc đó không kịp tải hình nữa */}
         <link rel="prefetch" href="/mascot-loading.svg" as="image" />
+        {/* Google AdSense */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5590145594898560"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="flex min-h-full">
         <Suspense fallback={<SidebarSkeleton />}>
