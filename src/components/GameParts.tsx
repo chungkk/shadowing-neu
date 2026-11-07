@@ -146,6 +146,7 @@ export function DeckMenu({
   error,
   onStart,
   deckExtra,
+  notice,
 }: {
   tone: Tone;
   icon: ComponentType<{ className?: string }>;
@@ -160,6 +161,7 @@ export function DeckMenu({
   error: string;
   onStart: (from: number) => void;
   deckExtra?: (deck: DeckOption) => ReactNode; // dòng thêm ở cuối thẻ bộ từ
+  notice?: ReactNode; // dòng thêm dưới lời giới thiệu (vd. tên tạm của khách)
 }) {
   const t = TONE[tone];
   const total = Math.max(current?.topicCount ?? 1, 1);
@@ -175,6 +177,7 @@ export function DeckMenu({
           <p className={`text-sm ${t.text}`}>{intro}</p>
         </div>
       </div>
+      {notice}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {decks.map((d) => (
           <DeckCard key={d.slug} deck={d} tone={tone} progressKey={progressKey(d.slug)} selected={d.slug === current?.slug} disabled={loading} extra={deckExtra?.(d)} onSelect={() => onSelect(d.slug)} />

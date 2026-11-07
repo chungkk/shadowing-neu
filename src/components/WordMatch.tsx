@@ -8,7 +8,7 @@ import type { GameWord, Topic } from "@/lib/falling-words";
 import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
 import { MILESTONE_PAIRS, TIME_BONUS, TIME_PENALTY, newGame, nextMilestone, pick, snapshot, step, type Game, type Phase, type View } from "@/lib/word-match";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { LoginLink } from "./LoginDialog";
+import { GuestResult, useGuestGate } from "./GuestPlay";
 import Mascot from "./Mascot";
 import { DeckMenu, GameHeader, type DeckOption } from "./GameParts";
 
@@ -196,6 +196,8 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
     }
   }
 
+  const guest = useGuestGate(loggedIn, start); // khách: hỏi tên tạm trước khi vào ván
+
   const header = (
     <GameHeader
       icon={Puzzle}
@@ -232,9 +234,11 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
           best={best}
           loading={phase === "loading"}
           error={error}
-          onStart={start}
+          onStart={guest.gate}
+          notice={guest.chip}
           deckExtra={(d) => <SeenLine deck={d} />}
         />
+        {guest.dialog}
       </div>
     );
   }
@@ -352,6 +356,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                   ) : (
                     <p className="text-sm text-muted">Kỷ lục: {best}</p>
                   )}
+                  {!loggedIn && <GuestResult name={guest.name} score={v.score} record={v.score > v.best} />}
                   <p className="text-sm text-muted">
                     Nối đúng {v.pairs} cặp · {phase === "win" ? `qua cả ${v.topics.length} mốc` : `dừng ở mốc ${v.milestone + 1}/${v.topics.length}`}
                   </p>
@@ -384,14 +389,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                             <BookmarkPlus className="size-4" /> {saveError ? "Thử lưu lại" : "Lưu vào sổ để ôn"}
                           </button>
                         </>
-                      ) : (
-                        <p className="mt-2 text-center text-sm text-muted">
-                          <LoginLink href={`/login?next=${location.pathname}`} className="font-bold text-link hover:underline">
-                            Đăng nhập
-                          </LoginLink>{" "}
-                          để lưu các từ này vào sổ.
-                        </p>
-                      )}
+                      ) : null}
                     </div>
                   )}
                   <div className="flex w-full gap-2">

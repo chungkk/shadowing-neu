@@ -47,7 +47,7 @@ import {
 } from "@/lib/falling-words";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { LoginLink } from "./LoginDialog";
+import { GuestResult, useGuestGate } from "./GuestPlay";
 import Mascot from "./Mascot";
 import { DeckMenu, GameHeader, ScreenKeyboard, useCoarsePointer, type DeckOption, type Tone } from "./GameParts";
 
@@ -504,6 +504,8 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
     }
   }
 
+  const guest = useGuestGate(loggedIn, start); // khách: hỏi tên tạm trước khi vào ván
+
   const header = (
     <GameHeader
       icon={cfg.icon}
@@ -545,8 +547,10 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
           best={best}
           loading={phase === "loading"}
           error={error}
-          onStart={start}
+          onStart={guest.gate}
+          notice={guest.chip}
         />
+        {guest.dialog}
       </div>
     );
   }
@@ -755,6 +759,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                     ) : (
                       <p className="text-sm text-muted">Kỷ lục: {best}</p>
                     )}
+                    {!loggedIn && <GuestResult name={guest.name} score={v.score} record={v.score > v.best} />}
                     <p className="text-sm text-muted">
                       {cfg.listen ? `Kéo được ${v.hits} cục vàng` : `Bắn trúng ${v.hits} từ`} ·{" "}
                       {phase === "win" ? `qua cả ${v.topics.length} mốc` : `dừng ở mốc ${v.milestone + 1}/${v.topics.length}`}
@@ -779,14 +784,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                           <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
                             <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn
                           </button>
-                        ) : (
-                          <p className="mt-2 text-center text-sm text-muted">
-                            <LoginLink href={`/login?next=${location.pathname}`} className="font-bold text-link hover:underline">
-                              Đăng nhập
-                            </LoginLink>{" "}
-                            để lưu các từ này vào sổ.
-                          </p>
-                        )}
+                        ) : null}
                       </div>
                     )}
                     <div className="flex w-full gap-2">
