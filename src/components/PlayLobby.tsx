@@ -24,7 +24,7 @@ import { clientApi } from "@/lib/client-api";
 import { emitPoints } from "@/lib/points";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GameHeader } from "./GameParts";
-import { LoginLink } from "./LoginDialog";
+import GameLoginPromo from "./GameLoginPromo";
 import { Gem } from "./PointsBadge";
 
 /** Sảnh Sudoku / Caro: chơi một mình (Caro: với máy) hoặc tạo phòng / vào phòng bằng mã — đều cược kim cương */
@@ -128,16 +128,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
     return (
       <>
         {header}
-        <div className="sticker flex flex-col gap-3 p-4">
-          <Rules game={game} />
-          <p className="text-sm font-bold">
-            Game dùng kim cương của tài khoản:{" "}
-            <LoginLink href={`/login?next=/games/${game}`} className="text-link hover:underline">
-              đăng nhập
-            </LoginLink>{" "}
-            để chơi.
-          </p>
-        </div>
+        <GameLoginPromo game={game} next={`/games/${game}`} rules={<Rules game={game} />} />
       </>
     );
   }

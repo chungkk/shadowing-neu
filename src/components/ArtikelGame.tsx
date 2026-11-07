@@ -8,7 +8,7 @@ import { emitPoints } from "@/lib/points";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GameHeader, LevelTile } from "./GameParts";
-import { LoginLink } from "./LoginDialog";
+import GameLoginPromo from "./GameLoginPromo";
 import { Gem } from "./PointsBadge";
 
 /**
@@ -134,16 +134,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
     return (
       <>
         {header}
-        <div className="sticker flex flex-col gap-3 p-4">
-          <Rules />
-          <p className="text-sm font-bold">
-            Game dùng kim cương của tài khoản —{" "}
-            <LoginLink href={`/login?next=/games/der-die-das`} className="text-link hover:underline">
-              đăng nhập
-            </LoginLink>{" "}
-            để chơi.
-          </p>
-        </div>
+        <GameLoginPromo game="der-die-das" next="/games/der-die-das" rules={<Rules />} />
       </>
     );
   }

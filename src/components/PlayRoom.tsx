@@ -2,16 +2,35 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Crown, Grid3x3, Hourglass, LogOut, Play, Share2, Users } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Crown,
+  Eye,
+  Grid3x3,
+  Hourglass,
+  LogOut,
+  Play,
+  Share2,
+  Trophy,
+  Users,
+  X,
+} from "lucide-react";
 import { fmtDiamonds, SUDOKU_LEVEL_LABEL, type PlayResult } from "@/lib/play";
 import { clientApi } from "@/lib/client-api";
 import { emitPoints } from "@/lib/points";
 import { GameHeader } from "./GameParts";
-import { LoginLink } from "./LoginDialog";
+import GameLoginPromo from "./GameLoginPromo";
 import { Diamonds, GAME_TITLE } from "./PlayLobby";
 import { Gem } from "./PointsBadge";
 import CaroPlay from "./CaroPlay";
-import { clock, MascotSay, useCountdown, type MascotMood, type View } from "./PlayParts";
+import {
+  clock,
+  MascotSay,
+  useCountdown,
+  type MascotMood,
+  type View,
+} from "./PlayParts";
 import SudokuPlay from "./SudokuPlay";
 
 /**
@@ -33,6 +52,13 @@ const REASON: Record<PlayResult["reason"], string> = {
 };
 
 function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [open]);
   const r = v.result!;
   const won = r.winnerId === v.meId;
   const winner = v.players.find((p) => p.id === r.winnerId);
@@ -47,21 +73,36 @@ function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
     line = "Kim cương cược đã được hoàn lại.";
   } else if (won) {
     title = "Bạn thắng!";
-    line = r.reason === "timeout" ? "Đối thủ hết thời gian đi nước." : r.reason === "resign" ? "Đối thủ đã bỏ cuộc." : `Thắng vì ${REASON[r.reason]}.`;
+    line =
+      r.reason === "timeout"
+        ? "Đối thủ hết thời gian đi nước."
+        : r.reason === "resign"
+          ? "Đối thủ đã bỏ cuộc."
+          : `Thắng vì ${REASON[r.reason]}.`;
   } else {
-    title = v.mode === "solo" ? (v.game === "caro" ? "Máy thắng" : "Chưa giải được") : `${winner?.name ?? "Người khác"} thắng`;
+    title =
+      v.mode === "solo"
+        ? v.game === "caro"
+          ? "Máy thắng"
+          : "Chưa giải được"
+        : `${winner?.name ?? "Người khác"} thắng`;
     line =
       r.reason === "time" && v.mode === "solo"
-          ? "Hết giờ."
-          : r.reason === "timeout" && v.mode === "solo"
-            ? "Hết thời gian đi nước."
-            : r.reason === "timeout"
-              ? "Bạn hết thời gian đi nước."
-              : r.reason === "resign"
-                ? "Bạn đã bỏ cuộc."
-                : `Thắng vì ${REASON[r.reason]}.`;
+        ? "Hết giờ."
+        : r.reason === "timeout" && v.mode === "solo"
+          ? "Hết thời gian đi nước."
+          : r.reason === "timeout"
+            ? "Bạn hết thời gian đi nước."
+            : r.reason === "resign"
+              ? "Bạn đã bỏ cuộc."
+              : `Thắng vì ${REASON[r.reason]}.`;
   }
-  const mood: MascotMood = v.status === "canceled" || r.winnerId === null ? "think" : won ? "cheer" : "sad";
+  const mood: MascotMood =
+    v.status === "canceled" || r.winnerId === null
+      ? "think"
+      : won
+        ? "cheer"
+        : "sad";
   const say =
     mood === "cheer"
       ? r.reason === "solved"
@@ -72,41 +113,100 @@ function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
         : v.status === "canceled"
           ? "Phòng huỷ rồi, kim cương vẫn còn nguyên."
           : "Ngang tài ngang sức! Làm thêm ván nữa không?";
+  if (!open) {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="btn px-4 py-2"
+        >
+          <Trophy className="size-4" /> {title}
+        </button>
+        <Link href={onAgain} className="btn btn-amber px-4 py-2">
+          <Play className="size-4 fill-current" /> Chơi ván mới
+        </Link>
+      </div>
+    );
+  }
   return (
-    <div className="sticker flex flex-col items-center gap-2 p-5 text-center">
-      <MascotSay mood={mood} className="mb-1 w-full max-w-sm text-left">
-        {say}
-      </MascotSay>
-      <p className={`text-2xl font-black ${won ? "text-emerald-600 dark:text-emerald-300" : ""}`}>{title}</p>
-      <p className="text-sm text-muted">{line}</p>
-      {seated && v.status !== "canceled" && (
-        <p className="font-bold">
-          {r.payout > 0 ? (
-            <>
-              Nhận về <Diamonds n={r.payout} />
-              {r.payout > r.stake && ` (lời ${fmtDiamonds(r.payout - r.stake)})`}
-              {r.capped && " · đã chạm trần lời 24 giờ"}
-            </>
-          ) : (
-            <>
-              Mất <Diamonds n={r.stake} />
-            </>
-          )}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <button
+        className="sheet-fade absolute inset-0 cursor-default bg-black/55"
+        onClick={() => setOpen(false)}
+        aria-label="Đóng"
+      />
+      <div className="sticker sheet-up relative flex w-full max-w-sm flex-col items-center gap-2 bg-card p-5 pt-6 text-center">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="absolute top-2 right-2 grid size-8 place-items-center rounded-full text-muted hover:bg-black/5 hover:text-ink dark:hover:bg-white/10"
+          aria-label="Đóng"
+        >
+          <X className="size-5" />
+        </button>
+        <MascotSay mood={mood} className="mb-1 w-full text-left">
+          {say}
+        </MascotSay>
+        <p
+          className={`text-2xl font-black ${won ? "text-emerald-600 dark:text-emerald-300" : ""}`}
+        >
+          {title}
         </p>
-      )}
-      <Link href={onAgain} className="btn btn-amber mt-2 px-6 py-3">
-        <Play className="size-4 fill-current" /> Chơi ván mới
-      </Link>
+        <p className="text-sm text-muted">{line}</p>
+        {seated && v.status !== "canceled" && (
+          <p className="font-bold">
+            {r.payout > 0 ? (
+              <>
+                Nhận về <Diamonds n={r.payout} />
+                {r.payout > r.stake &&
+                  ` (lời ${fmtDiamonds(r.payout - r.stake)})`}
+                {r.capped && " · đã chạm trần lời 24 giờ"}
+              </>
+            ) : (
+              <>
+                Mất <Diamonds n={r.stake} />
+              </>
+            )}
+          </p>
+        )}
+        <div className="mt-2 flex w-full flex-col gap-2">
+          <Link href={onAgain} className="btn btn-amber w-full px-6 py-3">
+            <Play className="size-4 fill-current" /> Chơi ván mới
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="btn w-full px-6 py-2"
+          >
+            <Eye className="size-4" /> Xem lại bàn chơi
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => void }) {
+function Waiting({
+  v,
+  send,
+}: {
+  v: View;
+  send: (p: Record<string, unknown>) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const me = v.players.find((p) => p.me);
   const host = v.hostId === v.meId;
   const left = useCountdown(v.msLeft, v.version);
-  const link = typeof window !== "undefined" ? `${location.origin}/games/${v.game}/${v.code}` : "";
+  const link =
+    typeof window !== "undefined"
+      ? `${location.origin}/games/${v.game}/${v.code}`
+      : "";
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
   const share = async () => {
     const text = `Vào chơi ${GAME_TITLE[v.game]} với mình trên ckk.pro, mỗi người cược ${v.stake} kim cương: ${link}`;
@@ -115,7 +215,8 @@ function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => v
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
-  const everyoneReady = v.players.length >= 2 && v.players.every((p) => p.ready);
+  const everyoneReady =
+    v.players.length >= 2 && v.players.every((p) => p.ready);
   const say = !me
     ? `Vào chơi cùng không? Mỗi người cược ${v.stake} kim cương đó.`
     : host
@@ -129,18 +230,29 @@ function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => v
         : "Chuẩn bị xong thì bấm Sẵn sàng nhé!";
   return (
     <div className="sticker flex flex-col gap-4 p-5">
-      <MascotSay mood={everyoneReady || me?.ready ? "cheer" : "happy"}>{say}</MascotSay>
+      <MascotSay mood={everyoneReady || me?.ready ? "cheer" : "happy"}>
+        {say}
+      </MascotSay>
       <div className="text-center">
         <p className="text-sm font-bold text-muted">Mã phòng</p>
-        <p className="font-mono text-4xl font-black tracking-[0.3em]">{v.code}</p>
+        <p className="font-mono text-4xl font-black tracking-[0.3em]">
+          {v.code}
+        </p>
         <p className="mt-1 text-sm text-muted">
           {GAME_TITLE[v.game]}
-          {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · mỗi người cược <Diamonds n={v.stake} /> · hũ hiện có <Diamonds n={v.pot} />
+          {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · mỗi người cược{" "}
+          <Diamonds n={v.stake} /> · hũ hiện có <Diamonds n={v.pot} />
         </p>
       </div>
       {me && (
         <button className="btn mx-auto" onClick={share}>
-          {copied ? <Check className="size-4" /> : canShare ? <Share2 className="size-4" /> : <Copy className="size-4" />}
+          {copied ? (
+            <Check className="size-4" />
+          ) : canShare ? (
+            <Share2 className="size-4" />
+          ) : (
+            <Copy className="size-4" />
+          )}
           {copied ? "Đã chép link" : "Gửi link cho bạn"}
         </button>
       )}
@@ -148,17 +260,25 @@ function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => v
         {Array.from({ length: v.capacity }, (_, k) => {
           const p = v.players[k];
           return (
-            <li key={k} className={`flex items-center gap-2 rounded-2xl border-2 px-3 py-2 ${p ? "border-ink bg-card-2" : "border-dashed border-border text-muted"}`}>
+            <li
+              key={k}
+              className={`flex items-center gap-2 rounded-2xl border-2 px-3 py-2 ${p ? "border-ink bg-card-2" : "border-dashed border-border text-muted"}`}
+            >
               {p ? (
                 <>
-                  {p.id === v.hostId ? <Crown className="size-4 text-amber" /> : <Users className="size-4" />}
+                  {p.id === v.hostId ? (
+                    <Crown className="size-4 text-amber" />
+                  ) : (
+                    <Users className="size-4" />
+                  )}
                   <span className="flex-1 truncate font-bold">
                     {p.name}
                     {p.me && " (bạn)"}
                   </span>
                   {p.ready ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
-                      <Check className="size-3.5" strokeWidth={3} /> {p.id === v.hostId ? "Chủ phòng" : "Sẵn sàng"}
+                      <Check className="size-3.5" strokeWidth={3} />{" "}
+                      {p.id === v.hostId ? "Chủ phòng" : "Sẵn sàng"}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-xs font-bold text-muted">
@@ -176,15 +296,22 @@ function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => v
       {me ? (
         <div className="flex flex-col gap-2">
           {host ? (
-            <button className="btn btn-primary py-3" disabled={!everyoneReady} onClick={() => send({ action: "start" })}>
-              <Play className="size-4 fill-current" /> Bắt đầu{v.players.length >= 2 && ` với ${v.players.length} người`}
+            <button
+              className="btn btn-primary py-3"
+              disabled={!everyoneReady}
+              onClick={() => send({ action: "start" })}
+            >
+              <Play className="size-4 fill-current" /> Bắt đầu
+              {v.players.length >= 2 && ` với ${v.players.length} người`}
             </button>
           ) : (
             <button
               className={`btn py-3 ${me.ready ? "" : "btn-amber"}`}
               onClick={() => send({ action: "ready", ready: !me.ready })}
             >
-              {me.ready ? "Huỷ sẵn sàng" : (
+              {me.ready ? (
+                "Huỷ sẵn sàng"
+              ) : (
                 <>
                   <Check className="size-4" strokeWidth={3} /> Sẵn sàng
                 </>
@@ -192,14 +319,25 @@ function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => v
             </button>
           )}
           <p className="text-center text-xs text-muted">
-            {host ? "Mọi người bấm Sẵn sàng thì bạn bắt đầu được." : "Chủ phòng bắt đầu khi mọi người đã sẵn sàng."} Phòng tự huỷ sau {clock(left)} nếu chưa bắt đầu.
+            {host
+              ? "Mọi người bấm Sẵn sàng thì bạn bắt đầu được."
+              : "Chủ phòng bắt đầu khi mọi người đã sẵn sàng."}{" "}
+            Phòng tự huỷ sau {clock(left)} nếu chưa bắt đầu.
           </p>
-          <button className="btn mx-auto" onClick={() => send({ action: "leave" })}>
-            <LogOut className="size-4" /> {host ? "Huỷ phòng (hoàn kim cương)" : "Rời phòng (hoàn kim cương)"}
+          <button
+            className="btn mx-auto"
+            onClick={() => send({ action: "leave" })}
+          >
+            <LogOut className="size-4" />{" "}
+            {host ? "Huỷ phòng (hoàn kim cương)" : "Rời phòng (hoàn kim cương)"}
           </button>
         </div>
       ) : (
-        <button className="btn btn-amber py-3" disabled={v.total < v.stake} onClick={() => send({ action: "join" })}>
+        <button
+          className="btn btn-amber py-3"
+          disabled={v.total < v.stake}
+          onClick={() => send({ action: "join" })}
+        >
           {v.total < v.stake ? (
             "Không đủ kim cương"
           ) : (
@@ -215,7 +353,15 @@ function Waiting({ v, send }: { v: View; send: (p: Record<string, unknown>) => v
 
 // ---- Khung chung ----
 
-export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "caro"; code: string; loggedIn: boolean }) {
+export default function PlayRoom({
+  game,
+  code,
+  loggedIn,
+}: {
+  game: "sudoku" | "caro";
+  code: string;
+  loggedIn: boolean;
+}) {
   const [v, setV] = useState<View | null>(null);
   const [error, setError] = useState("");
   const busy = useRef(false);
@@ -223,11 +369,22 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
   const lobby = `/games/${game}`;
 
   function apply(next: View) {
-    setV((old) => (old && old.version === next.version && old.status === next.status && old.total === next.total ? old : next));
+    setV((old) =>
+      old &&
+      old.version === next.version &&
+      old.status === next.status &&
+      old.total === next.total
+        ? old
+        : next,
+    );
     if (next.result && paid.current !== next.code) {
       paid.current = next.code;
       const payout = next.result.payout;
-      emitPoints(payout > 0 && next.status === "ended" ? { total: next.total - payout, delta: payout, earned: true } : { total: next.total });
+      emitPoints(
+        payout > 0 && next.status === "ended"
+          ? { total: next.total - payout, delta: payout, earned: true }
+          : { total: next.total },
+      );
     } else if (!next.result) emitPoints({ total: next.total });
   }
 
@@ -248,7 +405,10 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
     busy.current = true;
     setError("");
     try {
-      const r = await clientApi<View>("/games/play", { method: "POST", body: { ...payload, code } });
+      const r = await clientApi<View>("/games/play", {
+        method: "POST",
+        body: { ...payload, code },
+      });
       apply(r);
       return r;
     } catch (e) {
@@ -260,7 +420,10 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
     }
   }
 
-  const live = v && v.mode === "room" && (v.status === "waiting" || v.status === "playing");
+  const live =
+    v &&
+    v.mode === "room" &&
+    (v.status === "waiting" || v.status === "playing");
   useEffect(() => {
     if (loggedIn) void load();
   }, [loggedIn, code]);
@@ -274,7 +437,10 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
   // Ván một mình: tới hạn thì hỏi lại để server chốt (hết giờ / hết lượt)
   useEffect(() => {
     if (!v || v.mode !== "solo" || v.status !== "playing") return;
-    const t = setTimeout(() => void load(), (v.pause ? v.pause.msLeft : v.msLeft) + 2500);
+    const t = setTimeout(
+      () => void load(),
+      (v.pause ? v.pause.msLeft : v.msLeft) + 2500,
+    );
     return () => clearTimeout(t);
   }, [v]);
 
@@ -283,23 +449,37 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
       icon={game === "sudoku" ? Grid3x3 : Users}
       tone="cyan"
       title={GAME_TITLE[game]}
-      subtitle={v ? (v.mode === "solo" ? (game === "caro" ? "Đấu với máy" : "Chơi một mình") : `Phòng ${v.code}`) : `Phòng ${code}`}
-      right={<Link href={lobby} className="btn-icon" title="Sảnh" aria-label="Sảnh"><LogOut className="size-5" /></Link>}
+      subtitle={
+        v
+          ? v.mode === "solo"
+            ? game === "caro"
+              ? "Đấu với máy"
+              : "Chơi một mình"
+            : `Phòng ${v.code}`
+          : `Phòng ${code}`
+      }
+      right={
+        <Link href={lobby} className="btn-icon" title="Sảnh" aria-label="Sảnh">
+          <LogOut className="size-5" />
+        </Link>
+      }
     />
   );
-  const errorLine = error && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{error}</p>;
+  const errorLine = error && (
+    <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">
+      {error}
+    </p>
+  );
 
   if (!loggedIn) {
     return (
       <>
         {header}
-        <div className="sticker p-4 text-sm font-bold">
-          Game dùng kim cương của tài khoản:{" "}
-          <LoginLink href={`/login?next=/games/${game}/${code}`} className="text-link hover:underline">
-            đăng nhập
-          </LoginLink>{" "}
-          để vào phòng.
-        </div>
+        <GameLoginPromo
+          game={game}
+          next={`/games/${game}/${code}`}
+          action="phòng"
+        />
       </>
     );
   }
@@ -307,7 +487,9 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
     return (
       <>
         {header}
-        {errorLine || <p className="text-center text-sm text-muted">Đang tải…</p>}
+        {errorLine || (
+          <p className="text-center text-sm text-muted">Đang tải…</p>
+        )}
         {error && (
           <Link href={lobby} className="btn mx-auto">
             Về sảnh {GAME_TITLE[game]}
@@ -321,8 +503,16 @@ export default function PlayRoom({ game, code, loggedIn }: { game: "sudoku" | "c
     <>
       {header}
       {v.status === "waiting" && <Waiting v={v} send={send} />}
-      {(v.status === "ended" || v.status === "canceled") && <ResultCard v={v} onAgain={lobby} />}
-      {v.status !== "waiting" && v.status !== "canceled" && (v.game === "sudoku" ? <SudokuPlay key={v.code} v={v} send={send} apply={apply} /> : <CaroPlay v={v} send={send} />)}
+      {(v.status === "ended" || v.status === "canceled") && (
+        <ResultCard v={v} onAgain={lobby} />
+      )}
+      {v.status !== "waiting" &&
+        v.status !== "canceled" &&
+        (v.game === "sudoku" ? (
+          <SudokuPlay key={v.code} v={v} send={send} apply={apply} />
+        ) : (
+          <CaroPlay v={v} send={send} />
+        ))}
       {errorLine}
     </>
   );
