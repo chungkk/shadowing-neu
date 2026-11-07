@@ -2,14 +2,14 @@
 
 import { useLayoutEffect, useSyncExternalStore } from "react";
 import { Candy, Moon, Sun } from "lucide-react";
-import { THEME_COLOR, THEME_KEY, THEME_NEXT, type Theme } from "@/lib/theme";
+import { CANDY_ENABLED, THEME_COLOR, THEME_KEY, THEME_NEXT, type Theme } from "@/lib/theme";
 
 const listeners = new Set<() => void>();
 
 function readStored(): Theme {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    return t === "light" || t === "candy" ? t : "dark";
+    return t === "light" || (t === "candy" && CANDY_ENABLED) ? t : "dark";
   } catch {
     return "dark"; // Trình duyệt chặn lưu trữ: vẫn đổi được trong lần xem này
   }
