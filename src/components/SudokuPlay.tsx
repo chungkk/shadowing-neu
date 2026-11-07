@@ -4,7 +4,6 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Delete, Pencil, Undo2 } from "lucide-react";
 import { SUDOKU_LEVEL_LABEL } from "@/lib/play";
 import { clientApi } from "@/lib/client-api";
-import { Diamonds } from "./PlayLobby";
 import { GameClock, MascotSay, PausedCover, ResignButton, useCountdown, type MascotMood, type Send, type View } from "./PlayParts";
 
 /**
@@ -178,7 +177,7 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
         {v.status === "playing" && <MascotSay mood={mood}>{say}</MascotSay>}
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
           <span className="rounded-full border-2 border-ink bg-card px-2.5 py-0.5">
-            {SUDOKU_LEVEL_LABEL[v.level || "easy"]} · {v.mode === "solo" ? "thắng" : "hũ"} <Diamonds n={v.pot} />
+            {SUDOKU_LEVEL_LABEL[v.level || "easy"]}
           </span>
           <span className="rounded-full border-2 border-ink bg-card px-2.5 py-0.5 tabular-nums">{board.errors} lỗi</span>
           {v.status === "playing" && <GameClock v={v} send={send} ms={left} warn={left < 60_000} />}

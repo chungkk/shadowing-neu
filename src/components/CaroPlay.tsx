@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Bot, Maximize2, Minus, Plus, X } from "lucide-react";
 import { CARO_SIZE } from "@/lib/play";
-import { Diamonds } from "./PlayLobby";
 import { GameClock, MascotSay, PausedCover, ResignButton, useCountdown, type MascotMood, type Send, type View } from "./PlayParts";
 
 /** Bàn Caro 15×15 (như Solo Games): phóng to bằng 2 ngón / nút +− / Ctrl + cuộn chuột, phóng to rồi thì kéo để xem các góc */
@@ -168,9 +167,6 @@ export default function CaroPlay({ v, send }: { v: View; send: Send }) {
           <span className="text-muted">vs</span>
           {v.mode === "solo" ? <Bot className="size-4" /> : c.mySymbol && <Mark p={c.mySymbol === "X" ? "O" : "X"} className="size-4" />}
           {v.mode === "solo" ? "Máy" : (opponent?.name ?? "")}
-        </span>
-        <span>
-          {v.mode === "solo" ? "thắng nhận" : "hũ"} <Diamonds n={v.pot} />
         </span>
       </div>
       {playing && (

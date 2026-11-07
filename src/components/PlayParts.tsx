@@ -7,7 +7,7 @@ import Mascot from "./Mascot";
 
 /** Phần dùng chung của màn chơi Sudoku / Caro */
 
-export type View = PlayView & { total: number; ok?: boolean };
+export type View = PlayView & { ok?: boolean };
 export type Send = (payload: Record<string, unknown>) => Promise<View | null>;
 
 export const clock = (ms: number) => {

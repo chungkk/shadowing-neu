@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CloudRain, Gem, Grid3x3, Pickaxe, Puzzle, Users, Volume2, X } from "lucide-react";
+import { ArrowRight, CloudRain, Flame, Grid3x3, Pickaxe, Puzzle, Users, Volume2, X } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "@/components/Mascot";
 
 export const metadata: Metadata = {
   title: "Game",
-  description: "Chơi game để luyện từ vựng tiếng Đức theo các bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng, hoặc dùng kim cương chơi Sudoku và Caro với bạn bè.",
+  description: "Chơi game để luyện từ vựng tiếng Đức theo các bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng, hoặc chơi Sudoku và Caro với bạn bè — không cần tài khoản.",
 };
 
 const Emoji = ({ code, className }: { code: string; className: string }) => (
@@ -113,7 +113,7 @@ const GAMES: { href: string; title: string; description: string; icon: Component
   {
     href: "/games/sudoku",
     title: "Sudoku",
-    description: "Cược kim cương rồi giải đề một mình, hoặc tạo phòng đua với 1–3 người bạn: ai giải xong trước nhận cả hũ.",
+    description: "Giải đề một mình, hoặc tạo phòng đua với 1–3 người bạn: ai giải đúng trước là thắng.",
     icon: Grid3x3,
     art: <SudokuArt />,
     players: "1–4 người",
@@ -121,7 +121,7 @@ const GAMES: { href: string; title: string; description: string; icon: Component
   {
     href: "/games/caro",
     title: "Caro",
-    description: "Cược kim cương, đấu với máy hoặc với bạn trên bàn 15×15: ai có 5 quân liền nhau trước là thắng.",
+    description: "Đấu với máy hoặc với bạn trên bàn 15×15: ai có 5 quân liền nhau trước là thắng.",
     icon: Users,
     art: <CaroArt />,
     players: "1–2 người",
@@ -150,8 +150,8 @@ const GAMES: { href: string; title: string; description: string; icon: Component
   {
     href: "/games/der-die-das",
     title: "Der Die Das",
-    description: "Đặt kim cương rồi chọn đúng mạo từ cho từng danh từ — đúng liên tiếp thì hệ số tăng, chốt trước khi sai để mang kim cương về.",
-    icon: Gem,
+    description: "Chọn đúng der, die hay das cho từng danh từ trong 6 giây — đúng liên tiếp được bao nhiêu từ?",
+    icon: Flame,
     art: <ArtikelArt />,
   },
 ];

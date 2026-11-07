@@ -6,36 +6,28 @@ import {
   addPlaySeat,
   createPlayRoom,
   duePlayRooms,
-  getPoints,
   playRoomByCode,
   playRoomById,
   playSeats,
   playTx,
   removePlaySeat,
   removePlaySeats,
-  soloPlayUsage,
   updatePlayRoom,
   updatePlaySeat,
   type PlayRoomRow,
   type PlaySeatRow,
 } from "./db";
 import {
-  CARO_BOT_PAYOUT,
   CARO_BOT_TURN_SECONDS,
   CARO_SIZE,
   CARO_TURN_SECONDS,
-  PLAY_STAKES,
   ROOM_MAX_PLAYERS,
   ROOM_WAIT_MINUTES,
-  SOLO_ROUND_CAP,
-  SOLO_WIN_CAP,
   SUDOKU_LEVELS,
   PLAY_PAUSE_SECONDS,
   SUDOKU_MINUTES,
-  SUDOKU_SOLO_PAYOUT,
   type CaroCell,
   type PlayGame,
-  type PlayLimits,
   type PlayMode,
   type PlayResult,
   type PlayState,
@@ -47,27 +39,22 @@ import { generateSudoku } from "./sudoku";
 /**
  * Ván Sudoku / Caro do server giữ: lời giải Sudoku không rời server trước khi xong ván. Như Solo Games, người chơi điền / xoá /
  * hoàn tác tự do trên máy mình, bàn được gửi lên để lưu và cho người khác thấy tiến độ (chỉ số ô đã điền, không lộ đúng sai);
- * điền kín bàn thì nộp, server so với lời giải. Nước đi Caro và kim cương đều tính ở đây chứ không tin máy khách. Mọi thay đổi chạy đồng bộ trong 1 giao dịch (playTx)
+ * điền kín bàn thì nộp, server so với lời giải. Nước đi Caro tính ở đây chứ không tin máy khách. Chỉ chơi vui: không cược kim cương
+ * (cột stake trong DB luôn 0). Người chơi là người đăng nhập (id dương) hoặc khách tên tạm (id âm). Mọi thay đổi chạy đồng bộ trong 1 giao dịch (playTx)
  * từ lúc đọc ván tới lúc ghi nên 2 request cùng lúc không chen được vào giữa.
  */
 
 type Failure = { error: string; status: number };
-type SudokuData = { givens: number[]; solution: number[]; capped?: boolean };
+type SudokuData = { givens: number[]; solution: number[] };
 type SudokuSeat = { grid: number[]; errors: number }; // grid: 81 ô, chỉ các ô người này điền (0 = trống)
-type CaroData = { board: CaroCell[]; turn: "X" | "O"; last: number | null; line: number[]; capped?: boolean };
+type CaroData = { board: CaroCell[]; turn: "X" | "O"; last: number | null; line: number[] };
 /** Tạm dừng (chung cho cả 2 game, lưu trong data của phòng): left = thời gian còn lại của hạn đang chạy lúc bấm dừng */
 type PauseData = { pause?: { by: number; at: number; left: number } | null; pauseUsed?: Record<string, number> };
 
-const WINDOW_MS = 24 * 60 * 60 * 1000;
 const GRACE_MS = 2000; // bù độ trễ mạng khi hết giờ
 const BOT = 0; // winner_id của máy (Caro) / "không ai" khi thua ván một mình
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // bỏ I, O, 0, 1 cho dễ đọc
 const fail = (error: string, status = 400): Failure => ({ error, status });
-
-function limitsOf(userId: number, now: number): PlayLimits {
-  const { net, rounds } = soloPlayUsage(userId, now - WINDOW_MS);
-  return { roundsLeft: Math.max(0, SOLO_ROUND_CAP - rounds), winLeft: Math.max(0, SOLO_WIN_CAP - net) };
-}
 
 const PAUSE_MS = PLAY_PAUSE_SECONDS * 1000;
 /** Phòng chờ: id những người đã bấm Sẵn sàng (chủ phòng luôn sẵn sàng, không nằm trong danh sách) */
@@ -93,27 +80,12 @@ const caroSymbol = (r: PlayRoomRow, seat: PlaySeatRow | undefined) => (seat ? (r
 
 // ---- Kết thúc ván ----
 
-/** winnerId: id người thắng · BOT (máy thắng / thua ván một mình) · null = hoà, hoàn kim cương */
+/** winnerId: id người thắng · BOT (máy thắng / thua ván một mình) · null = hoà */
 function finish(r: PlayRoomRow, winnerId: number | null, reason: PlayResult["reason"], now: number, data: Record<string, unknown> = r.data) {
-  const seats = playSeats(r.id);
-  let capped = false;
-  if (r.mode === "solo") {
-    const s = seats[0];
-    if (s && winnerId === s.userId) {
-      const rate = r.game === "sudoku" ? SUDOKU_SOLO_PAYOUT[r.level as SudokuLevel] : CARO_BOT_PAYOUT;
-      const full = Math.floor((s.stake * rate) / 100);
-      const payout = Math.min(full, s.stake + limitsOf(s.userId, now).winLeft);
-      capped = payout < full;
-      updatePlaySeat(r.id, s.userId, { payout });
-    } else if (s && winnerId === null) updatePlaySeat(r.id, s.userId, { payout: s.stake });
-  } else {
-    const pot = seats.reduce((n, s) => n + s.stake, 0);
-    for (const s of seats) updatePlaySeat(r.id, s.userId, { payout: winnerId === null ? s.stake : s.userId === winnerId ? pot : 0 });
-  }
-  updatePlayRoom(r.id, { status: "ended", winnerId, reason, endedAt: now, deadline: now, data: { ...data, capped } });
+  updatePlayRoom(r.id, { status: "ended", winnerId, reason, endedAt: now, deadline: now, data });
 }
 
-/** Huỷ phòng chưa bắt đầu: xoá hết ghế = hoàn kim cương */
+/** Huỷ phòng chưa bắt đầu */
 function cancel(r: PlayRoomRow, now: number) {
   removePlaySeats(r.id);
   updatePlayRoom(r.id, { status: "canceled", reason: "canceled", endedAt: now, deadline: now });
@@ -167,11 +139,6 @@ function viewOf(r: PlayRoomRow, userId: number, now: number): PlayView {
     game: r.game,
     mode: r.mode,
     level: r.level as SudokuLevel | "",
-    stake: r.stake,
-    pot:
-      r.mode === "solo"
-        ? Math.floor((r.stake * (r.game === "sudoku" ? SUDOKU_SOLO_PAYOUT[r.level as SudokuLevel] : CARO_BOT_PAYOUT)) / 100)
-        : seats.reduce((n, s) => n + s.stake, 0),
     capacity: r.capacity,
     status: r.status,
     hostId: r.hostId,
@@ -179,6 +146,7 @@ function viewOf(r: PlayRoomRow, userId: number, now: number): PlayView {
     players: seats.map((s) => ({
       id: s.userId,
       name: s.name,
+      guest: s.userId < 0,
       seat: s.seat,
       me: s.userId === userId,
       out: s.out,
@@ -210,28 +178,20 @@ function viewOf(r: PlayRoomRow, userId: number, now: number): PlayView {
     const d = r.data as CaroData;
     view.caro = { board: d.board, turn: d.turn, mySymbol: caroSymbol(r, me), last: d.last, line: d.line };
   }
-  if (ended) {
-    view.result = {
-      winnerId: r.winnerId,
-      reason: r.reason as PlayResult["reason"],
-      payout: me?.payout ?? (r.status === "canceled" ? r.stake : 0),
-      stake: r.stake,
-      capped: !!r.data.capped,
-    };
-  }
+  if (ended) view.result = { winnerId: r.winnerId, reason: r.reason as PlayResult["reason"] };
   return view;
 }
 
 export function playState(userId: number, now = Date.now()): PlayState {
   sweep(now);
-  return { total: getPoints(userId).total, limits: limitsOf(userId, now), active: activePlayRoom(userId) };
+  return { active: activePlayRoom(userId) };
 }
 
-export function playView(userId: number, code: string, now = Date.now()): (PlayView & { total: number }) | Failure {
+export function playView(userId: number, code: string, now = Date.now()): PlayView | Failure {
   sweep(now);
   const r = playRoomByCode(code.toUpperCase());
   if (!r) return fail("Không tìm thấy phòng", 404);
-  return { ...viewOf(r, userId, now), total: getPoints(userId).total };
+  return viewOf(r, userId, now);
 }
 
 // ---- Hành động ----
@@ -259,15 +219,14 @@ function begin(r: PlayRoomRow, now: number) {
   updatePlayRoom(r.id, { status: "playing", data: startData(r.game, r.level as SudokuLevel), deadline: playingDeadline(r, now), startedAt: now });
 }
 
-type CreateInput = { game: string; mode: string; stake: number; level?: string; capacity?: number };
+type CreateInput = { game: string; mode: string; level?: string; capacity?: number };
 
-export function createPlay(userId: number, input: CreateInput, now = Date.now()): (PlayView & { total: number }) | Failure {
+export function createPlay(userId: number, input: CreateInput, now = Date.now()): PlayView | Failure {
   sweep(now);
   const game = input.game as PlayGame;
   const mode = input.mode as PlayMode;
   if (game !== "sudoku" && game !== "caro") return fail("Game không hợp lệ");
   if (mode !== "room" && mode !== "solo") return fail("Chế độ chơi không hợp lệ");
-  if (!PLAY_STAKES.includes(input.stake)) return fail("Mức cược không hợp lệ");
   const level = (game === "sudoku" ? input.level : "") as SudokuLevel;
   if (game === "sudoku" && !SUDOKU_LEVELS.includes(level)) return fail("Độ khó không hợp lệ");
   const capacity = game === "caro" || mode === "solo" ? (mode === "solo" ? 1 : 2) : Number(input.capacity);
@@ -275,19 +234,13 @@ export function createPlay(userId: number, input: CreateInput, now = Date.now())
   return playTx(() => {
     const active = activePlayRoom(userId);
     if (active) return fail("Bạn đang có ván chưa xong", 409);
-    if (mode === "solo") {
-      const limits = limitsOf(userId, now);
-      if (!limits.roundsLeft) return fail(`Bạn đã chơi đủ ${SOLO_ROUND_CAP} ván một mình trong 24 giờ qua, quay lại sau nhé`, 429);
-      if (!limits.winLeft) return fail(`Bạn đã lời đủ ${SOLO_WIN_CAP} kim cương trong 24 giờ qua, quay lại sau nhé`, 429);
-    }
-    if (getPoints(userId).total < input.stake) return fail("Không đủ kim cương");
     const solo = mode === "solo";
     const base = { game, mode, level: level ?? "" };
     const id = createPlayRoom(
       {
         ...base,
         code: newCode(),
-        stake: input.stake,
+        stake: 0,
         capacity,
         hostId: userId,
         status: solo ? "playing" : "waiting",
@@ -296,8 +249,8 @@ export function createPlay(userId: number, input: CreateInput, now = Date.now())
       },
       now,
     );
-    addPlaySeat(id, userId, 0, input.stake, seatData(game), now);
-    return { ...viewOf(playRoomById(id)!, userId, now), total: getPoints(userId).total };
+    addPlaySeat(id, userId, 0, 0, seatData(game), now);
+    return viewOf(playRoomById(id)!, userId, now);
   });
 }
 
@@ -318,7 +271,7 @@ function userGrid(raw: unknown, givens: number[]): number[] | null {
   return grid;
 }
 
-export function playAction(userId: number, input: ActionInput, now = Date.now()): (PlayView & { total: number; ok?: boolean }) | Failure {
+export function playAction(userId: number, input: ActionInput, now = Date.now()): (PlayView & { ok?: boolean }) | Failure {
   sweep(now);
   return playTx(() => {
     const r = playRoomByCode(input.code.toUpperCase());
@@ -336,8 +289,7 @@ export function playAction(userId: number, input: ActionInput, now = Date.now())
         if (r.status !== "waiting") return fail("Phòng đã bắt đầu hoặc đã kết thúc", 409);
         if (seats.length >= r.capacity) return fail("Phòng đã đủ người", 409);
         if (activePlayRoom(userId)) return fail("Bạn đang có ván chưa xong", 409);
-        if (getPoints(userId).total < r.stake) return fail("Không đủ kim cương");
-        addPlaySeat(r.id, userId, Math.max(...seats.map((s) => s.seat)) + 1, r.stake, seatData(r.game), now);
+        addPlaySeat(r.id, userId, Math.max(...seats.map((s) => s.seat)) + 1, 0, seatData(r.game), now);
         updatePlayRoom(r.id, {});
         break;
       }
@@ -438,7 +390,7 @@ export function playAction(userId: number, input: ActionInput, now = Date.now())
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- nhận kết quả finish() (void) để viết gọn `return done(finish(...))`
     function done(_?: void) {
-      return { ...viewOf(playRoomById(r!.id)!, userId, now), total: getPoints(userId).total, ok };
+      return { ...viewOf(playRoomById(r!.id)!, userId, now), ok };
     }
   });
 }

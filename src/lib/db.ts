@@ -198,7 +198,7 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, lesson_id)
     );
-    -- Ván game Der Die Das: payout − stake cộng thẳng vào điểm (getPoints), ván đang chơi đã trừ stake. Giữ vĩnh viễn như dict_points
+    -- Ván game Der Die Das cược kim cương thời trước (giờ chơi trên trình duyệt, không cược): chỉ còn dữ liệu cũ, không tính vào điểm
     CREATE TABLE IF NOT EXISTS artikel_rounds (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -214,15 +214,14 @@ function open() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS artikel_rounds_active ON artikel_rounds (user_id) WHERE ended_at IS NULL; -- mỗi người 1 ván đang chơi
     CREATE INDEX IF NOT EXISTS artikel_rounds_user ON artikel_rounds (user_id, started_at);
-    -- Ván Sudoku / Caro cược kim cương (luật trong play-game.ts). Mỗi người 1 dòng play_seats: payout − stake cộng thẳng vào điểm (getPoints),
-    -- stake trừ ngay khi vào phòng; xoá dòng = hoàn kim cương (rời phòng chờ, phòng bị huỷ). Giữ vĩnh viễn như dict_points
+    -- Ván Sudoku / Caro (luật trong play-game.ts), chỉ chơi vui: không tính vào điểm. stake / payout là cột thời còn cược, giờ luôn 0
     CREATE TABLE IF NOT EXISTS play_rooms (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL UNIQUE, -- mã phòng (ván một mình cũng có, chỉ không vào được)
       game TEXT NOT NULL, -- 'sudoku' | 'caro'
       mode TEXT NOT NULL, -- 'room' (với người) | 'solo' (Sudoku một mình / Caro với máy)
       level TEXT NOT NULL DEFAULT '', -- Sudoku: 'easy' | 'medium' | 'hard'
-      stake INTEGER NOT NULL, -- mức cược mỗi người
+      stake INTEGER NOT NULL, -- thời còn cược kim cương; giờ luôn 0
       capacity INTEGER NOT NULL,
       host_id INTEGER NOT NULL,
       status TEXT NOT NULL, -- 'waiting' | 'playing' | 'ended' | 'canceled'
@@ -248,6 +247,13 @@ function open() {
       PRIMARY KEY (room_id, user_id)
     );
     CREATE INDEX IF NOT EXISTS play_seats_user ON play_seats (user_id, joined_at);
+    -- Khách chơi Sudoku / Caro không cần tài khoản . Trong play_rooms / play_seats khách mang id ÂM (−id)
+    -- để không trùng người dùng thật và máy (0); điểm của id âm luôn 0, không có trong bảng xếp hạng (bảng đó JOIN users)
+    CREATE TABLE IF NOT EXISTS play_guests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
     -- Góp ý / báo lỗi gửi từ app (khách chưa đăng nhập cũng gửi được: user_id NULL)
     CREATE TABLE IF NOT EXISTS feedback (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1378,8 +1384,8 @@ export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
 export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học) — có thể âm
 
 /**
- * Điểm = cộng của các câu đúng − điểm trừ khi xem từ − điểm đã trả để mở khoá bài ± lời lỗ game Der Die Das, Sudoku, Caro (các khoản sau không tính vào "hôm nay":
- * hôm nay chỉ đo điểm kiếm được) · tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
+ * Điểm = cộng của các câu đúng − điểm trừ khi xem từ − điểm đã trả để mở khoá bài (khoản mở khoá không tính vào "hôm nay":
+ * hôm nay chỉ đo điểm kiếm được). Game chỉ để chơi vui, không cộng trừ điểm · tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
 export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Points {
   const dayStart = Date.parse(new Date(now - tzOffset * 60_000).toISOString().slice(0, 10)) + tzOffset * 60_000;
   const r = conn()
@@ -1388,11 +1394,9 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
          SELECT pts, at FROM dict_points WHERE user_id = ?
          UNION ALL SELECT -n * pts, at FROM dict_hints WHERE user_id = ?
          UNION ALL SELECT -cost, NULL FROM lesson_unlocks WHERE user_id = ?
-         UNION ALL SELECT payout - stake, NULL FROM artikel_rounds WHERE user_id = ?
-         UNION ALL SELECT payout - stake, NULL FROM play_seats WHERE user_id = ?
        )`,
     )
-    .get(dayStart, userId, userId, userId, userId, userId) as Points;
+    .get(dayStart, userId, userId, userId) as Points;
   return { total: r.total, today: r.today };
 }
 
@@ -1412,8 +1416,6 @@ export function getLeaderboard(userId: number, limit = 50): Leaderboard {
            SELECT user_id, pts FROM dict_points
            UNION ALL SELECT user_id, -n * pts FROM dict_hints
            UNION ALL SELECT user_id, -cost FROM lesson_unlocks
-           UNION ALL SELECT user_id, payout - stake FROM artikel_rounds
-           UNION ALL SELECT user_id, payout - stake FROM play_seats
          ) GROUP BY user_id
        ) t JOIN users u ON u.id = t.user_id
        WHERE t.total > 0
@@ -1473,44 +1475,11 @@ export function chargeDictHints(userId: number, source: string, idx: number, n: 
   return getPoints(userId, tzOffset);
 }
 
-// ---- Game Der Die Das (luật trong artikel-game.ts) ----
+// ---- Game Der Die Das (chơi trên trình duyệt, không lưu ván) ----
 
 export type ArtikelWord = { word: string; gender: "der" | "die" | "das"; meaning: string };
-export type ArtikelRound = { id: number; stake: number; words: ArtikelWord[]; correct: number; phase: "word" | "choose"; deadline: number };
 
-/** Ván đang chơi của 1 người */
-export function activeArtikelRound(userId: number): ArtikelRound | null {
-  const r = conn().prepare("SELECT id, stake, words, correct, phase, deadline FROM artikel_rounds WHERE user_id = ? AND ended_at IS NULL").get(userId) as
-    | (Omit<ArtikelRound, "words"> & { words: string })
-    | undefined;
-  return r ? { ...r, words: JSON.parse(r.words) } : null;
-}
-
-export function createArtikelRound(userId: number, deck: string, stake: number, words: ArtikelWord[], deadline: number, now: number) {
-  conn()
-    .prepare("INSERT INTO artikel_rounds (user_id, deck, stake, words, phase, deadline, started_at) VALUES (?, ?, ?, ?, 'word', ?, ?)")
-    .run(userId, deck, stake, JSON.stringify(words), deadline, now);
-}
-
-export function stepArtikelRound(id: number, correct: number, phase: "word" | "choose", deadline: number) {
-  conn().prepare("UPDATE artikel_rounds SET correct = ?, phase = ?, deadline = ? WHERE id = ?").run(correct, phase, deadline, id);
-}
-
-export function closeArtikelRound(id: number, phase: "won" | "lost", correct: number, payout: number, now: number) {
-  conn().prepare("UPDATE artikel_rounds SET phase = ?, correct = ?, payout = ?, ended_at = ?, words = '[]' WHERE id = ?").run(phase, correct, payout, now, id);
-}
-
-/** Từ mốc `since`: lời lỗ của các ván đã xong · số ván đã bắt đầu */
-export function artikelUsage(userId: number, since: number): { net: number; rounds: number } {
-  return conn()
-    .prepare(
-      `SELECT COALESCE(SUM(CASE WHEN ended_at >= ? THEN payout - stake END), 0) AS net, COALESCE(SUM(started_at >= ?), 0) AS rounds
-       FROM artikel_rounds WHERE user_id = ?`,
-    )
-    .get(since, since, userId) as { net: number; rounds: number };
-}
-
-// ---- Sudoku & Caro cược kim cương (luật trong play-game.ts) ----
+// ---- Sudoku & Caro (luật trong play-game.ts) ----
 
 export type PlayRoomRow = {
   id: number;
@@ -1540,8 +1509,9 @@ export const playRoomById = (id: number) => roomOf(conn().prepare(`SELECT ${ROOM
 export function playSeats(roomId: number): PlaySeatRow[] {
   const rows = conn()
     .prepare(
-      `SELECT s.user_id AS userId, COALESCE(u.name, 'Người chơi') AS name, s.seat, s.stake, s.payout, s.data, s.out
-       FROM play_seats s LEFT JOIN users u ON u.id = s.user_id WHERE s.room_id = ? ORDER BY s.seat`,
+      `SELECT s.user_id AS userId, COALESCE(u.name, g.name, 'Người chơi') AS name, s.seat, s.stake, s.payout, s.data, s.out
+       FROM play_seats s LEFT JOIN users u ON u.id = s.user_id LEFT JOIN play_guests g ON g.id = -s.user_id
+       WHERE s.room_id = ? ORDER BY s.seat`,
     )
     .all(roomId) as (Omit<PlaySeatRow, "data" | "out"> & { data: string; out: number })[];
   return rows.map((r) => ({ ...r, data: JSON.parse(r.data), out: !!r.out }));
@@ -1607,15 +1577,12 @@ export function duePlayRooms(now: number): number[] {
   return (conn().prepare("SELECT id FROM play_rooms WHERE status IN ('waiting', 'playing') AND deadline < ? LIMIT 50").all(now) as { id: number }[]).map((r) => r.id);
 }
 
-/** Từ mốc `since`, ván một mình / với máy: lời lỗ của các ván đã xong · số ván đã bắt đầu */
-export function soloPlayUsage(userId: number, since: number): { net: number; rounds: number } {
-  return conn()
-    .prepare(
-      `SELECT COALESCE(SUM(CASE WHEN r.ended_at >= ? THEN s.payout - s.stake END), 0) AS net, COALESCE(SUM(s.joined_at >= ?), 0) AS rounds
-       FROM play_seats s JOIN play_rooms r ON r.id = s.room_id WHERE s.user_id = ? AND r.mode = 'solo'`,
-    )
-    .get(since, since, userId) as { net: number; rounds: number };
-}
+/** Khách (tên tạm): tạo mới → id dương trong play_guests (khi chơi dùng −id) */
+export const createPlayGuest = (name: string, now: number) =>
+  Number(conn().prepare("INSERT INTO play_guests (name, created_at) VALUES (?, ?)").run(name, now).lastInsertRowid);
+export const playGuestById = (id: number) =>
+  (conn().prepare("SELECT id, name FROM play_guests WHERE id = ?").get(id) as { id: number; name: string } | undefined) ?? null;
+export const renamePlayGuest = (id: number, name: string) => conn().prepare("UPDATE play_guests SET name = ? WHERE id = ?").run(name, id);
 
 /** Chạy fn trong 1 giao dịch (fn đồng bộ: không có await chen giữa lúc đọc ván và lúc ghi) */
 export function playTx<T>(fn: () => T): T {

@@ -16,13 +16,12 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { fmtDiamonds, SUDOKU_LEVEL_LABEL, type PlayResult } from "@/lib/play";
+import { SUDOKU_LEVEL_LABEL, type PlayResult } from "@/lib/play";
 import { clientApi } from "@/lib/client-api";
-import { emitPoints } from "@/lib/points";
 import { GameHeader } from "./GameParts";
-import GameLoginPromo from "./GameLoginPromo";
-import { Diamonds, GAME_TITLE } from "./PlayLobby";
-import { Gem } from "./PointsBadge";
+import { usePlayGuest } from "./GuestPlay";
+import { LoginLink } from "./LoginDialog";
+import { GAME_TITLE } from "./PlayLobby";
 import CaroPlay from "./CaroPlay";
 import {
   clock,
@@ -51,7 +50,7 @@ const REASON: Record<PlayResult["reason"], string> = {
   time: "hết giờ, điền đúng nhiều ô nhất",
 };
 
-function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
+function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; loggedIn: boolean }) {
   const [open, setOpen] = useState(true);
   useEffect(() => {
     if (!open) return;
@@ -62,15 +61,14 @@ function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
   const r = v.result!;
   const won = r.winnerId === v.meId;
   const winner = v.players.find((p) => p.id === r.winnerId);
-  const seated = v.players.some((p) => p.me) || v.status === "canceled";
   let title: string;
   let line: string;
   if (v.status === "canceled") {
     title = "Phòng đã huỷ";
-    line = "Không ai thắng thua, kim cương đã được hoàn lại.";
+    line = "Không ai thắng thua.";
   } else if (r.winnerId === null) {
     title = "Hoà";
-    line = "Kim cương cược đã được hoàn lại.";
+    line = "Ngang tài ngang sức!";
   } else if (won) {
     title = "Bạn thắng!";
     line =
@@ -106,12 +104,12 @@ function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
   const say =
     mood === "cheer"
       ? r.reason === "solved"
-        ? "Giải đẹp quá! Kim cương về túi rồi nhé."
+        ? "Giải đẹp quá!"
         : "Tuyệt vời! Bạn thắng rồi!"
       : mood === "sad"
         ? "Tiếc quá… Ván sau gỡ lại nhé!"
         : v.status === "canceled"
-          ? "Phòng huỷ rồi, kim cương vẫn còn nguyên."
+          ? "Phòng huỷ rồi, lập phòng khác nhé!"
           : "Ngang tài ngang sức! Làm thêm ván nữa không?";
   if (!open) {
     return (
@@ -159,22 +157,6 @@ function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
           {title}
         </p>
         <p className="text-sm text-muted">{line}</p>
-        {seated && v.status !== "canceled" && (
-          <p className="font-bold">
-            {r.payout > 0 ? (
-              <>
-                Nhận về <Diamonds n={r.payout} />
-                {r.payout > r.stake &&
-                  ` (lời ${fmtDiamonds(r.payout - r.stake)})`}
-                {r.capped && " · đã chạm trần lời 24 giờ"}
-              </>
-            ) : (
-              <>
-                Mất <Diamonds n={r.stake} />
-              </>
-            )}
-          </p>
-        )}
         <div className="mt-2 flex w-full flex-col gap-2">
           <Link href={onAgain} className="btn btn-amber w-full px-6 py-3">
             <Play className="size-4 fill-current" /> Chơi ván mới
@@ -186,6 +168,11 @@ function ResultCard({ v, onAgain }: { v: View; onAgain: string }) {
           >
             <Eye className="size-4" /> Xem lại bàn chơi
           </button>
+          {!loggedIn && (
+            <LoginLink href={`/login?next=/games/${v.game}`} className="text-sm font-bold text-link hover:underline">
+              Đăng ký miễn phí để học tiếng Đức và nhận kim cương
+            </LoginLink>
+          )}
         </div>
       </div>
     </div>
@@ -209,7 +196,7 @@ function Waiting({
       : "";
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
   const share = async () => {
-    const text = `Vào chơi ${GAME_TITLE[v.game]} với mình trên ckk.pro, mỗi người cược ${v.stake} kim cương: ${link}`;
+    const text = `Vào chơi ${GAME_TITLE[v.game]} với mình trên ckk.pro, không cần tài khoản: ${link}`;
     if (canShare) return navigator.share({ text }).catch(() => {});
     await navigator.clipboard.writeText(link).catch(() => {});
     setCopied(true);
@@ -218,7 +205,7 @@ function Waiting({
   const everyoneReady =
     v.players.length >= 2 && v.players.every((p) => p.ready);
   const say = !me
-    ? `Vào chơi cùng không? Mỗi người cược ${v.stake} kim cương đó.`
+    ? "Vào chơi cùng không?"
     : host
       ? v.players.length < 2
         ? "Gửi mã phòng cho bạn rồi chờ mọi người vào nhé!"
@@ -240,8 +227,7 @@ function Waiting({
         </p>
         <p className="mt-1 text-sm text-muted">
           {GAME_TITLE[v.game]}
-          {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · mỗi người cược{" "}
-          <Diamonds n={v.stake} /> · hũ hiện có <Diamonds n={v.pot} />
+          {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · {v.capacity} người
         </p>
       </div>
       {me && (
@@ -274,6 +260,7 @@ function Waiting({
                   <span className="flex-1 truncate font-bold">
                     {p.name}
                     {p.me && " (bạn)"}
+                    {p.guest && <span className="ml-1 text-xs font-bold text-muted">· khách</span>}
                   </span>
                   {p.ready ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
@@ -329,22 +316,15 @@ function Waiting({
             onClick={() => send({ action: "leave" })}
           >
             <LogOut className="size-4" />{" "}
-            {host ? "Huỷ phòng (hoàn kim cương)" : "Rời phòng (hoàn kim cương)"}
+            {host ? "Huỷ phòng" : "Rời phòng"}
           </button>
         </div>
       ) : (
         <button
           className="btn btn-amber py-3"
-          disabled={v.total < v.stake}
           onClick={() => send({ action: "join" })}
         >
-          {v.total < v.stake ? (
-            "Không đủ kim cương"
-          ) : (
-            <>
-              Vào phòng, cược <Gem className="size-5" /> {v.stake}
-            </>
-          )}
+          <Users className="size-4" /> Vào phòng
         </button>
       )}
     </div>
@@ -365,35 +345,18 @@ export default function PlayRoom({
   const [v, setV] = useState<View | null>(null);
   const [error, setError] = useState("");
   const busy = useRef(false);
-  const paid = useRef<string | null>(null); // đã báo kim cương nhận về của ván này cho huy hiệu
+  const guest = usePlayGuest(loggedIn);
+  const ready = guest.ready;
   const lobby = `/games/${game}`;
 
   function apply(next: View) {
-    setV((old) =>
-      old &&
-      old.version === next.version &&
-      old.status === next.status &&
-      old.total === next.total
-        ? old
-        : next,
-    );
-    if (next.result && paid.current !== next.code) {
-      paid.current = next.code;
-      const payout = next.result.payout;
-      emitPoints(
-        payout > 0 && next.status === "ended"
-          ? { total: next.total - payout, delta: payout, earned: true }
-          : { total: next.total },
-      );
-    } else if (!next.result) emitPoints({ total: next.total });
+    setV((old) => (old && old.version === next.version && old.status === next.status ? old : next));
   }
 
   const reload = () =>
     clientApi<View>(`/games/play?code=${code}`)
       .then((r) => {
         if (r.game !== game) location.replace(`/games/${r.game}/${r.code}`);
-        // Ván đã xong lúc mở trang → không báo "+N" lại lần nữa
-        if (paid.current === null && r.result) paid.current = r.code;
         apply(r);
         setError("");
       })
@@ -425,8 +388,13 @@ export default function PlayRoom({
     v.mode === "room" &&
     (v.status === "waiting" || v.status === "playing");
   useEffect(() => {
-    if (loggedIn) void load();
-  }, [loggedIn, code]);
+    if (ready) void load();
+  }, [ready, code]);
+  // Khách chưa có tên tạm → hỏi tên ngay khi mở link phòng
+  useEffect(() => {
+    if (!loggedIn) guest.ask();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ hỏi 1 lần lúc mở trang
+  }, [loggedIn]);
   useEffect(() => {
     if (!live) return;
     const t = setInterval(() => {
@@ -471,15 +439,22 @@ export default function PlayRoom({
     </p>
   );
 
-  if (!loggedIn) {
+  if (!ready && !v) {
     return (
       <>
         {header}
-        <GameLoginPromo
-          game={game}
-          next={`/games/${game}/${code}`}
-          action="phòng"
-        />
+        <div className="sticker flex flex-col gap-3 p-5 text-center">
+          <p className="text-lg font-black">Vào phòng {code}</p>
+          <p className="text-sm text-muted">Không cần tài khoản — nhập tên tạm là vào chơi được.</p>
+          {guest.name ? (
+            <p className="text-sm text-muted">{guest.error || "Đang vào phòng…"}</p>
+          ) : (
+            <button className="btn btn-amber mx-auto px-6 py-3" onClick={() => guest.ask()}>
+              <Users className="size-4" /> Nhập tên để vào phòng
+            </button>
+          )}
+        </div>
+        {guest.dialog}
       </>
     );
   }
@@ -502,9 +477,10 @@ export default function PlayRoom({
   return (
     <>
       {header}
+      {v.status === "waiting" && guest.chip}
       {v.status === "waiting" && <Waiting v={v} send={send} />}
       {(v.status === "ended" || v.status === "canceled") && (
-        <ResultCard v={v} onAgain={lobby} />
+        <ResultCard v={v} onAgain={lobby} loggedIn={loggedIn} />
       )}
       {v.status !== "waiting" &&
         v.status !== "canceled" &&
@@ -514,6 +490,7 @@ export default function PlayRoom({
           <CaroPlay v={v} send={send} />
         ))}
       {errorLine}
+      {guest.dialog}
     </>
   );
 }

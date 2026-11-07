@@ -1,24 +1,25 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { Check, Clock, Gem as GemIcon, Play, Volume2, VolumeX, X } from "lucide-react";
-import { ARTIKEL_GOAL, ARTIKEL_LADDER, ARTIKEL_SECONDS, ARTIKEL_STAKES, ARTIKELS, type Artikel, type ArtikelState } from "@/lib/artikel";
+import { Check, Clock, Flame, Play, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { ARTIKEL_SECONDS, ARTIKELS, type Artikel, type ArtikelGameWord } from "@/lib/artikel";
 import { clientApi } from "@/lib/client-api";
-import { emitPoints } from "@/lib/points";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GameHeader, LevelTile } from "./GameParts";
-import GameLoginPromo from "./GameLoginPromo";
-import { Gem } from "./PointsBadge";
+import { GuestResult, useGuestGate } from "./GuestPlay";
 
 /**
- * Game Der Die Das: đặt kim cương, chọn mạo từ từng từ, đúng thì chọn chốt hay chơi tiếp. Mọi lượt đều hỏi server (đáp án và kim cương nằm ở server),
- * mở lại trang thì chơi tiếp ván đang dở. Đồng hồ ở đây chỉ để hiện, hạn thật do server giữ.
+ * Game Der Die Das, chỉ để vui (không cược kim cương): chọn đúng mạo từ cho từng danh từ, đúng liên tiếp càng nhiều càng tốt.
+ * Sai hoặc hết giờ là hết ván. Chơi hẳn trên trình duyệt (không có gì để gian lận); kỷ lục từng bộ lưu trong trình duyệt.
+ * Khách chơi được bằng tên tạm.
  */
 
 type DeckOption = { slug: string; title: string; level: string; wordCount: number };
+type Miss = ArtikelGameWord & { timedOut: boolean };
 
 const STORE = "artikel"; // tiền tố khoá localStorage
+const FLASH_MS = 550; // hiện "Chính xác" trước khi sang từ mới
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 const COLOR: Record<Artikel, string> = {
   der: "bg-sky-500 text-white",
@@ -27,73 +28,95 @@ const COLOR: Record<Artikel, string> = {
 };
 const TEXT: Record<Artikel, string> = { der: "text-sky-600 dark:text-sky-300", die: "text-rose-600 dark:text-rose-300", das: "text-emerald-600 dark:text-emerald-300" };
 
-const Diamonds = ({ n }: { n: number }) => (
-  <span className="inline-flex items-center gap-1 font-extrabold text-gem tabular-nums">
-    <Gem className="size-4" /> {fmt(n)}
-  </span>
-);
+function shuffle<T>(a: T[]): T[] {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
 
 function Rules() {
   return (
     <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted">
-      <li>Mỗi từ có {ARTIKEL_SECONDS} giây. Sai, hết giờ hoặc rời đi khi từ đang hiện là mất phần đã đặt.</li>
-      <li>Đúng thì chọn chốt lấy kim cương về, hoặc chơi tiếp để tăng hệ số. Tối đa {ARTIKEL_GOAL} từ một ván.</li>
-      <li>
-        Hệ số theo số từ đúng:{" "}
-        {[1, 3, 5, 10].map((n) => `${n} từ ×${ARTIKEL_LADDER[n] / 100}`).join(" · ")}.
-      </li>
+      <li>Mỗi từ có {ARTIKEL_SECONDS} giây để chọn der, die hoặc das (phím 1, 2, 3).</li>
+      <li>Đúng liên tiếp càng nhiều càng tốt. Sai hoặc hết giờ là hết ván.</li>
+      <li>Chơi cho vui, không cược kim cương. Kỷ lục từng bộ được lưu trên máy này.</li>
     </ul>
   );
 }
 
 export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; loggedIn: boolean }) {
   const [deck, setDeck] = useLocalStorage(`${STORE}-deck`, decks[0]?.slug ?? "");
-  const [stake, setStake] = useLocalStorage(`${STORE}-stake`, ARTIKEL_STAKES[0]);
   const [sound, setSound] = useLocalStorage(`${STORE}-sound`, true);
-  const [state, setState] = useState<ArtikelState | null>(null);
+  const [bests, setBests] = useLocalStorage<Record<string, number>>(`${STORE}-best`, {});
+  const [phase, setPhase] = useState<"menu" | "loading" | "word" | "flash" | "over">("menu");
+  const [queue, setQueue] = useState<ArtikelGameWord[]>([]);
+  const [streak, setStreak] = useState(0);
+  const [last, setLast] = useState<{ score: number; best: number; miss: Miss | null } | null>(null);
   const [error, setError] = useState("");
   const [left, setLeft] = useState(0); // ms còn lại của từ đang hiện
-  const busy = useRef(false); // đang chờ server → bỏ qua lượt bấm thêm
+  const cache = useRef(new Map<string, ArtikelGameWord[]>());
   const current = decks.find((d) => d.slug === deck) ?? decks[0];
-  const round = state?.round ?? null;
-  const reveal = state?.reveal;
-  const result = state?.result;
+  const word = queue[streak % Math.max(1, queue.length)];
+  const best = (current && bests[current.slug]) || 0;
 
-  useEffect(() => {
-    if (!loggedIn) return;
-    clientApi<ArtikelState>("/games/artikel")
-      .then(setState)
-      .catch((e: Error) => setError(e.message));
-    return stopSpeaking;
-  }, [loggedIn]);
+  useEffect(() => stopSpeaking, []);
 
-  async function send(payload: { action: string; deck?: string; stake?: number; article?: Artikel | null }) {
-    if (busy.current) return;
-    busy.current = true;
+  async function start() {
+    if (!current) return;
     setError("");
+    setPhase("loading");
     try {
-      const s = await clientApi<ArtikelState>("/games/artikel", { method: "POST", body: payload });
-      setState(s);
-      const payout = s.result?.payout ?? 0;
-      emitPoints(payout ? { total: s.total - payout, delta: payout, earned: true } : { total: s.total });
-      if (sound && s.reveal) void speakGerman(`${s.reveal.gender} ${s.reveal.word}`);
+      let words = cache.current.get(current.slug);
+      if (!words) {
+        words = (await clientApi<{ words: ArtikelGameWord[] }>(`/games/artikel?deck=${current.slug}`)).words;
+        cache.current.set(current.slug, words);
+      }
+      setQueue(shuffle(words));
+      setStreak(0);
+      setPhase("word");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setError((e as Error).message);
-      // Ván đã đổi ở nơi khác (tab khác, hết giờ) → lấy lại đúng tình trạng
-      clientApi<ArtikelState>("/games/artikel").then(setState).catch(() => {});
-    } finally {
-      busy.current = false;
+      setPhase("menu");
     }
   }
+  const guest = useGuestGate(loggedIn, () => void start()); // khách: hỏi tên tạm trước khi vào ván
 
-  const onTimeout = useEffectEvent(() => void send({ action: "answer", article: null }));
-  const wordKey = round?.phase === "word" ? `${round.correct}|${round.word?.word}` : "";
-  const msLeft = round?.msLeft ?? 0;
+  function end(miss: Miss | null) {
+    const prev = best;
+    if (current && streak > prev) setBests({ ...bests, [current.slug]: streak });
+    setLast({ score: streak, best: prev, miss });
+    setPhase("over");
+  }
+
+  function answer(a: Artikel | null) {
+    if (phase !== "word" || !word) return;
+    if (sound) void speakGerman(`${word.gender} ${word.word}`);
+    if (a !== word.gender) return end({ ...word, timedOut: a === null });
+    setPhase("flash");
+  }
+
+  // Sau khi đúng: hiện "Chính xác" một chút rồi sang từ mới (hết từ thì trộn lại bộ)
   useEffect(() => {
-    if (!wordKey) return;
-    const end = performance.now() + msLeft;
+    if (phase !== "flash") return;
+    const t = setTimeout(() => {
+      const next = streak + 1;
+      if (next % queue.length === 0) setQueue((q) => shuffle(q));
+      setStreak(next);
+      setPhase("word");
+    }, FLASH_MS);
+    return () => clearTimeout(t);
+  }, [phase, streak, queue.length]);
+
+  const onTimeout = useEffectEvent(() => answer(null));
+  useEffect(() => {
+    if (phase !== "word") return;
+    const until = performance.now() + ARTIKEL_SECONDS * 1000;
     const tick = () => {
-      const ms = Math.max(0, end - performance.now());
+      const ms = Math.max(0, until - performance.now());
       setLeft(ms);
       if (ms === 0) {
         clearInterval(timer);
@@ -103,11 +126,11 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
     const timer = setInterval(tick, 100);
     tick();
     return () => clearInterval(timer);
-  }, [wordKey, msLeft]);
+  }, [phase, streak]);
 
   const onKey = useEffectEvent((e: KeyboardEvent) => {
-    if (round?.phase === "word" && ["1", "2", "3"].includes(e.key)) void send({ action: "answer", article: ARTIKELS[Number(e.key) - 1] });
-    if (round?.phase === "choose" && e.key === "Enter") void send({ action: "next" });
+    if (phase === "word" && ["1", "2", "3"].includes(e.key)) answer(ARTIKELS[Number(e.key) - 1]);
+    else if ((phase === "over" || phase === "menu") && e.key === "Enter" && !guest.dialog) guest.gate(0);
   });
   useEffect(() => {
     const on = (e: KeyboardEvent) => onKey(e);
@@ -117,10 +140,10 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
 
   const header = (
     <GameHeader
-      icon={GemIcon}
+      icon={Flame}
       tone="cyan"
       title="Der Die Das"
-      subtitle="Chọn đúng mạo từ, chốt trước khi sai"
+      subtitle="Chọn đúng mạo từ, đúng liên tiếp càng lâu càng giỏi"
       right={
         <button className="btn-icon" title={sound ? "Tắt tiếng" : "Bật tiếng"} onClick={() => setSound(!sound)}>
           {sound ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
@@ -130,141 +153,72 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
   );
   const errorLine = error && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{error}</p>;
 
-  if (!loggedIn) {
-    return (
-      <>
-        {header}
-        <GameLoginPromo game="der-die-das" next="/games/der-die-das" rules={<Rules />} />
-      </>
-    );
-  }
-
-  if (!state) {
-    return (
-      <>
-        {header}
-        {errorLine || <p className="text-center text-sm text-muted">Đang tải…</p>}
-      </>
-    );
-  }
-
-  if (round?.phase === "word" && round.word) {
+  if ((phase === "word" || phase === "flash") && word) {
     return (
       <>
         {header}
         <div className="sticker flex flex-col gap-5 p-5">
           <div className="flex items-center justify-between text-sm font-bold">
-            <span>
-              Từ {round.correct + 1}/{ARTIKEL_GOAL}
+            <span className="inline-flex items-center gap-1">
+              <Flame className="size-4 text-amber" /> {streak} từ liên tiếp
+              {best > 0 && <span className="font-normal text-muted"> · kỷ lục {fmt(best)}</span>}
             </span>
             <span className="inline-flex items-center gap-1 tabular-nums">
-              <Clock className="size-4" /> {Math.ceil(left / 1000)}s
+              <Clock className="size-4" /> {phase === "flash" ? ARTIKEL_SECONDS : Math.ceil(left / 1000)}s
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-card-2">
-            <div className="h-full rounded-full bg-cyan-500" style={{ width: `${(left / (ARTIKEL_SECONDS * 1000)) * 100}%` }} />
+            <div className="h-full rounded-full bg-cyan-500" style={{ width: `${phase === "flash" ? 100 : (left / (ARTIKEL_SECONDS * 1000)) * 100}%` }} />
           </div>
           <div className="py-4 text-center">
-            <p className="text-3xl font-black break-words md:text-4xl">{round.word.word}</p>
-            <p className="mt-2 text-muted">{round.word.meaning}</p>
+            {phase === "flash" ? (
+              <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-emerald-600 dark:text-emerald-300">
+                <Check className="size-4" strokeWidth={3} /> Chính xác
+              </p>
+            ) : null}
+            <p className="text-3xl font-black break-words md:text-4xl">
+              {phase === "flash" && <span className={TEXT[word.gender]}>{word.gender} </span>}
+              {word.word}
+            </p>
+            <p className="mt-2 text-muted">{word.meaning}</p>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {ARTIKELS.map((a, i) => (
-              <button key={a} className={`btn py-4 text-lg font-extrabold ${COLOR[a]}`} onClick={() => send({ action: "answer", article: a })}>
+              <button key={a} className={`btn py-4 text-lg font-extrabold ${COLOR[a]}`} disabled={phase !== "word"} onClick={() => answer(a)}>
                 {a} <span className="text-xs opacity-70 max-md:hidden">({i + 1})</span>
               </button>
             ))}
           </div>
         </div>
-        {errorLine}
       </>
     );
   }
 
-  if (round?.phase === "choose") {
-    return (
-      <>
-        {header}
-        <div className="sticker flex flex-col gap-4 p-5 text-center">
-          {reveal && (
-            <div>
-              <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-emerald-600 dark:text-emerald-300">
-                <Check className="size-4" strokeWidth={3} /> Chính xác
-              </p>
-              <p className="mt-1 text-2xl font-black break-words">
-                <span className={TEXT[reveal.gender]}>{reveal.gender}</span> {reveal.word}
-              </p>
-              <p className="text-muted">{reveal.meaning}</p>
-            </div>
-          )}
-          <p className="text-sm font-bold">
-            Đúng {round.correct}/{ARTIKEL_GOAL} từ · đã đặt {fmt(round.stake)}
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button className="btn btn-amber py-3" onClick={() => send({ action: "cash" })}>
-              Chốt lấy <Gem className="size-5" /> {fmt(round.pot)}
-            </button>
-            <button className="btn py-3" onClick={() => send({ action: "next" })}>
-              Chơi tiếp, đúng thì <Gem className="size-5" /> {fmt(round.nextPot)}
-            </button>
-          </div>
-          {round.nextPot === round.pot && <p className="text-xs text-muted">Đã chạm trần lời 24 giờ, chơi tiếp không tăng thêm kim cương.</p>}
-        </div>
-        {errorLine}
-      </>
-    );
-  }
-
-  const short = state.total < stake;
-  const blocked = !state.limits.roundsLeft || !state.limits.winLeft;
   return (
     <>
       {header}
-      {result && (
-        <div className="sticker flex flex-col gap-2 p-5 text-center">
-          {reveal && !reveal.correct && (
+      {phase === "over" && last && (
+        <div className="sticker flex flex-col items-center gap-2 p-5 text-center">
+          {last.miss && (
             <>
               <p className="inline-flex items-center justify-center gap-1.5 text-sm font-extrabold text-red-500 dark:text-red-400">
-                <X className="size-4" strokeWidth={3} /> {reveal.timedOut ? "Hết giờ" : "Chưa đúng"}
+                <X className="size-4" strokeWidth={3} /> {last.miss.timedOut ? "Hết giờ" : "Chưa đúng"}
               </p>
               <p className="text-2xl font-black break-words">
-                <span className={TEXT[reveal.gender]}>{reveal.gender}</span> {reveal.word}
+                <span className={TEXT[last.miss.gender]}>{last.miss.gender}</span> {last.miss.word}
               </p>
-              <p className="text-muted">{reveal.meaning}</p>
+              <p className="text-muted">{last.miss.meaning}</p>
             </>
           )}
-          {result.won ? (
-            <p className="font-bold">
-              Đúng {result.correct} từ, nhận về <Diamonds n={result.payout} /> (lời {fmt(result.payout - result.stake)})
-              {result.capped && " · đã chạm trần lời 24 giờ"}
-            </p>
-          ) : (
-            <p className="font-bold">
-              Đúng {result.correct} từ, mất <Diamonds n={result.stake} />
-            </p>
-          )}
+          <p className="mt-1 inline-flex items-center gap-1.5 font-bold">
+            <Trophy className="size-4 text-amber" /> Đúng {fmt(last.score)} từ liên tiếp
+            {last.score > last.best && last.score > 0 ? " · kỷ lục mới!" : last.best > 0 ? ` · kỷ lục ${fmt(last.best)}` : ""}
+          </p>
+          {!loggedIn && <GuestResult name={guest.name} score={last.score} record={last.score > last.best} />}
         </div>
       )}
       <div className="sticker flex flex-col gap-4 p-4">
-        <p className="font-bold">
-          Bạn đang có <Diamonds n={state.total} />
-        </p>
-        <div>
-          <p className="mb-2 text-sm font-extrabold">Mức đặt</p>
-          <div className="grid grid-cols-4 gap-2">
-            {ARTIKEL_STAKES.map((n) => (
-              <button
-                key={n}
-                aria-pressed={n === stake}
-                className={`btn px-0 py-2.5 ${n === stake ? "bg-gem/20 ring-2 ring-gem" : ""}`}
-                disabled={state.total < n}
-                onClick={() => setStake(n)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
+        {guest.chip}
         <div>
           <p className="mb-2 text-sm font-extrabold">Bộ từ</p>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -278,7 +232,9 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
                 <LevelTile level={d.level} />
                 <span className="min-w-0">
                   <span className="block truncate font-extrabold">{d.title}</span>
-                  <span className="text-xs text-muted">{fmt(d.wordCount)} danh từ</span>
+                  <span className="text-xs text-muted">
+                    {fmt(d.wordCount)} danh từ{bests[d.slug] ? ` · kỷ lục ${fmt(bests[d.slug])}` : ""}
+                  </span>
                 </span>
               </button>
             ))}
@@ -286,23 +242,11 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
         </div>
         <Rules />
         {errorLine}
-        {blocked ? (
-          <p className="text-center text-sm font-bold text-muted">Bạn đã chơi đủ giới hạn trong 24 giờ qua, quay lại sau nhé.</p>
-        ) : (
-          <button className="btn btn-amber py-3" disabled={short || !current} onClick={() => current && send({ action: "start", deck: current.slug, stake })}>
-            {short ? (
-              "Không đủ kim cương"
-            ) : (
-              <>
-                <Play className="size-4 fill-current" /> Đặt <Gem className="size-5" /> {stake} và bắt đầu
-              </>
-            )}
-          </button>
-        )}
-        <p className="text-center text-xs text-muted">
-          Trong 24 giờ còn chơi được {state.limits.roundsLeft} ván, còn lời được tối đa {fmt(state.limits.winLeft)} kim cương.
-        </p>
+        <button className="btn btn-amber py-3" disabled={!current || phase === "loading"} onClick={() => guest.gate(0)}>
+          <Play className="size-4 fill-current" /> {phase === "over" ? "Chơi lại" : phase === "loading" ? "Đang tải…" : "Bắt đầu"}
+        </button>
       </div>
+      {guest.dialog}
     </>
   );
 }

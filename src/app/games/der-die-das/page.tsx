@@ -5,7 +5,7 @@ import { VocabSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
   title: "Der Die Das — game luyện mạo từ tiếng Đức",
-  description: "Đặt kim cương, chọn đúng der, die hay das cho từng danh từ và chốt trước khi sai. Từ vựng Goethe A1–B1, Aspekte B2 và điều dưỡng.",
+  description: "Chọn đúng der, die hay das cho từng danh từ, đúng liên tiếp càng nhiều càng giỏi. Từ vựng Goethe A1–B1, Aspekte B2 và điều dưỡng.",
 };
 
 export default function ArtikelRoute() {

@@ -117,6 +117,82 @@ function GuestNameDialog({ initial, editing, onSubmit, onCancel }: { initial: st
   );
 }
 
+/**
+ * Khách chơi Sudoku / Caro: tên tạm (dùng chung với các game khác) được báo lên server để nhận cookie khách,
+ * vì phòng chơi với người cần server biết ai là ai. ready = đã đăng nhập, hoặc server đã nhận tên tạm.
+ * ask(then): chưa có tên → hỏi tên, có rồi → chạy then ngay khi server đã nhận tên.
+ */
+export function usePlayGuest(loggedIn: boolean) {
+  const [name, setName] = useGuestName();
+  const [synced, setSynced] = useState("");
+  const [error, setError] = useState("");
+  const [dialog, setDialog] = useState<"ask" | "edit" | null>(null);
+  const pending = useRef<(() => void) | null>(null);
+  const ready = loggedIn || (!!name && synced === name);
+
+  useEffect(() => {
+    if (loggedIn || !name || synced === name) return;
+    let stop = false;
+    fetch("/api/v1/games/play/guest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error ?? `Lỗi máy chủ (${r.status})`);
+        if (!stop) {
+          setSynced(name);
+          setError("");
+        }
+      })
+      .catch((e: Error) => !stop && setError(e.message === "Failed to fetch" ? "Không kết nối được máy chủ" : e.message));
+    return () => {
+      stop = true;
+    };
+  }, [loggedIn, name, synced]);
+
+  useEffect(() => {
+    if (!ready || !pending.current) return;
+    const then = pending.current;
+    pending.current = null;
+    then();
+  }, [ready]);
+
+  const ask = (then?: () => void) => {
+    if (ready) return then?.();
+    pending.current = then ?? null;
+    if (!name) setDialog("ask");
+  };
+  const view =
+    dialog && !loggedIn ? (
+      <GuestNameDialog
+        initial={name}
+        editing={dialog === "edit"}
+        onCancel={() => {
+          pending.current = null;
+          setDialog(null);
+        }}
+        onSubmit={(n) => {
+          setName(n);
+          setDialog(null);
+        }}
+      />
+    ) : null;
+  const chip =
+    !loggedIn && name ? (
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border-2 border-ink/15 bg-card-2 px-3 py-2 text-sm">
+        <UserRound className="size-4 shrink-0 text-muted" />
+        <span>
+          Chơi với tên tạm <b>{name}</b>
+        </span>
+        <button className="inline-flex cursor-pointer items-center gap-1 font-bold text-link hover:underline" onClick={() => setDialog("edit")}>
+          <Pencil className="size-3.5" /> Đổi tên
+        </button>
+        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="ml-auto font-bold text-link hover:underline">
+          Đăng nhập
+        </LoginLink>
+      </div>
+    ) : null;
+  return { name, ready, error, ask, dialog: view, chip };
+}
+
 /** Lời chúc + mời đăng ký ở màn kết quả của khách */
 export function GuestResult({ name, score, record }: { name: string; score: number; record: boolean }) {
   const who = name || "bạn";
@@ -140,7 +216,7 @@ export function GuestResult({ name, score, record }: { name: string; score: numb
           <BookmarkPlus className="mt-0.5 size-4 shrink-0 text-amber" /> Lưu từ bị trượt vào sổ ôn, mở trên máy nào cũng còn
         </li>
         <li className="flex items-start gap-2">
-          <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Luyện bài nhận kim cương, chơi Sudoku · Caro với bạn bè
+          <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Luyện bài nhận kim cương, leo bảng xếp hạng
         </li>
       </ul>
       <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-amber py-3 font-black">

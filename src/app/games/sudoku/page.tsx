@@ -4,8 +4,8 @@ import { PlayLobbyPage } from "@/components/PlayPage";
 import { VocabSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
-  title: "Sudoku — giải đề hoặc đua với bạn bằng kim cương",
-  description: "Chơi Sudoku một mình hoặc tạo phòng đua giải cùng bạn bè, cược kim cương kiếm được khi học tiếng Đức.",
+  title: "Sudoku — giải đề hoặc đua với bạn",
+  description: "Chơi Sudoku một mình hoặc tạo phòng đua giải cùng bạn bè, không cần tài khoản.",
 };
 
 export default function SudokuRoute() {

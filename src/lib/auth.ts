@@ -24,7 +24,7 @@ const SCRYPT_V2: ScryptOptions = { N: 2 ** 15, r: 8, p: 3, maxmem: 64 * 1024 * 1
 const DUMMY_HASH = `v2:${"0".repeat(32)}:${"0".repeat(128)}`;
 
 const secret = () => process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD || "";
-const sign = (value: string) => createHmac("sha256", secret()).update(value).digest("base64url");
+export const sign = (value: string) => createHmac("sha256", secret()).update(value).digest("base64url");
 
 /** Email admin cố định (biến môi trường), luôn đăng nhập bằng ADMIN_PASSWORD */
 export const envAdminEmail = () => process.env.ADMIN_EMAIL?.trim().toLowerCase() || null;
