@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CloudRain, Gem, Pickaxe, Puzzle, Volume2 } from "lucide-react";
+import { ArrowRight, CloudRain, Gem, Grid3x3, Pickaxe, Puzzle, Users, Volume2, X } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "@/components/Mascot";
 
 export const metadata: Metadata = {
-  title: "Game từ vựng",
-  description: "Chơi game để luyện từ vựng tiếng Đức theo các bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng.",
+  title: "Game",
+  description: "Chơi game để luyện từ vựng tiếng Đức theo các bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng, hoặc dùng kim cương chơi Sudoku và Caro với bạn bè.",
 };
 
 const Emoji = ({ code, className }: { code: string; className: string }) => (
@@ -79,7 +79,53 @@ const ArtikelArt = () => (
   </div>
 );
 
-const GAMES: { href: string; title: string; description: string; icon: ComponentType<{ className?: string }>; art: ReactNode }[] = [
+const SUDOKU_SAMPLE = [5, 0, 3, 0, 7, 0, 9, 0, 1, 0, 2, 0, 8, 0, 6, 0, 4, 0];
+const SudokuArt = () => (
+  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#101a2e] to-[#17264a] pt-4">
+    <div className="grid grid-cols-6 overflow-hidden rounded-lg border-2 border-sky-300/70 bg-[#0e1b33] transition group-hover:-translate-y-0.5">
+      {SUDOKU_SAMPLE.map((n, i) => (
+        <span key={i} className={`flex size-8 items-center justify-center border-r border-b border-sky-300/20 text-sm font-black ${n ? "text-white" : ""} ${i === 7 ? "bg-sky-400/40" : ""}`}>
+          {n || (i === 7 ? <span className="text-sky-200">4</span> : "")}
+        </span>
+      ))}
+    </div>
+  </div>
+);
+
+const CARO_SAMPLE = "....O..XXXX.O.O..O....";
+const CaroArt = () => (
+  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#2a1a14] to-[#3d261a] pt-4">
+    <div className="grid grid-cols-6 rounded-lg border-2 border-amber-200/60 bg-[#fdf3dc]/95 p-1">
+      {Array.from({ length: 18 }, (_, i) => {
+        const p = CARO_SAMPLE[i + 2];
+        return (
+          <span key={i} className="flex size-7 items-center justify-center border-r border-b border-black/10">
+            {p === "X" && <X className={`size-5 text-red-500 ${i === 9 ? "transition group-hover:scale-125" : ""}`} strokeWidth={3.5} />}
+            {p === "O" && <span className="size-4 rounded-full border-[3px] border-sky-500" />}
+          </span>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const GAMES: { href: string; title: string; description: string; icon: ComponentType<{ className?: string }>; art: ReactNode; players?: string }[] = [
+  {
+    href: "/games/sudoku",
+    title: "Sudoku",
+    description: "Cược kim cương rồi giải đề một mình, hoặc tạo phòng đua với 1–3 người bạn: ai giải xong trước nhận cả hũ.",
+    icon: Grid3x3,
+    art: <SudokuArt />,
+    players: "1–4 người",
+  },
+  {
+    href: "/games/caro",
+    title: "Caro",
+    description: "Cược kim cương, đấu với máy hoặc với bạn trên bàn 15×15: ai có 5 quân liền nhau trước là thắng.",
+    icon: Users,
+    art: <CaroArt />,
+    players: "1–2 người",
+  },
   {
     href: "/games/word-rain",
     title: "Mưa từ vựng",
@@ -113,14 +159,14 @@ const GAMES: { href: string; title: string; description: string; icon: Component
 export default function GamesPage() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Game từ vựng</h1>
+      <h1 className="text-2xl font-extrabold">Game</h1>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {GAMES.map((g) => (
           <Link key={g.href} href={g.href} className="group sticker sticker-link flex flex-col overflow-hidden">
             <div className="theme-night relative h-40 overflow-hidden border-b-2 border-ink">
               {g.art}
               <span className="absolute top-2.5 right-2.5 rounded-full border border-cyan-300/50 bg-black/60 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-cyan-200 uppercase">
-                1 người chơi
+                {g.players ?? "1 người chơi"}
               </span>
             </div>
             <div className="flex flex-1 flex-col gap-3 p-4">

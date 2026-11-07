@@ -664,3 +664,115 @@ select {
     opacity: 0;
   }
 }
+
+/* Sudoku / Caro: số và quân cờ rơi xuống khi vừa đặt, đường thắng Caro nảy lên (như Solo Games) */
+@keyframes play-drop {
+  from {
+    transform: translateY(-70%) scale(0.6);
+    opacity: 0.3;
+  }
+  60% {
+    transform: translateY(6%) scale(1.06);
+    opacity: 1;
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes play-bounce {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(-14%);
+  }
+}
+.play-drop {
+  display: inline-block;
+  animation: play-drop 0.3s cubic-bezier(0.3, 1.4, 0.6, 1) both;
+}
+.play-bounce {
+  animation: play-bounce 0.55s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-drop,
+  .play-bounce {
+    animation: none;
+  }
+}
+
+/* Linh vật trong Sudoku / Caro: cảm xúc bằng chuyển động (PlayParts.tsx MascotSay) */
+@keyframes mascot-wow {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translateY(-18%) scale(1.08);
+  }
+  30% {
+    transform: translateY(-18%) rotate(-10deg) scale(1.08);
+  }
+  45% {
+    transform: translateY(-18%) rotate(10deg) scale(1.08);
+  }
+  60% {
+    transform: translateY(-6%) rotate(-4deg);
+  }
+}
+@keyframes mascot-cheer {
+  0%,
+  100% {
+    transform: none;
+  }
+  40% {
+    transform: translateY(-22%) rotate(-6deg);
+  }
+  60% {
+    transform: translateY(-22%) rotate(6deg);
+  }
+}
+@keyframes mascot-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.7);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(8px, -14px) scale(1.1);
+  }
+}
+.mascot-wow {
+  animation: mascot-wow 0.7s ease-out;
+}
+.mascot-cheer {
+  animation: mascot-cheer 0.7s ease-in-out infinite;
+}
+.mascot-think {
+  transform: rotate(-8deg);
+  transition: transform 0.3s;
+}
+.mascot-sleep {
+  transform: rotate(10deg) translateY(4%);
+  opacity: 0.75;
+  transition: transform 0.3s;
+}
+.mascot-sad {
+  transform: translateY(8%) scaleY(0.94);
+  filter: saturate(0.4);
+  transition: transform 0.3s;
+}
+.mascot-zzz {
+  animation: mascot-zzz 1.6s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-wow,
+  .mascot-cheer,
+  .mascot-zzz {
+    animation: none;
+  }
+}
