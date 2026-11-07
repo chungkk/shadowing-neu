@@ -35,7 +35,7 @@ export function GameClock({ v, send, ms, warn = false }: { v: View; send: Send; 
   const seated = v.players.some((p) => p.me && !p.out);
   const canPause = seated && v.status === "playing" && (mine || (!v.pause && v.pauseLeft > 0));
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border-2 border-ink bg-card py-0.5 pr-0.5 pl-2.5 font-bold tabular-nums ${warn ? "text-red-500 dark:text-red-400" : ""}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full border-2 border-ink bg-card py-0.5 pr-0.5 pl-2.5 font-bold tabular-nums ${warn ? "text-red-400" : ""}`}>
       <Clock className="size-4" /> {clock(ms)}
       {seated && (
         <button
@@ -105,7 +105,7 @@ export function MascotSay({ mood = "happy", children, className = "" }: { mood?:
       </span>
       <p
         aria-live="polite"
-        className="relative min-w-0 flex-1 rounded-2xl border-2 border-ink bg-card px-3 py-2 text-sm leading-snug font-bold text-balance shadow-[0_3px_0_var(--ink)] before:absolute before:top-1/2 before:-left-[7px] before:size-3 before:-translate-y-1/2 before:rotate-45 before:border-b-2 before:border-l-2 before:border-ink before:bg-card md:text-base"
+        className="say-bubble relative min-w-0 flex-1 rounded-2xl border-2 border-ink bg-card px-3 py-2 text-sm leading-snug font-bold text-balance shadow-[0_3px_0_var(--ink)] before:absolute before:top-1/2 before:-left-[7px] before:size-3 before:-translate-y-1/2 before:rotate-45 before:border-b-2 before:border-l-2 before:border-ink before:bg-card md:text-base"
       >
         {children}
       </p>

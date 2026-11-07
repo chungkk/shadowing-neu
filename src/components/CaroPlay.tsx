@@ -3,14 +3,23 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Bot, Maximize2, Minus, Plus, X } from "lucide-react";
 import { CARO_SIZE } from "@/lib/play";
+import { CandyPiece } from "./CandyPieces";
 import { GameClock, MascotSay, PausedCover, ResignButton, useCountdown, type MascotMood, type Send, type View } from "./PlayParts";
+
+/** Quân cờ: X/O nét vẽ ở giao diện sáng, tối · viên kẹo ở giao diện Kẹo */
+const Mark = ({ p, className = "" }: { p: "X" | "O"; className?: string }) => (
+  <>
+    <PlainMark p={p} className={`plain-only ${className}`} />
+    <CandyPiece p={p} className={`candy-only ${className}`} />
+  </>
+);
 
 /** Bàn Caro 15×15 (như Solo Games): phóng to bằng 2 ngón / nút +− / Ctrl + cuộn chuột, phóng to rồi thì kéo để xem các góc */
 
 const MIN = 1;
 const MAX = 3;
 
-const Mark = ({ p, className = "" }: { p: "X" | "O"; className?: string }) =>
+const PlainMark = ({ p, className = "" }: { p: "X" | "O"; className?: string }) =>
   p === "X" ? (
     <X className={`text-red-500 ${className}`} strokeWidth={3.5} />
   ) : (
@@ -99,7 +108,7 @@ function ZoomBoard({ v, myTurn, send }: { v: View; myTurn: boolean; send: Send }
           </button>
         )}
       </div>
-      <div className="overflow-hidden rounded-2xl border-[3px] border-ink bg-card-2 p-1 shadow-[0_4px_0_var(--ink)]">
+      <div className="caro-tray overflow-hidden rounded-2xl border-[3px] border-ink bg-board p-1 shadow-[0_4px_0_var(--ink)]">
         <div ref={box} className="relative aspect-square w-full touch-none overflow-hidden" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <div
             className="grid aspect-square w-full transition-transform duration-150 ease-out"
@@ -123,7 +132,7 @@ function ZoomBoard({ v, myTurn, send }: { v: View; myTurn: boolean; send: Send }
                   <span
                     aria-hidden
                     className={`absolute inset-[6%] rounded-[30%] transition-colors ${
-                      win ? "bg-gold" : i === c.last ? "bg-gold/35 ring-2 ring-ink/50 ring-inset" : canPlay ? "bg-card ring-1 ring-ink/20 ring-inset group-hover:bg-gem/20" : "bg-card ring-1 ring-ink/20 ring-inset"
+                      win ? "bg-gold" : i === c.last ? "bg-gold/35 ring-2 ring-ink/50 ring-inset" : canPlay ? "bg-cell ring-1 ring-ink/20 ring-inset group-hover:bg-gem/20" : "bg-cell ring-1 ring-ink/20 ring-inset"
                     }`}
                   />
                   {p && (

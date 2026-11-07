@@ -23,6 +23,7 @@ import { usePlayGuest } from "./GuestPlay";
 import { LoginLink } from "./LoginDialog";
 import { GAME_TITLE } from "./PlayLobby";
 import CaroPlay from "./CaroPlay";
+import { CandyPiece, CandyTitle, WrapperRain } from "./CandyPieces";
 import {
   clock,
   MascotSay,
@@ -148,6 +149,11 @@ function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; logged
         >
           <X className="size-5" />
         </button>
+        {won && v.game === "caro" && (
+          <div className="candy-only">
+            <WrapperRain />
+          </div>
+        )}
         <MascotSay mood={mood} className="mb-1 w-full text-left">
           {say}
         </MascotSay>
@@ -222,9 +228,18 @@ function Waiting({
       </MascotSay>
       <div className="text-center">
         <p className="text-sm font-bold text-muted">Mã phòng</p>
-        <p className="font-mono text-4xl font-black tracking-[0.3em]">
+        <p className={`font-mono text-4xl font-black tracking-[0.3em] ${v.game === "caro" ? "plain-only" : ""}`}>
           {v.code}
         </p>
+        {v.game === "caro" && (
+          <div aria-hidden className="candy-only mt-1 flex justify-center gap-1">
+            {v.code.split("").map((ch, k) => (
+              <span key={k} className="candy-gloss font-candy flex h-12 w-11 items-center justify-center rounded-2xl border-4 border-ink bg-gold text-[1.65rem] sm:h-14 sm:w-13 sm:text-3xl">
+                {ch}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="mt-1 text-sm text-muted">
           {GAME_TITLE[v.game]}
           {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · {v.capacity} người
@@ -252,6 +267,7 @@ function Waiting({
             >
               {p ? (
                 <>
+                  {v.game === "caro" && <CandyPiece p={k === 0 ? "X" : "O"} className="candy-only size-9 shrink-0" />}
                   {p.id === v.hostId ? (
                     <Crown className="size-4 text-amber" />
                   ) : (
@@ -413,6 +429,23 @@ export default function PlayRoom({
   }, [v]);
 
   const header = (
+    <>
+      {game === "caro" && (
+        <div className="candy-only">
+          <CandyTitle
+            title="Cờ Caro"
+            back={lobby}
+            backLabel="Sảnh Caro"
+            right={
+              <span className="mb-1 shrink-0 rounded-full border-[3px] border-ink bg-card px-3 py-0.5 font-bold">
+                {v ? (v.mode === "solo" ? "Đấu với máy" : `Phòng ${v.code}`) : `Phòng ${code}`}
+              </span>
+            }
+            small
+          />
+        </div>
+      )}
+      <div className={game === "caro" ? "plain-only" : "contents"}>
     <GameHeader
       icon={game === "sudoku" ? Grid3x3 : Users}
       tone="cyan"
@@ -432,6 +465,8 @@ export default function PlayRoom({
         </Link>
       }
     />
+      </div>
+    </>
   );
   const errorLine = error && (
     <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">
