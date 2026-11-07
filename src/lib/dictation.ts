@@ -222,33 +222,13 @@ export function hintFor(word: string, level: DictationLevel): string {
   return core[0] + "_".repeat(Math.max(core.length - 1, 0));
 }
 
-// ---- Lượt chính tả: 5–10 câu ngẫu nhiên chưa chép ----
-
-export const ROUND_MIN = 5;
-export const ROUND_MAX = 10;
-
-const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
-const shuffle = <T,>(a: T[]) => {
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
+// ---- Lượt chính tả: lần lượt từ đầu đến cuối bài ----
 
 /**
- * Chọn ngẫu nhiên 5–10 câu cho 1 lượt chính tả, xếp theo thứ tự trong video.
- * Chỉ lấy câu chưa làm (`done`) và có chữ để chép → các lượt nối tiếp nhau dần phủ hết bài; [] = đã làm hết.
- * Ưu tiên câu dài vừa phải (4–25 từ): câu quá ngắn ("Ja.") chép không có gì để luyện, câu quá dài dễ nản.
+ * Các câu cho lượt chính tả: mọi câu chưa làm (`done`) và có chữ để chép, theo thứ tự trong video; [] = đã làm hết.
  */
 export function pickDictation(texts: string[], done: Record<number, { correct: number; total: number }>): number[] {
-  const left = texts.flatMap((t, i) => (done[i] || !hasWords(t) ? [] : [i]));
-  const fits = (i: number) => {
-    const n = wordCount(texts[i]);
-    return n >= 4 && n <= 25;
-  };
-  const size = ROUND_MIN + Math.floor(Math.random() * (ROUND_MAX - ROUND_MIN + 1));
-  return [...shuffle(left.filter(fits)), ...shuffle(left.filter((i) => !fits(i)))].slice(0, size).sort((a, b) => a - b);
+  return texts.flatMap((t, i) => (done[i] || !hasWords(t) ? [] : [i]));
 }
 
 // ---- So câu nói (nhận dạng giọng nói) với câu gốc ----

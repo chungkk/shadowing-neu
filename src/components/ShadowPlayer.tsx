@@ -265,7 +265,7 @@ export default function ShadowPlayer({
   const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã xong
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã xem của từng câu (quay lại vẫn còn)
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả
-  const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép
+  const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: các câu chưa chép, lần lượt từ đầu đến cuối bài
   const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
   const awarded = useRef<Record<number, number>>({}); // điểm đã cộng của các câu chưa tính đủ — đọc ngay khi gõ nhanh, không chờ render
   const [earned, setEarned] = useState<Record<number, number>>({}); // điểm được của từng câu trong lượt này
@@ -288,7 +288,7 @@ export default function ShadowPlayer({
 
   const dictation = settings.practice === "dictation";
   const mediaHidden = dictation ? settings.dictHideMedia : settings.hideMedia;
-  const starredOnly = starFilter && loggedIn && !dictation; // Chính tả luôn theo lượt ngẫu nhiên, không lọc câu ⭐
+  const starredOnly = starFilter && loggedIn && !dictation; // Chính tả luôn theo lượt (lần lượt cả bài), không lọc câu ⭐
   // Chỉ câu ⭐: chuyển câu nhảy giữa các câu đã đánh dấu · Chính tả: chỉ các câu của lượt đang làm
   const starredIdx = useMemo(() => segments.flatMap((s, i) => (stars.has(s.text.toLowerCase()) ? [i] : [])), [segments, stars]);
   const queue = starredOnly ? starredIdx : dictation ? dictPick : null; // null = mọi câu
@@ -656,7 +656,7 @@ export default function ShadowPlayer({
     update({ practice: p });
     // Về Shadowing đang lọc câu ⭐ → về câu ⭐ gần nhất
     if (p !== "dictation") return starFilter && toNearestStarred();
-    // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
+    // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì lấy mọi câu chưa chép)
     const i = roundStart(ensureRound());
     if (i !== undefined && i !== idx) select(i);
   };
@@ -681,7 +681,8 @@ export default function ShadowPlayer({
         const dict = allowDictation && p.mode === "dictation";
         // Lượt chính tả đã lưu (chưa có mà đang ở Chính tả → chọn lượt mới)
         const pick = (p.dictPick ?? []).filter((k) => k < segments.length && hasWords(texts[k]));
-        const round = pick.length || !dict ? pick : pickDictation(texts, done);
+        // Lượt cũ (5–10 câu ngẫu nhiên) → nối thêm mọi câu chưa chép để làm lần lượt tới cuối bài
+        const round = pick.length || dict ? [...new Set([...pick, ...pickDictation(texts, done)])].sort((a, b) => a - b) : pick;
         let i = Math.min(p.idx, segments.length - 1);
         if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
         setIdx(i);
@@ -1177,7 +1178,7 @@ export default function ShadowPlayer({
               )}
               <p className="text-sm text-muted">
                 {left > 0
-                  ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Lượt mới chọn ngẫu nhiên 5–10 câu bạn chưa chép.`
+                  ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Chép tiếp các câu còn lại theo thứ tự.`
                   : `Bạn đã chép hết ${dictTotal} câu của bài này 👏`}
               </p>
               <button className="btn btn-primary py-3" onClick={left > 0 ? newRound : restartProgress}>

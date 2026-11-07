@@ -311,7 +311,7 @@ function open() {
   // Điểm trừ khi xem từ lưu theo từng lần xem (trước đây luôn −1) — đổi mức trừ không ảnh hưởng các lần đã xem
   const hintCols = db.prepare("PRAGMA table_info(dict_hints)").all() as { name: string }[];
   if (!hintCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_hints ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
-  // Chính tả: các câu của lượt đang làm (app chọn ngẫu nhiên 5–10 câu / lượt)
+  // Chính tả: các câu của lượt đang làm (mọi câu chưa chép, lần lượt từ đầu đến cuối)
   if (!progressCols.some((c) => c.name === "dict_pick")) db.exec("ALTER TABLE progress ADD COLUMN dict_pick TEXT NOT NULL DEFAULT '[]'"); // [3, 17, 42, …]
   // Chính tả: lúc bắt đầu lượt đang làm (ms, 0 = chưa biết) → tính lại điểm của lượt khi mở lại bài
   if (!progressCols.some((c) => c.name === "dict_round_at")) db.exec("ALTER TABLE progress ADD COLUMN dict_round_at INTEGER NOT NULL DEFAULT 0");

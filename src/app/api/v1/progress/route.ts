@@ -60,7 +60,7 @@ export async function PUT(req: Request) {
   if (Array.isArray(b.seen)) for (const v of b.seen.slice(0, 10000)) if (int(v) !== null && v < total) seen.add(v);
   if (mode === "shadow") seen.add(at); // Chính tả tính riêng bằng dictDone
   const dictPick = Array.isArray(b.dictPick)
-    ? [...new Set(b.dictPick.slice(0, 50).filter((v) => int(v) !== null && v < total) as number[])].sort((x, y) => x - y)
+    ? [...new Set(b.dictPick.slice(0, 10000).filter((v) => int(v) !== null && v < total) as number[])].sort((x, y) => x - y)
     : (prev?.dictPick ?? []).filter((i) => i < total);
   saveProgress(user.id, {
     source,

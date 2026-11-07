@@ -193,7 +193,7 @@ export default function Player({
   const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã làm: idx → 7/8 từ đúng
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả kể cả khi đang ở câu 1
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã hiện của từng câu (sang câu khác rồi quay lại vẫn còn)
-  const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: 5–10 câu ngẫu nhiên chưa chép ([] khi đang chép = đã chép hết bài)
+  const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: các câu chưa chép, lần lượt từ đầu đến cuối bài ([] khi đang chép = đã chép hết bài)
   const [seen, setSeen] = useState<Set<number>>(new Set()); // câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   const points = usePoints(user?.id); // tổng điểm chính tả (null = chưa tải)
   const [pointsEarned, setPointsEarned] = useState(0); // tăng mỗi lần vừa được điểm → huy hiệu điểm hiện "+N"
@@ -230,7 +230,7 @@ export default function Player({
 
   const current = segments[idx];
   const dictation = allowDictation && practice === "dictation";
-  const starredOnly = starFilter && !dictation; // Chính tả luôn theo lượt ngẫu nhiên, không lọc câu ⭐
+  const starredOnly = starFilter && !dictation; // Chính tả luôn theo lượt (lần lượt cả bài), không lọc câu ⭐
   // iPad nằm ngang: video + điều khiển bên trái (~58%), transcript bên phải.
   // iPad dọc lúc chép chính tả: thu nhỏ video để còn chỗ cho ô nhập + bàn phím
   const videoWidth = Math.round(width * (split ? 0.58 : tablet && dictation ? 0.6 : 1));
@@ -520,7 +520,8 @@ export default function Player({
         const dict = allowDictation && p.mode === "dictation";
         // Lượt chính tả đã lưu (server cũ / lượt chưa chọn → chọn lượt mới nếu đang ở Chính tả)
         const pick = (p.dictPick ?? []).filter((k) => k < segments.length && hasWords(texts[k]));
-        const round = pick.length || !dict ? pick : pickDictation(texts, done);
+        // Lượt cũ (5–10 câu ngẫu nhiên) → nối thêm mọi câu chưa chép để làm lần lượt tới cuối bài
+        const round = pick.length || dict ? [...new Set([...pick, ...pickDictation(texts, done)])].sort((a, b) => a - b) : pick;
         let i = Math.min(p.idx, segments.length - 1);
         if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
         setIdx(i);
@@ -742,7 +743,7 @@ export default function Player({
     setPractice(p);
     // Về Shadowing đang lọc câu ⭐ → về câu ⭐ gần nhất
     if (p !== "dictation") return starFilter && toNearestStarred();
-    // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì chọn ngẫu nhiên 5–10 câu)
+    // Vào Chính tả → mở câu của lượt đang làm (chưa có lượt thì lấy mọi câu chưa chép)
     const i = roundStart(ensureRound());
     if (i !== undefined && i !== idx) select(i);
   };
