@@ -8,9 +8,9 @@ const listeners = new Set<() => void>();
 
 function readStored(): Theme {
   try {
-    return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
   } catch {
-    return "light"; // Trình duyệt chặn lưu trữ: vẫn đổi được trong lần xem này
+    return "dark"; // Trình duyệt chặn lưu trữ: vẫn đổi được trong lần xem này
   }
 }
 
@@ -37,7 +37,7 @@ const isDark = () => document.documentElement.getAttribute("data-theme") === "da
 
 /** Nút chọn giao diện sáng / tối ấm ở thanh trên cùng; lựa chọn được ghi nhớ trên thiết bị này */
 export default function ThemeToggle() {
-  const dark = useSyncExternalStore(subscribe, isDark, () => false);
+  const dark = useSyncExternalStore(subscribe, isDark, () => true);
 
   // Script trong <head> không đặt được màu thanh trình duyệt; bản dev của React còn xoá data-theme khi remount
   useLayoutEffect(() => {

@@ -40,12 +40,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#fff6e9",
+  themeColor: "#241a1c",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="vi" data-theme="dark" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Áp giao diện đã chọn trước khi trình duyệt vẽ trang, tránh nháy nền sáng */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
