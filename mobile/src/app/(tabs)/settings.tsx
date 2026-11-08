@@ -507,7 +507,6 @@ function Signed({ user }: { user: User }) {
       {user.role === "admin" && (
         <Section title={t("admin.section")} footer={t("admin.hint")}>
           <Row first icon="person.2.fill" iconBg="#b45309" title={t("admin.users")} onPress={() => router.push("/admin/users")} />
-          <Row icon="plus.rectangle.on.rectangle" iconBg={C.accentDark} title={t("admin.addFromYoutube")} onPress={() => router.navigate("/youtube")} />
         </Section>
       )}
 

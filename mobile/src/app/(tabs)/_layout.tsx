@@ -11,10 +11,6 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Label>{t("tabs.lessons")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "books.vertical", selected: "books.vertical.fill" }} md="school" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="youtube">
-        <NativeTabs.Trigger.Label>{t("tabs.youtube")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: "play.rectangle", selected: "play.rectangle.fill" }} md="smart_display" />
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="vocab">
         <NativeTabs.Trigger.Label>{t("tabs.vocab")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} md="bookmark" />
