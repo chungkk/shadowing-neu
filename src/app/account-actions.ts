@@ -7,6 +7,8 @@ import { addWord, aiWordMeaning, confirmEmailChange, editProfile, removeAccount,
 import { AVATAR_MAX_BYTES, imageType, removeAvatar, saveAvatar } from "@/lib/avatar";
 import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@/lib/db";
 import { addDeckEntries, getDeck } from "@/lib/decks";
+import { translateSentences, translationEnabled } from "@/lib/translate";
+import { translateWord } from "@/lib/word";
 
 export type FormResult = { error?: string; ok?: string };
 
@@ -112,6 +114,36 @@ export async function aiMeaning(id: number): Promise<{ meaning: string } | { err
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+/** AI tạo nghĩa cho từ đang gõ ở form "Thêm từ" (chưa lưu) */
+export async function aiMeaningFor(word: string, context = ""): Promise<{ meaning: string } | { error: string }> {
+  const user = await requireUser("/vocab/notebook");
+  const w = word.trim();
+  const ctx = context.trim().slice(0, 500);
+  if (!w) return { error: "Nhập từ trước đã" };
+  if (w.length > (w.includes(" ") ? 500 : 80)) return { error: "Từ quá dài" };
+  if (!translationEnabled()) return { error: "Server chưa cấu hình AI để dịch." };
+  try {
+    const meaning =
+      w.includes(" ") && !ctx
+        ? (await translateSentences([w]))[0]
+        : (await translateWord(w, ctx || w, user.lang === "de" ? "de" : "vi")).meaning;
+    return meaning ? { meaning } : { error: "Không dịch được lúc này." };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/** Tự thêm từ vào sổ (form "Thêm từ"): từ + nghĩa + câu ví dụ (tuỳ chọn). Từ đã có → ghi nghĩa mới nếu có nhập */
+export async function addOwnWord(input: { word: string; meaning: string; context: string }): Promise<FormResult> {
+  const user = await requireUser("/vocab/notebook");
+  const res = addWord(user, { word: String(input.word ?? ""), context: String(input.context ?? ""), sourceUrl: null, sourceTitle: "" });
+  if (typeof res === "string") return { error: res };
+  const meaning = String(input.meaning ?? "").trim().slice(0, 500);
+  if (meaning) updateVocabMeaning(user.id, res.id, meaning);
+  refresh();
+  return { ok: "Đã thêm" };
 }
 
 /** Chấm 1 lần ôn từ (lặp lại ngắt quãng) → mức nhớ + hạn ôn mới */

@@ -3,8 +3,8 @@
 import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Brain, CalendarCheck, Download, ExternalLink, Search, Sparkles, Trash2 } from "lucide-react";
-import { aiMeaning, removeWord, setWordMeaning } from "@/app/account-actions";
+import { BookOpen, Brain, CalendarCheck, Download, ExternalLink, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { addOwnWord, aiMeaning, aiMeaningFor, removeWord, setWordMeaning } from "@/app/account-actions";
 import type { VocabItem } from "@/lib/db";
 import { isDue, stageInfo } from "@/lib/srs";
 import VocabReview from "./VocabReview";
@@ -154,6 +154,84 @@ function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
   );
 }
 
+/** Form tự thêm từ: gõ từ + nghĩa (tự điền hoặc bấm ✨ để AI tạo nghĩa) + câu ví dụ tuỳ chọn */
+function AddWordDialog({ onClose }: { onClose: () => void }) {
+  const [word, setWord] = useState("");
+  const [meaning, setMeaning] = useState("");
+  const [context, setContext] = useState("");
+  const [error, setError] = useState("");
+  const [aiPending, startAi] = useTransition();
+  const [saving, startSave] = useTransition();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const ai = () =>
+    startAi(async () => {
+      setError("");
+      const res = await aiMeaningFor(word, context);
+      if ("error" in res) return setError(res.error);
+      setMeaning(res.meaning);
+    });
+  const field =
+    "w-full rounded-xl border-2 border-border bg-background px-3 py-2.5 text-base outline-none focus:border-accent md:text-sm";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Thêm từ mới">
+      <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={onClose} aria-label="Đóng" />
+      <form
+        className="card sheet-up relative flex w-full max-w-md flex-col gap-3 p-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!word.trim() || saving) return;
+          startSave(async () => {
+            setError("");
+            const res = await addOwnWord({ word, meaning, context });
+            if (res.error) return setError(res.error);
+            onClose();
+          });
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-lg font-extrabold">Thêm từ mới</p>
+          <button type="button" className="btn-icon size-8 text-muted" onClick={onClose} aria-label="Đóng">
+            <X className="size-4" />
+          </button>
+        </div>
+        <label className="flex flex-col gap-1 text-sm font-bold">
+          Từ / cụm từ
+          <input autoFocus className={`${field} font-bold`} value={word} onChange={(e) => setWord(e.target.value)} maxLength={500} placeholder="vd. die Aussprache" />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-bold">
+          Nghĩa
+          <div className="flex gap-2">
+            <input
+              className={`${field} font-bold text-amber`}
+              value={meaning}
+              onChange={(e) => setMeaning(e.target.value)}
+              maxLength={500}
+              placeholder={aiPending ? "AI đang dịch…" : "Tự ghi nghĩa hoặc bấm AI"}
+            />
+            <button type="button" className="btn shrink-0" onClick={ai} disabled={!word.trim() || aiPending} title="Tạo nghĩa bằng AI">
+              <Sparkles className={`size-4 text-amber ${aiPending ? "animate-pulse" : ""}`} /> AI
+            </button>
+          </div>
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-bold">
+          <span>
+            Câu ví dụ <span className="font-normal text-muted">(tuỳ chọn — giúp AI dịch đúng nghĩa)</span>
+          </span>
+          <textarea className={`${field} resize-none`} rows={2} value={context} onChange={(e) => setContext(e.target.value)} maxLength={500} />
+        </label>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button type="submit" className="btn btn-primary h-11" disabled={!word.trim() || saving}>
+          <Plus className="size-4" /> {saving ? "Đang lưu…" : "Lưu vào sổ"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // Sổ lớn (hàng nghìn từ) vẽ hết 1 lần thì trang rất nặng → hiện dần
 const PAGE = 60;
 
@@ -161,6 +239,7 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [review, setReview] = useState<{ title: string; items: VocabItem[] } | null>(null);
+  const [adding, setAdding] = useState(false);
   const local = useMounted();
   const router = useRouter();
   // Giờ hiện tại chỉ lấy trên trình duyệt (server render không biết → khỏi lệch hydrate)
@@ -189,7 +268,11 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
       <div className="card flex flex-col items-center gap-2 p-10 text-center">
         <BookOpen className="size-10 text-link" />
         <p className="font-bold">Chưa có từ nào</p>
-        <p className="text-sm text-muted">Khi luyện một bài, bấm vào từ trong câu rồi chọn “Lưu từ”.</p>
+        <p className="text-sm text-muted">Khi luyện một bài, bấm vào từ trong câu rồi chọn “Lưu từ” — hoặc tự thêm từ.</p>
+        <button className="btn btn-primary mt-2" onClick={() => setAdding(true)}>
+          <Plus className="size-4" /> Thêm từ
+        </button>
+        {adding && <AddWordDialog onClose={() => setAdding(false)} />}
       </div>
     );
   }
@@ -216,6 +299,9 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
           disabled={now == null}
         >
           <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
+        </button>
+        <button className="btn h-11" onClick={() => setAdding(true)}>
+          <Plus className="size-4 text-link" /> Thêm từ
         </button>
         <button className="btn h-11" onClick={() => setReview({ title: "Tất cả", items })}>
           <Brain className="size-4 text-amber" /> Ôn tất cả
@@ -254,6 +340,7 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
         </button>
       )}
       {!shown.length && <p className="text-sm text-muted">Không tìm thấy “{q}”.</p>}
+      {adding && <AddWordDialog onClose={() => setAdding(false)} />}
       {review && (
         <VocabReview
           title={review.title}

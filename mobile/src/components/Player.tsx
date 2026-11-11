@@ -926,7 +926,7 @@ export default function Player({
   );
 
   // Video "sạch": tắt thanh điều khiển / phụ đề / chú thích của YouTube (app có thanh điều khiển riêng).
-  // Lớp phủ trong suốt chặn chạm vào iframe (không hiện lại tiêu đề, "Video khác"...) và dùng để phát / dừng.
+  // Không đặt lớp phủ lên iframe: chính sách YouTube API cấm che player (App Review 5.2.3) — phát / dừng bằng nút riêng của app.
   const video = (
     <View style={{ alignSelf: "center" }}>
       <YoutubePlayer
@@ -950,7 +950,6 @@ export default function Player({
           if (s === PLAYER_STATES.PAUSED || s === PLAYER_STATES.ENDED) setPlaying(false);
         }}
       />
-      <Pressable onPress={togglePlay} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
     </View>
   );
 
