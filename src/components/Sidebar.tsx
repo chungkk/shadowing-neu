@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Newspaper, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(portal)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -11,9 +11,11 @@ import Avatar, { type AvatarUser } from "./Avatar";
 type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
 type NavUser = AvatarUser & { role: string };
 
-// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "Tiếng Đức" = "/" khớp mọi trang còn lại (bài học, /vocab, /watch…)
+// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "/" = Tin tức (chỉ đúng trang chủ);
+// "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học ckk.biz/<slug>, /watch, /vocab…) — xem useCurrent
 const ITEMS: Item[] = [
-  { href: "/", label: "Tiếng Đức", icon: Languages },
+  { href: "/", label: "Tin tức", icon: Newspaper },
+  { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
   { href: "/games", label: "Game", icon: Gamepad2 },
@@ -21,7 +23,7 @@ const ITEMS: Item[] = [
 const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers }; // sổ từ; có từ đến hạn → vào thẳng buổi ôn
 // Các trang con của phần Tiếng Đức (hàng tab nhỏ dưới thanh trên cùng — DeutschSubnav)
 const DEUTSCH: Item[] = [
-  { href: "/", label: "Bài học", icon: MonitorPlay }, // bài học video — trụ cột của phần tiếng Đức
+  { href: "/tieng-duc", label: "Bài học", icon: MonitorPlay }, // bài học video — trụ cột của phần tiếng Đức
   { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
@@ -29,7 +31,7 @@ const DEUTSCH: Item[] = [
 // Thanh dưới đáy: 4 phần lớn; đã đăng nhập thì thêm Ôn tập (có chấm đỏ số từ đến hạn).
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
 const GUEST_BAR = ITEMS;
-const USER_BAR: Item[] = [ITEMS[0], REVIEW, ITEMS[1], ITEMS[2], ITEMS[3]];
+const USER_BAR: Item[] = [ITEMS[0], ITEMS[1], REVIEW, ITEMS[2], ITEMS[3], ITEMS[4]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
@@ -39,14 +41,22 @@ const ADMIN_ITEMS: Item[] = [
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
+  { href: "/admin/news", label: "Tin tức", icon: Newspaper },
 ];
+
+// Trang không thuộc phần Tiếng Đức (các trang khác không khớp mục nào thì coi là bài học → sáng "Tiếng Đức")
+const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "tin-tuc", "deutsch-shadowing"]);
 
 /** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */
 function useCurrent(items: Item[]) {
   const pathname = usePathname();
-  // "/" khớp mọi trang (dự phòng) → trang bài học ckk.biz/<slug>, /watch/… vẫn sáng "Trang chủ"
-  const matches = (href: string) => href === "/" || pathname === href || pathname.startsWith(href + "/");
-  return items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  // "/" (Tin tức) chỉ khớp đúng trang chủ. Trang không thuộc mục nào (bài học ckk.biz/<slug>, /watch/…) → "Tiếng Đức"
+  const matches = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
+  const best = items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  if (best) return best;
+  const first = pathname.split("/")[1] ?? "";
+  if (first === "tin-tuc" && items.some((it) => it.href === "/")) return "/"; // bài viết của trang tin
+  return items.some((it) => it.href === "/tieng-duc") && !NOT_DEUTSCH.has(first) ? "/tieng-duc" : undefined;
 }
 
 /**
@@ -255,13 +265,12 @@ export function UserDropdown({ user }: { user: NavUser }) {
 }
 
 /** Trang thuộc phần Tiếng Đức có hàng tab con (không hiện ở màn học /watch, /<slug> — màn đó cần chỗ cho trình phát) */
-const showDeutschSubnav = (p: string) => p === "/" || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
+const showDeutschSubnav = (p: string) => p === "/tieng-duc" || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
 
 /** Hàng tab con của phần Tiếng Đức: Bài học · Từ vựng · Ôn tập · Xếp hạng */
 export function DeutschSubnav() {
   const pathname = usePathname();
-  // "/" chỉ sáng khi đúng trang chủ (khác useCurrent: ở đây "/" không phải mục dự phòng)
-  const current = DEUTSCH.filter((it) => (it.href === "/" ? pathname === "/" : pathname === it.href || pathname.startsWith(it.href + "/"))).sort(
+  const current = DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort(
     (a, b) => b.href.length - a.href.length,
   )[0]?.href;
   if (!showDeutschSubnav(pathname)) return null;

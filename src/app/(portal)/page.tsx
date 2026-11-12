@@ -1,159 +1,187 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ChevronRight } from "lucide-react";
-import { connection } from "next/server";
-import { getCurrentUser, type User } from "@/lib/auth";
-import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
-import { LEVELS, listProgress } from "@/lib/db";
-import YouTubeUrlForm from "@/components/YouTubeUrlForm";
-import LessonGrid from "@/components/LessonGrid";
-import Mascot from "@/components/Mascot";
-import ContinueLearning, { percent } from "@/components/ContinueLearning";
-import { RecentVideos } from "@/components/RecentVideos";
-import { LessonGridSkeleton } from "@/components/Skeleton";
-import TodayStrip from "@/components/TodayStrip";
+import { after, connection } from "next/server";
+import { ArrowUpRight, Car, Gamepad2, Landmark, Languages, Newspaper } from "lucide-react";
+import type { ComponentType } from "react";
+import { listNewsItems, listNewsPosts, type NewsItem, type NewsPost } from "@/lib/db";
+import { SOURCES, coverUrl, refreshNews, sourceOf } from "@/lib/news";
+import { ListSkeleton } from "@/components/Skeleton";
 
-// Link đã lọc (/?level=B1) vẫn là trang chủ với Google
-export const metadata: Metadata = { alternates: { canonical: "/" } };
-
-const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
-
-/** Dữ liệu thẻ bài: chỉ gửi xuống trình duyệt những gì thẻ cần */
-function lessonItems(user: User | null) {
-  const now = Date.now();
-  // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
-  const access = accessOf(user?.role === "admin" ? null : user);
-  const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
-  const items = lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
-    const p = progress.get(`/lesson/${l.id}`); // khoá tiến độ của bài vẫn theo id
-    return {
-      id: l.id,
-      title: l.title,
-      slug: l.slug,
-      videoId: l.videoId,
-      level: l.level,
-      description: l.description,
-      sentences: l.sentenceCount ?? l.segmentCount,
-      duration: l.duration ?? 0,
-      dictation: l.dictation,
-      percent: p ? percent(p) : 0,
-      isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
-      access: access(l.id),
-    };
-  });
-  // Bài học được ngay (miễn phí / đã mở) lên đầu, trong mỗi nhóm vẫn mới nhất trước
-  return items.sort((x, y) => +(x.access === "locked") - +(y.access === "locked"));
-}
-
-async function Lessons() {
-  await connection(); // đọc DB lúc request, không prerender
-  const user = await getCurrentUser();
-  const admin = user?.role === "admin";
-  return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
-}
-
-const levelRank = (lv: string) => {
-  const i = (LEVELS as readonly string[]).indexOf(lv);
-  return i < 0 ? LEVELS.length : i;
+export const metadata: Metadata = {
+  title: { absolute: "CKK – Tin tức nước Đức bằng tiếng Việt, học tiếng Đức, lái xe, Leben in Deutschland" },
+  description: "Tin tức nước Đức hằng ngày dịch sang tiếng Việt (kèm nguồn), bài viết của CKK, học tiếng Đức với video, ôn thi lái xe và Leben in Deutschland.",
+  alternates: { canonical: "/" },
 };
 
-/** Ô dán link YouTube — lựa chọn phụ: người mới nên bắt đầu từ bài có sẵn */
-function OwnVideo() {
+const SECTIONS: { href: string; label: string; text: string; icon: ComponentType<{ className?: string }> }[] = [
+  { href: "/tieng-duc", label: "Tiếng Đức", text: "Bài học video, từ vựng", icon: Languages },
+  { href: "/lai-xe", label: "Lái xe", text: "1.191 câu hạng B", icon: Car },
+  { href: "/leben-in-deutschland", label: "Leben in DE", text: "Thi quốc tịch", icon: Landmark },
+  { href: "/games", label: "Game", text: "Luyện từ vựng", icon: Gamepad2 },
+];
+
+const vnDate = (ms: number) => new Date(ms).toLocaleDateString("vi-VN", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Europe/Berlin" });
+
+/** "5 phút trước", "3 giờ trước", "hôm qua"… (giờ Đức) */
+function ago(ms: number, now: number) {
+  const min = Math.max(0, Math.round((now - ms) / 60_000));
+  if (min < 1) return "vừa xong";
+  if (min < 60) return `${min} phút trước`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} giờ trước`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "hôm qua" : `${d} ngày trước`;
+}
+
+function SourceBadge({ source }: { source: string }) {
+  const s = sourceOf(source);
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-sm font-bold text-muted">Hoặc luyện với video YouTube bất kỳ có phụ đề tiếng Đức:</p>
-      <YouTubeUrlForm secondary />
-    </div>
+    <span className="pill border border-ink/20 bg-card-2 font-extrabold" style={{ color: "var(--foreground)" }}>
+      <span className="size-2 rounded-full" style={{ background: s?.color ?? "var(--muted)" }} aria-hidden />
+      {s?.name ?? source}
+    </span>
   );
 }
 
-/** Khách: hero giới thiệu, nút chính = bài dễ nhất học được ngay, chip trình độ lọc thư viện */
-function GuestHero({ first, levels }: { first?: { slug: string; title: string; level: string }; levels: string[] }) {
+function PostCard({ post, big = false }: { post: NewsPost; big?: boolean }) {
+  const cover = coverUrl(post.cover);
   return (
-    <section className="sticker grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-4 p-4 sm:gap-x-6 sm:p-6">
-      <Mascot className="bob size-20 sm:row-span-3 sm:size-36" />
-      <div className="flex flex-col items-start gap-1.5">
-        <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">Hallo! Cùng nói nào!</span>
-        <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Luyện nói tiếng Đức với video thật</h1>
+    <Link href={`/tin-tuc/${post.slug}`} className={`group sticker sticker-link flex flex-col overflow-hidden ${big ? "md:col-span-2 md:flex-row" : ""}`}>
+      {cover && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={cover} alt="" className={`aspect-video w-full border-ink object-cover ${big ? "md:w-1/2 md:self-start md:border-r-2 md:border-b-2 md:rounded-br-3xl" : "border-b-2"} max-md:border-b-2`} />
+      )}
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <span className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
+          <span className="pill bg-accent text-white">CKK</span>
+          {post.category && <span>{post.category}</span>}
+          <span>{vnDate(post.createdAt)}</span>
+        </span>
+        <h3 className={`leading-snug font-extrabold group-hover:underline ${big ? "text-2xl" : "text-lg"}`}>{post.title}</h3>
+        {post.summary && <p className="line-clamp-3 text-sm text-muted">{post.summary}</p>}
       </div>
-      <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
-        <p className="text-muted">Nghe từng câu, nói theo và ghi âm để so với người bản xứ.</p>
-        {first && (
-          <Link href={`/${first.slug}`} className="btn btn-primary self-start px-5 py-3 text-base max-sm:w-full">
-            Thử bài {first.level} đầu tiên <ChevronRight className="size-5" />
-          </Link>
-        )}
-        {levels.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-bold text-muted">Trình độ của bạn:</span>
-            {levels.map((lv) => (
-              <Link key={lv} href={`/?level=${lv}#lessons`} className="btn px-3 py-1.5 pointer-coarse:py-2.5">
-                {lv}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="col-span-2 sm:col-span-1">
-        <OwnVideo />
-      </div>
-    </section>
+    </Link>
   );
 }
 
-/** Đầu trang: đã đăng nhập → "Hôm nay" (Học tiếp · Từ đến hạn · Chuỗi ngày) lên trước, hero thu nhỏ; khách → hero giới thiệu */
-async function Top() {
+function NewsCard({ item, now }: { item: NewsItem; now: number }) {
+  return (
+    <article className="sticker flex flex-col gap-2 p-4">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <SourceBadge source={item.source} />
+        <time dateTime={new Date(item.publishedAt).toISOString()}>{ago(item.publishedAt, now)}</time>
+      </div>
+      <h3 className="text-lg leading-snug font-extrabold">
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+          {item.titleVi}
+        </a>
+      </h3>
+      {item.summaryVi && <p className="text-sm">{item.summaryVi}</p>}
+      {/* Tiêu đề gốc tiếng Đức: người học đọc song song */}
+      <p className="text-xs text-muted" lang="de">
+        🇩🇪 {item.title}
+      </p>
+      <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-start text-sm font-extrabold text-link">
+        Đọc bài gốc trên {sourceOf(item.source)?.name ?? item.source} <ArrowUpRight className="size-4" />
+      </a>
+    </article>
+  );
+}
+
+/** Bài CKK + tin tự động (lọc theo báo thì không hiện bài CKK) */
+function loadNews(source: string | null) {
+  return { posts: source ? [] : listNewsPosts({ limit: 7 }), items: listNewsItems({ limit: 60, source }), now: Date.now() };
+}
+
+async function News({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   await connection();
-  const user = await getCurrentUser();
-  if (user) {
-    return (
-      <>
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <Mascot className="size-12 shrink-0" />
-            <h1 className="text-xl leading-tight font-extrabold sm:text-2xl">Hallo, {user.name}! Hôm nay học gì?</h1>
-          </div>
-          <TodayStrip userId={user.id} />
-        </section>
-        <ContinueLearning userId={user.id} />
-      </>
-    );
-  }
-  const items = lessonItems(null).filter((l) => l.access !== "locked");
-  const first = [...items].sort((a, b) => levelRank(a.level) - levelRank(b.level) || a.id - b.id)[0];
-  const levels = [...new Set(items.map((l) => l.level))].sort((a, b) => levelRank(a) - levelRank(b));
+  // Lấy tin mới sau khi đã trả trang (không bắt người đọc chờ); tự bỏ qua nếu vừa lấy < 30 phút
+  after(() => refreshNews()?.catch((e) => console.error("[news]", e)));
+  const nguon = (await searchParams).nguon;
+  const source = typeof nguon === "string" && sourceOf(nguon) ? nguon : null;
+  const { posts, items, now } = loadNews(source);
+
   return (
     <>
-      <GuestHero first={first} levels={levels} />
-      <RecentVideos />
+      {posts.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby="ckk-posts">
+          <h2 id="ckk-posts" className="text-xl font-extrabold">
+            Bài viết của CKK
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {posts.map((p, i) => (
+              <PostCard key={p.id} post={p} big={i === 0} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="flex flex-col gap-3" aria-labelledby="de-news">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="de-news" className="text-xl font-extrabold">
+            Tin nước Đức
+          </h2>
+          <p className="text-xs text-muted">Dịch tự động từ tiêu đề và tóm tắt của báo gốc</p>
+        </div>
+        <nav aria-label="Lọc theo báo" className="scroll-row flex gap-1.5">
+          {[{ key: null, name: "Tất cả" }, ...SOURCES].map((s) => (
+            <Link
+              key={s.key ?? "all"}
+              href={s.key ? `/?nguon=${s.key}` : "/"}
+              aria-current={source === s.key ? "page" : undefined}
+              className={`rounded-full border-2 px-3 py-1 text-sm font-bold ${source === s.key ? "border-ink bg-accent text-white" : "border-ink/25 hover:border-ink"}`}
+            >
+              {s.name}
+            </Link>
+          ))}
+        </nav>
+        {items.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {items.map((it) => (
+              <NewsCard key={it.id} item={it} now={now} />
+            ))}
+          </div>
+        ) : (
+          <p className="sticker p-6 text-center text-muted">Đang cập nhật tin, bạn quay lại sau ít phút nhé.</p>
+        )}
+        <p className="text-xs text-muted">
+          Bản dịch do AI thực hiện từ tiêu đề và đoạn tóm tắt mà các báo công bố qua RSS, có thể chưa chính xác hoàn toàn. Nội dung đầy đủ và bản quyền
+          thuộc về báo gốc — bấm “Đọc bài gốc” để xem.
+        </p>
+      </section>
     </>
   );
 }
 
-/** Đã đăng nhập: ô dán link nằm dưới thư viện (lựa chọn phụ) */
-async function OwnVideoForUser() {
-  const user = await getCurrentUser();
-  return user ? (
-    <section className="sticker p-4 sm:p-6">
-      <OwnVideo />
-    </section>
-  ) : null;
-}
-
-export default function Home() {
+export default function Home(props: PageProps<"/">) {
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-4 md:gap-10 md:p-6">
-      <Suspense fallback={<div className="sticker h-48 animate-pulse motion-reduce:animate-none" />}>
-        <Top />
-      </Suspense>
-
-      <Suspense fallback={<LessonGridSkeleton />}>
-        <Lessons />
-      </Suspense>
-
-      <Suspense>
-        <OwnVideoForUser />
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-gold text-black">
+            <Newspaper className="size-6" />
+          </span>
+          <div>
+            <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Tin tức nước Đức</h1>
+            <p className="text-sm text-muted">Tin mới mỗi ngày từ báo Đức, dịch sang tiếng Việt, kèm nguồn.</p>
+          </div>
+        </div>
+        {/* Lối vào các phần học */}
+        <nav aria-label="Học cùng CKK" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {SECTIONS.map((s) => (
+            <Link key={s.href} href={s.href} className="sticker sticker-link flex items-center gap-2.5 p-3">
+              <s.icon className="size-5 shrink-0 text-accent-text" />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-extrabold">{s.label}</span>
+                <span className="truncate text-xs text-muted">{s.text}</span>
+              </span>
+            </Link>
+          ))}
+        </nav>
+      </section>
+      <Suspense fallback={<ListSkeleton rows={6} />}>
+        <News searchParams={props.searchParams} />
       </Suspense>
     </main>
   );

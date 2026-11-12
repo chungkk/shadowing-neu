@@ -27,8 +27,8 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
     return (
       <main className="mx-auto flex max-w-xl flex-col items-center gap-4 p-4 pt-20 text-center">
         <p className="rounded-md bg-red-500/10 p-4 text-sm text-red-400">{(e as Error).message}</p>
-        <Link href="/" className="btn">
-          ← Về trang chủ
+        <Link href="/tieng-duc" className="btn">
+          ← Về trang học
         </Link>
       </main>
     );

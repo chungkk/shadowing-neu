@@ -8,7 +8,8 @@ const COLUMNS = [
   {
     title: "Luyện tập",
     links: [
-      { href: "/", label: "Tiếng Đức – bài học video" },
+      { href: "/", label: "Tin tức" },
+      { href: "/tieng-duc", label: "Tiếng Đức – bài học video" },
       { href: "/vocab", label: "Từ vựng" },
       { href: "/lai-xe", label: "Lý thuyết lái xe" },
       { href: "/leben-in-deutschland", label: "Leben in Deutschland" },

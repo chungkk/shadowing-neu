@@ -33,6 +33,8 @@ export type LessonSummary = Omit<Lesson, "segments"> & {
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
 /** Ảnh đại diện lưu thành file cạnh DB (cùng volume dữ liệu trên VPS) */
 export const AVATAR_DIR = path.join(path.dirname(DB_PATH), "avatars");
+/** Ảnh bìa bài tin tức do admin tải lên */
+export const NEWS_DIR = path.join(path.dirname(DB_PATH), "news");
 /** Giọng đọc mẫu (mp3) đã tạo — mỗi câu chỉ tạo 1 lần, dùng chung cho mọi người học */
 export const TTS_DIR = path.join(path.dirname(DB_PATH), "tts");
 
@@ -145,6 +147,38 @@ function open() {
       word_key TEXT NOT NULL, -- khoá mục trong bộ (phân biệt từ đồng âm)
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, deck, word_key)
+    );
+    -- Trang tin (trang chủ): tin tự động lấy từ RSS báo Đức, dịch tiêu đề + tóm tắt sang tiếng Việt (không chép nguyên bài)
+    CREATE TABLE IF NOT EXISTS news_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT NOT NULL, -- khoá nguồn trong lib/news.ts: tagesschau, zdf…
+      guid TEXT NOT NULL,
+      url TEXT NOT NULL,
+      title TEXT NOT NULL, -- tiếng Đức (nguyên văn của báo)
+      summary TEXT NOT NULL DEFAULT '',
+      title_vi TEXT NOT NULL DEFAULT '', -- '' = chưa dịch
+      summary_vi TEXT NOT NULL DEFAULT '',
+      published_at INTEGER NOT NULL, -- ms
+      fetched_at INTEGER NOT NULL,
+      hidden INTEGER NOT NULL DEFAULT 0, -- admin ẩn tin
+      UNIQUE (source, guid)
+    );
+    CREATE INDEX IF NOT EXISTS news_items_published ON news_items (published_at);
+    -- Bài do admin viết
+    CREATE TABLE IF NOT EXISTS news_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '', -- chữ thường: đoạn cách nhau 1 dòng trống, "## " tiêu đề, "- " danh sách, **đậm**, [chữ](link)
+      category TEXT NOT NULL DEFAULT '',
+      cover TEXT, -- tên file ảnh bìa trong NEWS_DIR (NULL = không có)
+      source_name TEXT NOT NULL DEFAULT '', -- nguồn tham khảo (nếu bài dựa trên tin của báo khác)
+      source_url TEXT NOT NULL DEFAULT '',
+      published INTEGER NOT NULL DEFAULT 0,
+      author_id INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
     );
     -- Tab Lái xe / Leben in Deutschland: kết quả trả lời từng câu (module: 'fuehrerschein' | 'lid')
     CREATE TABLE IF NOT EXISTS quiz_answers (
@@ -698,6 +732,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM starred_sentences WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM deck_learned WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM quiz_answers WHERE user_id = ?").run(id);
+  conn().prepare("UPDATE news_posts SET author_id = NULL WHERE author_id = ?").run(id); // bài đã đăng vẫn giữ
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
@@ -1740,4 +1775,162 @@ export function quizStats(userId: number, module: QuizModule): Record<string, Qu
 /** Xoá tiến độ của 1 phần (bắt đầu lại từ đầu) */
 export function resetQuiz(userId: number, module: QuizModule) {
   conn().prepare("DELETE FROM quiz_answers WHERE user_id = ? AND module = ?").run(userId, module);
+}
+
+// ---- Trang tin ----
+
+export type NewsItem = {
+  id: number;
+  source: string;
+  url: string;
+  title: string;
+  summary: string;
+  titleVi: string;
+  summaryVi: string;
+  publishedAt: number;
+  hidden: boolean;
+};
+
+type NewsItemRow = { id: number; source: string; url: string; title: string; summary: string; title_vi: string; summary_vi: string; published_at: number; hidden: number };
+const toNewsItem = (r: NewsItemRow): NewsItem => ({
+  id: r.id,
+  source: r.source,
+  url: r.url,
+  title: r.title,
+  summary: r.summary,
+  titleVi: r.title_vi,
+  summaryVi: r.summary_vi,
+  publishedAt: r.published_at,
+  hidden: !!r.hidden,
+});
+
+/** Thêm tin mới (đã có thì bỏ qua) → số tin thêm được */
+export function insertNewsItems(items: { source: string; guid: string; url: string; title: string; summary: string; publishedAt: number }[]): number {
+  const db = conn();
+  const ins = db.prepare(
+    "INSERT OR IGNORE INTO news_items (source, guid, url, title, summary, published_at, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  );
+  const now = Date.now();
+  let added = 0;
+  db.exec("BEGIN");
+  try {
+    for (const it of items) added += Number(ins.run(it.source, it.guid, it.url, it.title, it.summary, it.publishedAt, now).changes);
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+  return added;
+}
+
+/** Tin chưa dịch, mới nhất trước */
+export function untranslatedNews(limit: number): { id: number; title: string; summary: string }[] {
+  return conn()
+    .prepare("SELECT id, title, summary FROM news_items WHERE title_vi = '' AND hidden = 0 ORDER BY published_at DESC LIMIT ?")
+    .all(limit) as { id: number; title: string; summary: string }[];
+}
+
+export function setNewsTranslation(id: number, titleVi: string, summaryVi: string) {
+  conn().prepare("UPDATE news_items SET title_vi = ?, summary_vi = ? WHERE id = ?").run(titleVi, summaryVi, id);
+}
+
+/** Tin đã dịch để hiện ra trang (admin: kèm tin chưa dịch / đã ẩn) */
+export function listNewsItems(opts: { limit?: number; source?: string | null; admin?: boolean } = {}): NewsItem[] {
+  const where = [opts.admin ? "1 = 1" : "hidden = 0 AND title_vi != ''", opts.source ? "source = ?" : "1 = 1"].join(" AND ");
+  const args: (string | number)[] = opts.source ? [opts.source] : [];
+  return (
+    conn()
+      .prepare(`SELECT id, source, url, title, summary, title_vi, summary_vi, published_at, hidden FROM news_items WHERE ${where} ORDER BY published_at DESC LIMIT ?`)
+      .all(...args, opts.limit ?? 60) as NewsItemRow[]
+  ).map(toNewsItem);
+}
+
+export function setNewsHidden(id: number, hidden: boolean) {
+  conn().prepare("UPDATE news_items SET hidden = ? WHERE id = ?").run(hidden ? 1 : 0, id);
+}
+
+/** Xoá tin cũ (tin tức nhanh cũ, không cần giữ) */
+export function pruneNewsItems(olderThanMs: number) {
+  conn().prepare("DELETE FROM news_items WHERE published_at < ?").run(Date.now() - olderThanMs);
+}
+
+export type NewsPost = {
+  id: number;
+  slug: string;
+  title: string;
+  summary: string;
+  body: string;
+  category: string;
+  cover: string | null;
+  sourceName: string;
+  sourceUrl: string;
+  published: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+export type NewsPostInput = Omit<NewsPost, "id" | "slug" | "createdAt" | "updatedAt" | "cover">;
+
+type NewsPostRow = { id: number; slug: string; title: string; summary: string; body: string; category: string; cover: string | null; source_name: string; source_url: string; published: number; created_at: number; updated_at: number };
+const toNewsPost = (r: NewsPostRow): NewsPost => ({
+  id: r.id,
+  slug: r.slug,
+  title: r.title,
+  summary: r.summary,
+  body: r.body,
+  category: r.category,
+  cover: r.cover,
+  sourceName: r.source_name,
+  sourceUrl: r.source_url,
+  published: !!r.published,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+export function listNewsPosts({ includeDrafts = false, limit = 50 } = {}): NewsPost[] {
+  return (
+    conn()
+      .prepare(`SELECT * FROM news_posts ${includeDrafts ? "" : "WHERE published = 1"} ORDER BY created_at DESC LIMIT ?`)
+      .all(limit) as NewsPostRow[]
+  ).map(toNewsPost);
+}
+
+export function getNewsPost(by: { id: number } | { slug: string }): NewsPost | null {
+  const r = ("id" in by
+    ? conn().prepare("SELECT * FROM news_posts WHERE id = ?").get(by.id)
+    : conn().prepare("SELECT * FROM news_posts WHERE slug = ?").get(by.slug)) as NewsPostRow | undefined;
+  return r ? toNewsPost(r) : null;
+}
+
+function uniqueNewsSlug(text: string, exceptId: number | null): string {
+  const base = slugify(text) || "bai-viet";
+  const taken = conn().prepare("SELECT 1 FROM news_posts WHERE slug = ? AND id IS NOT ?");
+  for (let n = 1; ; n++) {
+    const slug = n === 1 ? base : `${base}-${n}`;
+    if (!taken.get(slug, exceptId)) return slug;
+  }
+}
+
+export function createNewsPost(p: NewsPostInput, authorId: number): number {
+  const now = Date.now();
+  const r = conn()
+    .prepare(
+      "INSERT INTO news_posts (slug, title, summary, body, category, source_name, source_url, published, author_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(uniqueNewsSlug(p.title, null), p.title, p.summary, p.body, p.category, p.sourceName, p.sourceUrl, p.published ? 1 : 0, authorId, now, now);
+  return Number(r.lastInsertRowid);
+}
+
+/** Sửa bài — giữ nguyên slug (link đã chia sẻ không gãy) */
+export function updateNewsPost(id: number, p: NewsPostInput) {
+  conn()
+    .prepare("UPDATE news_posts SET title = ?, summary = ?, body = ?, category = ?, source_name = ?, source_url = ?, published = ?, updated_at = ? WHERE id = ?")
+    .run(p.title, p.summary, p.body, p.category, p.sourceName, p.sourceUrl, p.published ? 1 : 0, Date.now(), id);
+}
+
+export function setNewsPostCover(id: number, cover: string | null) {
+  conn().prepare("UPDATE news_posts SET cover = ?, updated_at = ? WHERE id = ?").run(cover, Date.now(), id);
+}
+
+export function deleteNewsPost(id: number) {
+  conn().prepare("DELETE FROM news_posts WHERE id = ?").run(id);
 }
