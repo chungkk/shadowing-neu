@@ -305,7 +305,7 @@ export default function DeckScreen() {
   const learn = (w: DeckWord) => {
     markSaved([w.key], true);
     if (user)
-      api(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { keys: [w.key], learn: true } }).catch((e) =>
+      api(`/vocab/decks/${encodeURIComponent(slug)}`, { method: "POST", body: { keys: [w.key], learn: true, tested: mode !== "flash" } }).catch((e) =>
         showError(e, t("study.learnFailed")),
       );
   };

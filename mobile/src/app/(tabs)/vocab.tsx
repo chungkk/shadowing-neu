@@ -11,6 +11,7 @@ import { ErrorText, styles } from "@/components/ui";
 import { api, deckCover, getVocabVersion, type DeckSummary } from "@/lib/api";
 import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
+import { setDueCount } from "@/lib/due";
 import { C, STICKER } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
@@ -178,6 +179,7 @@ export default function VocabTab() {
       const r = await api<{ decks: DeckSummary[]; notebook: Notebook | null }>("/vocab/decks");
       setDecks(r.decks);
       setNotebook(r.notebook);
+      setDueCount(r.notebook?.due ?? 0); // badge tab Từ vựng
       loaded.current = { version, at: Date.now() };
     } catch (e) {
       setError((e as Error).message);

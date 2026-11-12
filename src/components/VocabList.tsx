@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Brain, CalendarCheck, Download, ExternalLink, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
@@ -235,7 +235,7 @@ function AddWordDialog({ onClose }: { onClose: () => void }) {
 // Sổ lớn (hàng nghìn từ) vẽ hết 1 lần thì trang rất nặng → hiện dần
 const PAGE = 60;
 
-export default function VocabList({ items }: { items: VocabItem[] }) {
+export default function VocabList({ items, autoReview = false }: { items: VocabItem[]; autoReview?: boolean }) {
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [review, setReview] = useState<{ title: string; items: VocabItem[] } | null>(null);
@@ -244,10 +244,21 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
   const router = useRouter();
   // Giờ hiện tại chỉ lấy trên trình duyệt (server render không biết → khỏi lệch hydrate)
   const now = useNow();
-  const due = now == null ? [] : items.filter((v) => isDue(v, now)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0));
-  const fresh = items.filter((v) => v.stage === 0);
+  const due = useMemo(
+    () => (now == null ? [] : items.filter((v) => isDue(v, now)).sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0))),
+    [items, now],
+  );
+  const fresh = useMemo(() => items.filter((v) => v.stage === 0), [items]);
   // Mỗi buổi: tối đa 30 từ đến hạn (quá hạn lâu nhất trước) + 10 từ mới (mới lưu nhất trước)
-  const today = [...due.slice(0, 30), ...fresh.slice(0, 10)];
+  const today = useMemo(() => [...due.slice(0, 30), ...fresh.slice(0, 10)], [due, fresh]);
+  // Vào từ nút "Ôn" (?review=1) → mở buổi ôn hôm nay ngay khi biết giờ (chỉ 1 lần, khỏi bấm thêm "Ôn hôm nay")
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoReview || autoStarted.current || now == null) return;
+    autoStarted.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mở buổi ôn 1 lần khi vào trang từ nút "Ôn"
+    if (today.length) setReview({ title: "Hôm nay", items: today });
+  }, [autoReview, now, today]);
   const query = q.trim().toLowerCase();
   const shown = query
     ? items.filter((v) => v.word.toLowerCase().includes(query) || v.meaning.toLowerCase().includes(query))
@@ -348,6 +359,7 @@ export default function VocabList({ items }: { items: VocabItem[] }) {
           pool={items}
           onClose={(changed) => {
             setReview(null);
+            if (autoReview) router.replace("/vocab/notebook", { scroll: false }); // bỏ ?review=1 → tải lại trang không tự mở lại
             if (changed) router.refresh(); // cập nhật mức nhớ / lịch ôn trên các thẻ
           }}
         />

@@ -3,6 +3,7 @@ import { deleteVocab, unstarSentence, updateVocabMeaning } from "@/lib/db";
 import { aiWordMeaning } from "@/lib/account";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { translationEnabled } from "@/lib/translate";
+import { AI_LIMIT_MSG, aiAllowed } from "@/lib/rate-limit";
 
 const NOT_FOUND = "Không tìm thấy từ";
 
@@ -21,6 +22,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[
 export async function POST(_req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[id]">) {
   const user = await apiUser();
   if (user instanceof Response) return user;
+  if (!aiAllowed(user)) return fail(AI_LIMIT_MSG, 429);
   if (!translationEnabled()) return fail("Server chưa cấu hình AI để dịch.", 503);
   try {
     const res = await aiWordMeaning(user, Number((await ctx.params).id));

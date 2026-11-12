@@ -16,10 +16,10 @@ export const percent = (p: Progress) => {
   return done ? Math.max(1, Math.floor((done * 100) / p.total)) : 0;
 };
 
-/** Các bài / video đang học dở của người đang đăng nhập, mới nhất trước (tiến độ đồng bộ với app) */
-export default function ContinueLearning({ userId }: { userId: number }) {
+/** Bài / video đang học dở, mới nhất trước — dùng chung với dải "Hôm nay" */
+export function unfinished(userId: number, limit = SHOWN) {
   const lessons = new Map(lessonsFor(userId).map((l) => [String(l.id), l]));
-  const items = listProgress(userId)
+  return listProgress(userId)
     .filter((p) => percent(p) < 100)
     .map((p) => {
       const [, kind, id] = p.source.split("/");
@@ -28,7 +28,12 @@ export default function ContinueLearning({ userId }: { userId: number }) {
       return { p, href: lesson ? `/${lesson.slug}` : p.source, title: lesson?.title ?? p.title, videoId: kind === "watch" ? id : lesson?.videoId };
     })
     .filter((x): x is typeof x & { videoId: string } => !!x.videoId)
-    .slice(0, SHOWN);
+    .slice(0, limit);
+}
+
+/** Các bài / video đang học dở của người đang đăng nhập, mới nhất trước (tiến độ đồng bộ với app) */
+export default function ContinueLearning({ userId }: { userId: number }) {
+  const items = unfinished(userId);
   if (!items.length) return null;
 
   return (

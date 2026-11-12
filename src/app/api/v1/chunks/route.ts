@@ -1,4 +1,5 @@
 import { apiUser, body, fail } from "@/lib/api";
+import { AI_LIMIT_MSG, aiAllowed } from "@/lib/rate-limit";
 import { splitChunks } from "@/lib/chunks";
 import { translationEnabled } from "@/lib/translate";
 
@@ -9,6 +10,7 @@ import { translationEnabled } from "@/lib/translate";
 export async function POST(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
+  if (!aiAllowed(user)) return fail(AI_LIMIT_MSG, 429);
   if (!translationEnabled()) return fail("Server chưa cấu hình AI.", 503);
 
   const b = await body<{ sentences: unknown[] }>(req);

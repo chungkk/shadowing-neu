@@ -237,7 +237,15 @@ export default function AuthForm({
           )}
 
           <p className="text-center text-xs text-muted">
-            Khách vẫn học được bài miễn phí. Đăng nhập để tạo phụ đề bằng AI (Whisper).
+            Khi tiếp tục (kể cả đăng nhập bằng Google / Apple), bạn đồng ý với{" "}
+            <Link href="/terms" target="_blank" className="font-bold text-link underline">
+              Điều khoản sử dụng
+            </Link>{" "}
+            và{" "}
+            <Link href="/privacy" target="_blank" className="font-bold text-link underline">
+              Chính sách quyền riêng tư
+            </Link>{" "}
+            của chúng tôi. Khách vẫn học được bài miễn phí.
           </p>
         </div>
 

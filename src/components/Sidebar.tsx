@@ -3,27 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogOut, MessageSquare, Mic, Settings, Trophy, Users } from "lucide-react";
+import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogOut, MessageSquare, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
 
-type Item = { href: string; label: string; icon: ComponentType<{ className?: string }> };
+type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
 type NavUser = AvatarUser & { role: string };
 
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
-  { href: "/sprechen", label: "Luyện nói", icon: Mic },
   { href: "/games", label: "Game", icon: Gamepad2 },
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
-const BAR_ITEMS = ITEMS.filter((it) => it.href !== "/sprechen"); // thanh dưới đáy không có Luyện nói (chưa ra mắt)
+const BAR_ITEMS = ITEMS; // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
 const USER_ITEMS: Item[] = [
   { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },
 ];
 const ADMIN_ITEMS: Item[] = [
-  { href: "/admin", label: "Quản lý bài học", icon: ListVideo },
+  { href: "/admin", label: "Quản lý bài học", short: "Admin", icon: ListVideo },
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
@@ -41,7 +40,18 @@ function useCurrent(items: Item[]) {
  * Thanh icon dưới đáy — chỉ trên điện thoại (máy tính dùng menu thả xuống ở avatar). Chỉ giữ các trang chính:
  * Cài đặt + Đăng xuất nằm ở avatar → /settings, Đăng nhập là nút ở thanh trên cùng, trang con admin có nút trong /admin.
  */
-export default function Sidebar({ user }: { user: NavUser | null }) {
+/** Số từ đến hạn ôn: chấm đỏ trên mục "Từ vựng" — bấm vào là vào thẳng buổi ôn */
+function DueBadge({ due, className = "" }: { due: number; className?: string }) {
+  if (!due) return null;
+  return (
+    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-red px-1 text-[11px] leading-none font-extrabold text-white tabular-nums ${className}`}>
+      {due > 99 ? "99+" : due}
+    </span>
+  );
+}
+const vocabHref = (href: string, due: number) => (href === "/vocab" && due ? "/vocab/notebook?review=1" : href);
+
+export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?: number }) {
   const items = [...BAR_ITEMS, ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
   const current = useCurrent([...ITEMS, ...items, ...USER_ITEMS]); // ITEMS, USER_ITEMS: ở /games, /settings… không sáng nhầm "Trang chủ"
 
@@ -50,14 +60,16 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
       {items.map((it) => (
         <Link
           key={it.href}
-          href={it.href}
-          title={it.label}
+          href={vocabHref(it.href, due)}
+          aria-label={it.href === "/vocab" && due ? `${it.label} — ${due} từ đến hạn ôn` : it.label}
           aria-current={it.href === current ? "page" : undefined}
-          className={`flex size-11 items-center justify-center rounded-2xl transition ${
+          className={`relative flex h-12 min-w-14 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 transition ${
             it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
           }`}
         >
-          <it.icon className="size-6" />
+          <it.icon className="size-5" />
+          <span className="text-[11px] leading-none font-bold">{it.short ?? it.label}</span>
+          {it.href === "/vocab" && <DueBadge due={due} className="absolute -top-1 right-1" />}
         </Link>
       ))}
     </SidebarFrame>
@@ -66,7 +78,8 @@ export default function Sidebar({ user }: { user: NavUser | null }) {
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t-2 border-ink bg-card px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
+    // bottom-nav: màn học (.lesson) ẩn thanh này, thay bằng thanh điều khiển của trình phát (globals.css)
+    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t-2 border-ink bg-card px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
       {children}
     </nav>
   );
@@ -80,24 +93,26 @@ export function SidebarSkeleton() {
 const HEADER_ITEMS = ITEMS.filter((it) => it.href === "/vocab" || it.href === "/games" || it.href === "/leaderboard");
 
 /** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy) */
-export function HeaderNav() {
-  return <HeaderNavFrame current={useCurrent(HEADER_ITEMS)} />;
+export function HeaderNav({ due = 0 }: { due?: number }) {
+  return <HeaderNavFrame current={useCurrent(HEADER_ITEMS)} due={due} />;
 }
 
 /** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
-export function HeaderNavFrame({ current }: { current?: string }) {
+export function HeaderNavFrame({ current, due = 0 }: { current?: string; due?: number }) {
   return (
     <nav className="flex items-center gap-1 max-md:hidden">
       {HEADER_ITEMS.map((it) => (
         <Link
           key={it.href}
-          href={it.href}
+          href={vocabHref(it.href, due)}
+          title={it.href === "/vocab" && due ? `${due} từ đến hạn ôn — bấm để ôn ngay` : undefined}
           className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
             it.href === current ? "bg-accent/15 text-accent-text" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
           }`}
         >
           <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
           {it.label}
+          {it.href === "/vocab" && <DueBadge due={due} />}
         </Link>
       ))}
     </nav>

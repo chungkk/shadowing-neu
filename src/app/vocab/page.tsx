@@ -60,16 +60,22 @@ function NotebookBanner({ notebook }: { notebook: { total: number; due: number }
             : "Đăng nhập để lưu từ và ôn tập"}
         </span>
       </span>
-      {notebook?.due ? (
-        <span className="pill bg-accent text-white">
-          <Layers className="size-3.5" /> Ôn tập
-        </span>
-      ) : (
-        <ChevronRight className="size-5 text-muted" />
-      )}
+      {!notebook?.due && <ChevronRight className="size-5 text-muted" />}
     </>
   );
   const cls = "sticker sticker-link flex items-center gap-4 p-3.5 sm:p-4 lg:p-6";
+  // Có từ đến hạn: nút "Ôn tập" riêng → vào thẳng buổi ôn (1 chạm), phần còn lại của banner mở sổ từ
+  if (notebook?.due)
+    return (
+      <div className="sticker flex items-center gap-3 p-3.5 pr-4 sm:p-4 lg:p-6">
+        <Link href="/vocab/notebook" className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl">
+          {inner}
+        </Link>
+        <Link href="/vocab/notebook?review=1" className="btn btn-primary shrink-0 px-3 py-2">
+          <Layers className="size-4" /> Ôn {notebook.due}
+        </Link>
+      </div>
+    );
   return notebook ? (
     <Link href="/vocab/notebook" className={cls}>
       {inner}

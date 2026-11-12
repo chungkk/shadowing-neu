@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { LoginLink } from "@/components/LoginDialog";
 import { usePathname } from "next/navigation";
 import { Bookmark, BookmarkMinus, Loader2, Lock, Play, Volume2, X } from "lucide-react";
@@ -135,6 +136,8 @@ export default function WordPopup({
     stopSpeaking();
     onClose();
   };
+  const panel = useRef<HTMLDivElement>(null);
+  useDialogFocus(panel, !!word);
   // Esc để đóng
   useEffect(() => {
     if (!word) return;
@@ -173,7 +176,11 @@ export default function WordPopup({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={word}>
       <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={close} aria-label="Đóng" />
-      <div className="sheet-up relative flex max-h-[88dvh] w-full max-w-[640px] flex-col rounded-t-[28px] border-t border-border bg-card md:max-h-[80vh] md:rounded-[28px] md:border">
+      <div
+        ref={panel}
+        tabIndex={-1}
+        className="sheet-up relative flex max-h-[88dvh] w-full max-w-[640px] flex-col rounded-t-[28px] border-t border-border bg-card outline-none md:max-h-[80vh] md:rounded-[28px] md:border"
+      >
         <div className="mx-auto mt-2 h-1.5 w-9 rounded-full bg-border md:hidden" />
 
         {/* Từ + loa + đóng, nghĩa ngay bên dưới */}

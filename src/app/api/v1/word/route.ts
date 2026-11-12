@@ -1,4 +1,5 @@
 import { apiUser, body, fail, str } from "@/lib/api";
+import { AI_LIMIT_MSG, aiAllowed } from "@/lib/rate-limit";
 import { translateSentences, translationEnabled } from "@/lib/translate";
 import { translateWord, wordDetail, type WordLang } from "@/lib/word";
 
@@ -12,6 +13,7 @@ import { translateWord, wordDetail, type WordLang } from "@/lib/word";
 export async function POST(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
+  if (!aiAllowed(user)) return fail(AI_LIMIT_MSG, 429);
   if (!translationEnabled()) return fail("Server chưa cấu hình AI để dịch.", 503);
 
   const b = await body<{ word: string; context: string; lang: string; detail: boolean }>(req);

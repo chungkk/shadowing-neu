@@ -5,6 +5,7 @@ import { getCached, setCached } from "./db";
 import { transcribeAudio, whisperEnabled, WHISPER_MAX_BYTES } from "./whisper";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
 import { YtdlpMissingError, ytdlpAudio, ytdlpCaptions, ytdlpVideo } from "./ytdlp";
+import { allow } from "./rate-limit";
 
 export { extractVideoId } from "./youtube-id";
 
@@ -316,7 +317,7 @@ async function fromYtdlp(videoId: string): Promise<Source> {
 export async function getYouTubeTranscript(
   videoId: string,
   lang?: string,
-  { whisper = false }: { whisper?: boolean } = {},
+  { whisper = false, quotaKey }: { whisper?: boolean; quotaKey?: string } = {},
 ): Promise<Transcript> {
   await connection(); // luôn chạy lúc request (đọc cache có hạn dùng Date.now())
   // "ytp:" — bản có thêm dấu câu cho phụ đề tự động (đổi tiền tố để không dùng lại cache cũ chưa có dấu câu)
@@ -329,6 +330,49 @@ export async function getYouTubeTranscript(
     const w = germanOnly(getCached<Transcript>(`yt:${videoId}:${WHISPER}`));
     if (w && (lang === WHISPER || !w.tracks.some((t) => isGerman(t)))) return w;
   }
+
+  // Cùng video đang được lấy (người khác vừa mở) → chờ chung một lần, không gọi YouTube/LLM/Whisper lặp lại
+  const flightKey = `${videoId}:${lang || "default"}:${whisper ? 1 : 0}`;
+  const pending = inflight.get(flightKey);
+  if (pending) return pending;
+
+  // Chỉ tính hạn mức khi thật sự phải lấy mới (mở video đã có cache thì không tốn lượt)
+  if (quotaKey && !allow(`ytfetch:${quotaKey}`, FETCH_MAX, FETCH_WINDOW)) {
+    throw new Error("Bạn mở quá nhiều video mới trong thời gian ngắn. Thử lại sau ít phút nhé.");
+  }
+  if (active.n >= MAX_CONCURRENT_FETCHES) {
+    throw new Error("Máy chủ đang bận lấy phụ đề cho video khác. Thử lại sau ít phút nhé.");
+  }
+  active.n++;
+  const p = fetchTranscript(videoId, cacheKey, lang, whisper, quotaKey).finally(() => {
+    active.n--;
+    inflight.delete(flightKey);
+  });
+  inflight.set(flightKey, p);
+  return p;
+}
+
+// Lấy phụ đề mới tốn tài nguyên (yt-dlp chạy tới vài phút, LLM thêm dấu câu, Whisper) → giới hạn
+const FETCH_MAX = 10; // video mới / người (hoặc IP với khách) / 10 phút
+const FETCH_WINDOW = 10 * 60_000;
+const WHISPER_PER_DAY = 5; // lần chạy Whisper / người / ngày
+const MAX_CONCURRENT_FETCHES = 3; // số lần lấy phụ đề chạy cùng lúc trên server
+const UPLOADS_PER_DAY = 20; // phụ đề app gửi lên / người / ngày
+const UPLOAD_MAX_SEGMENTS = 5_000; // ~ video vài giờ
+const UPLOAD_MAX_CHARS = 300_000;
+
+// Để ở globalThis → dùng chung giữa các route (mỗi route có bản module riêng)
+const gy = globalThis as unknown as { __ytInflight?: Map<string, Promise<Transcript>>; __ytActive?: { n: number } };
+const inflight = (gy.__ytInflight ??= new Map());
+const active = (gy.__ytActive ??= { n: 0 });
+
+async function fetchTranscript(
+  videoId: string,
+  cacheKey: string,
+  lang: string | undefined,
+  whisper: boolean,
+  quotaKey: string | undefined,
+): Promise<Transcript> {
 
   // IP server (VPS) bị YouTube chặn ("…kein Bot…") → dùng yt-dlp + PO token
   const { title, tracks: allTracks, audio } = await orYtdlp(
@@ -382,6 +426,9 @@ export async function getYouTubeTranscript(
         " Cấu hình Whisper (TRANSCRIBE_API_KEY hoặc TRANSCRIBE_API_URL) trong .env.local để tự tạo phụ đề.",
     );
   }
+  if (quotaKey && !allow(`whisper:${quotaKey}`, WHISPER_PER_DAY, 24 * 3600_000)) {
+    throw new Error(`Mỗi ngày chỉ tạo được ${WHISPER_PER_DAY} phụ đề bằng Whisper. Mai thử lại nhé.`);
+  }
   const { blob, filename } = await audio();
   const segments = await transcribeAudio(blob, filename);
   if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
@@ -422,7 +469,9 @@ export async function saveUploadedTranscript(
   const tracks = (Array.isArray(input.tracks) ? input.tracks : []).filter(isTrack).filter(isGerman).slice(0, 10);
   const title = typeof input.title === "string" ? input.title.trim().slice(0, 200) : "";
   const raw = Array.isArray(input.segments) ? input.segments : [];
-  if (!title || !raw.length || raw.length > 20_000) return "Dữ liệu phụ đề không hợp lệ";
+  if (!title || !raw.length || raw.length > UPLOAD_MAX_SEGMENTS) return "Dữ liệu phụ đề không hợp lệ";
+  // Phụ đề gửi lên được dùng chung cho mọi người (và thêm dấu câu bằng LLM) → giới hạn mỗi người
+  if (!allow(`ytupload:${userId}`, UPLOADS_PER_DAY, 24 * 3600_000)) return "Bạn đã gửi quá nhiều phụ đề hôm nay";
 
   const segments: Segment[] = [];
   for (const r of raw as Segment[]) {
@@ -442,6 +491,7 @@ export async function saveUploadedTranscript(
     segments.push({ start: r.start, end: r.end, text: r.text.trim(), ...(words?.length ? { words } : {}) });
   }
 
+  if (segments.reduce((n, s) => n + s.text.length, 0) > UPLOAD_MAX_CHARS) return "Phụ đề quá dài";
   let clean = normalize(segments);
   if (!clean.length) return "Phụ đề trống";
   if (track.auto && punctuationEnabled() && lacksPunctuation(clean)) clean = await addPunctuation(clean);

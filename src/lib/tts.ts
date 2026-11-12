@@ -98,6 +98,31 @@ const fileFor = (text: string) =>
 /** Đã có file sẵn (đọc lại không tốn tiền API → không tính vào giới hạn lượt) */
 export const hasSpeech = (text: string) => fs.existsSync(fileFor(text));
 
+/**
+ * Thư mục mp3 nằm chung volume với DB — đầy đĩa thì SQLite không ghi được → giới hạn dung lượng
+ * (TTS_CACHE_MB, mặc định 2000 MB). Vượt thì xoá file lâu không dùng nhất (theo thời gian truy cập/sửa) tới còn 80%.
+ */
+const CACHE_MAX_BYTES = (Number(process.env.TTS_CACHE_MB) || 2000) * 1024 * 1024;
+let writes = 0;
+function pruneCache() {
+  try {
+    const files = fs.readdirSync(TTS_DIR).flatMap((name) => {
+      if (!name.endsWith(".mp3")) return [];
+      const st = fs.statSync(path.join(TTS_DIR, name));
+      return [{ name, size: st.size, used: Math.max(st.atimeMs, st.mtimeMs) }];
+    });
+    let total = files.reduce((n, f) => n + f.size, 0);
+    if (total <= CACHE_MAX_BYTES) return;
+    for (const f of files.sort((a, b) => a.used - b.used)) {
+      if (total <= CACHE_MAX_BYTES * 0.8) break;
+      fs.rmSync(path.join(TTS_DIR, f.name), { force: true });
+      total -= f.size;
+    }
+  } catch (e) {
+    console.error("Dọn cache TTS lỗi:", e);
+  }
+}
+
 // Nhiều người bấm cùng 1 câu lúc chưa có file → chỉ gọi API 1 lần
 const pending = new Map<string, Promise<Buffer>>();
 
@@ -113,6 +138,7 @@ export async function germanSpeech(text: string): Promise<Buffer> {
       .then((audio) => {
         fs.mkdirSync(TTS_DIR, { recursive: true });
         fs.writeFileSync(file, audio);
+        if (++writes % 100 === 0) pruneCache(); // thỉnh thoảng kiểm tra dung lượng (không phải mỗi lần ghi)
         return audio;
       })
       .finally(() => pending.delete(file));

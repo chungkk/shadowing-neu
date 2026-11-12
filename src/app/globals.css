@@ -178,6 +178,11 @@ select {
 }
 
 @layer base {
+  /* Viền focus khi dùng bàn phím (Tab) — màu xanh của giao diện; class outline-none vẫn tắt được */
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
   h1,
   h2 {
     font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
@@ -372,6 +377,10 @@ select {
   body:has([data-share-open]):has(.share-wide) .share-gutter {
     padding-right: 4rem;
   }
+}
+/* Màn học trên điện thoại: thanh điều khiển của trình phát thay chỗ thanh điều hướng dưới đáy (cùng chiều cao) */
+body:has(.lesson) .bottom-nav {
+  display: none;
 }
 /* Khoảng chừa thanh home (iPhone) ở đáy popup / bảng trượt */
 .pb-safe {

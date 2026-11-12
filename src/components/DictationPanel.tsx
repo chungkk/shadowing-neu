@@ -244,10 +244,12 @@ export default function DictationPanel({
               if (e.key === "Enter") {
                 e.preventDefault();
                 submit();
-              } else if (e.key === "Tab") {
+              } else if (e.key === "Escape") {
+                e.currentTarget.blur(); // thoát ô gõ (bàn phím / trình đọc màn hình không bị kẹt)
+              } else if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
-                onReplay();
-              } else if (e.code === "Space") {
+                onReplay(); // Tab = nghe lại; Shift+Tab / Esc vẫn rời ô như bình thường
+              } else if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
                 onTogglePlay();
               } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -344,7 +346,7 @@ export default function DictationPanel({
           ? result.done
             ? onWord && "Bấm vào từ để tra nghĩa."
             : "Sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại."
-          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, bấm mắt để xem từ (${hintCost}).`}
+          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, Tab nghe lại, Esc thoát ô, bấm mắt để xem từ (${hintCost}).`}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
@@ -366,6 +368,7 @@ export default function DictationPanel({
         ) : (
           <button className="btn flex-1 py-3" onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
             <Eye className="size-4" /> Hiện tất cả
+            {onHint && <span className="text-xs font-normal opacity-80">(−{POINTS_HINT}/từ)</span>}
           </button>
         )}
       </div>

@@ -10,6 +10,7 @@ import Mascot from "@/components/Mascot";
 import ContinueLearning, { percent } from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
 import { LessonGridSkeleton } from "@/components/Skeleton";
+import TodayStrip from "@/components/TodayStrip";
 
 // Link đã lọc (/?level=B1) vẫn là trang chủ với Google
 export const metadata: Metadata = { alternates: { canonical: "/" } };
@@ -50,6 +51,16 @@ async function Lessons() {
   return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
 }
 
+/** Dải "Hôm nay" trong hero — chỉ khi đã đăng nhập (khách giữ hero như cũ) */
+async function Today() {
+  const user = await getCurrentUser();
+  return user ? (
+    <div className="col-span-2">
+      <TodayStrip userId={user.id} />
+    </div>
+  ) : null;
+}
+
 /** Đã đăng nhập: bài đang học dở (lưu trên server) · khách: video đã mở trong trình duyệt này */
 async function Continue() {
   const user = await getCurrentUser();
@@ -68,6 +79,9 @@ export default function Home() {
         <div className="col-span-2 sm:col-span-1">
           <YouTubeUrlForm />
         </div>
+        <Suspense>
+          <Today />
+        </Suspense>
       </section>
 
       <Suspense>

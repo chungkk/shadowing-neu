@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getCached, savedTranscriptKeys } from "@/lib/db";
-import { mergeIntoSentences, toSrt } from "@/lib/subtitles";
+import { toSrt } from "@/lib/subtitles";
 import type { Transcript } from "@/lib/youtube";
 import TranscriptForm from "../TranscriptForm";
 import { FormSkeleton } from "@/components/Skeleton";
@@ -15,7 +15,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
 
   // Mỗi track chỉ hiện 1 lựa chọn (bản "mặc định" và bản theo mã track là một)
   const entries: { key: string; t: Transcript }[] = [];
-  for (const key of savedTranscriptKeys(videoId).sort((a) => (a.endsWith(":default") ? -1 : 1))) {
+  for (const key of savedTranscriptKeys(videoId).sort((a, b) => Number(b.endsWith(":default")) - Number(a.endsWith(":default")))) {
     const t = getCached<Transcript>(key);
     if (t && !entries.some((e) => e.t.track.languageCode === t.track.languageCode)) entries.push({ key, t });
   }
@@ -49,7 +49,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
         videoId={videoId}
         storageKey={current.key}
         title={current.t.title}
-        srt={toSrt(mergeIntoSentences(current.t.segments))}
+        srt={toSrt(current.t.segments)} /* dòng gốc — gộp sẵn rồi lưu sẽ mất thời gian từng từ và bị gộp lần nữa */
       />
     </>
   );

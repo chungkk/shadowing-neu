@@ -188,6 +188,17 @@ export function mergeIntoSentences(segs: Segment[]): Segment[] {
   }));
 }
 
+/**
+ * SRT không chứa thời gian từng từ → sau khi admin sửa, dòng nào giữ nguyên (cùng thời gian + nội dung)
+ * thì lấy lại bản gốc (có `words`) để gộp câu cho người học vẫn như cũ. Dòng đã sửa thì dùng bản mới.
+ */
+export function keepWordTimings(edited: Segment[], ...originals: Segment[][]): Segment[] {
+  const key = (s: Segment) => `${Math.round(s.start * 1000)}|${Math.round(s.end * 1000)}|${s.text}`;
+  const byKey = new Map<string, Segment>();
+  for (const list of originals) for (const s of normalize(list)) if (!byKey.has(key(s))) byKey.set(key(s), s);
+  return edited.map((s) => byKey.get(key(s)) ?? s);
+}
+
 export function formatTime(t: number): string {
   const m = Math.floor(t / 60);
   const s = Math.floor(t % 60);

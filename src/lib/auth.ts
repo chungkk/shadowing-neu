@@ -23,6 +23,11 @@ const SCRYPT_V2: ScryptOptions = { N: 2 ** 15, r: 8, p: 3, maxmem: 64 * 1024 * 1
 // Không có mật khẩu để so vẫn băm 1 lần, để thời gian phản hồi như nhau
 const DUMMY_HASH = `v2:${"0".repeat(32)}:${"0".repeat(128)}`;
 
+// Không có AUTH_SECRET thì dùng tạm ADMIN_PASSWORD (giữ cho phiên cũ còn hiệu lực) — nhưng khi đó đổi mật khẩu admin
+// sẽ đăng xuất mọi người. Production nên đặt AUTH_SECRET riêng (lưu ý: đặt mới cũng đăng xuất mọi người 1 lần).
+if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
+  console.warn("[auth] Thiếu AUTH_SECRET — đang ký phiên đăng nhập bằng ADMIN_PASSWORD. Nên đặt AUTH_SECRET riêng.");
+}
 const secret = () => process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD || "";
 export const sign = (value: string) => createHmac("sha256", secret()).update(value).digest("base64url");
 

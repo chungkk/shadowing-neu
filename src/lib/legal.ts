@@ -16,14 +16,14 @@ export type LegalContent = {
   sections: { h: string; body: Block[] }[];
 };
 
-const UPDATED = { vi: "Cập nhật lần cuối: 3 tháng 11 năm 2026", de: "Zuletzt aktualisiert: 3. November 2026" };
+const UPDATED = { vi: "Cập nhật lần cuối: 12 tháng 11 năm 2026", de: "Zuletzt aktualisiert: 12. November 2026" };
 
 const privacy: Record<LegalLang, LegalContent> = {
   vi: {
     title: "Chính sách quyền riêng tư",
     updated: UPDATED.vi,
     intro:
-      "Deutsch Shadowing (“chúng tôi”) gồm ứng dụng di động và trang web ckk.pro, giúp bạn luyện nghe, nói và chép chính tả tiếng Đức. Chính sách này giải thích chúng tôi thu thập dữ liệu nào, dùng để làm gì và bạn có những quyền gì. Chúng tôi chỉ thu thập những gì cần để dịch vụ hoạt động — không quảng cáo, không theo dõi hành vi, không bán dữ liệu.",
+      "Deutsch Shadowing (“chúng tôi”) gồm ứng dụng di động và trang web ckk.pro, giúp bạn luyện nghe, nói và chép chính tả tiếng Đức. Chính sách này giải thích chúng tôi thu thập dữ liệu nào, dùng để làm gì và bạn có những quyền gì. Chúng tôi chỉ thu thập những gì cần để dịch vụ hoạt động và không bán dữ liệu. Ứng dụng di động không có quảng cáo; trang web ckk.pro hiển thị quảng cáo của Google AdSense (xem mục 4 và 8).",
     sections: [
       {
         h: "1. Dữ liệu chúng tôi thu thập",
@@ -71,6 +71,7 @@ const privacy: Record<LegalLang, LegalContent> = {
             "Dịch vụ giọng đọc (ví dụ Microsoft Azure, ElevenLabs, OpenAI): chỉ nhận câu trong bài học.",
             "Google và Apple: khi bạn chọn đăng nhập bằng tài khoản của họ.",
             "YouTube (Google): video được phát qua trình phát nhúng của YouTube, và YouTube có thể thu thập dữ liệu theo chính sách riêng của Google.",
+            "Google AdSense (Google Ireland Ltd.): chỉ trên trang web — hiển thị quảng cáo và có thể dùng cookie / mã định danh để đo lường và cá nhân hoá quảng cáo theo chính sách của Google (policies.google.com/technologies/ads). Ứng dụng di động không dùng AdSense.",
             "Dịch vụ email (SMTP) để gửi mã xác nhận và thông báo.",
           ],
           "Một số nhà cung cấp đặt máy chủ ngoài Liên minh châu Âu; khi đó việc chuyển dữ liệu dựa trên các biện pháp bảo vệ phù hợp như Điều khoản hợp đồng mẫu (SCC) của EU.",
@@ -108,7 +109,7 @@ const privacy: Record<LegalLang, LegalContent> = {
       {
         h: "8. Cookie",
         body: [
-          "Trang web chỉ dùng cookie cần thiết để giữ bạn đăng nhập. Không có cookie quảng cáo hay phân tích. Trình phát YouTube nhúng có thể đặt cookie riêng của Google.",
+          "Trang web dùng cookie cần thiết để giữ bạn đăng nhập. Ngoài ra, Google AdSense có thể đặt cookie hoặc dùng mã định danh tương tự để hiển thị và đo lường quảng cáo; bạn có thể tắt quảng cáo cá nhân hoá tại adssettings.google.com hoặc chặn cookie bên thứ ba trong trình duyệt. Trình phát YouTube nhúng có thể đặt cookie riêng của Google. Ứng dụng di động không dùng cookie quảng cáo.",
         ],
       },
       {
@@ -124,7 +125,7 @@ const privacy: Record<LegalLang, LegalContent> = {
     title: "Datenschutzerklärung",
     updated: UPDATED.de,
     intro:
-      "Deutsch Shadowing („wir“) besteht aus der App und der Website ckk.pro und hilft dir, Deutsch zu hören, zu sprechen und zu schreiben. Diese Erklärung beschreibt, welche Daten wir erheben, wofür wir sie nutzen und welche Rechte du hast. Wir erheben nur, was für den Dienst nötig ist — keine Werbung, kein Tracking, kein Verkauf von Daten.",
+      "Deutsch Shadowing („wir“) besteht aus der App und der Website ckk.pro und hilft dir, Deutsch zu hören, zu sprechen und zu schreiben. Diese Erklärung beschreibt, welche Daten wir erheben, wofür wir sie nutzen und welche Rechte du hast. Wir erheben nur, was für den Dienst nötig ist, und verkaufen keine Daten. Die App enthält keine Werbung; die Website ckk.pro zeigt Werbung von Google AdSense (siehe Abschnitte 4 und 8).",
     sections: [
       {
         h: "1. Welche Daten wir erheben",
@@ -172,6 +173,7 @@ const privacy: Record<LegalLang, LegalContent> = {
             "Sprachausgabe-Dienste (z. B. Microsoft Azure, ElevenLabs, OpenAI): nur Sätze aus den Lektionen.",
             "Google und Apple: wenn du dich mit deren Konto anmeldest.",
             "YouTube (Google): Videos werden über den eingebetteten YouTube-Player abgespielt; YouTube kann dabei Daten gemäß der Datenschutzerklärung von Google erheben.",
+            "Google AdSense (Google Ireland Ltd.): nur auf der Website — blendet Werbung ein und kann Cookies / ähnliche Kennungen zur Messung und Personalisierung von Werbung gemäß den Richtlinien von Google verwenden (policies.google.com/technologies/ads). Die App nutzt kein AdSense.",
             "E-Mail-Dienst (SMTP) für Bestätigungscodes und Benachrichtigungen.",
           ],
           "Einige Anbieter verarbeiten Daten außerhalb der EU; die Übermittlung erfolgt dann auf Grundlage geeigneter Garantien wie der EU-Standardvertragsklauseln (SCC).",
@@ -209,7 +211,7 @@ const privacy: Record<LegalLang, LegalContent> = {
       {
         h: "8. Cookies",
         body: [
-          "Die Website verwendet nur technisch notwendige Cookies, um dich angemeldet zu halten. Es gibt keine Werbe- oder Analyse-Cookies. Der eingebettete YouTube-Player kann eigene Cookies von Google setzen.",
+          "Die Website verwendet technisch notwendige Cookies, um dich angemeldet zu halten. Zusätzlich kann Google AdSense Cookies oder ähnliche Kennungen setzen, um Werbung anzuzeigen und zu messen; personalisierte Werbung kannst du unter adssettings.google.com deaktivieren oder Drittanbieter-Cookies im Browser blockieren. Der eingebettete YouTube-Player kann eigene Cookies von Google setzen. Die App verwendet keine Werbe-Cookies.",
         ],
       },
       {

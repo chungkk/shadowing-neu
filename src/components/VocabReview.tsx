@@ -191,6 +191,7 @@ export default function VocabReview({
   const [graded, setGraded] = useState<Graded[]>([]);
   const [practice, setPractice] = useState(false); // luyện thêm từ sai: không chấm lại vào lịch ôn
   const [changed, setChanged] = useState(false); // đã chấm vào lịch ôn → đóng thì tải lại sổ từ
+  const [unsaved, setUnsaved] = useState(0); // lượt chấm không lưu được (mất mạng / hết phiên đăng nhập)
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
   const [xp, setXp] = useState(0);
@@ -253,9 +254,15 @@ export default function VocabReview({
       setGraded((g) => [...g, entry]);
       if (!practice) {
         setChanged(true);
-        gradeWord(v.id, ok)
-          .then((res) => res && setGraded((g) => g.map((x) => (x === entry ? { ...x, stage: res.stage } : x))))
-          .catch(() => {});
+        // Lỗi mạng → thử lại 1 lần; vẫn lỗi → đếm để báo ở màn tổng kết (không âm thầm mất kết quả ôn)
+        const grade = () => gradeWord(v.id, ok, kind);
+        grade()
+          .catch(() => new Promise((r) => setTimeout(r, 2000)).then(grade))
+          .then((res) => {
+            if (res && "stage" in res) setGraded((g) => g.map((x) => (x === entry ? { ...x, stage: res.stage } : x)));
+            else if (res && "error" in res) setUnsaved((n) => n + 1);
+          })
+          .catch(() => setUnsaved((n) => n + 1));
       }
     }
     if (kind === "match") return;
@@ -829,6 +836,12 @@ export default function VocabReview({
           <p className="max-w-md text-sm text-muted">
             Đúng ngay lần đầu {firstTry}/{graded.length} từ · chuỗi dài nhất {bestCombo} câu. Từ đúng được hẹn ôn lại xa hơn, từ sai quay lại vào ngày mai.
           </p>
+          {unsaved > 0 && (
+            <p role="alert" className="max-w-md rounded-md bg-red-500/10 p-3 text-sm text-red-400">
+              {unsaved} lượt chấm chưa lưu được (mất kết nối hoặc phiên đăng nhập đã hết hạn). Đăng nhập lại rồi ôn lại để
+              lịch ôn được cập nhật.
+            </p>
+          )}
           {wrong.length > 0 && (
             <div className="flex w-full max-w-md flex-col gap-2 rounded-2xl border-2 border-border p-4 text-left">
               <p className="font-extrabold text-red-400">Từ cần chú ý</p>

@@ -396,12 +396,12 @@ export function addWord(
   const word = input.word.trim().slice(0, input.word.trim().includes(" ") ? 500 : 80);
   if (!word) return "Từ trống";
   const sourceUrl = input.sourceUrl && /^\/(lesson|watch)\/[\w-]+$/.test(input.sourceUrl) ? input.sourceUrl : null;
-  return saveVocab(user.id, {
-    word,
-    context: (input.context ?? "").slice(0, 500),
-    sourceUrl,
-    sourceTitle: (input.sourceTitle ?? "").slice(0, 200),
-  });
+  return saveVocab(
+    user.id,
+    { word, context: (input.context ?? "").slice(0, 500), sourceUrl, sourceTitle: (input.sourceTitle ?? "").slice(0, 200) },
+    // Tự gõ thêm (không bấm từ trong bài) → viết hoa/thường là có chủ ý: "essen" ≠ "Essen", không gộp
+    { exactCase: !sourceUrl },
+  );
 }
 
 /** Đánh dấu ⭐ 1 câu ở màn Shadowing (không vào sổ từ vựng) */

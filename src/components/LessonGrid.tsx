@@ -184,7 +184,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   );
 
   return (
-    <section ref={top} className="flex scroll-mt-4 flex-col gap-4 sm:gap-5">
+    <section id="lessons" ref={top} className="flex scroll-mt-4 flex-col gap-4 sm:gap-5">
       <SectionHeader title="Thư viện bài học" count={lessons.length}>
         {/* Điện thoại: 1 hàng cuộn ngang sát mép màn hình thay vì xuống nhiều dòng */}
         <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">

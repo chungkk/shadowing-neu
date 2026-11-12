@@ -10,7 +10,6 @@ const COLUMNS = [
     links: [
       { href: "/", label: "Bài học video" },
       { href: "/vocab", label: "Từ vựng" },
-      { href: "/sprechen", label: "Luyện nói" },
       { href: "/games", label: "Game" },
     ],
   },

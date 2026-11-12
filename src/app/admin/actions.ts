@@ -3,9 +3,9 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { adminSetPassword, envAdminEmail, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteFeedback, deleteLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
-import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
-import { mergeIntoSentences, parseSubtitleFile, toSrt } from "@/lib/subtitles";
+import { createLesson, deleteFeedback, deleteLesson, getLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
+import { extractVideoId, getSavedTranscript, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
+import { keepWordTimings, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount } from "@/lib/account";
 import { slugify } from "@/lib/slug";
@@ -38,7 +38,9 @@ export async function fetchSubtitles(url: string, lang?: string): Promise<FetchR
       lang: d.track.languageCode,
       auto: d.track.auto,
       tracks: d.tracks,
-      srt: toSrt(mergeIntoSentences(d.segments)), // gộp sẵn thành câu để admin đọc / sửa theo câu
+      // Dòng gốc (không gộp sẵn): người học thấy bản gộp câu của đúng các dòng này,
+      // gộp sẵn rồi lưu thì lúc phát bị gộp lần nữa → khác bản admin đã xem
+      srt: toSrt(d.segments),
     };
   } catch (e) {
     return { error: (e as Error).message };
@@ -61,7 +63,12 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   if (!videoId) return { error: "Link YouTube không hợp lệ" };
   if (!LEVELS.includes(level)) return { error: "Cấp độ không hợp lệ" };
 
-  let segments = parseSubtitleFile(srt);
+  // Dòng không sửa → giữ bản gốc có thời gian từng từ (bài đang sửa / phụ đề đã lưu của video)
+  let segments = keepWordTimings(
+    parseSubtitleFile(srt),
+    (id && getLesson(id)?.segments) || [],
+    (await getSavedTranscript(videoId))?.segments ?? [],
+  );
   // Chưa bấm "Lấy phụ đề" → tự lấy luôn khi lưu
   if (!srt.trim()) {
     try {
@@ -156,7 +163,8 @@ export async function saveTranscript(videoId: string, key: string, _: FormState,
   const original = getCached<Transcript>(key);
   if (!original || original.videoId !== videoId) return { error: "Không tìm thấy phụ đề đã lưu (có thể vừa bị xoá)." };
   const title = String(formData.get("title") ?? "").trim();
-  const segments = parseSubtitleFile(String(formData.get("srt") ?? ""));
+  // Dòng không sửa giữ nguyên bản gốc (có thời gian từng từ) — không ghi đè mất dữ liệu gốc
+  const segments = keepWordTimings(parseSubtitleFile(String(formData.get("srt") ?? "")), original.segments);
   if (!title) return { error: "Nhập tiêu đề" };
   if (!segments.length) return { error: "Phụ đề trống hoặc sai định dạng SRT" };
 

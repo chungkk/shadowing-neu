@@ -26,3 +26,14 @@ export async function clientIp(): Promise<string> {
   const hops = Number(process.env.TRUSTED_PROXY_HOPS) || 1;
   return ips[Math.max(0, ips.length - hops)] || "local";
 }
+
+/**
+ * Hạn mức chung cho mọi lời gọi AI theo yêu cầu của người dùng (tra từ, cụm từ, chia cụm, AI ghi nghĩa):
+ * 200 lần / 10 phút và 2000 lần / ngày mỗi người. Admin không bị giới hạn.
+ * Tài khoản tạo được dễ (Google) nên "cần đăng nhập" không đủ để chặn lạm dụng.
+ */
+export function aiAllowed(user: { id: number; role?: string }): boolean {
+  if (user.role === "admin") return true;
+  return allow(`ai:10m:${user.id}`, 200, 10 * 60_000) && allow(`ai:day:${user.id}`, 2000, 24 * 3600_000);
+}
+export const AI_LIMIT_MSG = "Bạn dùng AI quá nhiều trong thời gian ngắn, thử lại sau ít phút nhé.";

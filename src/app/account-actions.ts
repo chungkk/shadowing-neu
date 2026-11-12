@@ -9,6 +9,8 @@ import { deleteVocab, getUserWithHash, reviewVocab, updateVocabMeaning } from "@
 import { addDeckEntries, getDeck } from "@/lib/decks";
 import { translateSentences, translationEnabled } from "@/lib/translate";
 import { translateWord } from "@/lib/word";
+import { exerciseName } from "@/lib/review";
+import { AI_LIMIT_MSG, aiAllowed } from "@/lib/rate-limit";
 
 export type FormResult = { error?: string; ok?: string };
 
@@ -109,6 +111,7 @@ export async function setWordMeaning(id: number, meaning: string) {
 /** AI ghi nghĩa cho từ (lưu luôn) */
 export async function aiMeaning(id: number): Promise<{ meaning: string } | { error: string }> {
   const user = await requireUser("/vocab/notebook");
+  if (!aiAllowed(user)) return { error: AI_LIMIT_MSG };
   try {
     return await aiWordMeaning(user, id);
   } catch (e) {
@@ -124,6 +127,7 @@ export async function aiMeaningFor(word: string, context = ""): Promise<{ meanin
   if (!w) return { error: "Nhập từ trước đã" };
   if (w.length > (w.includes(" ") ? 500 : 80)) return { error: "Từ quá dài" };
   if (!translationEnabled()) return { error: "Server chưa cấu hình AI để dịch." };
+  if (!aiAllowed(user)) return { error: AI_LIMIT_MSG };
   try {
     const meaning =
       w.includes(" ") && !ctx
@@ -147,12 +151,14 @@ export async function addOwnWord(input: { word: string; meaning: string; context
 }
 
 /** Chấm 1 lần ôn từ (lặp lại ngắt quãng) → mức nhớ + hạn ôn mới */
-export async function gradeWord(id: number, correct: boolean) {
-  const user = await requireUser("/vocab/notebook");
+export async function gradeWord(id: number, correct: boolean, kind?: string) {
+  // Không redirect giữa buổi ôn (redirect trong action gọi từ client dễ bị nuốt) → trả lỗi để client báo "chưa lưu"
+  const user = await getCurrentUser();
+  if (!user) return { error: "Phiên đăng nhập đã hết hạn" };
   return reviewVocab(user.id, id, {
     grade: correct ? "good" : "again",
     mode: "duolingo",
-    exercise: "web",
+    exercise: exerciseName(kind), // thẻ lật "Đã nhớ" (flash) không được tính là đã chứng minh nhớ lâu
     recall: null,
     speaking: null,
     autoClear: null,
@@ -166,7 +172,7 @@ export async function removeWord(id: number) {
 }
 
 /** Thêm các mục của 1 bộ từ (không truyền keys = cả bộ) vào sổ để ôn; learn = học xong ở màn học. Chưa đăng nhập → { error: "login" } */
-export async function addDeck(slug: string, keys?: string[], learn = false): Promise<{ added: number } | { error: string }> {
+export async function addDeck(slug: string, keys?: string[], learn = false, tested = false): Promise<{ added: number } | { error: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "login" };
   const deck = getDeck(slug);
@@ -175,5 +181,5 @@ export async function addDeck(slug: string, keys?: string[], learn = false): Pro
   const list = pick ? deck.words.filter((w) => pick.has(w.key)) : deck.words;
   if (!list.length) return { error: "Chưa chọn từ nào" };
   // Không refresh(): màn học gọi sau mỗi câu trả lời đúng, giao diện tự đánh dấu "đã có trong sổ"
-  return { added: addDeckEntries(user.id, deck, list, learn) };
+  return { added: addDeckEntries(user.id, deck, list, learn, learn && tested && list.length === 1) };
 }

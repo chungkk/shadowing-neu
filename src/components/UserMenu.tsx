@@ -1,13 +1,19 @@
 import { getCurrentUser } from "@/lib/auth";
-import { getPoints } from "@/lib/db";
+import { dueCount, getPoints } from "@/lib/db";
 import PointsBadge from "./PointsBadge";
 import { LoginLink } from "./LoginDialog";
-import Sidebar, { UserDropdown } from "./Sidebar";
+import Sidebar, { HeaderNav, UserDropdown } from "./Sidebar";
 
 /** Thanh dưới đáy (điện thoại) có thông tin người dùng (đọc cookie lúc request → đặt trong <Suspense>) */
 export async function SidebarWithUser() {
   const user = await getCurrentUser();
-  return <Sidebar user={user && { id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />;
+  return <Sidebar user={user && { id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} due={user ? dueCount(user.id) : 0} />;
+}
+
+/** Lối tắt thanh trên cùng (máy tính) kèm số từ đến hạn ôn ở mục "Từ vựng" */
+export async function HeaderNavWithUser() {
+  const user = await getCurrentUser();
+  return <HeaderNav due={user ? dueCount(user.id) : 0} />;
 }
 
 /** Góc phải thanh trên cùng: nút đăng nhập, hoặc điểm chính tả + tên + vai trò */

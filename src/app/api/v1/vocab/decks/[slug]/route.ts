@@ -32,7 +32,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/dec
 }
 
 /**
- * POST { keys?: string[], learn?: boolean } → thêm các mục đó vào sổ để ôn (learn: học xong ở màn học, ghi tiến độ) → { added }.
+ * POST { keys?: string[], learn?: boolean, tested?: boolean } → thêm các mục đó vào sổ để ôn (learn: học xong ở màn học, ghi tiến độ;
+ * tested: đúng ở dạng có kiểm tra, không phải thẻ lật → từ mới lên mức 1) → { added }.
  * App bản cũ gửi { words: string[] } theo cách viết; không gửi gì = cả bộ.
  */
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/decks/[slug]">) {
@@ -40,11 +41,12 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/de
   if (user instanceof Response) return user;
   const deck = getDeck((await ctx.params).slug);
   if (!deck) return fail(NOT_FOUND, 404);
-  const b = await body<{ keys: unknown[]; words: unknown[]; learn: boolean }>(req);
+  const b = await body<{ keys: unknown[]; words: unknown[]; learn: boolean; tested: boolean }>(req);
   const strings = (list: unknown[]) => new Set(list.filter((x): x is string => typeof x === "string"));
   const keys = Array.isArray(b.keys) ? strings(b.keys) : null;
   const names = Array.isArray(b.words) ? strings(b.words) : null;
   const words = keys ? deck.words.filter((w) => keys.has(w.key)) : names ? deck.words.filter((w) => names.has(w.word)) : deck.words;
   if (!words.length) return fail("Chưa chọn từ nào");
-  return Response.json({ added: addDeckEntries(user.id, deck, words, b.learn === true) });
+  const tested = b.learn === true && b.tested === true && words.length === 1;
+  return Response.json({ added: addDeckEntries(user.id, deck, words, b.learn === true, tested) });
 }

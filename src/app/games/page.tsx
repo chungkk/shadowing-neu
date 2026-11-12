@@ -109,23 +109,8 @@ const CaroArt = () => (
   </div>
 );
 
+// Game luyện từ tiếng Đức trước; Sudoku / Caro (chơi cho vui) xuống cuối
 const GAMES: { href: string; title: string; description: string; icon: ComponentType<{ className?: string }>; art: ReactNode; players?: string }[] = [
-  {
-    href: "/games/sudoku",
-    title: "Sudoku",
-    description: "Giải đề một mình, hoặc tạo phòng đua với 1–3 người bạn: ai giải đúng trước là thắng.",
-    icon: Grid3x3,
-    art: <SudokuArt />,
-    players: "1–4 người",
-  },
-  {
-    href: "/games/caro",
-    title: "Caro",
-    description: "Đấu với máy hoặc với bạn trên bàn 15×15: ai có 5 quân liền nhau trước là thắng.",
-    icon: Users,
-    art: <CaroArt />,
-    players: "1–2 người",
-  },
   {
     href: "/games/word-rain",
     title: "Mưa từ vựng",
@@ -154,6 +139,22 @@ const GAMES: { href: string; title: string; description: string; icon: Component
     icon: Flame,
     art: <ArtikelArt />,
   },
+  {
+    href: "/games/sudoku",
+    title: "Sudoku",
+    description: "Giải đề một mình, hoặc tạo phòng đua với 1–3 người bạn: ai giải đúng trước là thắng.",
+    icon: Grid3x3,
+    art: <SudokuArt />,
+    players: "1–4 người",
+  },
+  {
+    href: "/games/caro",
+    title: "Caro",
+    description: "Đấu với máy hoặc với bạn trên bàn 15×15: ai có 5 quân liền nhau trước là thắng.",
+    icon: Users,
+    art: <CaroArt />,
+    players: "1–2 người",
+  },
 ];
 
 export default function GamesPage() {
@@ -165,7 +166,7 @@ export default function GamesPage() {
           <Link key={g.href} href={g.href} className="group sticker sticker-link flex flex-col overflow-hidden">
             <div className="theme-night relative h-40 overflow-hidden border-b-2 border-ink">
               {g.art}
-              <span className="absolute top-2.5 right-2.5 rounded-full border border-cyan-300/50 bg-black/60 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-cyan-200 uppercase">
+              <span className="absolute top-2.5 right-2.5 rounded-full border border-gold/50 bg-black/60 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-gold uppercase">
                 {g.players ?? "1 người chơi"}
               </span>
             </div>
@@ -176,9 +177,10 @@ export default function GamesPage() {
                 </span>
                 {g.title}
               </h2>
+              {/* Cả thẻ đã bấm được → chỉ 1 mũi tên nhỏ thay cho nút "Chơi ngay" */}
               <p className="flex-1 text-sm text-muted">{g.description}</p>
-              <span className="btn btn-amber py-2.5 group-hover:brightness-105">
-                Chơi ngay <ArrowRight className="size-4" />
+              <span className="inline-flex items-center gap-1 self-end text-sm font-extrabold text-amber">
+                Chơi <ArrowRight className="size-4 transition group-hover:translate-x-1 motion-reduce:transition-none" />
               </span>
             </div>
           </Link>

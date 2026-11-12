@@ -95,6 +95,23 @@ export type Kind =
   | "listen-order" // nghe, xếp các từ của cụm từ / câu
   | "flash"; // thẻ lật tự chấm (khi không đủ dữ liệu cho dạng khác)
 
+const KINDS: readonly Kind[] = [
+  "intro", "choose-meaning", "listen-choose", "choose-word", "cloze-bank", "tiles", "type",
+  "cloze-type", "listen-type", "match", "order", "listen-order", "flash",
+];
+/** Dạng bài của chế độ Crazy (app) */
+const CRAZY_EXERCISES = ["recall", "recall-self", "cued", "shadow"] as const;
+
+/**
+ * Tên dạng bài ghi vào lịch sử ôn — chỉ nhận các dạng đã biết (quyết định có tính là "đã chứng minh nhớ" hay không),
+ * lạ → "other" (không tính, xem provenIds trong db.ts)
+ */
+export function exerciseName(v: unknown): string {
+  return typeof v === "string" && ((KINDS as readonly string[]).includes(v) || (CRAZY_EXERCISES as readonly string[]).includes(v))
+    ? v
+    : "other";
+}
+
 export type Step = {
   id: number;
   /**

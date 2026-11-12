@@ -247,8 +247,11 @@ export const deckTopics = (deck: Deck, m: DeckMarks) =>
     return { ...t, wordCount: words.length, ...countOf(deck, words, m) };
   });
 
-/** Thêm các mục vào sổ để ôn; learn = học xong ở màn học (ghi tiến độ của bộ). → số mục mới thêm */
-export function addDeckEntries(userId: number, deck: Deck, words: DeckWord[], learn = false): number {
+/**
+ * Thêm các mục vào sổ để ôn; learn = học xong ở màn học (ghi tiến độ của bộ);
+ * tested = trả lời đúng ở dạng có kiểm tra → tính là lần ôn đầu (xem addDeckWords). → số mục mới thêm
+ */
+export function addDeckEntries(userId: number, deck: Deck, words: DeckWord[], learn = false, tested = false): number {
   const { notes } = vocabOverview(userId);
   const added = addDeckWords(
     userId,
@@ -262,6 +265,7 @@ export function addDeckEntries(userId: number, deck: Deck, words: DeckWord[], le
       mergeMeaning: (current) => mergedMeaning(deck, w, current),
     })),
     deck.title,
+    tested,
   );
   if (learn) markDeckLearned(userId, deck.slug, words.map((w) => w.key));
   return added;

@@ -369,7 +369,8 @@ export default function DeckStudy({
     setWords((ws) => ws.map((x) => (x.key === w.key ? { ...x, saved: true, learned: true } : x)));
     if (!loggedIn) return; // khách: tiến độ chỉ trong lượt này
     startTransition(async () => {
-      const r = await addDeck(slug, [w.key], true);
+      // Thẻ lật = tự khai "đã thuộc" → chỉ vào sổ; dạng có kiểm tra → tính là lần ôn đầu (mức 1)
+      const r = await addDeck(slug, [w.key], true, study !== "flash");
       if ("error" in r) setError(r.error);
     });
   };

@@ -6,8 +6,9 @@ import { listVocab } from "@/lib/db";
 import VocabList from "@/components/VocabList";
 import { VocabSkeleton } from "@/components/Skeleton";
 
-async function Vocab() {
-  const user = await requireUser("/vocab/notebook");
+async function Vocab({ searchParams }: { searchParams: PageProps<"/vocab/notebook">["searchParams"] }) {
+  const { review } = await searchParams;
+  const user = await requireUser(review === "1" ? "/vocab/notebook?review=1" : "/vocab/notebook");
   const items = listVocab(user.id);
   return (
     <>
@@ -17,19 +18,20 @@ async function Vocab() {
           {items.length} từ đã lưu · {items.filter((v) => v.stage >= 5).length} từ thuộc lâu
         </p>
       </div>
-      <VocabList items={items} />
+      {/* ?review=1 (nút "Ôn" ở banner / thanh điều hướng) → mở ngay buổi ôn hôm nay */}
+      <VocabList items={items} autoReview={review === "1"} />
     </>
   );
 }
 
-export default function NotebookPage() {
+export default function NotebookPage({ searchParams }: PageProps<"/vocab/notebook">) {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
       <Link href="/vocab" className="inline-flex items-center gap-1 self-start text-sm font-bold text-muted hover:text-foreground">
         <ChevronLeft className="size-4" /> Từ vựng
       </Link>
       <Suspense fallback={<VocabSkeleton />}>
-        <Vocab />
+        <Vocab searchParams={searchParams} />
       </Suspense>
     </main>
   );

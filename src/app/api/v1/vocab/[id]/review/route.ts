@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { reviewVocab } from "@/lib/db";
-import { apiUser, body, fail, str } from "@/lib/api";
+import { apiUser, body, fail } from "@/lib/api";
 import { GRADES, type Grade } from "@/lib/srs";
+import { exerciseName } from "@/lib/review";
 
 const level = (v: unknown, max: number) => (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/[i
   const res = reviewVocab(user.id, Number((await ctx.params).id), {
     grade,
     mode: b.mode === "crazy" ? "crazy" : "duolingo",
-    exercise: str(b.exercise).slice(0, 32),
+    exercise: exerciseName(b.exercise),
     recall: level(b.recall, 3),
     speaking: level(b.speaking, 2),
     autoClear,

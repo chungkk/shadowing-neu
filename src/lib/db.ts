@@ -900,14 +900,14 @@ function examplesOf(userId: number, vocabId?: number): Map<number, VocabExample[
 
 /**
  * Các mục đã "chứng minh" nhớ lâu: từng nhớ lại đúng sau khoảng cách ≥ MASTERY_GAP_DAYS ngày,
- * ở dạng bài không tự khai báo (thẻ lật "Tôi biết", tự chấm "recall-self" không tính) và phải tự nhớ ra
+ * ở dạng bài không tự khai báo (thẻ lật "Tôi biết", tự chấm "recall-self", dạng lạ "other" không tính) và phải tự nhớ ra
  * (Luyện to "shadow" nghe mẫu rồi nói theo, nhớ lại có gợi ý "cued" không tính)
  */
 function provenIds(userId: number): Set<number> {
   const rows = conn()
     .prepare(
       `SELECT DISTINCT vocab_id FROM review_events
-       WHERE user_id = ? AND grade IN ('good', 'easy') AND exercise NOT IN ('flash', 'shadow', 'recall-self', 'cued') AND gap_days >= ?`,
+       WHERE user_id = ? AND grade IN ('good', 'easy') AND exercise NOT IN ('flash', 'shadow', 'recall-self', 'cued', 'other') AND gap_days >= ?`,
     )
     .all(userId, MASTERY_GAP_DAYS) as { vocab_id: number }[];
   return new Set(rows.map((r) => r.vocab_id));
@@ -938,16 +938,20 @@ export function saveVocab(
   const context = v.context.trim() || !/\s/.test(v.word.trim()) ? v.context : v.word;
   const variants = opts.exactCase ? [v.word] : caseVariants(v.word);
   const found = conn()
-    .prepare(`SELECT id, word, context FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
-    .all(userId, ...variants) as { id: number; word: string; context: string }[];
-  const old = found.find((f) => f.word === v.word) ?? (found.length === 1 ? found[0] : undefined);
+    .prepare(`SELECT id, word, context, gender FROM vocab WHERE user_id = ? AND word IN (${variants.map(() => "?").join(", ")})`)
+    .all(userId, ...variants) as { id: number; word: string; context: string; gender: string }[];
+  const lowerFirst = v.word[0] !== v.word[0].toUpperCase();
+  // Mục cũ đã xác định là danh từ (der/die/das) mà lần này gặp dạng viết thường → từ khác ("essen" ≠ "Essen"), không gộp
+  const isNoun = (f: { gender: string }) => f.gender === "der" || f.gender === "die" || f.gender === "das";
+  const old =
+    found.find((f) => f.word === v.word) ??
+    (found.length === 1 && !(lowerFirst && isNoun(found[0])) ? found[0] : undefined);
   if (!old) {
     const r = conn()
       .prepare(`INSERT INTO vocab (user_id, word, context, source_url, source_title) VALUES (?, ?, ?, ?, ?) RETURNING *`)
       .get(userId, v.word, context, v.sourceUrl, v.sourceTitle) as VocabRow;
     return toVocab(r, false);
   }
-  const lowerFirst = v.word[0] !== v.word[0].toUpperCase();
   const word = old.word !== v.word && lowerFirst ? v.word : old.word;
   const r = conn()
     .prepare(
@@ -1115,6 +1119,12 @@ export function vocabOverview(userId: number, now = Date.now()): { notes: Map<st
   };
 }
 
+/** Số từ đến hạn ôn (badge "Từ vựng" trên thanh điều hướng — chạy mỗi trang nên chỉ đọc 2 cột) */
+export function dueCount(userId: number, now = Date.now()): number {
+  const rows = conn().prepare("SELECT srs_stage, due_at FROM vocab WHERE user_id = ?").all(userId) as { srs_stage: number; due_at: number | null }[];
+  return rows.filter((r) => isDue({ stage: r.srs_stage, dueAt: r.due_at }, now)).length;
+}
+
 /** 1 mục của bộ từ cần đưa vào sổ — cách gộp nghĩa / phân biệt từ trùng do lib/decks quyết định */
 export type DeckNoteInput = {
   word: string;
@@ -1126,8 +1136,12 @@ export type DeckNoteInput = {
   mergeMeaning: (current: string) => string;
 };
 
-/** Thêm các từ của 1 bộ từ vào sổ (1 giao dịch). Từ đã có thì giữ mục cũ (saveVocab). → số mục mới thêm */
-export function addDeckWords(userId: number, words: DeckNoteInput[], sourceTitle: string): number {
+/**
+ * Thêm các từ của 1 bộ từ vào sổ (1 giao dịch). Từ đã có thì giữ mục cũ (saveVocab). → số mục mới thêm
+ * `tested`: vừa trả lời đúng ở dạng có kiểm tra (gõ / trắc nghiệm / nghe viết, không phải thẻ lật tự khai) →
+ * tính là lần ôn đầu: từ mới lên mức 1, hẹn ôn ngày mai (khỏi dạy lại như từ chưa gặp ở phiên ôn).
+ */
+export function addDeckWords(userId: number, words: DeckNoteInput[], sourceTitle: string, tested = false): number {
   const db = conn();
   db.exec("BEGIN");
   try {
@@ -1138,6 +1152,8 @@ export function addDeckWords(userId: number, words: DeckNoteInput[], sourceTitle
       const meaning = w.mergeMeaning(item.meaning);
       if (meaning && meaning !== item.meaning) updateVocabMeaning(userId, item.id, meaning.slice(0, 500));
       if (!item.gender && w.gender) setVocabNoun(userId, item.id, { gender: w.gender, singular: w.gender === "-" ? "" : w.word, plural: w.plural });
+      if (tested && item.stage === 0)
+        reviewVocab(userId, item.id, { grade: "good", mode: "duolingo", exercise: "deck", recall: null, speaking: null, autoClear: null });
     }
     db.exec("COMMIT");
     return added;

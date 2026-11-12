@@ -23,7 +23,7 @@ import { isPhrase, isSentence, spokenWord } from "@shared/review";
 import { isDue } from "@shared/srs";
 import { Button, Card, ErrorText, Input, styles } from "@/components/ui";
 import { WordSheet } from "@/components/WordSheet";
-import { api, getVocabVersion, type VocabItem } from "@/lib/api";
+import { api, ApiError, getVocabVersion, type VocabItem } from "@/lib/api";
 import { notice, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { C, themed } from "@/lib/theme";
@@ -754,21 +754,24 @@ export default function NotebookScreen() {
     setBulk({ done: 0, total: list.length });
     let next = 0;
     let failed = 0;
+    let limited: string | null = null; // server báo dùng AI quá nhiều (429) → dừng hết, không gọi tiếp
     const worker = async () => {
-      while (next < list.length) {
+      while (next < list.length && !limited) {
         const v = list[next++];
         try {
           const { meaning } = await api<{ meaning: string }>(`/vocab/${v.id}`, { method: "POST" });
           setItems((l) => l?.map((x) => (x.id === v.id ? { ...x, meaning } : x)) ?? null);
-        } catch {
-          failed++;
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 429) limited = e.message;
+          else failed++;
         }
         setBulk((b) => b && { ...b, done: b.done + 1 });
       }
     };
     await Promise.all(Array.from({ length: AI_WORKERS }, worker));
     setBulk(null);
-    if (failed) notice(t("vocab.aiFillFailed", { n: failed }));
+    if (limited) notice(limited);
+    else if (failed) notice(t("vocab.aiFillFailed", { n: failed }));
   };
 
   /** Xuất các mục đang hiện (theo lọc / tìm kiếm) dạng bảng TSV: từ · nghĩa · câu ví dụ — dán vào Anki / bảng tính */

@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { slugify } from "@/lib/slug";
+import { mergeIntoSentences, parseSubtitleFile } from "@/lib/subtitles";
 import { fetchSubtitles, saveLesson, type FetchResult } from "./actions";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -26,6 +27,16 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
   const [title, setTitle] = useState(initial?.title ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [srt, setSrt] = useState(initial?.srt ?? "");
+  // Giữ trong state (không dùng defaultValue): React 19 reset form sau khi gửi → lưu lỗi sẽ mất các ô này
+  const [level, setLevel] = useState(initial?.level ?? "A1");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [published, setPublished] = useState(initial?.published ?? true);
+  const [dictation, setDictation] = useState(initial?.dictation ?? false);
+  // Số câu người học sẽ thấy (người học xem bản đã gộp câu của các dòng này)
+  const counts = useMemo(() => {
+    const lines = parseSubtitleFile(srt);
+    return lines.length ? { lines: lines.length, sentences: mergeIntoSentences(lines).length } : null;
+  }, [srt]);
   const [info, setInfo] = useState<Extract<FetchResult, { srt: string }> | null>(null);
   const [fetchError, setFetchError] = useState("");
 
@@ -94,7 +105,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         </label>
         <label className="field text-sm">
           Cấp độ
-          <select name="level" defaultValue={initial?.level ?? "A1"}>
+          <select name="level" value={level} onChange={(e) => setLevel(e.target.value)}>
             {LEVELS.map((l) => (
               <option key={l}>{l}</option>
             ))}
@@ -125,16 +136,17 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
             name="description"
             rows={3}
             className="input text-foreground"
-            defaultValue={initial?.description}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Từ vựng chính, ngữ pháp, mẹo luyện…"
           />
         </label>
         <label className="check text-sm">
-          <input type="checkbox" name="published" defaultChecked={initial?.published ?? true} />
+          <input type="checkbox" name="published" checked={published} onChange={(e) => setPublished(e.target.checked)} />
           Đăng công khai (bỏ chọn = bản nháp)
         </label>
         <label className="check text-sm">
-          <input type="checkbox" name="dictation" defaultChecked={initial?.dictation ?? false} />
+          <input type="checkbox" name="dictation" checked={dictation} onChange={(e) => setDictation(e.target.checked)} />
           Cho luyện Dictation (bỏ chọn = chỉ Shadowing)
         </label>
       </div>
@@ -149,6 +161,11 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
           onChange={(e) => setSrt(e.target.value)}
           spellCheck={false}
         />
+        {counts && (
+          <span className="text-xs text-muted">
+            {counts.lines} dòng → người học thấy {counts.sentences} câu (tự gộp theo dấu câu và chỗ ngừng)
+          </span>
+        )}
       </label>
 
       {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}

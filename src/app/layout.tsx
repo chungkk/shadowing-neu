@@ -1,14 +1,15 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Geist_Mono, Nunito, Paytone_One } from "next/font/google";
-import { HeaderNav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
+import { HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
 import ShareBar from "@/components/ShareBar";
 import SiteFooter from "@/components/SiteFooter";
 import ThemeToggle from "@/components/ThemeToggle";
-import UserMenu, { SidebarWithUser } from "@/components/UserMenu";
+import UserMenu, { HeaderNavWithUser, SidebarWithUser } from "@/components/UserMenu";
 import { SITE_URL } from "@/lib/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { Awning } from "@/components/CandyPieces";
@@ -32,11 +33,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const ADSENSE_CLIENT = "ca-pub-5590145594898560";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: "Deutsch Shadowing", template: "%s · Deutsch Shadowing" },
   description: "Luyện shadowing tiếng Đức với video YouTube",
   openGraph: { siteName: "Deutsch Shadowing", locale: "vi_VN" },
+  other: { "google-adsense-account": ADSENSE_CLIENT },
 };
 
 // viewport-fit=cover: thanh dưới đáy (điện thoại) kéo xuống sát mép, chừa chỗ thanh home bằng env(safe-area-inset-*)
@@ -55,12 +59,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Tải sẵn linh vật của màn tải trang: mạng chậm mới hiện màn này, lúc đó không kịp tải hình nữa */}
         <link rel="prefetch" href="/mascot-loading.svg" as="image" />
-        {/* Google AdSense */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5590145594898560"
-          crossOrigin="anonymous"
-        />
       </head>
       <body className="flex min-h-full">
         <Suspense fallback={<SidebarSkeleton />}>
@@ -77,7 +75,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </span>
             </Link>
             <Suspense fallback={<HeaderNavFrame />}>
-              <HeaderNav />
+              <HeaderNavWithUser />
             </Suspense>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
@@ -94,6 +92,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense>
           <ShareBar />
         </Suspense>
+        {/* Google AdSense: tải lúc trình duyệt rảnh (không chặn trang, không chèn vào <head> trước khi hydrate → hết lệch HTML);
+            xác minh site dùng thẻ meta google-adsense-account trong metadata */}
+        <Script
+          strategy="lazyOnload"
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+          crossOrigin="anonymous"
+        />
         {/* Popup đăng nhập / đăng ký: bấm nút đăng nhập ở trang nào cũng hiện đè lên trang đó */}
         <Suspense>
           <LoginDialogSlot />
