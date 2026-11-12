@@ -13,6 +13,7 @@ import ContinueLearning, { percent } from "@/components/ContinueLearning";
 import { RecentVideos } from "@/components/RecentVideos";
 import { LessonGridSkeleton } from "@/components/Skeleton";
 import TodayStrip from "@/components/TodayStrip";
+import { lessonPath } from "@/lib/slug";
 
 // Link đã lọc (/tieng-duc?level=B1) vẫn là trang học tiếng Đức với Google
 export const metadata: Metadata = { alternates: { canonical: "/tieng-duc" } };
@@ -80,7 +81,7 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
       <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
         <p className="text-muted">Nghe từng câu, nói theo và ghi âm để so với người bản xứ.</p>
         {first && (
-          <Link href={`/${first.slug}`} className="btn btn-primary self-start px-5 py-3 text-base max-sm:w-full">
+          <Link href={lessonPath(first.slug)} className="btn btn-primary self-start px-5 py-3 text-base max-sm:w-full">
             Thử bài {first.level} đầu tiên <ChevronRight className="size-5" />
           </Link>
         )}

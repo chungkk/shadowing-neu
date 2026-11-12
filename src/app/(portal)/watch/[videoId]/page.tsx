@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 import { clientIp } from "@/lib/rate-limit";
+import { lessonPath } from "@/lib/slug";
 
 async function Watch({ params }: PageProps<"/watch/[videoId]">) {
   const { videoId: rawId } = await params;
@@ -16,7 +17,7 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
   const opts = { whisper: !!user, quotaKey: user ? `u:${user.id}` : `ip:${await clientIp()}` };
   // Video của bài đang khoá → sang trang bài (màn mở khoá), không cho học lách qua link YouTube
   const locked = lockedLessonOfVideo(user, extractVideoId(rawId) ?? "");
-  if (locked) redirect(`/${locked.slug}`);
+  if (locked) redirect(lessonPath(locked.slug));
 
   let data: Awaited<ReturnType<typeof getYouTubeTranscript>>;
   try {

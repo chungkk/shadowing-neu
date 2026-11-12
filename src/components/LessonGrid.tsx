@@ -9,6 +9,7 @@ import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
 import UnlockDialog from "./UnlockDialog";
+import { lessonPath } from "@/lib/slug";
 
 type Item = {
   id: number;
@@ -51,7 +52,7 @@ function formatDuration(total: number) {
 function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: Item) => void; className?: string }) {
   return (
     <Link
-      href={`/${l.slug}`}
+      href={lessonPath(l.slug)}
       onClick={(e) => {
         if (l.access !== "locked" || !onLocked || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();

@@ -7,9 +7,10 @@ import { getLesson, getLessonBySlug } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { accessOf, canViewLesson, lockInfo, lockSettings } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
+import { lessonPath } from "@/lib/slug";
 
-/** Trang bài học: ckk.biz/<slug> (link cũ /lesson/<id> chuyển hướng 308 về đây) */
-async function LessonView({ params }: PageProps<"/[slug]">) {
+/** Trang bài học: ckk.biz/tieng-duc/<slug> (link cũ ckk.biz/<slug> và /lesson/<id> chuyển hướng 308 về đây) */
+async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
   const { slug } = await params;
   const lesson = getLessonBySlug(slug);
   // Bài nháp chỉ admin và người đã trả để mở xem được
@@ -47,7 +48,7 @@ async function LessonView({ params }: PageProps<"/[slug]">) {
   );
 }
 
-export async function generateMetadata({ params }: PageProps<"/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/tieng-duc/[slug]">): Promise<Metadata> {
   const lesson = getLessonBySlug((await params).slug);
   // Trang stream nên notFound() vẫn trả HTTP 200 → báo noindex để Google không lưu trang 404 này
   if (!lesson) return { title: "Không tìm thấy bài học", robots: { index: false, follow: false } };
@@ -59,14 +60,14 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">): Promis
   return {
     title,
     description,
-    alternates: { canonical: `/${lesson.slug}` },
-    openGraph: { type: "article", title, description, url: `/${lesson.slug}`, images: [{ url: image, width: 480, height: 360 }] },
+    alternates: { canonical: lessonPath(lesson.slug) },
+    openGraph: { type: "article", title, description, url: lessonPath(lesson.slug), images: [{ url: image, width: 480, height: 360 }] },
     twitter: { card: "summary_large_image", title, description, images: [image] },
     robots: lesson.published ? undefined : { index: false, follow: false },
   };
 }
 
-export default function Page(props: PageProps<"/[slug]">) {
+export default function Page(props: PageProps<"/tieng-duc/[slug]">) {
   return (
     <Suspense fallback={<PlayerSkeleton />}>
       <LessonView {...props} />

@@ -3,6 +3,7 @@ import { Play } from "lucide-react";
 import { lessonsFor } from "@/lib/access";
 import { listProgress, type Progress } from "@/lib/db";
 import { SectionHeader } from "./LessonGrid";
+import { lessonPath } from "@/lib/slug";
 
 const SHOWN = 4;
 
@@ -25,7 +26,7 @@ export function unfinished(userId: number, limit = SHOWN) {
       const [, kind, id] = p.source.split("/");
       const lesson = kind === "lesson" ? lessons.get(id) : undefined;
       // Bài đã bị xoá / chuyển về nháp → bỏ qua
-      return { p, href: lesson ? `/${lesson.slug}` : p.source, title: lesson?.title ?? p.title, videoId: kind === "watch" ? id : lesson?.videoId };
+      return { p, href: lesson ? lessonPath(lesson.slug) : p.source, title: lesson?.title ?? p.title, videoId: kind === "watch" ? id : lesson?.videoId };
     })
     .filter((x): x is typeof x & { videoId: string } => !!x.videoId)
     .slice(0, limit);

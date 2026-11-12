@@ -4,6 +4,7 @@ import { listLessons, listNewsPosts } from "@/lib/db";
 import { chapterIds } from "@/lib/fuehrerschein";
 import { setIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
+import { lessonPath } from "@/lib/slug";
 import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/biz/lib/legal";
 import { PRODUCT_PAGES } from "@/biz/lib/productPages";
 import { SERVICES, productPath } from "@/biz/lib/services";
@@ -51,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...bizPages(),
     ...["/deutsch-shadowing/privacy", "/deutsch-shadowing/privacy/de", "/deutsch-shadowing/terms", "/deutsch-shadowing/terms/de"].map((p) => ({ url: SITE_URL + p, changeFrequency: "yearly" as const, priority: 0.2 })),
     ...listLessons().map((l) => ({
-      url: `${SITE_URL}/${l.slug}`,
+      url: SITE_URL + lessonPath(l.slug),
       lastModified: new Date(l.createdAt.replace(" ", "T") + "Z"),
       changeFrequency: "monthly" as const,
       priority: 0.8,

@@ -114,7 +114,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         <label className="field text-sm sm:col-span-2">
           Đường dẫn (SEO)
           <div className="input flex items-center p-0 focus-within:border-accent">
-            <span className="shrink-0 pl-4 text-muted">ckk.biz/</span>
+            <span className="shrink-0 pl-4 text-muted">ckk.biz/tieng-duc/</span>
             <input
               name="slug"
               className="min-w-0 flex-1 bg-transparent py-3 pr-4 text-foreground outline-none placeholder:text-muted/60"

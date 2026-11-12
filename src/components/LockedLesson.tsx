@@ -9,6 +9,7 @@ import { emitPoints } from "@/lib/points";
 import LevelBadge from "./LevelBadge";
 import { LoginLink } from "./LoginDialog";
 import { Gem } from "./PointsBadge";
+import { lessonPath } from "@/lib/slug";
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 
@@ -126,7 +127,7 @@ export default function LockedLesson({
           <h2 className="text-sm font-bold text-muted">Học thử miễn phí</h2>
           <div className="flex flex-wrap gap-2">
             {freeLessons.map((l) => (
-              <Link key={l.slug} href={`/${l.slug}`} className="btn">
+              <Link key={l.slug} href={lessonPath(l.slug)} className="btn">
                 {l.title}
               </Link>
             ))}

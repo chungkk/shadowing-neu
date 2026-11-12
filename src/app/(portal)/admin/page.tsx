@@ -9,6 +9,7 @@ import { removeLesson, setLessonLock, toggleFreeLesson, toggleLessonPublished } 
 import DeleteButton from "./DeleteButton";
 import LevelBadge from "@/components/LevelBadge";
 import { ListSkeleton } from "@/components/Skeleton";
+import { lessonPath } from "@/lib/slug";
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 
@@ -113,7 +114,7 @@ async function Dashboard() {
                   {free.has(l.id) ? "● Miễn phí" : "○ Miễn phí"}
                 </button>
               </form>
-              <Link href={`/${l.slug}`} className="btn">
+              <Link href={lessonPath(l.slug)} className="btn">
                 Xem
               </Link>
               <Link href={`/admin/${l.id}`} className="btn">
