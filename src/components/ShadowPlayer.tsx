@@ -298,6 +298,9 @@ export default function ShadowPlayer({
 
   const handleRef = useRef<PlayerHandle | null>(null);
   const stopAtRef = useRef<number | null>(null);
+  // Sau khi seek, YouTube còn trả về vị trí cũ (vd. cuối câu vừa phát) một lúc trong khi tải → chỉ kiểm tra điểm dừng
+  // khi đã thấy thời gian nằm trong câu mới (hoặc quá hạn chờ), tránh dừng ngay khiến phải bấm phát lần nữa
+  const armAtRef = useRef<{ start: number; since: number } | null>(null);
   const repeatCountRef = useRef(0);
   const gapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -348,6 +351,7 @@ export default function ShadowPlayer({
       h.setRate(settings.rate);
       h.seek(s.start);
       h.play();
+      armAtRef.current = { start: s.start, since: Date.now() };
       // Chính tả luôn dừng sau mỗi câu
       stopAtRef.current = settings.mode === "free" && settings.practice !== "dictation" ? null : s.end;
       setPlaying(true);
@@ -417,6 +421,13 @@ export default function ShadowPlayer({
       if (!h) return;
       const t = h.getTime();
       const { settings, segments, idx } = live.current;
+      const arm = armAtRef.current;
+      if (arm) {
+        // Chưa thấy thời gian về đầu câu → chưa tin getTime (quá 3 giây thì thôi chờ)
+        if (t >= arm.start - 0.5 && (stopAtRef.current === null || t < stopAtRef.current - 0.03)) armAtRef.current = null;
+        else if (Date.now() - arm.since > 3000) armAtRef.current = null;
+        else return;
+      }
       if (stopAtRef.current !== null) {
         if (t >= stopAtRef.current - 0.03) {
           h.pause();
