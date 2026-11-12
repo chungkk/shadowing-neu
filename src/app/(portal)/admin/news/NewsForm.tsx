@@ -4,7 +4,9 @@ import { useActionState } from "react";
 import type { NewsPost } from "@/lib/db";
 import { saveNewsPost } from "./actions";
 
-export default function NewsForm({ post, cover }: { post?: NewsPost; cover?: string | null }) {
+type Category = { key: string; label: string };
+
+export default function NewsForm({ post, cover, categories }: { post?: NewsPost; cover?: string | null; categories: Category[] }) {
   const [state, action, saving] = useActionState(saveNewsPost, {});
   return (
     <form action={action} className="card flex flex-col gap-4">
@@ -20,7 +22,13 @@ export default function NewsForm({ post, cover }: { post?: NewsPost; cover?: str
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="field text-sm">
           Chuyên mục
-          <input name="category" maxLength={40} defaultValue={post?.category} placeholder="Đời sống, Thủ tục, Lái xe…" className="input text-foreground" />
+          <select name="category" defaultValue={post?.category ?? categories[0]?.key} className="input text-foreground">
+            {categories.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="field text-sm">
           Ảnh bìa (JPG / PNG / WebP, tối đa 4,5 MB)

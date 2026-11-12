@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getNewsPost } from "@/lib/db";
 import { coverUrl } from "@/lib/news";
 import NewsForm from "../NewsForm";
+import { GUIDE_CATEGORIES } from "@/lib/guides";
 import { FormSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Sửa bài viết", robots: { index: false } };
@@ -13,7 +14,7 @@ async function Edit({ params }: PageProps<"/admin/news/[id]">) {
   await requireAdmin();
   const post = getNewsPost({ id: Number((await params).id) });
   if (!post) notFound();
-  return <NewsForm post={post} cover={coverUrl(post.cover)} />;
+  return <NewsForm post={post} cover={coverUrl(post.cover)} categories={GUIDE_CATEGORIES.map(({ key, label }) => ({ key, label }))} />;
 }
 
 export default function Page(props: PageProps<"/admin/news/[id]">) {

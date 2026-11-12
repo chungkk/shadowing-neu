@@ -5,6 +5,7 @@ import { refresh } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createNewsPost, deleteNewsPost, getNewsPost, setNewsHidden, setNewsPostCover, updateNewsPost, type NewsPostInput } from "@/lib/db";
 import { COVER_MAX_BYTES, refreshNews, removeCover, saveCover } from "@/lib/news";
+import { guidePath } from "@/lib/guides";
 
 export type NewsFormState = { error?: string };
 
@@ -46,7 +47,7 @@ export async function saveNewsPost(_prev: NewsFormState, f: FormData): Promise<N
     removeCover(existing.cover);
     setNewsPostCover(id, null);
   }
-  redirect(`/tin-tuc/${getNewsPost({ id })!.slug}`);
+  redirect(guidePath(getNewsPost({ id })!.slug));
 }
 
 export async function removeNewsPost(id: number) {

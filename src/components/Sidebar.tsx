@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Newspaper, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, BookOpen, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Newspaper, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(portal)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -11,10 +11,11 @@ import Avatar, { type AvatarUser } from "./Avatar";
 type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
 type NavUser = AvatarUser & { role: string };
 
-// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "/" = Tin tức (chỉ đúng trang chủ);
+// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "/" = Trang chủ (chỉ đúng trang chủ, cả /tin-tuc);
 // "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học ckk.biz/<slug>, /watch, /vocab…) — xem useCurrent
 const ITEMS: Item[] = [
-  { href: "/", label: "Tin tức", icon: Newspaper },
+  { href: "/", label: "Trang chủ", icon: House },
+  { href: "/huong-dan", label: "Hướng dẫn", icon: BookOpen },
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
@@ -30,8 +31,9 @@ const DEUTSCH: Item[] = [
 ];
 // Thanh dưới đáy: 4 phần lớn; đã đăng nhập thì thêm Ôn tập (có chấm đỏ số từ đến hạn).
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
-const GUEST_BAR = ITEMS;
-const USER_BAR: Item[] = [ITEMS[0], ITEMS[1], REVIEW, ITEMS[2], ITEMS[3], ITEMS[4]];
+// Điện thoại: "Hướng dẫn" vào từ trang chủ (thanh dưới đáy tối đa 6 ô)
+const GUEST_BAR: Item[] = [ITEMS[0], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[5]];
+const USER_BAR: Item[] = [ITEMS[0], ITEMS[2], REVIEW, ITEMS[3], ITEMS[4], ITEMS[5]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
@@ -41,21 +43,22 @@ const ADMIN_ITEMS: Item[] = [
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
-  { href: "/admin/news", label: "Tin tức", icon: Newspaper },
+  { href: "/admin/news", label: "Hướng dẫn & tin", icon: Newspaper },
 ];
 
 // Trang không thuộc phần Tiếng Đức (các trang khác không khớp mục nào thì coi là bài học → sáng "Tiếng Đức")
-const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "tin-tuc", "deutsch-shadowing"]);
+const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "tin-tuc", "huong-dan", "deutsch-shadowing"]);
 
 /** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */
 function useCurrent(items: Item[]) {
   const pathname = usePathname();
-  // "/" (Tin tức) chỉ khớp đúng trang chủ. Trang không thuộc mục nào (bài học ckk.biz/<slug>, /watch/…) → "Tiếng Đức"
+  // "/" (Trang chủ) chỉ khớp đúng trang chủ. Trang không thuộc mục nào (/watch/…) → "Tiếng Đức"
   const matches = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
   const best = items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   if (best) return best;
   const first = pathname.split("/")[1] ?? "";
-  if (first === "tin-tuc" && items.some((it) => it.href === "/")) return "/"; // bài viết của trang tin
+  if (!first) return undefined; // trang chủ khi danh sách không có mục "/" (thanh trên cùng máy tính)
+  if (first === "tin-tuc" && items.some((it) => it.href === "/")) return "/"; // trang tin thuộc trang chủ
   return items.some((it) => it.href === "/tieng-duc") && !NOT_DEUTSCH.has(first) ? "/tieng-duc" : undefined;
 }
 
@@ -113,7 +116,8 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-const HEADER_ITEMS = ITEMS;
+// Máy tính: logo đã là nút về trang chủ → thanh trên cùng bắt đầu từ "Hướng dẫn"
+const HEADER_ITEMS = ITEMS.slice(1);
 
 /** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy). Ôn tập là nút riêng ở góc phải (ReviewPill) */
 export function HeaderNav() {

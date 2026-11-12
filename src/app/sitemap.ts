@@ -5,6 +5,7 @@ import { chapterIds } from "@/lib/fuehrerschein";
 import { setIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { lessonPath } from "@/lib/slug";
+import { guidePath } from "@/lib/guides";
 import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/biz/lib/legal";
 import { PRODUCT_PAGES } from "@/biz/lib/productPages";
 import { SERVICES, productPath } from "@/biz/lib/services";
@@ -35,11 +36,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/tieng-duc`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${SITE_URL}/huong-dan`, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${SITE_URL}/tin-tuc`, changeFrequency: "hourly", priority: 0.5 },
     ...listNewsPosts({ limit: 1000 }).map((p) => ({
-      url: `${SITE_URL}/tin-tuc/${p.slug}`,
+      url: SITE_URL + guidePath(p.slug),
       lastModified: new Date(p.updatedAt),
       changeFrequency: "monthly" as const,
-      priority: 0.7,
+      priority: 0.8,
     })),
     { url: `${SITE_URL}/games/word-rain`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/games/spelling-bee`, changeFrequency: "monthly", priority: 0.6 },

@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // API câu hỏi lái xe (app iOS/Android) đọc catalog JSON lúc chạy
   outputFileTracingIncludes: {
     "/api/fuehrerschein/**": ["./content/laixe/catalog/*.json", "./content/laixe/catalog_all/*.json"],
+    // Bài hướng dẫn mẫu (nạp thành bản nháp lần đầu admin mở /admin/news)
+    "/admin/news": ["./content/guides/*.md"],
   },
   // Ảnh trên các trang giới thiệu của ckk.biz
   images: {

@@ -4,18 +4,20 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { listNewsItems, listNewsPosts } from "@/lib/db";
 import { lastNewsFetch, sourceOf } from "@/lib/news";
+import { categoryLabel, guidePath, seedGuidesOnce } from "@/lib/guides";
 import { translationEnabled } from "@/lib/translate";
 import DeleteButton from "../DeleteButton";
 import FetchNowButton from "./FetchNowButton";
 import { removeNewsPost, toggleNewsItem } from "./actions";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Quản lý tin tức", robots: { index: false } };
+export const metadata: Metadata = { title: "Quản lý hướng dẫn & tin", robots: { index: false } };
 
 const when = (ms: number) => new Date(ms).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" });
 
 async function Manage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
+  const seeded = seedGuidesOnce(admin.id); // lần đầu: nạp bài hướng dẫn mẫu thành bản nháp
   const posts = listNewsPosts({ includeDrafts: true, limit: 200 });
   const items = listNewsItems({ admin: true, limit: 150 });
   const last = lastNewsFetch();
@@ -23,11 +25,16 @@ async function Manage() {
     <>
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="flex-1 text-2xl font-extrabold">Bài viết ({posts.length})</h1>
+          <h1 className="flex-1 text-2xl font-extrabold">Bài hướng dẫn ({posts.length})</h1>
           <Link href="/admin/news/new" className="btn btn-primary">
             + Bài mới
           </Link>
         </div>
+        {seeded > 0 && (
+          <p className="rounded-2xl border-2 border-amber/50 bg-amber/10 p-3 text-sm">
+            Đã thêm {seeded} bài hướng dẫn mẫu ở dạng <b>bản nháp</b>. Hãy đọc kỹ, sửa cho đúng với thực tế rồi tick “Đăng công khai”.
+          </p>
+        )}
         {posts.length === 0 && <p className="text-sm text-muted">Chưa có bài nào.</p>}
         <ul className="flex flex-col gap-2">
           {posts.map((p) => (
@@ -36,10 +43,10 @@ async function Manage() {
                 <p className="truncate font-bold">{p.title}</p>
                 <p className="text-xs text-muted">
                   {p.published ? "Đã đăng" : "Bản nháp"} · {when(p.createdAt)}
-                  {p.category ? ` · ${p.category}` : ""}
+                  {p.category ? ` · ${categoryLabel(p.category)}` : ""}
                 </p>
               </div>
-              <Link href={`/tin-tuc/${p.slug}`} className="btn">
+              <Link href={guidePath(p.slug)} className="btn">
                 Xem
               </Link>
               <Link href={`/admin/news/${p.id}`} className="btn">
