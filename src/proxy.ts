@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { fuehrerscheinGuard } from "@/biz/fuehrerschein-guard";
 
-// Một app cho cả ckk.biz (tên miền chính) và ckk.pro (tên cũ của Deutsch Shadowing).
+// Tên miền duy nhất: ckk.biz. ckk.pro (tên cũ của Deutsch Shadowing) không dùng nữa — chỉ giữ trỏ về app này
+// để link cũ và app di động bản cũ không gãy; khi gần như mọi người đã cập nhật app (gọi ckk.biz) thì bỏ hẳn.
 // - www.ckk.biz → ckk.biz
 // - ckk.pro → ckk.biz, cùng đường dẫn. Riêng /api/* KHÔNG chuyển: app di động (bản đã phát hành) gọi thẳng
 //   ckk.pro/api/v1 kèm Bearer token — chuyển hướng sang tên miền khác thì iOS bỏ header Authorization.

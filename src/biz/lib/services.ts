@@ -169,7 +169,7 @@ export const SERVICES: Service[] = [
         ink: 'var(--ink-saffron)',
         onInk: 'dark',
         platform: 'Web',
-        href: 'https://ckk.pro',
+        href: '/', // app học ngay trên ckk.biz
         copy: {
             de: {
                 short: 'Deutsch hören, sprechen und schreiben',
@@ -179,8 +179,8 @@ export const SERVICES: Service[] = [
                     'Eigene YouTube-Videos zum Üben einfügen',
                     'Vokabeln, Sprechen und Lernspiele',
                 ],
-                action: 'Zu ckk.pro',
-                note: 'Eigene Website unter ckk.pro. Ein Produkt von CKK.',
+                action: 'Jetzt lernen',
+                note: 'Direkt hier auf ckk.biz – ein Konto für Deutsch, Führerschein und Leben in Deutschland.',
             },
             en: {
                 short: 'Listen to, speak and write German',
@@ -190,8 +190,8 @@ export const SERVICES: Service[] = [
                     'Practise with any YouTube video you paste in',
                     'Vocabulary, speaking and learning games',
                 ],
-                action: 'Go to ckk.pro',
-                note: 'Its own website at ckk.pro. A CKK product.',
+                action: 'Start learning',
+                note: 'Right here on ckk.biz – one account for German, the driving test and Leben in Deutschland.',
             },
             vi: {
                 short: 'Luyện nghe, nói và viết tiếng Đức',
@@ -201,8 +201,8 @@ export const SERVICES: Service[] = [
                     'Dán link YouTube để tự luyện',
                     'Từ vựng, luyện nói và game học tập',
                 ],
-                action: 'Đến ckk.pro',
-                note: 'Trang web riêng tại ckk.pro. Một sản phẩm của CKK.',
+                action: 'Học ngay',
+                note: 'Ngay trên ckk.biz – một tài khoản cho tiếng Đức, lái xe và Leben in Deutschland.',
             },
         },
     },

@@ -44,7 +44,7 @@ const ADMIN_ITEMS: Item[] = [
 /** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */
 function useCurrent(items: Item[]) {
   const pathname = usePathname();
-  // "/" khớp mọi trang (dự phòng) → trang bài học ckk.pro/<slug>, /watch/… vẫn sáng "Trang chủ"
+  // "/" khớp mọi trang (dự phòng) → trang bài học ckk.biz/<slug>, /watch/… vẫn sáng "Trang chủ"
   const matches = (href: string) => href === "/" || pathname === href || pathname.startsWith(href + "/");
   return items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }

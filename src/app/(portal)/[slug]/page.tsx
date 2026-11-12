@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { accessOf, canViewLesson, lockInfo, lockSettings } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 
-/** Trang bài học: ckk.pro/<slug> (link cũ /lesson/<id> chuyển hướng 308 về đây) */
+/** Trang bài học: ckk.biz/<slug> (link cũ /lesson/<id> chuyển hướng 308 về đây) */
 async function LessonView({ params }: PageProps<"/[slug]">) {
   const { slug } = await params;
   const lesson = getLessonBySlug(slug);

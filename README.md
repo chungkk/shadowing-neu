@@ -1,4 +1,7 @@
-# CKK (ckk.biz) — trước đây là Deutsch Shadowing (ckk.pro)
+# CKK (ckk.biz)
+
+Tên miền duy nhất là **ckk.biz**. ckk.pro (tên cũ của Deutsch Shadowing) không dùng nữa, chỉ còn chuyển hướng về ckk.biz
+(và phục vụ `/api/*` cho app di động bản cũ — xem `src/proxy.ts`).
 
 Một app Next.js cho cả ckk.biz: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
 cộng các trang doanh nghiệp / pháp lý của CKK (chuyển từ repo `ckk-biz`).

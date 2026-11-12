@@ -38,8 +38,8 @@ export function StoreButtons({ service }: { service: Service }) {
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
                 <a
                     href={service.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    // Link ngoài (App Store) mở tab mới; Deutsch Shadowing là app học ngay trên ckk.biz ("/")
+                    {...(service.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     className="inline-flex min-h-12 items-center gap-2.5 bg-[var(--ink)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-white hover:text-[var(--ink)]"
                 >
                     {service.platform === 'iOS' ? <AppleIcon className="h-5 w-5" /> : null}

@@ -1,5 +1,5 @@
 // Nội dung trang riêng của từng sản phẩm (/fuehrerschein, /lid, /shadowing).
-// Ảnh chụp nằm ở public/apps/<id>/: ảnh App Store của app iOS, ảnh chụp ckk.pro cho Deutsch Shadowing.
+// Ảnh chụp nằm ở public/apps/<id>/: ảnh App Store của app iOS, ảnh chụp trang học (trước đây ckk.pro) cho Deutsch Shadowing.
 // Mọi con số ở đây phải khớp với app thật (mô tả App Store, ảnh chụp); không tự đặt ra.
 import catalog from '@/../content/laixe/catalog_all/manifest.json';
 import type { Locale } from '@/biz/contexts/LocaleContext';
@@ -446,7 +446,7 @@ const shadowing: ProductPage = {
     sections: [[0], [1], [2], [3]],
     seo: {
         title: 'Deutsch Shadowing – Deutsch lernen mit echten Videos',
-        description: 'Deutsch hören und nachsprechen, Satz für Satz, mit echten Videos von A1 bis C2, eigenen YouTube-Videos, Goethe-Wortlisten und Lernspielen. Auf ckk.pro.',
+        description: 'Deutsch hören und nachsprechen, Satz für Satz, mit echten Videos von A1 bis C2, eigenen YouTube-Videos, Goethe-Wortlisten und Lernspielen. Auf ckk.biz.',
     },
     copy: {
         de: {
@@ -480,17 +480,17 @@ const shadowing: ProductPage = {
                 },
             ],
             alts: [
-                'Startseite von ckk.pro mit Feld für einen YouTube-Link und der Bibliothek der Lektionen',
+                'Startseite von Deutsch Shadowing mit Feld für einen YouTube-Link und der Bibliothek der Lektionen',
                 'Eine Lektion mit Video, aktuellem Satz, Aufnahme-Knopf und Transkript',
                 'Die Wortlisten Goethe A1, A2 und B1',
                 'Die Lernspiele Wortregen, Goldgräber und Wortpaare',
             ],
             galleryTitle: 'Alle Screenshots',
             faq: [
-                { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche von ckk.pro und die Bedeutungen in Wortlisten und Spielen sind derzeit auf Vietnamesisch. Die Videos, Transkripte und Übungen sind auf Deutsch.' },
+                { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche von Deutsch Shadowing und die Bedeutungen in Wortlisten und Spielen sind derzeit auf Vietnamesisch. Die Videos, Transkripte und Übungen sind auf Deutsch.' },
                 { q: 'Brauche ich ein Konto?', a: 'Nein. Die freien Lektionen und eigene YouTube-Videos funktionieren ohne Anmeldung. Mit Konto wählst du zwei weitere Lektionen und speicherst Wörter im Vokabelheft.' },
                 { q: 'Welche Videos kann ich nutzen?', a: 'Die Lektionen der Bibliothek oder jedes YouTube-Video mit Untertiteln, dessen Link du einfügst. Die Videos bleiben Eigentum ihrer Urheber auf YouTube.' },
-                { q: 'Warum liegt Deutsch Shadowing auf ckk.pro?', a: 'Deutsch Shadowing ist eine eigene Website unter ckk.pro und ein Produkt von CKK. Support und Datenschutz findest du hier auf ckk.biz.' },
+                { q: 'Wo finde ich Deutsch Shadowing?', a: 'Direkt hier auf ckk.biz (früher ckk.pro). Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
             ],
         },
         en: {
@@ -524,17 +524,17 @@ const shadowing: ProductPage = {
                 },
             ],
             alts: [
-                'ckk.pro home page with a field for a YouTube link and the lesson library',
+                'Deutsch Shadowing home page with a field for a YouTube link and the lesson library',
                 'A lesson with video, current sentence, record button and transcript',
                 'The Goethe A1, A2 and B1 word lists',
                 'The games word rain, gold digger and word match',
             ],
             galleryTitle: 'All screenshots',
             faq: [
-                { q: 'What language is the interface in?', a: 'The ckk.pro interface and the meanings in word lists and games are currently in Vietnamese. Videos, transcripts and exercises are in German.' },
+                { q: 'What language is the interface in?', a: 'The Deutsch Shadowing interface and the meanings in word lists and games are currently in Vietnamese. Videos, transcripts and exercises are in German.' },
                 { q: 'Do I need an account?', a: 'No. Free lessons and your own YouTube videos work without signing in. With an account you pick two more lessons and save words to your notebook.' },
                 { q: 'Which videos can I use?', a: 'The library lessons, or any YouTube video with subtitles whose link you paste in. The videos remain the property of their creators on YouTube.' },
-                { q: 'Why is Deutsch Shadowing on ckk.pro?', a: 'Deutsch Shadowing is its own website at ckk.pro and a CKK product. Support and privacy information are here on ckk.biz.' },
+                { q: 'Where do I find Deutsch Shadowing?', a: 'Right here on ckk.biz (formerly ckk.pro). With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
             ],
         },
         vi: {
@@ -568,17 +568,17 @@ const shadowing: ProductPage = {
                 },
             ],
             alts: [
-                'Trang chủ ckk.pro với ô dán link YouTube và thư viện bài học',
+                'Trang chủ Deutsch Shadowing với ô dán link YouTube và thư viện bài học',
                 'Một bài học với video, câu hiện tại, nút ghi âm và transcript',
                 'Các bộ từ vựng Goethe A1, A2 và B1',
                 'Các game Mưa từ vựng, Đào vàng và Nối từ',
             ],
             galleryTitle: 'Tất cả ảnh chụp màn hình',
             faq: [
-                { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện ckk.pro và phần nghĩa trong bộ từ, game hiện bằng tiếng Việt. Video, transcript và bài luyện là tiếng Đức.' },
+                { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện Deutsch Shadowing và phần nghĩa trong bộ từ, game hiện bằng tiếng Việt. Video, transcript và bài luyện là tiếng Đức.' },
                 { q: 'Có cần tài khoản không?', a: 'Không. Bài học miễn phí và video YouTube tự dán đều dùng được mà không cần đăng nhập. Có tài khoản thì chọn thêm 2 bài và lưu từ vào sổ từ vựng.' },
                 { q: 'Luyện được với những video nào?', a: 'Các bài trong thư viện, hoặc bất kỳ video YouTube có phụ đề mà bạn dán link vào. Video vẫn thuộc quyền sở hữu của tác giả trên YouTube.' },
-                { q: 'Sao Deutsch Shadowing lại ở ckk.pro?', a: 'Deutsch Shadowing là một trang web riêng tại ckk.pro và là sản phẩm của CKK. Thông tin hỗ trợ và bảo mật nằm ở đây, trên ckk.biz.' },
+                { q: 'Học Deutsch Shadowing ở đâu?', a: 'Ngay trên ckk.biz (trước đây là ckk.pro). Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
             ],
         },
     },
