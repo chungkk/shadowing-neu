@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { extractVideoId } from "@/lib/youtube-id";
 
 /** Người dùng dán link YouTube → chuyển sang /watch/[videoId], phụ đề được lấy tự động. */
-export default function YouTubeUrlForm() {
+export default function YouTubeUrlForm({ secondary = false }: { secondary?: boolean }) {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
@@ -34,8 +34,8 @@ export default function YouTubeUrlForm() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className="btn btn-primary px-6 py-3" disabled={pending}>
-          {pending ? "Đang lấy phụ đề…" : "Bắt đầu"}
+        <button className={`btn px-6 py-3 ${secondary ? "" : "btn-primary"}`} disabled={pending}>
+          {pending ? "Đang lấy phụ đề…" : secondary ? "Mở video" : "Bắt đầu"}
         </button>
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}

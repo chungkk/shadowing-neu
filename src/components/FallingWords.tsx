@@ -646,7 +646,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                     ) : (
                       <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
                     )}
-                    {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gem">+{d.points}</span>}
+                    {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-amber">+{d.points}</span>}
                   </div>
                 </div>
               );
@@ -751,7 +751,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                 ) : (
                   <>
                     <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
-                    <p className="text-5xl font-extrabold text-gem tabular-nums">{v.score}</p>
+                    <p className="text-5xl font-extrabold text-amber tabular-nums">{v.score}</p>
                     {v.score > v.best ? (
                       <p className="flex items-center gap-1.5 font-bold text-amber">
                         <Trophy className="size-5" /> Kỷ lục mới!

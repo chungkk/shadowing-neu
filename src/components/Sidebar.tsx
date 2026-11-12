@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, Captions, ChevronDown, Gamepad2, House, ListVideo, LogOut, MessageSquare, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Captions, ChevronDown, Gamepad2, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -12,14 +12,19 @@ type Item = { href: string; label: string; short?: string; icon: ComponentType<{
 type NavUser = AvatarUser & { role: string };
 
 const ITEMS: Item[] = [
-  { href: "/", label: "Trang chủ", icon: House },
+  { href: "/", label: "Bài học", icon: MonitorPlay }, // bài học video — trụ cột của app
   { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
   { href: "/games", label: "Game", icon: Gamepad2 },
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
-const BAR_ITEMS = ITEMS; // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
+const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers }; // sổ từ; có từ đến hạn → vào thẳng buổi ôn
+// Thanh dưới đáy: khách xem Xếp hạng (chỉ đọc); đã đăng nhập thì chỗ đó dành cho Ôn tập — Xếp hạng chuyển vào trang Thành tích.
+// Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
+const GUEST_BAR = ITEMS;
+const USER_BAR: Item[] = [ITEMS[0], ITEMS[1], REVIEW, ITEMS[2]];
 const USER_ITEMS: Item[] = [
-  { href: "/settings", label: "Cài đặt tài khoản", icon: Settings },
+  { href: "/stats", label: "Thành tích", icon: BarChart3 },
+  { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
 ];
 const ADMIN_ITEMS: Item[] = [
   { href: "/admin", label: "Quản lý bài học", short: "Admin", icon: ListVideo },
@@ -49,10 +54,10 @@ function DueBadge({ due, className = "" }: { due: number; className?: string }) 
     </span>
   );
 }
-const vocabHref = (href: string, due: number) => (href === "/vocab" && due ? "/vocab/notebook?review=1" : href);
+const reviewHref = (href: string, due: number) => (href === REVIEW.href && due ? "/vocab/notebook?review=1" : href);
 
 export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?: number }) {
-  const items = [...BAR_ITEMS, ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
+  const items = [...(user ? USER_BAR : GUEST_BAR), ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
   const current = useCurrent([...ITEMS, ...items, ...USER_ITEMS]); // ITEMS, USER_ITEMS: ở /games, /settings… không sáng nhầm "Trang chủ"
 
   return (
@@ -60,16 +65,16 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
       {items.map((it) => (
         <Link
           key={it.href}
-          href={vocabHref(it.href, due)}
-          aria-label={it.href === "/vocab" && due ? `${it.label} — ${due} từ đến hạn ôn` : it.label}
+          href={reviewHref(it.href, due)}
+          aria-label={it.href === REVIEW.href && due ? `${it.label} — ${due} từ đến hạn ôn` : it.label}
           aria-current={it.href === current ? "page" : undefined}
           className={`relative flex h-12 min-w-14 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 transition ${
             it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
           }`}
         >
           <it.icon className="size-5" />
-          <span className="text-[11px] leading-none font-bold">{it.short ?? it.label}</span>
-          {it.href === "/vocab" && <DueBadge due={due} className="absolute -top-1 right-1" />}
+          <span className="text-xs leading-none font-bold">{it.short ?? it.label}</span>
+          {it.href === REVIEW.href && <DueBadge due={due} className="absolute -top-1 right-1" />}
         </Link>
       ))}
     </SidebarFrame>
@@ -90,29 +95,38 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-const HEADER_ITEMS = ITEMS.filter((it) => it.href === "/vocab" || it.href === "/games" || it.href === "/leaderboard");
+const HEADER_ITEMS = ITEMS;
 
-/** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy) */
-export function HeaderNav({ due = 0 }: { due?: number }) {
-  return <HeaderNavFrame current={useCurrent(HEADER_ITEMS)} due={due} />;
+/** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy). Ôn tập là nút riêng ở góc phải (ReviewPill) */
+export function HeaderNav() {
+  return <HeaderNavFrame current={useCurrent([...HEADER_ITEMS, REVIEW, ...USER_ITEMS])} />;
+}
+
+/** Máy tính: nút "Ôn N" ở góc phải thanh trên cùng — chỉ hiện khi có từ đến hạn, bấm là vào thẳng buổi ôn */
+export function ReviewPill({ due }: { due: number }) {
+  if (!due) return null;
+  return (
+    <Link href="/vocab/notebook?review=1" title={`${due} từ đến hạn ôn — bấm để ôn ngay`} className="btn gap-1.5 px-3 py-1.5 max-md:hidden">
+      <Layers className="size-4" /> Ôn
+      <DueBadge due={due} />
+    </Link>
+  );
 }
 
 /** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
-export function HeaderNavFrame({ current, due = 0 }: { current?: string; due?: number }) {
+export function HeaderNavFrame({ current }: { current?: string }) {
   return (
     <nav className="flex items-center gap-1 max-md:hidden">
       {HEADER_ITEMS.map((it) => (
         <Link
           key={it.href}
-          href={vocabHref(it.href, due)}
-          title={it.href === "/vocab" && due ? `${due} từ đến hạn ôn — bấm để ôn ngay` : undefined}
+          href={it.href}
           className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
             it.href === current ? "bg-accent/15 text-accent-text" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
           }`}
         >
           <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
           {it.label}
-          {it.href === "/vocab" && <DueBadge due={due} />}
         </Link>
       ))}
     </nav>
@@ -125,7 +139,7 @@ export function HeaderNavFrame({ current, due = 0 }: { current?: string; due?: n
  */
 export function UserDropdown({ user }: { user: NavUser }) {
   const admin = user.role === "admin";
-  const current = useCurrent([...ITEMS, ...USER_ITEMS, ...(admin ? ADMIN_ITEMS : [])]);
+  const current = useCurrent([...ITEMS, REVIEW, ...USER_ITEMS, ...(admin ? ADMIN_ITEMS : [])]);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -163,7 +177,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
   const trigger = (
     <>
       {admin && <span className="pill bg-amber/15 text-amber max-sm:hidden">ADMIN</span>}
-      <span className="max-w-40 truncate font-bold max-sm:max-w-28 max-[380px]:hidden">{user.name}</span>
+      <span className="max-w-40 truncate font-bold max-sm:hidden">{user.name}</span>
       <Avatar user={user} className="size-9 text-lg sm:size-10" />
     </>
   );
@@ -184,7 +198,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
 
   return (
     <>
-      <Link href="/settings" title="Cài đặt tài khoản" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-foreground/5 md:hidden">
+      <Link href="/stats" title="Thành tích & cài đặt" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-foreground/5 md:hidden">
         {trigger}
       </Link>
       <div ref={box} className="relative max-md:hidden" onPointerEnter={(e) => e.pointerType === "mouse" && show()} onPointerLeave={(e) => e.pointerType === "mouse" && hide()}>
@@ -208,7 +222,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
                   <p className="text-xs text-muted">{admin ? "Quản trị viên" : "Học viên"}</p>
                 </div>
               </div>
-              {[...ITEMS, ...USER_ITEMS].map(item)}
+              {[...ITEMS, REVIEW, ...USER_ITEMS].map(item)}
               {admin && (
                 <>
                   <p className="px-3 pt-3 pb-1 text-[11px] font-extrabold tracking-wider text-muted uppercase">Quản trị</p>

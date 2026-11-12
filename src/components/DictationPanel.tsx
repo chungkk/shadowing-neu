@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ChevronRight, Eye, RotateCcw } from "lucide-react";
 import { checkSlots, hintFor, isOpenWord, nextOpenSlot, POINTS_HINT, slotForTyped, slotsFromInput, splitWords, type DictationLevel, type WordState } from "@/lib/dictation";
 import { emitPoints } from "@/lib/points";
+import { useIsTouchPhone, useKeyboardInset } from "@/hooks/useKeyboardInset";
 import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
 
@@ -55,6 +56,7 @@ export default function DictationPanel({
   onEarn,
   onWord,
   translation,
+  onTyping,
 }: {
   text: string;
   level: DictationLevel;
@@ -72,6 +74,7 @@ export default function DictationPanel({
   onHint?: (n: number) => void; // vừa bấm xem n từ → trừ điểm
   onWord?: (word: string) => void; // câu đã xong: bấm vào từ → bảng tra từ
   translation?: string; // bản dịch câu (chỉ hiện khi đã xong)
+  onTyping?: (on: boolean) => void; // điện thoại: đang gõ (bàn phím mở) → player thu video lại
 }) {
   const refWords = useMemo(() => splitWords(text), [text]);
   const [slots, setSlots] = useState(() => (draft ? slotsFromInput(text, draft.input) : saved ? refWords : refWords.map(() => "")));
@@ -94,6 +97,17 @@ export default function DictationPanel({
   const focusInput = () => inputRef.current?.focus({ preventScroll: true });
   useEffect(focusInput, []);
   const [focused, setFocused] = useState(false); // ô nhập ẩn đang nhận phím: chỉ khi đó mới hiện con trỏ
+  // Chế độ "đang gõ" (điện thoại, bàn phím mở): ẩn linh vật, ghim hàng nút ngay trên bàn phím
+  const touch = useIsTouchPhone();
+  const typing = touch && focused;
+  const kbInset = useKeyboardInset(typing);
+  const typingRef = useRef(onTyping);
+  useEffect(() => {
+    typingRef.current = onTyping;
+  });
+  useEffect(() => typingRef.current?.(typing), [typing]);
+  useEffect(() => () => typingRef.current?.(false), []);
+  const keepFocus = (e: { preventDefault: () => void }) => e.preventDefault(); // bấm nút không làm đóng bàn phím
   const composing = useRef(false); // đang ghép chữ (bộ gõ, dấu ä…): chưa chấm, chưa nhảy ô
   const revealedCount = result.words.filter((w) => w.state === "revealed").length; // số từ đã bấm xem
   const hintCost = onHint ? `−${POINTS_HINT} điểm` : "tính là lỗi";
@@ -193,7 +207,7 @@ export default function DictationPanel({
       <div className="flex flex-col gap-3">
         <div className="flex min-h-11 items-center gap-2">
           {/* Linh vật lật lại để nhìn và "nói" về phía bong bóng thoại */}
-          <span ref={mascotRef} className="relative -my-1.5 -ml-1 shrink-0">
+          <span ref={mascotRef} className={`relative -my-1.5 -ml-1 shrink-0 ${typing ? "hidden" : ""}`}>
             <Mascot animated className="size-14 -scale-x-100" />
             {won && (
               <span className="pt-burst left-1/2 top-1/2" aria-hidden>
@@ -207,7 +221,7 @@ export default function DictationPanel({
             {say}
           </p>
           <button
-            className="btn ml-auto shrink-0 px-2.5 py-1.5 text-xs text-link"
+            className="btn hit-44 ml-auto shrink-0 px-2.5 py-1.5 text-xs text-link"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               onReplay();
@@ -321,7 +335,7 @@ export default function DictationPanel({
                 </button>
                 {w.state !== "correct" && (
                   <button
-                    className={`absolute -top-3.5 left-1/2 flex size-5 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-ink bg-card text-foreground transition after:absolute after:-inset-1 after:content-[''] hover:bg-gold hover:text-black ${isActive ? "" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"}`}
+                    className={`absolute -top-3.5 left-1/2 flex size-5 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-ink bg-card text-foreground transition after:absolute after:-inset-1 after:content-[''] hover:bg-gold hover:text-black pointer-coarse:hidden ${isActive ? "" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"}`}
                     title={`Xem từ này (${hintCost})`}
                     aria-label={`Xem từ này (${hintCost})`}
                     onMouseDown={(e) => e.preventDefault()}
@@ -351,8 +365,12 @@ export default function DictationPanel({
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
           — cùng một hàng để "Kiểm tra" không bị đẩy xuống dưới màn hình */}
-      <div className="flex gap-2 sm:gap-3">
-        <button className="btn btn-primary flex-[2] py-3.5 text-base" onClick={submit} disabled={result.done && !hasNext}>
+      {typing && <div className="h-20" aria-hidden />}
+      <div
+        className={`flex gap-2 sm:gap-3 ${typing ? "fixed inset-x-0 z-40 border-t-2 border-ink bg-card px-3 py-2.5" : ""}`}
+        style={typing ? { bottom: kbInset } : undefined}
+      >
+        <button className="btn btn-primary flex-[2] py-3.5 text-base" onMouseDown={keepFocus} onClick={submit} disabled={result.done && !hasNext}>
           {result.done ? (
             <>
               Câu tiếp theo <ChevronRight className="size-5" />
@@ -366,10 +384,16 @@ export default function DictationPanel({
             <RotateCcw className="size-4" /> Làm lại
           </button>
         ) : (
-          <button className="btn flex-1 py-3" onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
-            <Eye className="size-4" /> Hiện tất cả
-            {onHint && <span className="text-xs font-normal opacity-80">(−{POINTS_HINT}/từ)</span>}
+          <>
+          {/* Cảm ứng: mắt trên từng ô quá nhỏ và sát ô gõ (dễ bấm nhầm bị trừ điểm) → nút riêng xem từ đang chọn */}
+          <button className="btn flex-1 py-3 pointer-fine:hidden" onMouseDown={keepFocus} onClick={() => reveal([active])} title={`Xem từ đang chọn (${hintCost})`}>
+            <Eye className="size-4" /> Xem từ
           </button>
+          <button className="btn flex-1 py-3" onMouseDown={keepFocus} onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
+            <Eye className="size-4 pointer-coarse:hidden" /> <span className="pointer-coarse:hidden">Hiện tất cả</span><span className="pointer-fine:hidden">Hiện hết</span>
+            {onHint && <span className="text-xs font-normal opacity-80 pointer-coarse:hidden">(−{POINTS_HINT}/từ)</span>}
+          </button>
+          </>
         )}
       </div>
     </div>

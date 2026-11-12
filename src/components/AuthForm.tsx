@@ -8,7 +8,7 @@ import SocialLogin from "./SocialLogin";
 import Mascot from "./Mascot";
 
 const ErrorBox = ({ children }: { children?: string }) =>
-  children ? <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
+  children ? <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
 
 /** Email đã nhập ở bước đầu + nút "Đổi" để quay lại sửa */
 function EmailRow({ email, onChange }: { email: string; onChange: () => void }) {
@@ -41,7 +41,7 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
     >
       <input
         type="email"
-        placeholder="Nhập email của bạn"
+        placeholder="Nhập email của bạn" aria-label="Nhập email của bạn"
         className="input"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
@@ -71,7 +71,7 @@ function LoginForm({ email, next, close, back }: { email: string; next: string; 
       {/* Ô email ẩn (không phải type=hidden) để trình quản lý mật khẩu biết lưu cho tài khoản nào */}
       <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
       <EmailRow email={email} onChange={back} />
-      <input name="password" type="password" placeholder="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
+      <input name="password" type="password" placeholder="Mật khẩu" aria-label="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
       <Link href="/forgot-password" onClick={close} className="-mt-1 self-end text-sm font-bold text-link">
         Quên mật khẩu?
       </Link>
@@ -127,10 +127,10 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
       >
         <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
         <EmailRow email={email} onChange={back} />
-        <input placeholder="Tên của bạn" className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus required />
+        <input placeholder="Tên của bạn" aria-label="Tên của bạn" className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus required />
         <input
           type="password"
-          placeholder="Tạo mật khẩu (ít nhất 8 ký tự)"
+          placeholder="Tạo mật khẩu (ít nhất 8 ký tự)" aria-label="Tạo mật khẩu (ít nhất 8 ký tự)"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -164,6 +164,7 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
         inputMode="numeric"
         autoComplete="one-time-code"
         placeholder="______"
+              aria-label="Mã xác nhận 6 số"
         className="input text-center text-2xl font-extrabold tracking-[0.5em]"
         autoFocus
         required

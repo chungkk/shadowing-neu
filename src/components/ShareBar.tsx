@@ -39,8 +39,9 @@ const NETWORKS = [
   },
 ];
 
-/** Trang cá nhân / quản trị / đăng nhập: không có gì để chia sẻ */
-const PRIVATE = /^\/(admin|settings|vocab|login|register|forgot-password)(\/|$)/;
+/** Chỉ hiện ở nơi có nội dung đáng chia sẻ: bài học (/watch/…, /<slug>) và bộ từ (/vocab/decks/…) */
+const RESERVED = /^\/(admin|settings|stats|vocab|games|leaderboard|sprechen|login|register|forgot-password|privacy|terms)(\/|$)/;
+const shareable = (p: string) => /^\/(watch|vocab\/decks)\/./.test(p) || (/^\/[^/]+$/.test(p) && !RESERVED.test(p));
 
 /** Link trang đang xem (bỏ ?query) + tiêu đề trang */
 const current = () => ({ url: location.origin + location.pathname, title: document.title });
@@ -53,9 +54,9 @@ const round = "flex size-10 cursor-pointer items-center justify-center rounded-f
  */
 export default function ShareBar() {
   const pathname = usePathname();
-  const [open, setOpen] = useLocalStorage("share-bar-open", true);
+  const [open, setOpen] = useLocalStorage("share-bar-open", false); // mặc định thu gọn thành 1 nút
   const [copied, setCopied] = useState(false);
-  if (PRIVATE.test(pathname)) return null;
+  if (!shareable(pathname)) return null;
 
   const copy = async () => {
     try {

@@ -3,7 +3,15 @@
 /* dark: chỉ theo nút chọn giao diện (data-theme trên <html>), không theo cài đặt của hệ điều hành */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Giao diện theo linh vật: nền kem · viền nâu mận (ink) · đỏ kẹo (ghi âm / xoá) · xanh lá (chính) · vàng tai nghe (nhấn) */
+/* Giao diện theo linh vật: nền kem · viền nâu mận (ink) · sọc kẹo đỏ.
+   LUẬT MÀU — mỗi màu một nghĩa, đừng dùng lẫn:
+   · xanh lá (accent)  = học / xác nhận / nút chính của bước học
+   · vàng (gold/amber) = chơi / thưởng / điểm trong game
+   · đỏ (red)          = sai / huỷ / xoá / đang ghi âm
+   · hồng (candy)      = nói (nút Ghi âm khi chờ, bước "đến lượt bạn")
+   · teal (link)       = link / điều hướng phụ
+   · xanh lam (gem)    = kim cương — chỉ dùng cho điểm thật kiếm được khi học
+   Mỗi lúc chỉ một nút màu đậm (btn-primary / btn-record…) trên màn; nút phụ dùng .btn trung tính. */
 :root {
   color-scheme: light;
   --background: #fff6e9;
@@ -121,6 +129,7 @@
   --color-border: var(--border);
   --color-ink: var(--ink);
   --color-gold: var(--gold);
+  --color-candy: var(--candy);
   --color-red-400: var(--red-400);
   --color-red-300: var(--red-300);
   --color-muted: var(--muted);
@@ -206,17 +215,45 @@ select {
     @apply text-sm font-extrabold tracking-wider text-foreground uppercase;
   }
   .btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-card px-3.5 py-2 text-sm font-bold shadow-[0_3px_0_var(--ink)] transition select-none hover:-translate-y-px active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-card px-3.5 py-2 text-sm font-bold shadow-[0_3px_0_var(--ink)] transition select-none hover:-translate-y-px active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-ink/30 disabled:bg-card-2 disabled:text-muted disabled:shadow-none disabled:brightness-100;
   }
-  /* Nút lớn kiểu "nổi" có viền dưới đậm */
+  /* Nút lớn kiểu "nổi" có viền dưới đậm. Không in hoa: chữ Việt có dấu chồng viết thường dễ đọc hơn */
   .btn-primary {
-    @apply bg-accent tracking-wide text-white uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-110;
+    @apply bg-accent font-extrabold text-white shadow-[0_4px_0_var(--ink)] hover:brightness-110;
   }
   .btn-amber {
-    @apply bg-gold tracking-wide text-black uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-105;
+    @apply bg-gold font-extrabold text-black shadow-[0_4px_0_var(--ink)] hover:brightness-105;
   }
   .btn-red {
-    @apply bg-red tracking-wide text-white uppercase shadow-[0_4px_0_var(--ink)] hover:brightness-110;
+    @apply bg-red font-extrabold text-white shadow-[0_4px_0_var(--ink)] hover:brightness-110;
+  }
+  /* Nút Ghi âm: hồng khi chờ (hành động chính của bước nói), chỉ đỏ khi đang ghi — đỏ còn lại dành cho sai / xoá */
+  .btn-record {
+    @apply bg-candy font-extrabold text-[#2b1520] shadow-[0_4px_0_var(--ink)] hover:brightness-105;
+  }
+  .btn-recording {
+    @apply bg-red font-extrabold text-white shadow-[0_4px_0_var(--ink)];
+    animation: rec-ring 1.4s ease-out infinite;
+  }
+  @keyframes rec-ring {
+    0% { box-shadow: 0 4px 0 var(--ink), 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); }
+    100% { box-shadow: 0 4px 0 var(--ink), 0 0 0 12px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-recording { animation: none; }
+  }
+  /* Vùng chạm ≥ 44px mà không đổi kích thước nhìn thấy */
+  .hit-44 {
+    position: relative;
+  }
+  .hit-44::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
   }
   /* Dải sọc kẹo như thân linh vật */
   .candy-stripe {
@@ -289,7 +326,7 @@ select {
   }
   /* Điện thoại: chữ 16px — nhỏ hơn thì Safari iOS tự phóng to trang khi bấm vào ô */
   .input {
-    @apply rounded-2xl border-2 border-ink/40 bg-card px-4 py-3 text-base outline-none placeholder:text-muted focus:border-accent md:text-sm;
+    @apply rounded-2xl border-2 border-ink/40 bg-card px-4 py-3 text-base outline-none placeholder:text-muted focus:border-accent md:text-sm dark:border-muted/45;
   }
   .field {
     @apply flex flex-col gap-1 text-muted;
@@ -381,6 +418,17 @@ select {
 /* Màn học trên điện thoại: thanh điều khiển của trình phát thay chỗ thanh điều hướng dưới đáy (cùng chiều cao) */
 body:has(.lesson) .bottom-nav {
   display: none;
+}
+/* Màn học: chân trang gọn — chỉ dòng bản quyền, không cột link (đỡ phân tán khi đang tập trung) */
+body:has(.lesson) .footer-cols {
+  display: none;
+}
+body:has(.lesson) .footer-inner {
+  padding-block: 1rem;
+}
+body:has(.lesson) .footer-legal {
+  border-top: 0;
+  padding-top: 0;
 }
 /* Khoảng chừa thanh home (iPhone) ở đáy popup / bảng trượt */
 .pb-safe {
@@ -788,209 +836,5 @@ body:has(.lesson) .bottom-nav {
   .mascot-cheer,
   .mascot-zzz {
     animation: none;
-  }
-}
-
-/* ---- Giao diện Kẹo (như solo.ckk.pro): lựa chọn thứ 3 bên cạnh sáng / tối (data-theme="candy" trên <html>) ----
-   Nền bạc hà chấm bi, khay sữa viền mận dày, bóng mềm + một vệt bóng kẹo, chữ tiêu đề Paytone One */
-:root[data-theme="candy"] {
-  color-scheme: light;
-  --ink: #55303f;
-  --ink-soft: #6f4a59;
-  --mint: #a9ecd8;
-  --mint-deep: #8fe0c8;
-  --mint-pale: #dcf7ee;
-  --milk: #fffaf3;
-  --cherry: #d92c45;
-  --lemon: #ffd24d;
-  --lemon-pale: #fff0bd;
-  --teal: #0b7f73;
-  --tray-shadow: 0 14px 26px -14px rgba(85, 48, 63, 0.55);
-  --candy-shadow: 0 10px 16px -10px rgba(85, 48, 63, 0.7);
-  --background: var(--mint);
-  --sidebar: var(--milk);
-  --foreground: var(--ink);
-  --card: var(--milk);
-  --card-2: #ffffff;
-  --border: rgba(85, 48, 63, 0.4);
-  --muted: var(--ink-soft);
-  --link: var(--teal);
-  --accent: var(--teal);
-  --accent-dark: #075e55;
-  --accent-text: var(--teal);
-  --on-link: #ffffff;
-  --stripe: var(--milk);
-  --gold: var(--lemon);
-  --red: var(--cherry);
-  --red-dark: #8f2036;
-  --red-400: var(--cherry);
-  --red-300: var(--cherry);
-  --gem: var(--teal);
-  --gem-dark: #075e55;
-  --board: var(--milk);
-  --cell: var(--mint-pale);
-  scrollbar-color: var(--ink) var(--mint-deep);
-}
-[data-theme="candy"] body {
-  background-color: var(--mint);
-  background-image: radial-gradient(var(--mint-deep) 3px, transparent 3.5px);
-  background-size: 26px 26px;
-  font-family: var(--font-baloo), system-ui, sans-serif;
-  font-weight: 600;
-  caret-color: var(--cherry);
-}
-[data-theme="candy"] ::selection {
-  background: var(--lemon);
-  color: var(--ink);
-}
-[data-theme="candy"] h1,
-[data-theme="candy"] h2,
-[data-theme="candy"] .font-display,
-.font-candy {
-  font-family: var(--font-candy), var(--font-baloo), sans-serif;
-  font-weight: 400;
-}
-/* Phần chỉ hiện ở giao diện Kẹo / chỉ hiện ở sáng và tối */
-:root:not([data-theme="candy"]) .candy-only,
-[data-theme="candy"] .plain-only {
-  display: none !important;
-}
-
-@layer components {
-  [data-theme="candy"] .sticker,
-  [data-theme="candy"] .card {
-    border: 4px solid var(--ink);
-    border-radius: 1.75rem;
-    background: var(--milk);
-    box-shadow: var(--tray-shadow);
-  }
-  /* Nút: viên kẹo tròn, nhấc lên khi rê chuột, bóp lại khi bấm */
-  [data-theme="candy"] .btn {
-    border: 3px solid var(--ink);
-    border-radius: 9999px;
-    background: var(--milk);
-    color: var(--ink);
-    font-family: var(--font-candy), var(--font-baloo), sans-serif;
-    font-weight: 400;
-    letter-spacing: 0;
-    text-transform: none;
-    box-shadow: none;
-    transition:
-      transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1),
-      background-color 120ms,
-      filter 120ms;
-  }
-  [data-theme="candy"] .btn:hover:not(:disabled) {
-    background-color: var(--lemon-pale);
-    transform: translateY(-2px);
-  }
-  [data-theme="candy"] .btn:active:not(:disabled) {
-    transform: translateY(1px) scale(0.96);
-    box-shadow: none;
-  }
-  [data-theme="candy"] .btn:disabled {
-    opacity: 0.55;
-    filter: saturate(0.5);
-  }
-  [data-theme="candy"] .btn-amber,
-  [data-theme="candy"] .btn-red,
-  [data-theme="candy"] .btn-primary {
-    position: relative;
-    border-width: 4px;
-    color: var(--milk);
-    background: var(--cherry);
-    box-shadow: var(--candy-shadow);
-  }
-  [data-theme="candy"] .btn-primary {
-    background: var(--teal);
-  }
-  [data-theme="candy"] .btn-amber:hover:not(:disabled),
-  [data-theme="candy"] .btn-red:hover:not(:disabled) {
-    background-color: var(--cherry);
-    filter: brightness(1.1);
-  }
-  [data-theme="candy"] .btn-primary:hover:not(:disabled) {
-    background-color: var(--teal);
-    filter: brightness(1.1);
-  }
-  /* Một vệt bóng kẹo cứng */
-  [data-theme="candy"] .btn-amber::before,
-  [data-theme="candy"] .btn-red::before,
-  [data-theme="candy"] .btn-primary::before,
-  .candy-gloss::before {
-    content: "";
-    position: absolute;
-    top: 0.3rem;
-    left: 0.85rem;
-    width: min(1.75rem, 34%);
-    height: 0.28rem;
-    border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.65);
-    pointer-events: none;
-  }
-  .candy-gloss {
-    position: relative;
-    box-shadow: var(--candy-shadow);
-  }
-  [data-theme="candy"] .input {
-    border: 3px solid var(--ink);
-    border-radius: 1rem;
-    background: #fff;
-    font-weight: 700;
-  }
-  [data-theme="candy"] .input:focus {
-    border-color: var(--ink);
-    background: var(--lemon-pale);
-  }
-  /* Bàn Caro: khay sữa viền dày, bóng mềm */
-  [data-theme="candy"] .caro-tray {
-    border: 5px solid var(--ink);
-    border-radius: 1.5rem;
-    box-shadow: var(--tray-shadow);
-  }
-  /* Tên trò chơi: chữ kẹo đỏ có viền sữa dày */
-  .title-candy {
-    font-family: var(--font-candy), var(--font-baloo), sans-serif;
-    color: var(--cherry);
-    -webkit-text-stroke: 0.19em var(--milk);
-    paint-order: stroke fill;
-    line-height: 1;
-    filter: drop-shadow(0 6px 5px rgba(85, 48, 63, 0.35));
-  }
-}
-/* Bóng nói của linh vật: viền mận dày, không bóng cứng */
-[data-theme="candy"] .say-bubble {
-  border-width: 3.5px;
-  border-radius: 1.25rem;
-  background: var(--milk);
-  box-shadow: none;
-  font-weight: 600;
-}
-[data-theme="candy"] .say-bubble::before {
-  border-width: 0 0 3.5px 3.5px;
-  background: var(--milk);
-  left: -9px;
-}
-/* Mái hiên sọc dưới thanh trên cùng thay cho dải sọc kẹo */
-[data-theme="candy"] .candy-stripe {
-  display: none;
-}
-@keyframes candy-rain {
-  from {
-    transform: translateY(-10vh) rotate(0);
-  }
-  to {
-    transform: translateY(110vh) rotate(var(--spin, 300deg));
-  }
-}
-.candy-rain {
-  animation: candy-rain 2s cubic-bezier(0.3, 0.1, 0.6, 1) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-theme="candy"] .btn {
-    transition: none;
-  }
-  .candy-rain {
-    display: none;
   }
 }

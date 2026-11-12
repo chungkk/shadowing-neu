@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Geist_Mono, Nunito, Paytone_One } from "next/font/google";
+import { Baloo_2, Geist_Mono, Nunito } from "next/font/google";
 import { HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
@@ -12,7 +12,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu, { HeaderNavWithUser, SidebarWithUser } from "@/components/UserMenu";
 import { SITE_URL } from "@/lib/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
-import { Awning } from "@/components/CandyPieces";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -25,8 +24,6 @@ const baloo = Baloo_2({
   subsets: ["latin", "vietnamese"],
 });
 
-/* Chữ tiêu đề của giao diện Kẹo; không tải sẵn vì chỉ dùng khi chọn giao diện đó */
-const paytone = Paytone_One({ weight: "400", subsets: ["latin", "vietnamese"], variable: "--font-candy", preload: false });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -53,7 +50,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" data-theme="dark" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} ${paytone.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="vi" data-theme="dark" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Áp giao diện đã chọn trước khi trình duyệt vẽ trang, tránh nháy nền sáng */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
@@ -68,10 +65,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
           <header className="relative z-30 flex h-14 items-center gap-3 bg-card dark:bg-sidebar px-3 pb-2 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
             <div className="candy-stripe absolute inset-x-0 bottom-0 h-2.5" />
-            <Link href="/" className="flex items-center gap-1.5 font-display text-xl font-extrabold">
-              <Mascot className="size-11 max-md:hidden" />
-              <span>
-                <span className="hidden sm:inline">Deutsch </span>Shadowing
+            <Link href="/" className="flex min-w-0 items-center gap-1.5 font-display text-lg font-extrabold sm:text-xl">
+              <Mascot className="size-8 shrink-0 md:size-11" />
+              <span className="truncate">
+                <span className="max-[359px]:hidden">Deutsch </span>Shadowing
               </span>
             </Link>
             <Suspense fallback={<HeaderNavFrame />}>
@@ -84,7 +81,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </Suspense>
             </div>
           </header>
-          <Awning className="candy-only relative z-20 -mt-px" />
           {/* share-gutter: chừa lề phải khi thanh chia sẻ đang mở (globals.css) */}
           <div className="share-gutter flex min-w-0 flex-1 flex-col">{children}</div>
           <SiteFooter />

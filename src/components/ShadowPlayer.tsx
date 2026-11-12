@@ -157,7 +157,7 @@ function Segmented<T extends string>({
 
 const PRACTICES = [
   ["shadow", "Shadowing"],
-  ["dictation", "Dictation"],
+  ["dictation", "Chính tả"],
 ] as const;
 const DICT_LEVELS = [
   ["easy", "Dễ", "Gợi ý chữ cái đầu"],
@@ -270,6 +270,8 @@ export default function ShadowPlayer({
   const [playing, setPlaying] = useState(false);
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
   const [panel, setPanel] = useState<"settings" | "keys" | null>(null);
+  // Điện thoại đang gõ chính tả (bàn phím mở) → thu video về 0 (vẫn phát tiếng) để nhường chỗ cho ô gõ
+  const [typing, setTyping] = useState(false);
   const [picked, setPicked] = useState<{ word: string; context: string; marks?: string[] } | null>(null); // bảng tra từ đang mở
   const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ đã lưu (chữ thường) → id trong sổ từ vựng
   const [stars, setStars] = useState<Map<string, number>>(new Map()); // câu ⭐ (chữ thường) → id
@@ -908,11 +910,29 @@ export default function ShadowPlayer({
   const hasRec = !!recorder.recordings[idx];
   const toggleRecord = () => (isRecording ? recorder.stop() : void recorder.start(idx));
   const recordLabel = isRecording ? "Dừng ghi" : hasRec ? "Ghi lại" : "Ghi âm";
-  const recordCls = isRecording ? "btn-red animate-pulse" : hasRec ? "" : "btn-red";
+  const recordCls = isRecording ? "btn-recording" : hasRec ? "" : "btn-record";
   // Chế độ Shadow = dừng sau mỗi câu + nghỉ để nói + tự ghi âm lúc nghỉ (gộp 3 cài đặt thành 1 công tắc)
   const shadowOn = settings.mode === "segment" && settings.autoRecord && settings.gapFactor > 0;
   // Đang ở câu cuối (của cả bài, không lọc ⭐) và đã nghe câu đó → hiện thẻ "Xong bài"
-  const lessonDone = !dictation && !starredOnly && segments.length > 0 && idx === segments.length - 1 && seen.has(idx) && !playing && !gap;
+  const atEnd = !dictation && !starredOnly && segments.length > 0 && idx === segments.length - 1 && seen.has(idx) && !playing && !gap;
+  // "Xong bài" khi đã nói theo ≥ một nửa số câu — shadowing là nói, không chỉ nghe
+  const spokenCount = Object.keys(recorder.recordings).length;
+  const spokenNeed = Math.ceil(segments.length / 2);
+  const lessonDone = atEnd && spokenCount >= spokenNeed;
+  const lessonAlmost = atEnd && !lessonDone;
+  // Lần đầu vào bài (chưa từng chỉnh tự ghi âm): mời bật vòng nói theo. Bấm nút = có thao tác thật → mới xin quyền micro
+  const [inviteSeen, setInviteSeen] = useLocalStorage("shadow-invite-seen", false);
+  const showInvite = !dictation && ready && !shadowOn && !inviteSeen && stored.autoRecord === undefined;
+  const acceptInvite = async () => {
+    setInviteSeen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      update({ mode: "segment", autoRecord: true, gapFactor: settings.gapFactor || 1.2 });
+    } catch {
+      update({ autoRecord: false }); // từ chối micro → giữ tắt, không hỏng âm thầm
+    }
+  };
   const toggleShadow = () =>
     update(shadowOn ? { autoRecord: false } : { mode: "segment", autoRecord: true, gapFactor: settings.gapFactor || 1.2 });
 
@@ -985,7 +1005,7 @@ export default function ShadowPlayer({
         <div className="card flex flex-col gap-3 self-start max-md:contents sm:gap-4">
           <div
             className={
-              mediaHidden
+              mediaHidden || typing
                 ? "h-0 overflow-hidden"
                 : "overflow-hidden rounded-2xl max-md:sticky max-md:top-0 max-md:z-20 max-sm:-mx-3 max-md:rounded-none sm:max-md:-mx-4 max-md:bg-black"
             }
@@ -1000,10 +1020,10 @@ export default function ShadowPlayer({
           {dictation ? (
             <div className="flex gap-2 sm:gap-3">
               <button className="btn btn-primary flex-1 py-3" title="Phát / dừng (Space)" onClick={togglePlay}>
-                {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Pause" : "Start"}
+                {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Dừng" : "Phát"}
               </button>
-              <button className="btn flex-1 py-3 tracking-wide uppercase" title="Nghe lại câu (Tab)" onClick={() => go(idx)}>
-                <RotateCcw className="size-5" /> Replay
+              <button className="btn flex-1 py-3" title="Nghe lại câu (Tab)" onClick={() => go(idx)}>
+                <RotateCcw className="size-5" /> Nghe lại
               </button>
             </div>
           ) : (
@@ -1140,6 +1160,23 @@ export default function ShadowPlayer({
             )}
           </div>
 
+          {showInvite && (
+            <div className="flex flex-col gap-2.5 rounded-2xl border-2 border-ink bg-[color-mix(in_srgb,var(--candy)_30%,var(--card))] p-3 sm:p-4">
+              <p className="font-extrabold">Bật vòng nói theo?</p>
+              <p className="text-sm text-muted">
+                Video dừng sau mỗi câu, chờ bạn nói lại và tự ghi âm để bạn so với bản gốc. Trình duyệt sẽ xin quyền dùng micro. Nên đeo tai nghe.
+              </p>
+              <div className="flex gap-2">
+                <button className="btn flex-1 py-2.5" onClick={acceptInvite}>
+                  <Mic className="size-5" /> Bật nói theo
+                </button>
+                <button className="btn flex-1 py-2.5" onClick={() => setInviteSeen(true)}>
+                  Để sau
+                </button>
+              </div>
+            </div>
+          )}
+
           {resumed !== null && (
             <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
               <span className="flex-1 font-semibold">
@@ -1194,6 +1231,7 @@ export default function ShadowPlayer({
                 draft={dictDrafts[idx]}
                 saved={dictDone[idx]}
                 onWord={(w) => pickWord(w)}
+                onTyping={setTyping}
                 translation={settings.showTranslation ? trText(current.text) : undefined}
                 onDraft={(d) =>
                   setDictDrafts((prev) => {
@@ -1327,7 +1365,7 @@ export default function ShadowPlayer({
                   <div>
                     <p className="text-lg font-extrabold">Xong bài rồi!</p>
                     <p className="text-sm text-muted">
-                      Đã nghe {seenCount}/{segments.length} câu
+                      Đã nghe {seenCount}/{segments.length} câu · nói theo {spokenCount} câu
                       {seenCount < segments.length ? " — còn vài câu bạn chưa phát" : ""}.
                     </p>
                   </div>
@@ -1346,6 +1384,13 @@ export default function ShadowPlayer({
                       Chọn bài khác <ChevronRight className="size-5" />
                     </Link>
                   </div>
+                </div>
+              ) : lessonAlmost ? (
+                <div className="flex flex-col gap-1 rounded-2xl border-2 border-ink bg-card-2 p-3 text-sm">
+                  <p className="font-extrabold">Bạn đã nghe hết bài 👂</p>
+                  <p className="text-muted">
+                    Mới nói theo {spokenCount}/{segments.length} câu. Nói thêm {spokenNeed - spokenCount} câu nữa (bấm câu bất kỳ trong transcript rồi Ghi âm) để hoàn thành bài.
+                  </p>
                 </div>
               ) : (
                 <button className={`btn py-3.5 text-base max-md:hidden ${hasRec ? "btn-primary" : ""}`} disabled={nextIdx === undefined} onClick={next}>
@@ -1388,7 +1433,7 @@ export default function ShadowPlayer({
         <div className="card flex max-h-[75dvh] min-h-0 min-w-0 flex-col gap-2.5 max-md:max-h-none max-sm:p-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
           <h2 className="flex min-w-0 items-center truncate text-lg font-extrabold">
             <SoundMark className="mr-1" />
-            {dictation ? "Lượt Dictation" : starredOnly ? "Câu đã đánh dấu" : "Transcript"}
+            {dictation ? "Lượt chính tả" : starredOnly ? "Câu đã đánh dấu" : "Transcript"}
           </h2>
           {/* Chính tả: % tính trên cả bài (không phải lượt) — ghi rõ để khỏi lẫn với "Đã xong x/y câu" của lượt */}
           <div className="flex items-center gap-2" title={dictation ? "Số câu đã chép trong cả bài" : "Số câu đã nghe"}>

@@ -11,10 +11,11 @@ export type StudyWord = { word: string; gender: string; plural: string; meaning:
 
 export type StudyMode = "guess" | "flash" | "quiz" | "reverse" | "listen";
 export const STUDY_MODES: { mode: StudyMode; label: string }[] = [
-  { mode: "guess", label: "Đoán từ" },
+  // Theo thứ tự lộ trình học: làm quen (lật thẻ) → nhận ra (trắc nghiệm) → nhớ ra (gõ)
   { mode: "flash", label: "Thẻ lật" },
   { mode: "quiz", label: "Trắc nghiệm" },
   { mode: "reverse", label: "Trắc nghiệm ngược" },
+  { mode: "guess", label: "Đoán từ" },
   { mode: "listen", label: "Nghe viết" },
 ];
 

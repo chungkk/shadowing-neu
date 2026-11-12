@@ -8,7 +8,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
   return [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
-    { url: `${SITE_URL}/sprechen`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/games/word-rain`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/games/spelling-bee`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/games/word-match`, changeFrequency: "monthly", priority: 0.6 },

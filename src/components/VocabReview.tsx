@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X, Zap } from "lucide-react";
+import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X } from "lucide-react";
 import { gradeWord } from "@/app/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clientApi } from "@/lib/client-api";
@@ -194,7 +194,6 @@ export default function VocabReview({
   const [unsaved, setUnsaved] = useState(0); // lượt chấm không lưu được (mất mạng / hết phiên đăng nhập)
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
-  const [xp, setXp] = useState(0);
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -244,7 +243,6 @@ export default function VocabReview({
     setFeedback({ ok, note, combo: nextCombo });
     setCombo(nextCombo);
     setBestCombo((b) => Math.max(b, nextCombo));
-    if (ok) setXp((x) => x + (s.role === "graded" || s.role === "match" ? 10 : 5));
     if (sound) {
       sfx(ok);
       if (kind !== "match") setTimeout(() => speak(spoken(v.word)), 350);
@@ -332,7 +330,6 @@ export default function VocabReview({
     setPractice(true);
     setCombo(0);
     setBestCombo(0);
-    setXp(0);
     setStartedAt(Date.now());
     setFinishedAt(null);
   };
@@ -776,7 +773,7 @@ export default function VocabReview({
   };
 
   const stats = [
-    { icon: Zap, label: "Tổng XP", value: String(xp), color: "border-amber text-amber" },
+    { icon: Check, label: "Đã ôn", value: `${graded.length} từ`, color: "border-amber text-amber" },
     { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "border-accent text-accent-text" },
     { icon: Clock, label: "Thời gian", value: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, color: "border-link text-link" },
   ];

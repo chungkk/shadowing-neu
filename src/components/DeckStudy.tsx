@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Eye, Lightbulb, List, RotateCcw, Volume2, X } from "lucide-react";
 import { addDeck } from "@/app/account-actions";
@@ -84,6 +84,12 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
   const [picked, setPicked] = useState<string | null>(null);
   const [options] = useState(() => (mode === "quiz" || mode === "reverse" ? quizOptions(w, pool, mode === "reverse") : []));
   const blanked = useMemo(() => blankExample(w), [w]);
+
+  // Máy tính: con trỏ vào ô gõ luôn. Cảm ứng thì không — bàn phím bật lên che mất thẻ trước khi kịp nhìn từ
+  const guessRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!matchMedia("(pointer: coarse)").matches) guessRef.current?.focus();
+  }, []);
 
   // Nghe viết: đọc từ ngay khi hiện thẻ
   useEffect(() => {
@@ -221,7 +227,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
             </button>
           </div>
           <input
-            autoFocus
+            ref={guessRef}
             className="input h-12 text-center text-lg md:text-lg"
             placeholder={mode === "listen" ? "Gõ từ bạn nghe được…" : "Gõ từ tiếng Đức…"}
             value={input}
@@ -348,7 +354,12 @@ export default function DeckStudy({
   const [words, setWords] = useState(initial);
   const [topicId, setTopicId] = useState(initialTopic);
   const [practice, setPractice] = useState(0); // > 0: đang ôn lại (mỗi lần bấm "Ôn lại" tăng 1 → lượt mới)
-  const [mode, setMode] = useLocalStorage<Mode>("deck-mode", "guess");
+  const [mode, setMode] = useLocalStorage<Mode>("deck-mode", "flash");
+  const [picked, setPicked] = useState(false); // đã tự chọn chế độ trong lần mở trang này
+  const pickMode = (m: Mode) => {
+    setPicked(true);
+    setMode(m);
+  };
   const [error, setError] = useState("");
   const [, startTransition] = useTransition();
   const tts = useHasGermanVoice();
@@ -359,7 +370,8 @@ export default function DeckStudy({
   const pool = topicWords.length >= 4 ? topicWords : words;
   const learned = topicWords.filter((w) => w.learned).length;
   const modes = STUDY_MODES.filter((m) => m.mode !== "listen" || tts);
-  const study: Mode = mode === "listen" && !tts ? "guess" : mode;
+  // Chủ đề chưa học từ nào → bắt đầu bằng Thẻ lật (không bắt gõ từ chưa từng thấy), trừ khi vừa tự chọn chế độ khác
+  const study: Mode = !picked && learned === 0 && mode !== "list" ? "flash" : mode === "listen" && !tts ? "guess" : mode;
 
   const markSaved = (keys: string[]) => {
     const set = new Set(keys);
@@ -400,8 +412,8 @@ export default function DeckStudy({
           {[...modes, { mode: "list" as const, label: "Danh sách" }].map((m) => (
             <button
               key={m.mode}
-              onClick={() => setMode(m.mode)}
-              className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-bold transition ${
+              onClick={() => pickMode(m.mode)}
+              className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-bold transition pointer-coarse:py-2.5 ${
                 study === m.mode ? "bg-accent text-white" : "text-muted hover:text-foreground"
               }`}
             >
@@ -410,9 +422,14 @@ export default function DeckStudy({
             </button>
           ))}
         </div>
+        {study === "flash" && learned > 0 && (
+          <button className="cursor-pointer text-sm font-bold text-link hover:underline" onClick={() => pickMode("quiz")}>
+            Tiếp theo: Trắc nghiệm →
+          </button>
+        )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         {/* Danh sách chủ đề: cột trái (máy tính) · hàng cuộn ngang (điện thoại) */}
         <aside className="card flex flex-col gap-2 p-3 max-lg:p-2 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-6rem)] lg:self-start">
           <p className="label px-1 max-lg:hidden">Chủ đề</p>

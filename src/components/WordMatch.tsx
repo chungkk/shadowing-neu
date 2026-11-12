@@ -323,7 +323,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                   {isWord ? "Aa" : "•••"}
                 </span>
                 {isWord ? fullWord(c.w) : c.w.meaning}
-                {c.points > 0 && <span className="absolute top-1 right-2 text-sm font-extrabold text-gem">+{c.points}</span>}
+                {c.points > 0 && <span className="absolute top-1 right-2 text-sm font-extrabold text-amber">+{c.points}</span>}
               </button>
             );
           })}
@@ -348,7 +348,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
               ) : (
                 <>
                   <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.left > 0 ? "Đã thoát ván" : "Hết giờ!"}</p>
-                  <p className="text-5xl font-extrabold text-gem tabular-nums">{v.score}</p>
+                  <p className="text-5xl font-extrabold text-amber tabular-nums">{v.score}</p>
                   {v.score > v.best ? (
                     <p className="flex items-center gap-1.5 font-bold text-amber">
                       <Trophy className="size-5" /> Kỷ lục mới!

@@ -6,7 +6,7 @@ import { KeyRound } from "lucide-react";
 import { requestPasswordReset, resetPasswordAction, type ResetState } from "@/app/auth-actions";
 
 const ErrorBox = ({ children }: { children?: string }) =>
-  children ? <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
+  children ? <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
 
 /** Trang "Quên mật khẩu": nhập email → nhận mã 6 số → nhập mã + mật khẩu mới (đặt xong là đăng nhập luôn) */
 export function ForgotForm() {
@@ -66,7 +66,7 @@ export function ForgotForm() {
           >
             <input
               type="email"
-              placeholder="Email"
+              placeholder="Email" aria-label="Email"
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -89,12 +89,13 @@ export function ForgotForm() {
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder="______"
+              aria-label="Mã xác nhận 6 số"
               className="input text-center text-2xl font-extrabold tracking-[0.5em]"
               autoFocus
               required
             />
-            <input name="password" type="password" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" className="input" autoComplete="new-password" minLength={8} required />
-            <input name="confirm" type="password" placeholder="Nhập lại mật khẩu mới" className="input" autoComplete="new-password" minLength={8} required />
+            <input name="password" type="password" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" aria-label="Mật khẩu mới (ít nhất 8 ký tự)" className="input" autoComplete="new-password" minLength={8} required />
+            <input name="confirm" type="password" placeholder="Nhập lại mật khẩu mới" aria-label="Nhập lại mật khẩu mới" className="input" autoComplete="new-password" minLength={8} required />
             <ErrorBox>{err}</ErrorBox>
             <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending || code.length !== 6}>
               {pending ? "Đang lưu…" : "Lưu mật khẩu mới"}

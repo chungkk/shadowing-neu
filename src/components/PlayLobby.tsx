@@ -20,8 +20,6 @@ import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GameHeader } from "./GameParts";
 import { usePlayGuest } from "./GuestPlay";
-import { CandyO, CandyTitle, CandyX } from "./CandyPieces";
-import { MascotSay } from "./PlayParts";
 
 /**
  * Sảnh Sudoku / Caro, chỉ để chơi vui (không cược kim cương): chơi một mình (Caro: với máy) hoặc tạo phòng / vào phòng bằng mã.
@@ -100,13 +98,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
 
   return (
     <>
-      {game === "caro" && (
-        <div className="candy-only flex flex-col gap-4">
-          <CandyTitle title="Cờ Caro" back="/games" backLabel="Game" />
-          <MascotSay mood="happy">{active ? "Ván đang dở kìa, vào chơi tiếp nhé!" : "Đấu máy cho nóng tay, hoặc tạo phòng rồi gửi mã cho bạn nhé!"}</MascotSay>
-        </div>
-      )}
-      <div className={game === "caro" ? "plain-only" : "contents"}>
+      <div className="contents">
       <GameHeader
         icon={game === "sudoku" ? Grid3x3 : Users}
         tone="cyan"
@@ -132,12 +124,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
       <div className="grid gap-4 md:grid-cols-2">
         <section className="sticker flex flex-col gap-3 p-4">
           <h2 className="flex items-center gap-2 text-lg font-extrabold">
-            {game === "sudoku" ? <User className="size-5" /> : <Bot className="plain-only size-5" />}
-            {game === "caro" && (
-              <span className="candy-only flex size-12 shrink-0 items-center justify-center rounded-2xl border-4 border-ink bg-(--candy)">
-                <Bot className="size-6" />
-              </span>
-            )}
+            {game === "sudoku" ? <User className="size-5" /> : <Bot className="size-5" />}
             {game === "sudoku" ? "Chơi một mình" : "Đấu với máy"}
           </h2>
           <p className="flex-1 text-sm text-muted">{game === "sudoku" ? "Giải 1 đề trong thời gian cho phép." : "Bạn cầm X đi trước, thử xem có thắng nổi máy không."}</p>
@@ -148,13 +135,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
 
         <section className="sticker flex flex-col gap-3 p-4">
           <h2 className="flex items-center gap-2 text-lg font-extrabold">
-            <Users className={`size-5 ${game === "caro" ? "plain-only" : ""}`} />
-            {game === "caro" && (
-              <span className="candy-only flex h-12 shrink-0 items-center gap-0.5 rounded-2xl border-4 border-ink bg-gold px-1">
-                <CandyX className="size-8" />
-                <CandyO className="size-8" />
-              </span>
-            )}
+            <Users className="size-5" />
             Chơi với bạn
           </h2>
           {game === "sudoku" && (
@@ -192,15 +173,6 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
 
       {(error || guest.error) && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{error || guest.error}</p>}
 
-      {game === "caro" && (
-        <ul className="candy-only flex flex-wrap justify-center gap-2">
-          {["Bàn 15×15", "5 viên liền nhau là thắng", "Không cần tài khoản"].map((f) => (
-            <li key={f} className="rounded-full border-[3px] border-ink bg-card px-3 py-0.5">
-              {f}
-            </li>
-          ))}
-        </ul>
-      )}
       <div className="sticker p-4">
         <Rules game={game} />
       </div>

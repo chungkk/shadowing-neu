@@ -47,8 +47,9 @@ export default function SiteFooter() {
     <footer className="bg-sidebar">
       <div className="candy-stripe h-2.5" />
       <div className="share-gutter">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
+        <div className="footer-inner mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
+          {/* footer-cols: màn học ẩn phần cột link (globals.css) — chỉ còn dòng bản quyền */}
+          <div className="footer-cols grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
               <Link href="/" className="flex w-fit items-center gap-1.5 font-display text-xl font-extrabold">
                 <Mascot className="size-12" /> Deutsch Shadowing
@@ -71,7 +72,7 @@ export default function SiteFooter() {
               </nav>
             ))}
           </div>
-          <div className="flex flex-col gap-1 border-t border-border pt-5 text-xs text-muted sm:flex-row sm:justify-between sm:gap-4">
+          <div className="footer-legal flex flex-col gap-1 border-t border-border pt-5 text-xs text-muted sm:flex-row sm:justify-between sm:gap-4">
             <p>
               ©{" "}
               <Suspense>

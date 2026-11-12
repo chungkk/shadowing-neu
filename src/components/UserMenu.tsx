@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { dueCount, getPoints } from "@/lib/db";
 import PointsBadge from "./PointsBadge";
 import { LoginLink } from "./LoginDialog";
-import Sidebar, { HeaderNav, UserDropdown } from "./Sidebar";
+import Sidebar, { HeaderNav, ReviewPill, UserDropdown } from "./Sidebar";
 
 /** Thanh dưới đáy (điện thoại) có thông tin người dùng (đọc cookie lúc request → đặt trong <Suspense>) */
 export async function SidebarWithUser() {
@@ -10,10 +10,10 @@ export async function SidebarWithUser() {
   return <Sidebar user={user && { id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} due={user ? dueCount(user.id) : 0} />;
 }
 
-/** Lối tắt thanh trên cùng (máy tính) kèm số từ đến hạn ôn ở mục "Từ vựng" */
+/** Lối tắt thanh trên cùng (máy tính) */
 export async function HeaderNavWithUser() {
-  const user = await getCurrentUser();
-  return <HeaderNav due={user ? dueCount(user.id) : 0} />;
+  await getCurrentUser(); // đọc cookie lúc request (giữ trong <Suspense> như trước)
+  return <HeaderNav />;
 }
 
 /** Góc phải thanh trên cùng: nút đăng nhập, hoặc điểm chính tả + tên + vai trò */
@@ -29,6 +29,7 @@ export default async function UserMenu() {
   }
   return (
     <div className="flex items-center gap-2 sm:gap-3">
+      <ReviewPill due={dueCount(user.id)} />
       <PointsBadge initial={getPoints(user.id).total} />
       <UserDropdown user={{ id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />
     </div>

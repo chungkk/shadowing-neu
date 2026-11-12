@@ -3,16 +3,10 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Bot, Maximize2, Minus, Plus, X } from "lucide-react";
 import { CARO_SIZE } from "@/lib/play";
-import { CandyPiece } from "./CandyPieces";
 import { GameClock, MascotSay, PausedCover, ResignButton, useCountdown, type MascotMood, type Send, type View } from "./PlayParts";
 
-/** Quân cờ: X/O nét vẽ ở giao diện sáng, tối · viên kẹo ở giao diện Kẹo */
-const Mark = ({ p, className = "" }: { p: "X" | "O"; className?: string }) => (
-  <>
-    <PlainMark p={p} className={`plain-only ${className}`} />
-    <CandyPiece p={p} className={`candy-only ${className}`} />
-  </>
-);
+/** Quân cờ X/O nét vẽ */
+const Mark = ({ p, className = "" }: { p: "X" | "O"; className?: string }) => <PlainMark p={p} className={className} />;
 
 /** Bàn Caro 15×15 (như Solo Games): phóng to bằng 2 ngón / nút +− / Ctrl + cuộn chuột, phóng to rồi thì kéo để xem các góc */
 

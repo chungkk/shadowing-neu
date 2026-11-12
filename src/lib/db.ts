@@ -1431,8 +1431,7 @@ export function getLeaderboard(userId: number, limit = 50): Leaderboard {
          SELECT user_id, SUM(pts) AS total FROM (
            SELECT user_id, pts FROM dict_points
            UNION ALL SELECT user_id, -n * pts FROM dict_hints
-           UNION ALL SELECT user_id, -cost FROM lesson_unlocks
-         ) GROUP BY user_id
+         ) GROUP BY user_id -- xếp theo kim cương kiếm được: tiền mở bài không trừ hạng
        ) t JOIN users u ON u.id = t.user_id
        WHERE t.total > 0
        ORDER BY t.total DESC, u.id`,
@@ -1649,12 +1648,19 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
     return { day, reviews: counts.get(day) ?? 0 };
   });
   // Chuỗi ngày: hôm nay chưa ôn thì vẫn giữ chuỗi tới hôm qua.
-  // Lấy mọi ngày có ôn (không chỉ 90 ngày như trên) để chuỗi dài hơn 90 ngày không bị cắt
+  // Lấy mọi ngày có học (không chỉ 90 ngày như trên) để chuỗi dài hơn 90 ngày không bị cắt.
+  // Ngày có học = ôn từ, học bộ từ hoặc chép chính tả được điểm — cùng nguồn với "+N kim cương" ở TodayStrip
   const studied = new Set(
     (
       conn()
-        .prepare("SELECT DISTINCT date((at - ? * 60000) / 1000, 'unixepoch') AS day FROM review_events WHERE user_id = ?")
-        .all(tzOffset, userId) as { day: string }[]
+        .prepare(
+          `SELECT DISTINCT date((at - ? * 60000) / 1000, 'unixepoch') AS day FROM (
+             SELECT at FROM review_events WHERE user_id = ?
+             UNION ALL SELECT at FROM deck_learned WHERE user_id = ?
+             UNION ALL SELECT at FROM dict_points WHERE user_id = ?
+           )`,
+        )
+        .all(tzOffset, userId, userId, userId) as { day: string }[]
     ).map((r) => r.day),
   );
   let streak = 0;
