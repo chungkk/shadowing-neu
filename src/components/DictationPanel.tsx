@@ -360,7 +360,9 @@ export default function DictationPanel({
           ? result.done
             ? onWord && "Bấm vào từ để tra nghĩa."
             : "Sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại."
-          : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, Tab nghe lại, Esc thoát ô, bấm mắt để xem từ (${hintCost}).`}
+          : touch
+            ? `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô để đổi ô, "Xem từ" để hiện từ đang chọn (${hintCost}).`
+            : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, Tab nghe lại, Esc thoát ô, bấm mắt để xem từ (${hintCost}).`}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
@@ -386,10 +388,10 @@ export default function DictationPanel({
         ) : (
           <>
           {/* Cảm ứng: mắt trên từng ô quá nhỏ và sát ô gõ (dễ bấm nhầm bị trừ điểm) → nút riêng xem từ đang chọn */}
-          <button className="btn flex-1 py-3 pointer-fine:hidden" onMouseDown={keepFocus} onClick={() => reveal([active])} title={`Xem từ đang chọn (${hintCost})`}>
+          <button className="btn flex-1 py-3 whitespace-nowrap pointer-fine:hidden" onMouseDown={keepFocus} onClick={() => reveal([active])} title={`Xem từ đang chọn (${hintCost})`}>
             <Eye className="size-4" /> Xem từ
           </button>
-          <button className="btn flex-1 py-3" onMouseDown={keepFocus} onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
+          <button className="btn flex-1 py-3 whitespace-nowrap" onMouseDown={keepFocus} onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
             <Eye className="size-4 pointer-coarse:hidden" /> <span className="pointer-coarse:hidden">Hiện tất cả</span><span className="pointer-fine:hidden">Hiện hết</span>
             {onHint && <span className="text-xs font-normal opacity-80 pointer-coarse:hidden">(−{POINTS_HINT}/từ)</span>}
           </button>
