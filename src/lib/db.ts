@@ -148,10 +148,10 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, deck, word_key)
     );
-    -- Trang tin (trang chủ): tin tự động lấy từ RSS báo Đức, dịch tiêu đề + tóm tắt sang tiếng Việt (không chép nguyên bài)
+    -- Mục Tin tức (/tin-tuc): tin tự động lấy từ RSS báo Đức, dịch tiêu đề + tóm tắt sang tiếng Việt (không chép nguyên bài)
     CREATE TABLE IF NOT EXISTS news_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      source TEXT NOT NULL, -- khoá nguồn trong lib/news.ts: tagesschau, zdf…
+      source TEXT NOT NULL, -- khoá nguồn (lib/news.ts newsSources): tagesschau, zdf…
       guid TEXT NOT NULL,
       url TEXT NOT NULL,
       title TEXT NOT NULL, -- tiếng Đức (nguyên văn của báo)
@@ -1835,9 +1835,10 @@ export function setNewsTranslation(id: number, titleVi: string, summaryVi: strin
 }
 
 /** Tin đã dịch để hiện ra trang (admin: kèm tin chưa dịch / đã ẩn) */
-export function listNewsItems(opts: { limit?: number; source?: string | null; admin?: boolean } = {}): NewsItem[] {
-  const where = [opts.admin ? "1 = 1" : "hidden = 0 AND title_vi != ''", opts.source ? "source = ?" : "1 = 1"].join(" AND ");
-  const args: (string | number)[] = opts.source ? [opts.source] : [];
+export function listNewsItems(opts: { limit?: number; sources?: string[]; admin?: boolean } = {}): NewsItem[] {
+  if (opts.sources && !opts.sources.length) return [];
+  const where = [opts.admin ? "1 = 1" : "hidden = 0 AND title_vi != ''", opts.sources ? `source IN (${opts.sources.map(() => "?").join(", ")})` : "1 = 1"].join(" AND ");
+  const args: (string | number)[] = opts.sources ?? [];
   return (
     conn()
       .prepare(`SELECT id, source, url, title, summary, title_vi, summary_vi, published_at, hidden FROM news_items WHERE ${where} ORDER BY published_at DESC LIMIT ?`)
@@ -1847,6 +1848,11 @@ export function listNewsItems(opts: { limit?: number; source?: string | null; ad
 
 export function setNewsHidden(id: number, hidden: boolean) {
   conn().prepare("UPDATE news_items SET hidden = ? WHERE id = ?").run(hidden ? 1 : 0, id);
+}
+
+/** Xoá mọi tin của 1 nguồn (admin bỏ nguồn đó) */
+export function deleteNewsItemsOf(source: string) {
+  conn().prepare("DELETE FROM news_items WHERE source = ?").run(source);
 }
 
 /** Xoá tin cũ (tin tức nhanh cũ, không cần giữ) */

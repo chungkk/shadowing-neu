@@ -18,7 +18,7 @@ export function proxy(request: NextRequest) {
   const host = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
 
   if (OLD_HOSTS.has(host) && !pathname.startsWith("/api/")) {
-    // Trang chủ cũ của ckk.pro là bài học tiếng Đức (trang chủ ckk.biz giờ là tin tức)
+    // Trang chủ cũ của ckk.pro là bài học tiếng Đức (trang chủ ckk.biz giờ là trang giới thiệu)
     if (host.endsWith("ckk.pro") && pathname === "/") return NextResponse.redirect(`https://${MAIN_HOST}/tieng-duc${search}`, 308);
     const path = host.endsWith("ckk.pro") && OLD_LEGAL.test(pathname) ? `/deutsch-shadowing${pathname.replace(/\/$/, "")}` : pathname;
     return NextResponse.redirect(`https://${MAIN_HOST}${path}${search}`, 308);

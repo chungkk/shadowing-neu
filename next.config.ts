@@ -7,8 +7,6 @@ const nextConfig: NextConfig = {
   // API câu hỏi lái xe (app iOS/Android) đọc catalog JSON lúc chạy
   outputFileTracingIncludes: {
     "/api/fuehrerschein/**": ["./content/laixe/catalog/*.json", "./content/laixe/catalog_all/*.json"],
-    // Bài hướng dẫn mẫu (nạp thành bản nháp lần đầu admin mở /admin/news)
-    "/admin/news": ["./content/guides/*.md"],
   },
   // Ảnh trên các trang giới thiệu của ckk.biz
   images: {
@@ -32,8 +30,10 @@ const nextConfig: NextConfig = {
       ],
     },
   ],
-  // Đường dẫn cũ của các game (tên tiếng Việt) → tên tiếng Anh
+  // Đường dẫn cũ của các game (tên tiếng Việt) → tên tiếng Anh; mục Hướng dẫn cũ → Tin tức
   redirects: async () => [
+    { source: "/huong-dan", destination: "/tin-tuc", permanent: false },
+    { source: "/huong-dan/:slug", destination: "/tin-tuc/:slug", permanent: false },
     { source: "/games/mua-tu-vung", destination: "/games/word-rain", permanent: true },
     { source: "/games/ong-danh-van", destination: "/games/spelling-bee", permanent: true },
   ],

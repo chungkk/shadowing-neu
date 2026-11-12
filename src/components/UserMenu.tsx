@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { dueCount, getPoints } from "@/lib/db";
 import PointsBadge from "./PointsBadge";
 import { LoginLink } from "./LoginDialog";
-import Sidebar, { HeaderNav, ReviewPill, UserDropdown } from "./Sidebar";
+import Sidebar, { DeutschOnly, HeaderNav, ReviewPill, UserDropdown } from "./Sidebar";
 
 /** Thanh dưới đáy (điện thoại) có thông tin người dùng (đọc cookie lúc request → đặt trong <Suspense>) */
 export async function SidebarWithUser() {
@@ -29,8 +29,10 @@ export default async function UserMenu() {
   }
   return (
     <div className="flex items-center gap-2 sm:gap-3">
-      <ReviewPill due={dueCount(user.id)} />
-      <PointsBadge initial={getPoints(user.id).total} />
+      <DeutschOnly>
+        <ReviewPill due={dueCount(user.id)} />
+        <PointsBadge initial={getPoints(user.id).total} />
+      </DeutschOnly>
       <UserDropdown user={{ id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />
     </div>
   );

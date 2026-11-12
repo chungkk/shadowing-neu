@@ -73,7 +73,7 @@ async function Dashboard() {
           Góp ý
         </Link>
         <Link href="/admin/news" className="btn">
-          Hướng dẫn & tin
+          Tin tức
         </Link>
         <Link href="/admin/new" className="btn btn-primary">
           + Bài mới

@@ -23,31 +23,25 @@ export function SourceBadge({ source }: { source: string }) {
   );
 }
 
-/** Tin tự động: tiêu đề + tóm tắt đã dịch, tiêu đề gốc tiếng Đức, link bài gốc. compact: dải tin ở trang chủ */
-export default function NewsCard({ item, now, compact = false }: { item: NewsItem; now: number; compact?: boolean }) {
+/** Tin tự động: tiêu đề + tóm tắt đã dịch, tiêu đề gốc, link bài gốc */
+export default function NewsCard({ item, now }: { item: NewsItem; now: number }) {
   return (
-    <article className={`sticker flex flex-col gap-2 ${compact ? "p-3" : "p-4"}`}>
+    <article className="sticker flex flex-col gap-2 p-4">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <SourceBadge source={item.source} />
         <time dateTime={new Date(item.publishedAt).toISOString()}>{ago(item.publishedAt, now)}</time>
       </div>
-      <h3 className={`leading-snug font-extrabold ${compact ? "text-base" : "text-lg"}`}>
+      <h3 className="text-lg leading-snug font-extrabold">
         <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
           {item.titleVi}
         </a>
       </h3>
-      {!compact && item.summaryVi && <p className="text-sm">{item.summaryVi}</p>}
-      {!compact && (
-        <>
-          {/* Tiêu đề gốc tiếng Đức: người học đọc song song */}
-          <p className="text-xs text-muted" lang="de">
-            🇩🇪 {item.title}
-          </p>
-          <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-start text-sm font-extrabold text-link">
-            Đọc bài gốc trên {sourceOf(item.source)?.name ?? item.source} <ArrowUpRight className="size-4" />
-          </a>
-        </>
-      )}
+      {item.summaryVi && <p className="text-sm">{item.summaryVi}</p>}
+      {/* Tiêu đề gốc: người học đọc song song */}
+      <p className="text-xs text-muted">{item.title}</p>
+      <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-start text-sm font-extrabold text-link">
+        Đọc bài gốc trên {sourceOf(item.source)?.name ?? item.source} <ArrowUpRight className="size-4" />
+      </a>
     </article>
   );
 }

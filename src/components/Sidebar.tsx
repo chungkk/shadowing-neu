@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, BookOpen, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Newspaper, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Newspaper, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(portal)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -11,11 +11,11 @@ import Avatar, { type AvatarUser } from "./Avatar";
 type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
 type NavUser = AvatarUser & { role: string };
 
-// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "/" = Trang chủ (chỉ đúng trang chủ, cả /tin-tuc);
+// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "/" = Trang chủ (trang giới thiệu tĩnh — chỉ khớp đúng "/");
 // "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học ckk.biz/<slug>, /watch, /vocab…) — xem useCurrent
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
-  { href: "/huong-dan", label: "Hướng dẫn", icon: BookOpen },
+  { href: "/tin-tuc", label: "Tin tức", icon: Newspaper }, // tin tự động từ các nguồn admin chọn, dịch sang tiếng Việt
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
@@ -29,11 +29,11 @@ const DEUTSCH: Item[] = [
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
-// Thanh dưới đáy: 4 phần lớn; đã đăng nhập thì thêm Ôn tập (có chấm đỏ số từ đến hạn).
+// Thanh dưới đáy (tối đa 6 ô): khách thấy đủ các phần; đã đăng nhập thì Ôn tập (có chấm đỏ số từ đến hạn) thay Trang chủ
+// — trang chủ chỉ là trang giới thiệu, logo ở thanh trên cùng vẫn dẫn về đó.
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
-// Điện thoại: "Hướng dẫn" vào từ trang chủ (thanh dưới đáy tối đa 6 ô)
-const GUEST_BAR: Item[] = [ITEMS[0], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[5]];
-const USER_BAR: Item[] = [ITEMS[0], ITEMS[2], REVIEW, ITEMS[3], ITEMS[4], ITEMS[5]];
+const GUEST_BAR: Item[] = ITEMS;
+const USER_BAR: Item[] = [ITEMS[1], ITEMS[2], REVIEW, ITEMS[3], ITEMS[4], ITEMS[5]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
@@ -43,7 +43,7 @@ const ADMIN_ITEMS: Item[] = [
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
-  { href: "/admin/news", label: "Hướng dẫn & tin", icon: Newspaper },
+  { href: "/admin/news", label: "Tin tức & nguồn tin", icon: Newspaper },
 ];
 
 // Trang không thuộc phần Tiếng Đức (các trang khác không khớp mục nào thì coi là bài học → sáng "Tiếng Đức")
@@ -58,7 +58,6 @@ function useCurrent(items: Item[]) {
   if (best) return best;
   const first = pathname.split("/")[1] ?? "";
   if (!first) return undefined; // trang chủ khi danh sách không có mục "/" (thanh trên cùng máy tính)
-  if (first === "tin-tuc" && items.some((it) => it.href === "/")) return "/"; // trang tin thuộc trang chủ
   return items.some((it) => it.href === "/tieng-duc") && !NOT_DEUTSCH.has(first) ? "/tieng-duc" : undefined;
 }
 
@@ -116,7 +115,7 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-// Máy tính: logo đã là nút về trang chủ → thanh trên cùng bắt đầu từ "Hướng dẫn"
+// Máy tính: logo đã là nút về trang chủ → thanh trên cùng bắt đầu từ "Tin tức"
 const HEADER_ITEMS = ITEMS.slice(1);
 
 /** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy). Ôn tập là nút riêng ở góc phải (ReviewPill) */
@@ -133,6 +132,13 @@ export function ReviewPill({ due }: { due: number }) {
       <DueBadge due={due} />
     </Link>
   );
+}
+
+/** Chỉ hiện phần con khi đang ở phần Tiếng Đức (bài học, từ vựng, ôn tập, xếp hạng) — nút "Ôn N" và kim cương là của riêng phần này.
+ *  Ẩn bằng CSS chứ không gỡ ra: huy hiệu kim cương giữ nguyên số điểm đang đếm khi chuyển qua lại giữa các phần */
+export function DeutschOnly({ children }: { children: ReactNode }) {
+  const current = useCurrent([...ITEMS, REVIEW, ...USER_ITEMS]);
+  return <div className={current === "/tieng-duc" || current === REVIEW.href ? "contents" : "hidden"}>{children}</div>;
 }
 
 /** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
