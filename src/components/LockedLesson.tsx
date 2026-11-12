@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Lock } from "lucide-react";
-import { unlockLessonAction } from "@/app/lesson-actions";
+import { unlockLessonAction } from "@/app/(portal)/lesson-actions";
 import { FREE_PICKS, type LockInfo } from "@/lib/lesson-lock";
 import { emitPoints } from "@/lib/points";
 import LevelBadge from "./LevelBadge";

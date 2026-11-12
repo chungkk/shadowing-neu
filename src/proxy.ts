@@ -1,0 +1,31 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { fuehrerscheinGuard } from "@/biz/fuehrerschein-guard";
+
+// Một app cho cả ckk.biz (tên miền chính) và ckk.pro (tên cũ của Deutsch Shadowing).
+// - www.ckk.biz → ckk.biz
+// - ckk.pro → ckk.biz, cùng đường dẫn. Riêng /api/* KHÔNG chuyển: app di động (bản đã phát hành) gọi thẳng
+//   ckk.pro/api/v1 kèm Bearer token — chuyển hướng sang tên miền khác thì iOS bỏ header Authorization.
+//   Link pháp lý cũ của app (ckk.pro/privacy, /terms, …/de) → trang chính sách của Deutsch Shadowing trên ckk.biz.
+// - /api/fuehrerschein/*: CORS, chặn bot, App Key, giới hạn tần suất (như ckk-biz trước đây)
+
+const MAIN_HOST = "ckk.biz";
+const OLD_HOSTS = new Set(["ckk.pro", "www.ckk.pro", "www.ckk.biz"]);
+const OLD_LEGAL = /^\/(privacy|terms)(\/de)?\/?$/;
+
+export function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const host = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
+
+  if (OLD_HOSTS.has(host) && !pathname.startsWith("/api/")) {
+    const path = host.endsWith("ckk.pro") && OLD_LEGAL.test(pathname) ? `/deutsch-shadowing${pathname.replace(/\/$/, "")}` : pathname;
+    return NextResponse.redirect(`https://${MAIN_HOST}${path}${search}`, 308);
+  }
+
+  if (pathname.startsWith("/api/fuehrerschein")) return fuehrerscheinGuard(request);
+  return NextResponse.next();
+}
+
+export const config = {
+  // Bỏ qua file tĩnh của Next (đã có hash, không cần chuyển hướng) để proxy không chạy cho từng file JS/CSS
+  matcher: ["/((?!_next/static|_next/image).*)"],
+};

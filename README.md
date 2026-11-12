@@ -1,6 +1,28 @@
-# 🇩🇪 Deutsch Shadowing
+# CKK (ckk.biz) — trước đây là Deutsch Shadowing (ckk.pro)
 
-App Next.js đơn giản để luyện shadowing tiếng Đức:
+Một app Next.js cho cả ckk.biz: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
+cộng các trang doanh nghiệp / pháp lý của CKK (chuyển từ repo `ckk-biz`).
+
+## Cấu trúc
+
+- `src/app/(portal)/` — app học (layout có thanh tab, đăng nhập). `/` = Tiếng Đức, `/lai-xe`, `/leben-in-deutschland`, `/games`…
+- `src/app/(biz)/` + `src/biz/` — trang doanh nghiệp, giao diện riêng (DE/EN/VI): `/about`, `/fuehrerschein`, `/lid`, `/shadowing`,
+  `/privacy`, `/terms`, `/impressum`, `/support`, `/refund`, `/delete-account`, `/<app>/privacy|support`…
+  Các URL này app iOS/Android đang dùng → **không đổi đường dẫn**.
+- `src/app/api/fuehrerschein/*` — API câu hỏi cho app lái xe, đọc `content/laixe/` (bảo vệ trong `src/proxy.ts`).
+- `src/proxy.ts` — `ckk.pro/*` và `www.ckk.biz/*` → 308 về `ckk.biz` (trừ `/api/*`: app di động đã phát hành gọi thẳng
+  `ckk.pro/api/v1` kèm Bearer token). Link pháp lý cũ `ckk.pro/privacy|terms` → `/deutsch-shadowing/privacy|terms`.
+- Hai root layout → đổi qua lại giữa app học và trang doanh nghiệp là tải lại cả trang (bình thường). 404 chung: `app/global-not-found.tsx`.
+
+## Dữ liệu Lái xe / LiD
+
+`node scripts/import-portal-content.mjs` — chép từ `../ckk-biz/data/laixe` (catalog cho API + bộ câu hạng B cho tab Lái xe)
+và `../lid-app` (câu hỏi LiD + ảnh). Catalog vẫn tạo / publish bằng script của `ckk-biz` (`npm run catalog:publish`), sau đó chạy
+script này rồi deploy. Tiến độ trả lời lưu ở bảng `quiz_answers` (tự tạo).
+
+---
+
+Phần tiếng Đức (shadowing):
 
 - **Bài học do admin đăng**: danh sách trên trang chủ, lọc theo cấp độ A1–C2.
 - **Tự luyện với YouTube**: người dùng dán link → `/watch/[videoId]`, phụ đề tiếng Đức được lấy tự động (ưu tiên phụ đề thủ công, nếu không có thì dùng sub tự động).

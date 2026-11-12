@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X } from "lucide-react";
-import { gradeWord } from "@/app/account-actions";
+import { gradeWord } from "@/app/(portal)/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clientApi } from "@/lib/client-api";
 import { speak, useHasGermanVoice } from "@/lib/german-voice";

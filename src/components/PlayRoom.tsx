@@ -196,7 +196,7 @@ function Waiting({
       : "";
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
   const share = async () => {
-    const text = `Vào chơi ${GAME_TITLE[v.game]} với mình trên ckk.pro, không cần tài khoản: ${link}`;
+    const text = `Vào chơi ${GAME_TITLE[v.game]} với mình trên ckk.biz, không cần tài khoản: ${link}`;
     if (canShare) return navigator.share({ text }).catch(() => {});
     await navigator.clipboard.writeText(link).catch(() => {});
     setCopied(true);

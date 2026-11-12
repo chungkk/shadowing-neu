@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { Loader2 } from "lucide-react";
-import { oauthLogin } from "@/app/auth-actions";
+import { oauthLogin } from "@/app/(portal)/auth-actions";
 
 // SDK của Google Identity Services / Sign in with Apple JS (nạp từ Google / Apple, chỉ phần cần dùng)
 type GoogleId = {

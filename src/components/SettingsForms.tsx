@@ -2,8 +2,8 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Camera, Download, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
-import { deleteAccount, deleteAvatar, logoutOtherDevices, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/account-actions";
-import { logout } from "@/app/auth-actions";
+import { deleteAccount, deleteAvatar, logoutOtherDevices, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/(portal)/account-actions";
+import { logout } from "@/app/(portal)/auth-actions";
 import { clientApi } from "@/lib/client-api";
 import Avatar from "./Avatar";
 

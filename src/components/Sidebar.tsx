@@ -3,25 +3,33 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Captions, ChevronDown, Gamepad2, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { logout } from "@/app/auth-actions";
+import { logout } from "@/app/(portal)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
 
 type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
 type NavUser = AvatarUser & { role: string };
 
+// Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "Tiếng Đức" = "/" khớp mọi trang còn lại (bài học, /vocab, /watch…)
 const ITEMS: Item[] = [
-  { href: "/", label: "Bài học", icon: MonitorPlay }, // bài học video — trụ cột của app
-  { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
+  { href: "/", label: "Tiếng Đức", icon: Languages },
+  { href: "/lai-xe", label: "Lái xe", icon: Car },
+  { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
   { href: "/games", label: "Game", icon: Gamepad2 },
-  { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
 const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers }; // sổ từ; có từ đến hạn → vào thẳng buổi ôn
-// Thanh dưới đáy: khách xem Xếp hạng (chỉ đọc); đã đăng nhập thì chỗ đó dành cho Ôn tập — Xếp hạng chuyển vào trang Thành tích.
+// Các trang con của phần Tiếng Đức (hàng tab nhỏ dưới thanh trên cùng — DeutschSubnav)
+const DEUTSCH: Item[] = [
+  { href: "/", label: "Bài học", icon: MonitorPlay }, // bài học video — trụ cột của phần tiếng Đức
+  { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
+  REVIEW,
+  { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
+];
+// Thanh dưới đáy: 4 phần lớn; đã đăng nhập thì thêm Ôn tập (có chấm đỏ số từ đến hạn).
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
 const GUEST_BAR = ITEMS;
-const USER_BAR: Item[] = [ITEMS[0], ITEMS[1], REVIEW, ITEMS[2]];
+const USER_BAR: Item[] = [ITEMS[0], REVIEW, ITEMS[1], ITEMS[2], ITEMS[3]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
@@ -243,5 +251,35 @@ export function UserDropdown({ user }: { user: NavUser }) {
         )}
       </div>
     </>
+  );
+}
+
+/** Trang thuộc phần Tiếng Đức có hàng tab con (không hiện ở màn học /watch, /<slug> — màn đó cần chỗ cho trình phát) */
+const showDeutschSubnav = (p: string) => p === "/" || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
+
+/** Hàng tab con của phần Tiếng Đức: Bài học · Từ vựng · Ôn tập · Xếp hạng */
+export function DeutschSubnav() {
+  const pathname = usePathname();
+  // "/" chỉ sáng khi đúng trang chủ (khác useCurrent: ở đây "/" không phải mục dự phòng)
+  const current = DEUTSCH.filter((it) => (it.href === "/" ? pathname === "/" : pathname === it.href || pathname.startsWith(it.href + "/"))).sort(
+    (a, b) => b.href.length - a.href.length,
+  )[0]?.href;
+  if (!showDeutschSubnav(pathname)) return null;
+  return (
+    <nav aria-label="Tiếng Đức" className="scroll-row mx-auto flex w-full max-w-6xl gap-1.5 px-4 pt-3 md:px-6">
+      {DEUTSCH.map((it) => (
+        <Link
+          key={it.href}
+          href={it.href}
+          aria-current={it.href === current ? "page" : undefined}
+          className={`flex shrink-0 items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-sm font-bold transition ${
+            it.href === current ? "border-ink bg-accent text-white" : "border-ink/25 hover:border-ink"
+          }`}
+        >
+          <it.icon className="size-4" />
+          {it.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

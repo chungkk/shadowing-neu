@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 2,
+  "version": "q-a02e87184859fa6fe775b72d7cc237f034268d48bb7cca3fc1736240ee66c4f9",
+  "date": "2026-10-06",
+  "questionCount": 1746,
+  "translations": {
+    "vi": {
+      "version": "t-b290f0656e1398c1b45175ee320136f189065c7090c71110afcd1b4d8fb07581",
+      "questionsVersion": "q-a02e87184859fa6fe775b72d7cc237f034268d48bb7cca3fc1736240ee66c4f9",
+      "count": 1746
+    },
+    "en": {
+      "version": "t-3ef0a588cf3d5bce42d89771d690174032c31b5fedf19e2e5374be7d76cb1daf",
+      "questionsVersion": "q-a02e87184859fa6fe775b72d7cc237f034268d48bb7cca3fc1736240ee66c4f9",
+      "count": 1746
+    },
+    "ar": {
+      "version": "t-ed34ec177f799c815233cc392b641ace1e9752abccd9f8f6750315ef468cb8de",
+      "questionsVersion": "q-a02e87184859fa6fe775b72d7cc237f034268d48bb7cca3fc1736240ee66c4f9",
+      "count": 1746
+    },
+    "zh": {
+      "version": "t-d6edab861bb6ff1e98a2da66b7cb01c76257d718f7020f2fe96fc1b76b863359",
+      "questionsVersion": "q-a02e87184859fa6fe775b72d7cc237f034268d48bb7cca3fc1736240ee66c4f9",
+      "count": 1746
+    },
+    "ru": {
+      "version": "t-2e4044e65147abccc378be904b50e65153de7048cd2a3b9af21aeb39fbf1a0ec",
+      "questionsVersion": "q-a02e87184859fa6fe775b72d7cc237f034268d48bb7cca3fc1736240ee66c4f9",
+      "count": 1746
+    }
+  },
+  "availableLanguages": [
+    "vi",
+    "en",
+    "ar",
+    "zh",
+    "ru"
+  ],
+  "translationVersions": {
+    "vi": "t-b290f0656e1398c1b45175ee320136f189065c7090c71110afcd1b4d8fb07581",
+    "en": "t-3ef0a588cf3d5bce42d89771d690174032c31b5fedf19e2e5374be7d76cb1daf",
+    "ar": "t-ed34ec177f799c815233cc392b641ace1e9752abccd9f8f6750315ef468cb8de",
+    "zh": "t-d6edab861bb6ff1e98a2da66b7cb01c76257d718f7020f2fe96fc1b76b863359",
+    "ru": "t-2e4044e65147abccc378be904b50e65153de7048cd2a3b9af21aeb39fbf1a0ec"
+  }
+}

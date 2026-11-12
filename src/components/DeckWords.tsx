@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Check, Layers, Loader2, Plus, Volume2 } from "lucide-react";
-import { addDeck } from "@/app/account-actions";
+import { addDeck } from "@/app/(portal)/account-actions";
 import type { DeckWord } from "@/lib/decks";
 import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import { LoginLink } from "./LoginDialog";

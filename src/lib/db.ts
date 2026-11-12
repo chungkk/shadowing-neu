@@ -146,6 +146,17 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, deck, word_key)
     );
+    -- Tab Lái xe / Leben in Deutschland: kết quả trả lời từng câu (module: 'fuehrerschein' | 'lid')
+    CREATE TABLE IF NOT EXISTS quiz_answers (
+      user_id INTEGER NOT NULL,
+      module TEXT NOT NULL,
+      qid TEXT NOT NULL, -- "1.1.01-001", "g26", "bw3"
+      correct INTEGER NOT NULL DEFAULT 0, -- số lần đúng
+      wrong INTEGER NOT NULL DEFAULT 0, -- số lần sai
+      last_ok INTEGER NOT NULL, -- lần gần nhất đúng (1) / sai (0)
+      at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, module, qid)
+    );
     CREATE TABLE IF NOT EXISTS vocab_examples (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       vocab_id INTEGER NOT NULL,
@@ -686,6 +697,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM vocab_examples WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM starred_sentences WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM deck_learned WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM quiz_answers WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
@@ -715,6 +727,7 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     vocabExamples: rows("SELECT vocab_id, context, source_url, source_title, created_at FROM vocab_examples WHERE user_id = ? ORDER BY id"),
     starredSentences: rows("SELECT text, source_url, source_title, created_at FROM starred_sentences WHERE user_id = ? ORDER BY id"),
     deckLearned: rows("SELECT deck, word_key, at FROM deck_learned WHERE user_id = ? ORDER BY at"),
+    quizAnswers: rows("SELECT module, qid, correct, wrong, last_ok, at FROM quiz_answers WHERE user_id = ? ORDER BY at"),
     progress: rows("SELECT source, title, idx, total, mode, dict_level, dict_done, updated_at FROM progress WHERE user_id = ? ORDER BY updated_at DESC"),
     reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
     crazyReps: rows("SELECT source, idx, reps, passed, updated_at FROM crazy_reps WHERE user_id = ?"),
@@ -1689,4 +1702,42 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
       .map((v) => ({ id: v.id, word: v.word, meaning: v.meaning, lapses: v.lapses })),
     points: getPoints(userId, tzOffset, now),
   };
+}
+
+// ---- Lái xe / Leben in Deutschland: tiến độ trả lời ----
+
+export type QuizModule = "fuehrerschein" | "lid";
+export const QUIZ_MODULES: readonly QuizModule[] = ["fuehrerschein", "lid"];
+export type QuizStat = { correct: number; wrong: number; lastOk: boolean };
+
+/** Ghi 1 lần trả lời (nhiều câu một lúc, vd. nộp bài thi thử) */
+export function recordQuizAnswers(userId: number, module: QuizModule, answers: { qid: string; ok: boolean }[]) {
+  const db = conn();
+  const upsert = db.prepare(
+    `INSERT INTO quiz_answers (user_id, module, qid, correct, wrong, last_ok, at) VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (user_id, module, qid) DO UPDATE SET
+       correct = correct + excluded.correct, wrong = wrong + excluded.wrong, last_ok = excluded.last_ok, at = excluded.at`,
+  );
+  const now = Date.now();
+  db.exec("BEGIN");
+  try {
+    for (const a of answers) upsert.run(userId, module, a.qid, a.ok ? 1 : 0, a.ok ? 0 : 1, a.ok ? 1 : 0, now);
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
+/** Kết quả từng câu đã trả lời: qid → thống kê */
+export function quizStats(userId: number, module: QuizModule): Record<string, QuizStat> {
+  const rows = conn()
+    .prepare("SELECT qid, correct, wrong, last_ok FROM quiz_answers WHERE user_id = ? AND module = ?")
+    .all(userId, module) as { qid: string; correct: number; wrong: number; last_ok: number }[];
+  return Object.fromEntries(rows.map((r) => [r.qid, { correct: r.correct, wrong: r.wrong, lastOk: !!r.last_ok }]));
+}
+
+/** Xoá tiến độ của 1 phần (bắt đầu lại từ đầu) */
+export function resetQuiz(userId: number, module: QuizModule) {
+  conn().prepare("DELETE FROM quiz_answers WHERE user_id = ? AND module = ?").run(userId, module);
 }

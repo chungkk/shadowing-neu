@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransiti
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Brain, CalendarCheck, Download, ExternalLink, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
-import { addOwnWord, aiMeaning, aiMeaningFor, removeWord, setWordMeaning } from "@/app/account-actions";
+import { addOwnWord, aiMeaning, aiMeaningFor, removeWord, setWordMeaning } from "@/app/(portal)/account-actions";
 import type { VocabItem } from "@/lib/db";
 import { isDue, stageInfo } from "@/lib/srs";
 import VocabReview from "./VocabReview";

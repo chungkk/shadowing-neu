@@ -8,16 +8,21 @@ const COLUMNS = [
   {
     title: "Luyện tập",
     links: [
-      { href: "/", label: "Bài học video" },
+      { href: "/", label: "Tiếng Đức – bài học video" },
       { href: "/vocab", label: "Từ vựng" },
+      { href: "/lai-xe", label: "Lý thuyết lái xe" },
+      { href: "/leben-in-deutschland", label: "Leben in Deutschland" },
       { href: "/games", label: "Game" },
     ],
   },
   {
     title: "Pháp lý",
     links: [
-      { href: "/privacy", label: "Chính sách quyền riêng tư" },
-      { href: "/terms", label: "Điều khoản sử dụng" },
+      { href: "/deutsch-shadowing/privacy", label: "Chính sách quyền riêng tư" },
+      { href: "/deutsch-shadowing/terms", label: "Điều khoản sử dụng" },
+      { href: "/privacy", label: "Datenschutz (ckk.biz)" },
+      { href: "/impressum", label: "Impressum" },
+      { href: "/about", label: "Về CKK · App & dịch vụ" },
     ],
   },
 ];
@@ -52,9 +57,9 @@ export default function SiteFooter() {
           <div className="footer-cols grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
               <Link href="/" className="flex w-fit items-center gap-1.5 font-display text-xl font-extrabold">
-                <Mascot className="size-12" /> Deutsch Shadowing
+                <Mascot className="size-12" /> CKK
               </Link>
-              <p className="max-w-sm text-sm text-muted">Luyện nghe, nói và chép chính tả tiếng Đức với video thật.</p>
+              <p className="max-w-sm text-sm text-muted">Học tiếng Đức với video thật, ôn thi lái xe và Leben in Deutschland — một tài khoản cho tất cả.</p>
             </div>
             {COLUMNS.map((c) => (
               <nav key={c.title} aria-label={c.title} className="flex flex-col items-start gap-2.5">
@@ -78,10 +83,10 @@ export default function SiteFooter() {
               <Suspense>
                 <CurrentYear />
               </Suspense>{" "}
-              Deutsch Shadowing · Một sản phẩm của{" "}
-              <a href="https://ckk.biz" className="underline underline-offset-2 hover:text-foreground">
+              CKK ·{" "}
+              <Link href="/about" className="underline underline-offset-2 hover:text-foreground">
                 ckk.biz
-              </a>
+              </Link>
             </p>
             <p>Video thuộc quyền sở hữu của tác giả trên YouTube.</p>
           </div>

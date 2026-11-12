@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
-import { requestPasswordReset, resetPasswordAction, type ResetState } from "@/app/auth-actions";
+import { requestPasswordReset, resetPasswordAction, type ResetState } from "@/app/(portal)/auth-actions";
 
 const ErrorBox = ({ children }: { children?: string }) =>
   children ? <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;

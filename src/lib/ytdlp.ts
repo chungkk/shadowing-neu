@@ -40,7 +40,9 @@ function commonArgs(): string[] {
 
 function run(args: string[], timeout: number): Promise<string> {
   return new Promise((resolve, reject) => {
+    // turbopackIgnore: yt-dlp là chương trình hệ thống, không phải file trong dự án → không để Next chép cả dự án vào bản build
     execFile(
+      /*turbopackIgnore: true*/
       BIN,
       [...commonArgs(), ...args],
       { timeout, killSignal: "SIGKILL", maxBuffer: 64 * 1024 * 1024 },

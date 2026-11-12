@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 95 620 620"><defs><clipPath id="m"><path d="M232 442C330 468 480 462 590 402 590 505 510 598 412 592 330 586 268 520 232 442Z"/></clipPath><clipPath id="h"><path d="M418 208C440 130 560 110 640 170 690 210 700 280 672 330 600 262 510 225 418 208Z"/></clipPath></defs>
+<path d="M192 424C194 396 236 368 258 306 288 228 360 202 430 200 560 195 640 285 636 410 632 540 540 640 415 632 325 626 262 572 222 486 208 462 190 450 192 424Z" fill="#FFFAF3" stroke="#17151A" stroke-width="13" stroke-linejoin="round"/>
+<path d="M232 442C330 468 480 462 590 402 590 505 510 598 412 592 330 586 268 520 232 442Z" fill="#8F2036" stroke="#17151A" stroke-width="11" stroke-linejoin="round"/>
+<g clip-path="url(#m)"><path d="M300 615C320 505 455 490 520 620Z" fill="#F58A8E"/><path d="M240 444C340 470 480 465 590 405L590 424C480 482 340 488 250 462Z" fill="#FFFAF3"/></g>
+<ellipse cx="578" cy="510" rx="27" ry="17" fill="#F9A8A8"/>
+<path d="M418 208C440 130 560 110 640 170 690 210 700 280 672 330 600 262 510 225 418 208Z" fill="#FFFAF3" stroke="#17151A" stroke-width="13" stroke-linejoin="round"/>
+<g clip-path="url(#h)"><path d="M430 150L500 110 640 340 560 320Z" fill="#E8384F"/><path d="M590 100L650 120 760 300 690 340Z" fill="#E8384F"/></g>
+<path d="M418 208C440 130 560 110 640 170 690 210 700 280 672 330 600 262 510 225 418 208Z" fill="none" stroke="#17151A" stroke-width="13" stroke-linejoin="round"/>
+<path d="M397 322C410 306 428 306 442 320" fill="none" stroke="#17151A" stroke-width="13" stroke-linecap="round"/>
+<circle cx="322" cy="330" r="82" fill="#FFFFFF" stroke="#17151A" stroke-width="16"/><circle cx="512" cy="312" r="86" fill="#FFFFFF" stroke="#17151A" stroke-width="16"/>
+<circle cx="298" cy="336" r="33" fill="#17151A"/><circle cx="287" cy="323" r="11" fill="#fff"/><circle cx="488" cy="318" r="34" fill="#17151A"/><circle cx="477" cy="305" r="11" fill="#fff"/>
+<g stroke="#17151A" stroke-width="11" stroke-linejoin="round"><path d="M430 650L330 606C316 600 304 608 304 622V684C304 698 316 706 330 700Z" fill="#E8384F"/><path d="M430 650L530 606C544 600 556 608 556 622V684C556 698 544 706 530 700Z" fill="#E8384F"/><rect x="404" y="624" width="52" height="56" rx="16" fill="#E8384F"/></g></svg>

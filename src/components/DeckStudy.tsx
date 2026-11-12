@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Eye, Lightbulb, List, RotateCcw, Volume2, X } from "lucide-react";
-import { addDeck } from "@/app/account-actions";
+import { addDeck } from "@/app/(portal)/account-actions";
 import { blankExample, checkGuess, fullWord, hintOf, quizOptions, STUDY_MODES, type StudyMode } from "@/lib/deck-study";
 import type { DeckTopic, DeckWord } from "@/lib/decks";
 import { speak, useHasGermanVoice } from "@/lib/german-voice";

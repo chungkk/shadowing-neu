@@ -1,0 +1,843 @@
+@import "tailwindcss";
+/* Bỏ qua dữ liệu JSON lớn khi Tailwind quét tên class */
+@source not "../../../content";
+@source not "../../content";
+
+/* dark: chỉ theo nút chọn giao diện (data-theme trên <html>), không theo cài đặt của hệ điều hành */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Giao diện theo linh vật: nền kem · viền nâu mận (ink) · sọc kẹo đỏ.
+   LUẬT MÀU — mỗi màu một nghĩa, đừng dùng lẫn:
+   · xanh lá (accent)  = học / xác nhận / nút chính của bước học
+   · vàng (gold/amber) = chơi / thưởng / điểm trong game
+   · đỏ (red)          = sai / huỷ / xoá / đang ghi âm
+   · hồng (candy)      = nói (nút Ghi âm khi chờ, bước "đến lượt bạn")
+   · teal (link)       = link / điều hướng phụ
+   · xanh lam (gem)    = kim cương — chỉ dùng cho điểm thật kiếm được khi học
+   Mỗi lúc chỉ một nút màu đậm (btn-primary / btn-record…) trên màn; nút phụ dùng .btn trung tính. */
+:root {
+  color-scheme: light;
+  --background: #fff6e9;
+  --sidebar: #ffedd6;
+  --foreground: #43232f;
+  --ink: #55303f;
+  --card: #fffdf9;
+  --card-2: #ffedd6;
+  --border: #ecd3bb;
+  --muted: #7a5a65;
+  --link: #0f766e;
+  --accent: #17803f;
+  --accent-dark: #0e5a2b;
+  --accent-text: #17803f; /* chữ màu xanh; --accent là nền nút chữ trắng */
+  --on-link: #ffffff; /* chữ trên nền --link */
+  --stripe: #fffaf3; /* vạch sáng của dải sọc kẹo */
+  --amber: #a85605; /* đủ đậm để làm chữ trên nền kem; nền nút dùng --gold */
+  --amber-dark: #7a3e04;
+  --gold: #fbbf24;
+  /* Màu nhấn của dòng đang học trong transcript */
+  --candy: #ffb3bd;
+  --sun: #ffd15c;
+  --leaf: #93e4a8;
+  --aqua: #a5e1f5;
+  --red: #e8384f;
+  --red-dark: #8f2036;
+  --red-400: #c81e3a; /* chữ đỏ (lỗi, xoá) */
+  --red-300: #c81e3a;
+  --phrase: #0369a1; /* cụm từ cố định AI tìm thấy */
+  --gem: #0369a1; /* điểm chính tả (kim cương) */
+  --gem-dark: #075985;
+  /* Bàn Caro: khay và ô */
+  --board: var(--card-2);
+  --cell: var(--card);
+}
+
+/* Giao diện tối ấm: nâu ca cao lấy từ viền linh vật, như bàn học dưới ánh đèn vàng buổi tối */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #241a1c;
+  --sidebar: #1c1416;
+  --foreground: #f9ecdf;
+  --ink: #5c4248;
+  --card: #32252a;
+  --card-2: #3f2f33;
+  --border: #4e3b40;
+  --muted: #cdb7aa;
+  --link: #83d8cc;
+  --accent: #1d8048;
+  --accent-dark: #0f4f2b;
+  --accent-text: #8adea6;
+  --on-link: #16211f;
+  --stripe: #efdcc6;
+  --amber: #f6c26b;
+  --amber-dark: #ffdc9a;
+  --gold: #f5b93c;
+  --red: #cf3a4e;
+  --red-dark: #7a1f30;
+  --red-400: #ff9ca7;
+  --red-300: #ffb7bf;
+  --phrase: #93d2f7;
+  --gem: #93d2f7;
+  --gem-dark: #2c6f95;
+  scrollbar-color: var(--ink) var(--sidebar);
+}
+[data-theme="dark"] ::selection {
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
+}
+
+/* Màn chơi game và tranh minh hoạ game: vẽ riêng cho nền đêm nên giữ bảng màu tối */
+.theme-night {
+  color-scheme: dark;
+  --background: #0c110e;
+  --sidebar: #070a08;
+  --foreground: #eef5ef;
+  --ink: #26362c;
+  --card: #131b16;
+  --card-2: #1b261f;
+  --border: #26362c;
+  --muted: #8ea395;
+  --link: #facc15;
+  --accent: #16a34a;
+  --accent-dark: #14532d;
+  --accent-text: #16a34a;
+  --amber: #facc15;
+  --amber-dark: #854d0e;
+  --gold: #facc15;
+  --red: #dc2626;
+  --red-dark: #7f1d1d;
+  --red-400: #f87171;
+  --red-300: #fca5a5;
+  --phrase: #38bdf8;
+  --gem: #38bdf8;
+  --gem-dark: #0369a1;
+  color: var(--foreground);
+}
+/* Khung màn chơi trong giao diện tối ấm: cùng tông ca cao với trang */
+[data-theme="dark"] .theme-night {
+  --background: #1c1416;
+  --sidebar: #161012;
+  --ink: #4e3b40;
+  --card: #2a1f23;
+  --card-2: #32252a;
+  --border: #4e3b40;
+  --muted: #cdb7aa;
+  --foreground: #f9ecdf;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-sidebar: var(--sidebar);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-2: var(--card-2);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-gold: var(--gold);
+  --color-candy: var(--candy);
+  --color-red-400: var(--red-400);
+  --color-red-300: var(--red-300);
+  --color-muted: var(--muted);
+  --color-link: var(--link);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-text: var(--accent-text);
+  --color-on-link: var(--on-link);
+  --color-amber: var(--amber);
+  --color-amber-dark: var(--amber-dark);
+  --color-red: var(--red);
+  --color-red-dark: var(--red-dark);
+  --color-phrase: var(--phrase);
+  --color-gem: var(--gem);
+  --color-gem-dark: var(--gem-dark);
+  --color-board: var(--board);
+  --color-cell: var(--cell);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-baloo);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Chấm bi nhạt như giấy dán sticker */
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 8%, transparent) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  /* Điện thoại xoay ngang: chừa chỗ tai thỏ (viewport-fit=cover) */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tối ấm: chấm bi sáng nhạt thay cho chấm tối, thêm vầng đèn vàng phía trên trang */
+[data-theme="dark"] body {
+  background-image: radial-gradient(color-mix(in srgb, var(--foreground) 5%, transparent) 1.5px, transparent 1.5px);
+}
+[data-theme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(70rem 32rem at 50% -6rem, color-mix(in srgb, var(--gold) 13%, transparent), transparent);
+}
+
+/* Bỏ trễ chạm / zoom khi chạm 2 lần vào nút trên điện thoại */
+button,
+a,
+label,
+select {
+  touch-action: manipulation;
+}
+
+@layer base {
+  /* Viền focus khi dùng bàn phím (Tab) — màu xanh của giao diện; class outline-none vẫn tắt được */
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  h1,
+  h2 {
+    font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* Khung kiểu sticker: viền đậm, bóng cứng dưới đáy */
+  .sticker {
+    @apply rounded-3xl border-2 border-ink bg-card shadow-[0_4px_0_var(--ink)];
+  }
+  /* Thẻ bấm được: nhấc lên và nghiêng nhẹ khi rê chuột */
+  .sticker-link {
+    @apply transition hover:-translate-y-1 hover:-rotate-1 hover:shadow-[0_7px_0_var(--ink)] active:translate-y-0.5 active:rotate-0 active:shadow-[0_1px_0_var(--ink)] motion-reduce:hover:rotate-0;
+  }
+  .card {
+    @apply rounded-3xl border-2 border-ink bg-card p-4 shadow-[0_4px_0_var(--ink)];
+  }
+  /* Tiêu đề nhỏ in hoa của từng khung: "VIDEO", "TRANSCRIPT"… */
+  .label {
+    @apply text-sm font-extrabold tracking-wider text-foreground uppercase;
+  }
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-card px-3.5 py-2 text-sm font-bold shadow-[0_3px_0_var(--ink)] transition select-none hover:-translate-y-px active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-ink/30 disabled:bg-card-2 disabled:text-muted disabled:shadow-none disabled:brightness-100;
+  }
+  /* Nút lớn kiểu "nổi" có viền dưới đậm. Không in hoa: chữ Việt có dấu chồng viết thường dễ đọc hơn */
+  .btn-primary {
+    @apply bg-accent font-extrabold text-white shadow-[0_4px_0_var(--ink)] hover:brightness-110;
+  }
+  .btn-amber {
+    @apply bg-gold font-extrabold text-black shadow-[0_4px_0_var(--ink)] hover:brightness-105;
+  }
+  .btn-red {
+    @apply bg-red font-extrabold text-white shadow-[0_4px_0_var(--ink)] hover:brightness-110;
+  }
+  /* Nút Ghi âm: hồng khi chờ (hành động chính của bước nói), chỉ đỏ khi đang ghi — đỏ còn lại dành cho sai / xoá */
+  .btn-record {
+    @apply bg-candy font-extrabold text-[#2b1520] shadow-[0_4px_0_var(--ink)] hover:brightness-105;
+  }
+  .btn-recording {
+    @apply bg-red font-extrabold text-white shadow-[0_4px_0_var(--ink)];
+    animation: rec-ring 1.4s ease-out infinite;
+  }
+  @keyframes rec-ring {
+    0% { box-shadow: 0 4px 0 var(--ink), 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); }
+    100% { box-shadow: 0 4px 0 var(--ink), 0 0 0 12px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-recording { animation: none; }
+  }
+  /* Vùng chạm ≥ 44px mà không đổi kích thước nhìn thấy */
+  .hit-44 {
+    position: relative;
+  }
+  .hit-44::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* Dải sọc kẹo như thân linh vật */
+  .candy-stripe {
+    @apply border-y-2 border-ink;
+    background: repeating-linear-gradient(-45deg, var(--red) 0 10px, var(--stripe) 10px 20px);
+  }
+  .candy-bar {
+    background: repeating-linear-gradient(-45deg, var(--red) 0 6px, var(--stripe) 6px 12px);
+  }
+  /* Bộ 3 vạch sóng âm cạnh tiêu đề mục */
+  .sound-mark {
+    @apply inline-flex h-[1em] shrink-0 items-center gap-[0.14em] pr-[0.2em];
+  }
+  .sound-mark i {
+    width: 0.2em;
+    border-radius: 99px;
+    background: var(--red);
+    box-shadow: 0.09em 0.09em 0 var(--gold);
+  }
+  /* Màn học: --stage đổi theo việc người học cần làm, dòng đang học trong transcript đổi màu theo */
+  .lesson {
+    --stage: var(--aqua);
+  }
+  .lesson[data-step="speak"] {
+    --stage: var(--candy);
+  }
+  .lesson[data-step="compare"] {
+    --stage: var(--leaf);
+  }
+  .lesson[data-step="dict"] {
+    --stage: var(--sun);
+  }
+  .lesson:has([data-dict="check"]) {
+    --stage: var(--candy);
+  }
+  .lesson:has([data-dict="done"]) {
+    --stage: var(--leaf);
+  }
+  /* Dòng transcript: chấm số nối thành một đường, câu đang học nổi lên như sticker */
+  .trow {
+    @apply relative flex cursor-pointer items-start gap-2.5 rounded-2xl border-2 border-transparent px-2 py-2.5 transition-colors hover:bg-card-2;
+  }
+  .trow::before {
+    content: "";
+    position: absolute;
+    left: 21px;
+    top: 0;
+    bottom: 0;
+    border-left: 2px solid var(--border);
+  }
+  .trow-on {
+    @apply border-ink shadow-[0_3px_0_var(--ink)] hover:bg-[color-mix(in_srgb,var(--stage)_45%,var(--card))];
+    z-index: 1;
+    background: color-mix(in srgb, var(--stage) 45%, var(--card));
+  }
+  .trow-on::before {
+    display: none;
+  }
+  .trow-dot {
+    @apply relative flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-border bg-card text-xs font-extrabold text-muted tabular-nums;
+  }
+  .trow-passed {
+    @apply border-ink bg-[var(--leaf)] text-[#2b1520];
+  }
+  .trow-on .trow-dot {
+    @apply border-0 bg-transparent;
+  }
+  .btn-icon {
+    @apply inline-flex size-10 cursor-pointer items-center justify-center rounded-xl text-foreground transition hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  /* Điện thoại: chữ 16px — nhỏ hơn thì Safari iOS tự phóng to trang khi bấm vào ô */
+  .input {
+    @apply rounded-2xl border-2 border-ink/40 bg-card px-4 py-3 text-base outline-none placeholder:text-muted focus:border-accent md:text-sm dark:border-muted/45;
+  }
+  .field {
+    @apply flex flex-col gap-1 text-muted;
+  }
+  .field select {
+    @apply rounded-lg border border-border bg-background px-2 py-1.5 text-base text-foreground md:text-sm;
+  }
+  .check {
+    @apply flex cursor-pointer items-center gap-2;
+  }
+  .check input {
+    @apply accent-accent;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold;
+  }
+  /* Thanh cuộn ngang trên điện thoại (hàng nút, hàng lọc) — ẩn thanh cuộn */
+  .scroll-row {
+    @apply overflow-x-auto overscroll-x-contain [scrollbar-width:none] *:shrink-0 [&::-webkit-scrollbar]:hidden;
+  }
+  /* Nút bấm-giữ (nghe chậm): không bôi chọn chữ / hiện menu khi giữ lâu trên điện thoại */
+  .press {
+    @apply select-none [-webkit-touch-callout:none];
+  }
+  /* Khối xám nhấp nháy giữ chỗ trong lúc chờ dữ liệu (Skeleton.tsx) */
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-card-2 motion-reduce:animate-none;
+  }
+  kbd {
+    @apply rounded border border-border bg-card-2 px-1 font-mono text-[10px];
+  }
+}
+
+.gap-bar {
+  width: 0;
+  animation-name: fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fill {
+  to {
+    width: 100%;
+  }
+}
+
+/* Bảng tra từ: nền mờ dần, bảng trượt lên (màn rộng: nổi lên giữa màn hình) */
+.sheet-fade {
+  animation: sheet-fade 160ms ease-out;
+}
+.sheet-up {
+  animation: sheet-up 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+@media (min-width: 48rem) {
+  .sheet-up {
+    animation-name: sheet-pop;
+  }
+}
+@keyframes sheet-pop {
+  from {
+    transform: translateY(16px) scale(0.97);
+    opacity: 0;
+  }
+}
+/* Thanh chia sẻ đang mở (máy tính): chừa lề phải để thanh nổi không che nội dung.
+   Từ 88rem khung max-w-7xl đã không chạm thanh → bỏ lề để nội dung luôn căn giữa, không nhảy khi đổi trang;
+   riêng trang rộng hơn khung đó (.share-wide: trình phát bài học) vẫn cần lề */
+@media (min-width: 48rem) and (max-width: 87.99rem) {
+  body:has([data-share-open]) .share-gutter {
+    padding-right: 4rem;
+  }
+}
+@media (min-width: 88rem) {
+  body:has([data-share-open]):has(.share-wide) .share-gutter {
+    padding-right: 4rem;
+  }
+}
+/* Màn học trên điện thoại: thanh điều khiển của trình phát thay chỗ thanh điều hướng dưới đáy (cùng chiều cao) */
+body:has(.lesson) .bottom-nav {
+  display: none;
+}
+/* Màn học: chân trang gọn — chỉ dòng bản quyền, không cột link (đỡ phân tán khi đang tập trung) */
+body:has(.lesson) .footer-cols {
+  display: none;
+}
+body:has(.lesson) .footer-inner {
+  padding-block: 1rem;
+}
+body:has(.lesson) .footer-legal {
+  border-top: 0;
+  padding-top: 0;
+}
+/* Khoảng chừa thanh home (iPhone) ở đáy popup / bảng trượt */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+/* ---- Điểm chính tả: hiệu ứng khi câu được điểm — các ô từ (DictationPanel) và huy hiệu điểm (PointsBadge) ---- */
+/* Tia lấp lánh quanh kim cương + "+N" bật lên cạnh huy hiệu rồi mờ dần */
+.pt-burst {
+  position: absolute;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+.pt-spark {
+  position: absolute;
+  left: -2.5px;
+  top: -2.5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--spark, var(--gem));
+  box-shadow: 0 0 6px var(--spark, var(--gem));
+  animation: pt-spark 600ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+  opacity: 0;
+}
+@keyframes pt-spark {
+  0% {
+    transform: rotate(var(--a)) translateX(0) scale(1.2);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--a)) translateX(var(--d, 22px)) scale(0.2);
+    opacity: 0;
+  }
+}
+.pt-plus {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  margin-right: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 1.125rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--gem);
+  text-shadow: 0 1px 0 var(--gem-dark), 0 0 12px rgba(56, 189, 248, 0.6);
+  animation: pt-plus 1100ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+@keyframes pt-plus {
+  0% {
+    transform: translate(10px, -50%) scale(0.4);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(0, -50%) scale(1.25);
+    opacity: 1;
+  }
+  35% {
+    transform: translate(0, -50%) scale(1);
+  }
+  70% {
+    transform: translate(0, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-6px, -50%) scale(0.9);
+    opacity: 0;
+  }
+}
+/* Các ô từ nảy lên lần lượt khi câu đúng hết */
+.dict-win {
+  animation: dict-win 520ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+@keyframes dict-win {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: translateY(-5px) scale(1.12);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.35), 0 6px 16px rgba(22, 163, 74, 0.35);
+  }
+  100% {
+    transform: none;
+  }
+}
+/* Từ vừa gõ đúng: "dán" sticker xuống ô */
+.dict-stick {
+  animation: dict-stick 300ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes dict-stick {
+  from {
+    transform: scale(1.22);
+  }
+}
+/* Bong bóng thoại của linh vật (đuôi chĩa về phía linh vật) */
+.dict-bubble {
+  position: relative;
+}
+.dict-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  background: var(--card);
+  border-left: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  transform: translateY(-50%) rotate(45deg);
+}
+/* Tiến độ câu: dải sọc kẹo dài dần */
+.dict-progress {
+  background: repeating-linear-gradient(-45deg, var(--red) 0 7px, var(--stripe) 7px 14px);
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* Huy hiệu: kim cương nảy, số mới lăn từ dưới lên, viền loé sáng */
+.points-bump {
+  display: inline-flex;
+  animation: points-bump 520ms cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+@keyframes points-bump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.4) rotate(-12deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+.points-roll {
+  animation: points-roll 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes points-roll {
+  from {
+    transform: translateY(85%);
+    opacity: 0;
+  }
+}
+.points-glow {
+  animation: points-glow 800ms ease-out forwards;
+}
+@keyframes points-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(56, 189, 248, 0);
+  }
+}
+
+/* ---- Game chữ rơi (FallingWords): giọt bị bắn nổ bay lên, giọt chạm đáy mờ dần, gõ sai thì rung ---- */
+.rain-hit {
+  animation: rain-hit 700ms ease-out forwards;
+}
+@keyframes rain-hit {
+  25% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1.05) translateY(-28px);
+    opacity: 0;
+  }
+}
+.rain-miss {
+  animation: pt-fade 700ms ease-in forwards;
+}
+.shake {
+  animation: shake 300ms;
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
+/* Vệt mưa nền + thuyền / chim nhấp nhô trên mặt nước */
+.rain-streak {
+  animation: rain-fall linear infinite;
+}
+@keyframes rain-fall {
+  to {
+    transform: translateY(110vh);
+  }
+}
+/* Màn tải trang (app/loading.tsx): chờ 250ms mới hiện, trang tải nhanh sẽ không nháy linh vật */
+.page-loader {
+  animation: page-loader-in 200ms ease-out 250ms backwards;
+}
+@keyframes page-loader-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.bob {
+  animation: bob 2.4s ease-in-out infinite;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-4px) rotate(-3deg);
+  }
+}
+
+/* Đào vàng: móc treo đung đưa ở ròng rọc, thợ mỏ nhún người khi kéo */
+.hook-swing {
+  animation: hook-swing 2.6s ease-in-out infinite;
+}
+@keyframes hook-swing {
+  0%,
+  100% {
+    transform: rotate(14deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+.gold-pull {
+  animation: gold-pull 0.35s ease-in-out infinite;
+}
+@keyframes gold-pull {
+  50% {
+    transform: translateY(3px) rotate(-8deg);
+  }
+}
+
+/* Sao trời nền game Đào vàng */
+.twinkle {
+  animation: twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hook-swing,
+  .gold-pull {
+    animation: none;
+  }
+  .twinkle {
+    animation: none;
+    opacity: 0.5;
+  }
+  .rain-streak {
+    display: none;
+  }
+  .bob,
+  .page-loader,
+  .shake,
+  .sheet-fade,
+  .sheet-up,
+  .pt-spark,
+  .dict-win,
+  .dict-stick,
+  .points-bump,
+  .points-roll,
+  .points-glow {
+    animation: none;
+  }
+  .pt-spark {
+    display: none;
+  }
+  /* "+N" vẫn hiện (chỉ mờ dần, không bay) để biết vừa được điểm */
+  .rain-hit {
+    animation: pt-fade 700ms ease-out forwards;
+  }
+  .pt-plus {
+    animation: pt-fade 1100ms ease-out forwards;
+    transform: translateY(-50%);
+  }
+}
+@keyframes pt-fade {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Sudoku / Caro: số và quân cờ rơi xuống khi vừa đặt, đường thắng Caro nảy lên (như Solo Games) */
+@keyframes play-drop {
+  from {
+    transform: translateY(-70%) scale(0.6);
+    opacity: 0.3;
+  }
+  60% {
+    transform: translateY(6%) scale(1.06);
+    opacity: 1;
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes play-bounce {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(-14%);
+  }
+}
+.play-drop {
+  display: inline-block;
+  animation: play-drop 0.3s cubic-bezier(0.3, 1.4, 0.6, 1) both;
+}
+.play-bounce {
+  animation: play-bounce 0.55s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-drop,
+  .play-bounce {
+    animation: none;
+  }
+}
+
+/* Linh vật trong Sudoku / Caro: cảm xúc bằng chuyển động (PlayParts.tsx MascotSay) */
+@keyframes mascot-wow {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translateY(-18%) scale(1.08);
+  }
+  30% {
+    transform: translateY(-18%) rotate(-10deg) scale(1.08);
+  }
+  45% {
+    transform: translateY(-18%) rotate(10deg) scale(1.08);
+  }
+  60% {
+    transform: translateY(-6%) rotate(-4deg);
+  }
+}
+@keyframes mascot-cheer {
+  0%,
+  100% {
+    transform: none;
+  }
+  40% {
+    transform: translateY(-22%) rotate(-6deg);
+  }
+  60% {
+    transform: translateY(-22%) rotate(6deg);
+  }
+}
+@keyframes mascot-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.7);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(8px, -14px) scale(1.1);
+  }
+}
+.mascot-wow {
+  animation: mascot-wow 0.7s ease-out;
+}
+.mascot-cheer {
+  animation: mascot-cheer 0.7s ease-in-out infinite;
+}
+.mascot-think {
+  transform: rotate(-8deg);
+  transition: transform 0.3s;
+}
+.mascot-sleep {
+  transform: rotate(10deg) translateY(4%);
+  opacity: 0.75;
+  transition: transform 0.3s;
+}
+.mascot-sad {
+  transform: translateY(8%) scaleY(0.94);
+  filter: saturate(0.4);
+  transition: transform 0.3s;
+}
+.mascot-zzz {
+  animation: mascot-zzz 1.6s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-wow,
+  .mascot-cheer,
+  .mascot-zzz {
+    animation: none;
+  }
+}

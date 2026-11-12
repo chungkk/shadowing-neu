@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
-import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/auth-actions";
+import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/(portal)/auth-actions";
 import SocialLogin from "./SocialLogin";
 import Mascot from "./Mascot";
 
@@ -239,11 +239,11 @@ export default function AuthForm({
 
           <p className="text-center text-xs text-muted">
             Khi tiếp tục (kể cả đăng nhập bằng Google / Apple), bạn đồng ý với{" "}
-            <Link href="/terms" target="_blank" className="font-bold text-link underline">
+            <Link href="/deutsch-shadowing/terms" target="_blank" className="font-bold text-link underline">
               Điều khoản sử dụng
             </Link>{" "}
             và{" "}
-            <Link href="/privacy" target="_blank" className="font-bold text-link underline">
+            <Link href="/deutsch-shadowing/privacy" target="_blank" className="font-bold text-link underline">
               Chính sách quyền riêng tư
             </Link>{" "}
             của chúng tôi. Khách vẫn học được bài miễn phí.

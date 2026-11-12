@@ -1,0 +1,185 @@
+@import "tailwindcss";
+/* Bỏ qua dữ liệu JSON lớn khi Tailwind quét tên class */
+@source not "../../../content";
+@source not "../../content";
+
+:root {
+  --background: #e3e6e9;
+  --foreground: #141b2d;
+  --ink: #141b2d;
+  --paper: #e3e6e9;
+  --ink-vermilion: #c92f16;
+  --ink-petrol: #0a6e5f;
+  --ink-saffron: #f4b400;
+  --ink-ultra: #2438c9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-be-vietnam);
+  --font-display: var(--font-bricolage), var(--font-be-vietnam);
+}
+
+/* FAQ accordion: hide default marker, rotate icon when open */
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary { list-style: none; }
+.faq-item[open] .faq-icon { transform: rotate(45deg); }
+
+/* Trang support dùng thẻ này */
+.biz-card { transition: border-color 0.2s; }
+.biz-card:hover { border-color: var(--ink); }
+
+/* ───────── Tờ tem CKK ───────── */
+html { scroll-behavior: smooth; }
+:focus-visible { outline: 2px solid var(--ink-ultra); outline-offset: 2px; }
+.on-ink :focus-visible { outline-color: currentColor; }
+.on-ink .perf :focus-visible { outline-color: var(--ink-ultra); }
+
+/* Răng cưa thật: nền tem nằm ở lớp riêng được đục lỗ, nên nhìn xuyên được và không cắt dấu bưu điện */
+.perf {
+  --r: 5px;
+  --pitch: 18px;
+  position: relative;
+  isolation: isolate;
+}
+.perf::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--tile, #fff);
+  mask:
+    radial-gradient(circle var(--r) at 50% 0, #0000 97%, #000) top / var(--pitch) var(--r) round no-repeat,
+    radial-gradient(circle var(--r) at 50% 100%, #0000 97%, #000) bottom / var(--pitch) var(--r) round no-repeat,
+    radial-gradient(circle var(--r) at 0 50%, #0000 97%, #000) left / var(--r) var(--pitch) no-repeat round,
+    radial-gradient(circle var(--r) at 100% 50%, #0000 97%, #000) right / var(--r) var(--pitch) no-repeat round,
+    linear-gradient(#000 0 0) center / calc(100% - 2 * var(--r)) calc(100% - 2 * var(--r)) no-repeat;
+}
+/* Dải sản phẩm xé nối nhau: chồng lên dải trên, lỗ để lộ màu của dải đó */
+.perf-top {
+  --r: 7px;
+  --pitch: 24px;
+  position: relative;
+  isolation: isolate;
+  margin-top: -7px;
+}
+.perf-top::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--band);
+  mask:
+    radial-gradient(circle var(--r) at 50% 0, #0000 97%, #000) top / var(--pitch) var(--r) round no-repeat,
+    linear-gradient(#000 0 0) 0 var(--r) / 100% 100% no-repeat;
+}
+/* Dấu thanh tiếng Việt cần khoảng dòng rộng hơn */
+html:lang(vi) h1,
+html:lang(vi) h2 { line-height: 1.18; }
+/* Từ ghép tiếng Đức dài (Prüfungssimulation…) không vừa cột trên máy rất hẹp: cho ngắt có gạch nối */
+@media (max-width: 400px) {
+  h1, h2, h3 { hyphens: auto; overflow-wrap: break-word; }
+}
+
+/* Mực in lần lượt khi tải trang */
+@keyframes ink-print {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.stamp-face {
+  animation: ink-print 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+
+/* Dấu bưu điện đóng xuống */
+.postmark {
+  opacity: 0;
+  transform: scale(1.45) rotate(-14deg);
+  transition: opacity 0.1s linear, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stamp:hover .postmark,
+.stamp:focus-visible .postmark {
+  opacity: 0.86;
+  transform: scale(1) rotate(-14deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .stamp-face { animation: none; }
+  .postmark { transition: none; }
+}
+
+/* Legal / prose pages (components layer → Tailwind utilities can override) */
+@layer components {
+.legal-prose { color: var(--ink); line-height: 1.75; font-size: 15.5px; }
+.legal-prose h2 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 2.75rem 0 1rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(20, 27, 45, 0.2);
+  scroll-margin-top: 6rem;
+}
+.legal-prose h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.legal-prose h3 { font-weight: 650; color: var(--ink); margin: 1.6rem 0 0.5rem; font-size: 1.05rem; }
+.legal-prose p { margin: 0 0 1rem; }
+.legal-prose ul, .legal-prose ol { margin: 0 0 1rem; padding-left: 1.35rem; }
+.legal-prose ul { list-style: disc; }
+.legal-prose ol { list-style: decimal; }
+.legal-prose li { margin-bottom: 0.4rem; }
+.legal-prose li::marker { color: var(--ink-ultra); }
+.legal-prose a { color: var(--ink-ultra); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(36, 56, 201, 0.35); }
+.legal-prose a:hover { text-decoration-color: currentColor; }
+.legal-prose strong { color: var(--ink); font-weight: 600; }
+.legal-prose .note {
+  background: #e8eafa;
+  border: 1px solid #b6bdf0;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  color: #182590;
+}
+.legal-prose .card {
+  background: #fff;
+  border: 1px solid rgba(20, 27, 45, 0.2);
+  padding: 1.1rem 1.35rem;
+  margin: 1rem 0 1.25rem;
+}
+.legal-prose .card p { margin: 0.15rem 0; }
+.legal-prose table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 1.25rem; font-size: 14px; }
+.legal-prose th, .legal-prose td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(20, 27, 45, 0.2); vertical-align: top; }
+.legal-prose th { color: var(--ink); font-weight: 600; background: #fff; }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { background: var(--ink); }
+
+/* Line Clamp Utility */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Selection Color */
+::selection {
+  background: var(--ink-saffron);
+  color: var(--ink);
+}
