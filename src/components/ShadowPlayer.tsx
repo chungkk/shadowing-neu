@@ -1,13 +1,12 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Check,
   ChevronLeft,
   ChevronRight,
   CirclePause,
-  Clock,
   Eye,
   EyeOff,
   Keyboard,
@@ -22,7 +21,6 @@ import {
   Star,
   VideoOff,
   Volume2,
-  Zap,
 } from "lucide-react";
 import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
 import { hasWords, pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@/lib/dictation";
@@ -217,21 +215,6 @@ function SentenceText({
   });
 }
 
-/** Đồng hồ phát tự đọc thời gian → chỉ ô này vẽ lại mỗi giây, không phải cả trình phát (và cả transcript) */
-function PlayClock({ handle }: { handle: RefObject<PlayerHandle | null> }) {
-  const [t, setT] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => {
-      const h = handle.current;
-      if (!h) return;
-      const now = h.getTime();
-      setT((prev) => (Math.floor(prev) === Math.floor(now) ? prev : now));
-    }, 250);
-    return () => clearInterval(id);
-  }, [handle]);
-  return formatTime(t);
-}
-
 export default function ShadowPlayer({
   title,
   level,
@@ -269,7 +252,7 @@ export default function ShadowPlayer({
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
-  const [panel, setPanel] = useState<"settings" | "keys" | null>(null);
+  const [panel, setPanel] = useState<"settings" | null>(null);
   // Điện thoại đang gõ chính tả (bàn phím mở) → thu video về 0 (vẫn phát tiếng) để nhường chỗ cho ô gõ
   const [typing, setTyping] = useState(false);
   const [picked, setPicked] = useState<{ word: string; context: string; marks?: string[] } | null>(null); // bảng tra từ đang mở
@@ -1027,73 +1010,49 @@ export default function ShadowPlayer({
           {mediaHidden && (
             <p className="rounded-xl bg-card-2 p-3 text-center text-sm text-muted">Video đang ẩn — chỉ nghe tiếng.</p>
           )}
-          {/* Thanh điều khiển ngay dưới video — Chính tả chỉ cần phát / nghe lại */}
-          {dictation ? (
-            <div className="flex gap-2 sm:gap-3">
-              <button className="btn btn-primary flex-1 py-3" title="Phát / dừng (Space)" onClick={togglePlay}>
-                {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Dừng" : "Phát"}
-              </button>
-              <button className="btn flex-1 py-3" title="Nghe lại câu (Tab)" onClick={() => go(idx)}>
-                <RotateCcw className="size-5" /> Nghe lại
-              </button>
-            </div>
-          ) : (
-            // Điện thoại: câu trước / phát / câu sau nằm ở thanh dưới đáy → hàng này chỉ còn tốc độ + ⚙
-            <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-card-2/60 px-1.5 py-1.5 sm:gap-1 sm:px-2">
-              <button className="btn-icon max-md:hidden" title="Câu trước (←)" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
-                <ChevronLeft className="size-5" />
-              </button>
-              <button className="btn-icon max-md:hidden" title="Phát lại câu" aria-label="Phát lại câu" onClick={() => go(idx)}>
-                <RotateCcw className="size-5" />
-              </button>
-              <button className="btn-icon max-md:hidden" title="Phát / dừng (Space)" aria-label={playing ? "Dừng" : "Phát"} onClick={togglePlay}>
-                {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
-              </button>
-              <button className="btn-icon max-md:hidden" title="Câu sau (→)" aria-label="Câu sau" onClick={next} disabled={nextIdx === undefined}>
-                <ChevronRight className="size-5" />
-              </button>
-              <span className="inline-flex items-center gap-1 px-2 text-sm font-bold text-muted tabular-nums">
-                <Clock className="size-4" /> <PlayClock handle={handleRef} />
-              </span>
-              <div className="flex-1" />
+          {/* Thanh điều khiển ngay dưới video: phát / nghe lại (Shadowing thêm ⚙ cho tốc độ, lặp, nghỉ…) */}
+          <div className="flex gap-2 sm:gap-3">
+            {/* Điện thoại (Shadowing): nút phát nằm ở thanh dưới đáy */}
+            <button className={`btn btn-primary flex-1 py-3 ${dictation ? "" : "max-md:hidden"}`} title="Phát / dừng (Space)" onClick={togglePlay}>
+              {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Dừng" : "Phát"}
+            </button>
+            <button className="btn flex-1 py-3" title={dictation ? "Nghe lại câu (Tab)" : "Nghe lại câu"} onClick={() => go(idx)}>
+              <RotateCcw className="size-5" /> Nghe lại
+            </button>
+            {!dictation && (
               <button
-                className="btn-icon w-auto gap-1 px-2 font-bold"
-                title="Tốc độ phát"
-                aria-label={`Tốc độ phát ${settings.rate}×`}
-                onClick={() => {
-                  const r = RATES[(RATES.indexOf(settings.rate) + 1) % RATES.length];
-                  update({ rate: r });
-                  handleRef.current?.setRate(r);
-                }}
-              >
-                <Zap className="size-5" /> {settings.rate}×
-              </button>
-              <button
-                className={`btn-icon ${panel === "settings" ? "bg-foreground/10" : ""}`}
-                title="Cài đặt"
+                className={`btn shrink-0 px-3.5 py-3 ${panel === "settings" ? "bg-foreground/10" : ""}`}
+                title="Cài đặt (tốc độ, lặp câu, nghỉ để nói…)"
                 aria-label="Cài đặt"
                 aria-expanded={panel === "settings"}
                 onClick={() => setPanel(panel === "settings" ? null : "settings")}
               >
                 <Settings2 className="size-5" />
               </button>
-              {/* Điện thoại không có bàn phím → ẩn bảng phím tắt */}
-              <button
-                className={`btn-icon max-md:hidden ${panel === "keys" ? "bg-foreground/10" : ""}`}
-                title="Phím tắt"
-                aria-label="Phím tắt"
-                aria-expanded={panel === "keys"}
-                onClick={() => setPanel(panel === "keys" ? null : "keys")}
-              >
-                <Keyboard className="size-5" />
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {!dictation && panel === "settings" && (
             <div className="grid gap-3 rounded-2xl border border-border bg-card-2/40 p-3 text-sm min-[400px]:grid-cols-2 sm:p-4">
               {/* Điện thoại: các nút bật/tắt của đầu màn chuyển vào đây */}
               <div className="flex flex-wrap gap-2 md:hidden min-[400px]:col-span-2">{toggles}</div>
+              <label className="field">
+                Tốc độ phát
+                <select
+                  value={settings.rate}
+                  onChange={(e) => {
+                    const r = Number(e.target.value);
+                    update({ rate: r });
+                    handleRef.current?.setRate(r);
+                  }}
+                >
+                  {RATES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}×
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="field">
                 Lặp mỗi câu
                 <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
@@ -1138,13 +1097,12 @@ export default function ShadowPlayer({
                 />
                 Phát liên tục (không dừng sau mỗi câu)
               </label>
-            </div>
-          )}
-          {!dictation && panel === "keys" && (
-            <p className="rounded-2xl max-md:hidden border border-border bg-card-2/40 p-4 text-sm leading-7 text-muted">
+              {/* Điện thoại không có bàn phím → ẩn phím tắt */}
+              <p className="leading-7 text-muted max-md:hidden min-[400px]:col-span-2">
               <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd>{" "}
               nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
-            </p>
+              </p>
+            </div>
           )}
 
           {children}
