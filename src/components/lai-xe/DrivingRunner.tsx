@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,7 +16,6 @@ import {
   Clock,
   Languages,
   Lightbulb,
-  Pause,
   FastForward,
   Play,
   Rewind,
@@ -175,7 +175,6 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
     if (!ok) {
       setShake((n) => n + 1);
       navigator.vibrate?.(150);
-      setShowExplain(true);
     }
     if (!loggedIn) return;
     clientApi("/quiz", { method: "POST", body: { module, answers: [{ qid: q.id, ok }] }, keepalive: true }).catch(() => {});
@@ -409,8 +408,10 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         {/* Lái xe: khung cố định — nội dung dài thì cuộn bên trong, đầu/chân khung đứng yên */}
         <div className={fs ? "-mr-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2 pb-1 [scrollbar-gutter:stable]" : "contents"}>
         <div className="flex flex-col gap-1">
-          <h2 className={`text-lg leading-snug font-extrabold whitespace-pre-line ${fs ? "min-h-[2lh]" : ""}`}>{q.q}</h2>
-          {showTr && q.tr?.q && (
+          <h2 className={`text-lg leading-snug font-extrabold whitespace-pre-line ${fs ? "min-h-[2lh]" : ""}`}>
+            {videoStep ? "Bitte starten Sie den Film, um sich mit der Situation vertraut zu machen." : q.q}
+          </h2>
+          {showTr && !videoStep && q.tr?.q && (
             <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
               {q.tr.q}
             </p>
@@ -544,12 +545,12 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           </p>
         )}
 
-        {(reveal || mode === "ueben") && q.explain && (
+        {(reveal || mode === "ueben") && !videoStep && q.explain && (
           <div className="flex flex-col gap-2">
-            <button type="button" className="btn self-start px-3 py-1.5" aria-expanded={showExplain || mode === "lesen"} onClick={() => setShowExplain(!showExplain)} hidden={mode === "lesen"}>
+            <button type="button" className="btn self-start px-3 py-1.5" aria-expanded={showExplain} onClick={() => setShowExplain(!showExplain)}>
               <Lightbulb className="size-4" /> {showExplain ? "Ẩn giải thích" : "Giải thích"}
             </button>
-            {(showExplain || mode === "lesen") && (
+            {showExplain && (
               <div className="rounded-2xl border-2 border-gold/60 bg-gold/10 p-3 text-sm">
                 <p className="font-extrabold">💡 Giải thích</p>
                 <p className="mt-1 whitespace-pre-line">{q.explain}</p>
@@ -857,77 +858,106 @@ function Media({ q, gated, fs }: { q: DrivingQ; gated: boolean; fs?: boolean }) 
   );
 }
 
-/** Bước xem video của câu video: bấm Bắt đầu (mỗi lần = 1 lượt, tối đa 5), xem ít nhất 1 lượt mới được sang câu hỏi */
+const noop = () => () => {};
+
+/** Bước xem video như phần mềm thi (theorie24):
+ *  1. khung hình đầu + nút ▶ · "Video starten" · được xem tối đa 5 lần
+ *  2. bấm xem → video phát toàn màn hình, "Schliessen" để đóng (xem hết tự đóng)
+ *  3. đã xem → khung hình cuối · thêm "Zur Aufgabenstellung" · "noch N mal" — sang câu hỏi rồi thì không xem lại được */
 function VideoGate({ src, poster, count, onView, onAnswer }: { src: string; poster: string | null; count: number; onView: () => void; onAnswer: () => void }) {
   const ref = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [open, setOpen] = useState(false);
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
   const left = MAX_VIEWS - count;
 
+  const close = useCallback(() => {
+    ref.current?.pause();
+    setOpen(false);
+  }, []);
+
+  // Gọi play() ngay trong lúc bấm (video luôn nằm sẵn trong DOM) để iOS / Safari không chặn phát có tiếng
   const start = () => {
     const v = ref.current;
-    if (!v) return;
-    if (paused) {
-      v.play().catch(() => {});
-      return;
-    }
-    if (left <= 0) return;
+    if (!v || left <= 0) return;
     v.currentTime = 0;
+    setOpen(true);
     v.play()
       .then(() => onView())
-      .catch(() => {});
+      .catch(() => setOpen(false));
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+      e.stopImmediatePropagation();
+    };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [open, close]);
+
+  const blue = "flex h-11 w-full max-w-md items-center justify-center rounded-md bg-[#0000a8] px-4 text-lg text-white shadow-md transition hover:bg-[#0000c8] disabled:opacity-50 sm:text-xl";
+
   return (
-    <div className="flex flex-col gap-3">
-      <video
-        ref={ref}
-        src={src}
-        poster={poster ?? undefined}
-        playsInline
-        preload="metadata"
-        onPlay={() => {
-          setPlaying(true);
-          setPaused(false);
-        }}
-        onPause={(e) => {
-          setPlaying(false);
-          setPaused(!e.currentTarget.ended);
-        }}
-        onEnded={() => {
-          setPlaying(false);
-          setPaused(false);
-        }}
-        className="w-full max-w-xl rounded-2xl border-2 border-ink bg-black"
-      >
-        Trình duyệt không phát được video.
-      </video>
-      <div className="flex flex-wrap items-center gap-2">
-        {playing ? (
-          <button type="button" className="btn" onClick={() => ref.current?.pause()}>
-            <Pause className="size-4" /> Tạm dừng
-          </button>
+    <div className="grid items-start gap-4 sm:grid-cols-2 sm:gap-8">
+      <div className="relative min-w-0 bg-black">
+        {count && poster ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={poster} alt="Khung hình cuối của video" className="w-full object-contain" />
         ) : (
-          <button type="button" className="btn btn-primary" onClick={start} disabled={!paused && left <= 0}>
-            <Play className="size-4" /> {paused ? "Xem tiếp" : count ? "Xem lại" : "Bắt đầu video"}
+          <video src={`${src}#t=0.1`} preload="metadata" muted playsInline className="w-full" aria-hidden />
+        )}
+        {left > 0 && (
+          <button type="button" onClick={start} aria-label="Xem video" className="group absolute inset-0 flex items-center justify-center">
+            <span className="flex size-20 items-center justify-center rounded-full border-[6px] border-white/75 transition group-hover:border-white sm:size-24">
+              <Play className="ml-2 size-10 fill-white/75 text-transparent group-hover:fill-white sm:size-12" />
+            </span>
           </button>
         )}
-        <span className="text-sm text-muted tabular-nums">Còn {left}/{MAX_VIEWS} lượt xem</span>
-        <span className="flex-1" />
-        <button
-          type="button"
-          className="btn btn-amber"
-          disabled={!count}
-          onClick={() => {
-            ref.current?.pause();
-            onAnswer();
-          }}
-          title={count ? undefined : "Xem video ít nhất 1 lần"}
-        >
-          Sang câu hỏi (Zur Aufgabe) <ChevronRight className="size-4" />
-        </button>
       </div>
-      <p className="text-xs text-muted">Như thi thật: xem tối đa {MAX_VIEWS} lần, sang câu hỏi rồi thì không xem lại video được.</p>
+
+      <div className="flex min-w-0 flex-col items-center gap-5 sm:pt-4">
+        <button type="button" className={blue} onClick={start} disabled={left <= 0}>
+          Video starten
+        </button>
+        {count > 0 && (
+          <button type="button" className={blue} onClick={onAnswer}>
+            Zur Aufgabenstellung
+          </button>
+        )}
+        <p className="mt-4 text-center text-lg font-bold">
+          {count ? (
+            <>
+              Sie können sich den Film noch <span className="text-red">{left}</span> mal ansehen.
+            </>
+          ) : (
+            `Sie können das Video insgesamt ${MAX_VIEWS} Mal ansehen.`
+          )}
+        </p>
+        <p className="text-center text-xs text-muted">Xem ít nhất 1 lần mới sang câu hỏi được; sang câu hỏi rồi thì không xem lại video.</p>
+      </div>
+
+      {mounted &&
+        createPortal(
+          <div className={`fixed inset-0 z-[100] flex flex-col bg-[#d9f2da] ${open ? "" : "hidden"}`} role="dialog" aria-modal="true" aria-label="Video tình huống">
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <video ref={ref} src={src} playsInline preload="metadata" onEnded={() => setOpen(false)} className="max-h-full w-full bg-black object-contain">
+                Trình duyệt không phát được video.
+              </video>
+            </div>
+            <div className="flex justify-end bg-[#518f52] px-4 py-2.5">
+              <button type="button" onClick={close} className="rounded px-2 text-lg font-bold text-white hover:bg-white/15">
+                Schliessen
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
