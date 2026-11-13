@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
@@ -159,12 +159,29 @@ export function HeaderNavFrame({ current }: { current?: string }) {
   );
 }
 
+// Lời chào theo giờ máy người dùng. Server không biết giờ địa phương → render "Xin chào", lên client mới đổi (khỏi lệch hydrate)
+function greetingNow() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 11) return "Chào buổi sáng";
+  if (h >= 11 && h < 13) return "Chào buổi trưa";
+  if (h >= 13 && h < 18) return "Chào buổi chiều";
+  return "Chào buổi tối";
+}
+const subscribeMinute = (cb: () => void) => {
+  const id = setInterval(cb, 60_000);
+  return () => clearInterval(id);
+};
+function useGreeting() {
+  return useSyncExternalStore(subscribeMinute, greetingNow, () => "Xin chào");
+}
+
 /**
  * Góc phải thanh trên cùng: avatar + tên. Máy tính: rê chuột (hoặc bấm — màn cảm ứng) để mở menu các trang.
  * Điện thoại: chỉ là link tới Cài đặt (trang chính đã có ở thanh dưới đáy, Đăng xuất nằm trong Cài đặt).
  */
 export function UserDropdown({ user }: { user: NavUser }) {
   const admin = user.role === "admin";
+  const greeting = useGreeting();
   const current = useCurrent([...ITEMS, REVIEW, ...USER_ITEMS, ...(admin ? ADMIN_ITEMS : [])]);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -202,8 +219,10 @@ export function UserDropdown({ user }: { user: NavUser }) {
 
   const trigger = (
     <>
-      {admin && <span className="pill bg-amber/15 text-amber max-sm:hidden">ADMIN</span>}
-      <span className="max-w-40 truncate font-bold max-sm:hidden">{user.name}</span>
+      <span className="flex flex-col items-end leading-tight max-sm:hidden">
+        <span className="text-xs font-semibold text-muted">{greeting}</span>
+        <span className="max-w-40 truncate font-bold">{user.name}</span>
+      </span>
       <Avatar user={user} className="size-9 text-lg sm:size-10" />
     </>
   );
