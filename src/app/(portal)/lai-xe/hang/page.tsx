@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
-import { CLASS_GROUPS, classInfo, classQuestionIds, prefs } from "@/lib/fuehrerschein";
+import { classGroups, prefs } from "@/lib/fuehrerschein";
 import { ClassPicker } from "@/components/lai-xe/Settings";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -10,14 +10,7 @@ export const metadata: Metadata = { title: "Chọn hạng bằng · Lý thuyết
 
 async function Picker() {
   const { cls } = await prefs();
-  const groups = CLASS_GROUPS.map((g) => ({
-    title: g.title,
-    classes: g.classes.map((id) => {
-      const c = classInfo(id);
-      return { id, name: c.name, description: c.description, vi: c.vi, count: classQuestionIds(id).length, exam: `${c.exam.questions} câu, ≤ ${c.exam.maxErrorPoints} điểm lỗi` };
-    }),
-  }));
-  return <ClassPicker groups={groups} current={cls} />;
+  return <ClassPicker groups={classGroups()} current={cls} />;
 }
 
 export default function Page() {

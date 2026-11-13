@@ -4,9 +4,12 @@ import { accountStats } from "@/lib/account-stats";
 import AccountStats from "@/components/AccountStats";
 import SettingsForms from "@/components/SettingsForms";
 import { SettingsSkeleton } from "@/components/Skeleton";
+import { DrivingSettings } from "@/components/lai-xe/Settings";
+import { classGroups, prefs } from "@/lib/fuehrerschein";
 
 async function Settings() {
   const user = await requireUser("/settings");
+  const { cls, lang } = await prefs();
   return (
     <SettingsForms
       user={{
@@ -20,6 +23,7 @@ async function Settings() {
       }}
       fixedAdmin={user.email === envAdminEmail()}
       stats={<AccountStats stats={accountStats(user.id)} />}
+      learning={<DrivingSettings groups={classGroups()} current={cls} lang={lang} />}
     />
   );
 }

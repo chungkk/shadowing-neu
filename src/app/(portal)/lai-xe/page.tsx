@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, BookOpen, ClipboardCheck, FileStack, RotateCcw, Star } from "lucide-react";
+import type { ComponentType } from "react";
+import { ArrowLeftRight, BarChart3, BookOpen, ChevronRight, Flag, Settings } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { bogenProgress, quizBookmarks, quizStats } from "@/lib/db";
-import { BOGEN_COUNT, classInfo, classQuestionIds, learnTree, prefs, totalQuestions } from "@/lib/fuehrerschein";
+import { quizStats } from "@/lib/db";
+import { classInfo, classQuestionIds, prefs } from "@/lib/fuehrerschein";
+import { LANG_NAMES } from "@/lib/fuehrerschein-rules";
 import { summarize } from "@/lib/quiz-types";
-import { ActionCard, ProgressBar, SectionHero } from "@/components/QuizParts";
-import { LangSelect } from "@/components/lai-xe/Settings";
+import { ProgressBar } from "@/components/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
@@ -15,185 +16,127 @@ export const metadata: Metadata = {
   description: "Luyện thi lý thuyết bằng lái xe Đức mọi hạng (B, A, C, D…): câu hỏi chính thức kèm bản dịch tiếng Việt, giải thích, đề mẫu và thi thử như thật.",
 };
 
-async function Overview() {
+/** Thẻ lớn ở giữa màn hình chính (như app): Học theo chủ đề / Thi thử */
+function BigCard({ href, icon: Icon, title, text, red }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; red?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`sticker sticker-link flex min-h-40 flex-col items-center justify-center gap-1 p-4 text-center sm:min-h-52 ${red ? "bg-red text-white" : ""}`}
+    >
+      <span className={`mb-2 flex size-14 items-center justify-center rounded-full border-2 sm:size-20 ${red ? "border-white bg-white/20" : "border-gold bg-gold/15 text-gold"}`}>
+        <Icon className="size-7 sm:size-9" />
+      </span>
+      <span className="text-lg font-extrabold sm:text-2xl">{title}</span>
+      <span className={`text-sm ${red ? "text-white/75" : "text-muted"}`}>{text}</span>
+    </Link>
+  );
+}
+
+/** Dòng menu phụ (Thống kê, Cài đặt) */
+function ListCard({ href, icon: Icon, title, text, disabled }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; disabled?: boolean }) {
+  const body = (
+    <>
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-card-2 text-gold">
+        <Icon className="size-5" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="font-extrabold">{title}</span>
+        <span className="text-sm text-muted">{text}</span>
+      </span>
+      {!disabled && <ChevronRight className="size-5 shrink-0 text-muted" />}
+    </>
+  );
+  if (disabled) return <div className="sticker flex items-center gap-3 p-3 opacity-60">{body}</div>;
+  return (
+    <Link href={href} className="sticker sticker-link flex items-center gap-3 p-3">
+      {body}
+    </Link>
+  );
+}
+
+async function Home() {
   const { cls, lang } = await prefs();
   const user = await getCurrentUser();
   const stats = user ? quizStats(user.id, "fuehrerschein") : {};
   const info = classInfo(cls);
   const ids = classQuestionIds(cls);
-  const inClass = new Set(ids);
   const all = summarize(ids, stats);
-  const marked = user ? quizBookmarks(user.id, "fuehrerschein").filter((id) => inClass.has(id)).length : 0;
-  const bogen = user && cls === "B" ? bogenProgress(user.id, "fuehrerschein") : {};
-  const bogenPassed = Object.values(bogen).filter((b) => b.everPassed).length;
-  const tree = learnTree(cls);
+  const settingsHref = user ? "/settings#lai-xe" : "/lai-xe/hang";
 
   return (
     <>
-      <section className="sticker flex flex-wrap items-center gap-3 p-4">
-        <span className="flex h-12 min-w-12 items-center justify-center rounded-2xl border-2 border-ink bg-gold px-2 text-lg font-extrabold text-black">{cls}</span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="font-extrabold">
-            Hạng {info.name} · {info.vi}
-          </span>
-          <span className="text-sm text-muted">
-            {ids.length.toLocaleString("vi-VN")} câu · thi {info.exam.questions} câu, tối đa {info.exam.maxErrorPoints} điểm lỗi
-          </span>
-        </span>
-        <Link href="/lai-xe/hang" className="btn">
-          Đổi hạng
-        </Link>
-        <div className="w-full sm:w-auto">
-          <LangSelect lang={lang} />
+      {/* Đầu trang: tiêu đề + nút cài đặt, thẻ hạng đang học (bấm để đổi) */}
+      <section className="sticker flex flex-col gap-4 p-4 sm:p-6">
+        <div className="flex items-center gap-3">
+          <h1 className="min-w-0 flex-1 text-2xl leading-tight font-extrabold sm:text-3xl">Bằng lái xe Đức</h1>
+          <Link href={settingsHref} className="btn-icon" aria-label="Cài đặt lái xe">
+            <Settings className="size-5" />
+          </Link>
         </div>
+        <Link href={settingsHref} className="flex items-center gap-3 rounded-2xl border-2 border-ink/20 p-2.5 transition hover:border-ink" aria-label={`Đổi hạng bằng (đang học hạng ${cls})`}>
+          <span className="flex h-11 min-w-11 items-center justify-center rounded-xl bg-gold px-1.5 text-base font-extrabold text-black">{cls}</span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="font-extrabold">
+              Hạng {info.name} · {info.vi}
+            </span>
+            <span className="truncate text-sm text-muted">
+              {ids.length.toLocaleString("vi-VN")} câu · thi {info.exam.questions} câu, tối đa {info.exam.maxErrorPoints} điểm lỗi · bản dịch {LANG_NAMES[lang]}
+            </span>
+          </span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card-2">
+            <ArrowLeftRight className="size-4" />
+          </span>
+        </Link>
       </section>
 
-      {user && (
-        <div className="sticker flex flex-col gap-2 p-4">
-          <p className="font-bold">
-            Đã làm {all.done}/{all.total} câu · <span className="text-accent-text">{all.ok} đúng</span> · <span className="text-red-400">{all.wrong} sai</span>
-          </p>
-          <ProgressBar {...all} />
+      {/* Tiến trình */}
+      <section className="sticker flex flex-col gap-3 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-extrabold tracking-wider text-muted uppercase">Tiến trình</span>
+          <span className="rounded-full bg-card-2 px-2.5 py-1 text-xs font-bold text-muted">Bộ đề từ 01.04.2025</span>
         </div>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <ActionCard
-          href="/lai-xe/thi-thu"
-          icon={ClipboardCheck}
-          tone="bg-red text-white"
-          title="Thi thử"
-          text={`${info.exam.questions} câu · ${info.exam.minutes} phút · đậu khi ≤ ${info.exam.maxErrorPoints} điểm lỗi`}
-        />
-        {cls === "B" && (
-          <ActionCard
-            href="/lai-xe/de-mau"
-            icon={FileStack}
-            tone="bg-gold text-black"
-            title="Đề mẫu chính thức"
-            text={user ? `Đã đậu ${bogenPassed}/${BOGEN_COUNT} đề` : `${BOGEN_COUNT} đề mẫu, mỗi đề 30 câu`}
-          />
+        <ProgressBar {...all} />
+        <div className="flex items-center gap-4 text-sm text-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-accent" /> Đúng <b className="text-foreground tabular-nums">{all.ok}</b>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-red" /> Sai <b className="text-foreground tabular-nums">{all.wrong}</b>
+          </span>
+          <span className="ml-auto tabular-nums">
+            <b className="text-foreground">{all.done}</b> / {all.total}
+          </span>
+        </div>
+        {!user && (
+          <p className="text-sm text-muted">
+            <Link href="/login?next=/lai-xe" className="font-bold underline underline-offset-2">
+              Đăng nhập
+            </Link>{" "}
+            để lưu tiến trình, câu sai và lịch sử thi.
+          </p>
         )}
-        <ActionCard
-          href="/lai-xe/cau-sai"
-          icon={RotateCcw}
-          title="Câu sai"
-          disabled={!user || !all.wrong}
-          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
-        />
-        <ActionCard
-          href="/lai-xe/danh-dau"
-          icon={Star}
-          title="Câu đánh dấu"
-          disabled={!user || !marked}
-          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ⭐ ở câu hỏi để đánh dấu"}
-        />
-        <ActionCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" disabled={!user} text={user ? "Tiến độ và lịch sử thi" : "Đăng nhập để xem thống kê"} />
-        <ActionCard href={`/lai-xe/hoc/grund?mode=lesen`} icon={BookOpen} title="Đọc lướt đáp án" text="Xem câu hỏi với đáp án đúng đánh dấu sẵn" />
+      </section>
+
+      {/* 2 thẻ lớn */}
+      <div className="grid grid-cols-2 gap-3">
+        <BigCard href="/lai-xe/hoc" icon={BookOpen} title="Học theo chủ đề" text="Học lý thuyết theo chủ đề" />
+        <BigCard href="/lai-xe/thi-thu" icon={Flag} title="Thi thử" text={cls === "B" ? "Thi thử & bộ đề mẫu" : `${info.exam.questions} câu · ${info.exam.minutes} phút`} red />
       </div>
 
-      {/* Học theo chủ đề: phần cơ bản / phần riêng → chủ đề → chương */}
-      {tree.map((part) => {
-        const ps = summarize(part.ids, stats);
-        return (
-          <section key={part.key} className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-              <div>
-                <h2 className="text-xl font-extrabold">{part.title}</h2>
-                <p className="text-sm text-muted">{part.subtitle}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted tabular-nums">
-                  {user ? `${ps.done}/` : ""}
-                  {ps.total} câu
-                </span>
-                <Link href={`/lai-xe/hoc/${part.key}?mode=lesen`} className="btn px-3 py-1.5">
-                  Đọc
-                </Link>
-                <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-amber px-3 py-1.5">
-                  Luyện
-                </Link>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              {part.themes.map((t) => {
-                const ts = summarize(t.ids, stats);
-                return (
-                  <details key={t.id} className="sticker group overflow-hidden">
-                    <summary className="flex cursor-pointer list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden">
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className="min-w-0 font-extrabold">
-                          <span aria-hidden className="mr-1 inline-block transition group-open:rotate-90">
-                            ▸
-                          </span>
-                          {t.vi || t.de} <span className="text-sm font-bold text-muted">· {t.de}</span>
-                        </span>
-                        <span className="shrink-0 text-xs text-muted tabular-nums">
-                          {user ? `${ts.done}/` : ""}
-                          {ts.total}
-                        </span>
-                      </span>
-                      {user && <ProgressBar {...ts} />}
-                    </summary>
-                    <div className="flex flex-col gap-1 border-t-2 border-ink/10 p-2">
-                      <div className="flex justify-end gap-2 px-1 pb-1">
-                        <Link href={`/lai-xe/hoc/${t.id}?mode=lesen`} className="text-sm font-bold text-muted underline-offset-2 hover:underline">
-                          Đọc cả chủ đề
-                        </Link>
-                        <Link href={`/lai-xe/hoc/${t.id}`} className="text-sm font-extrabold text-accent-text underline-offset-2 hover:underline">
-                          Luyện cả chủ đề →
-                        </Link>
-                      </div>
-                      <ul className="grid gap-2 sm:grid-cols-2">
-                        {t.chapters.map((c) => {
-                          const cs = summarize(c.ids, stats);
-                          return (
-                            <li key={c.id} className="flex flex-col gap-2 rounded-2xl border-2 border-ink/20 p-3">
-                              <Link href={`/lai-xe/hoc/${c.id}`} className="flex flex-col hover:underline">
-                                <span className="font-bold">{c.vi || c.de}</span>
-                                <span className="text-xs text-muted">
-                                  {c.id} · {c.de}
-                                </span>
-                              </Link>
-                              {user && <ProgressBar {...cs} />}
-                              <span className="flex items-center gap-2 text-xs">
-                                <span className="flex-1 text-muted tabular-nums">
-                                  {user ? `${cs.done}/` : ""}
-                                  {cs.total} câu
-                                </span>
-                                <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="rounded-lg border-2 border-ink/30 px-2 py-0.5 font-bold hover:border-ink">
-                                  Đọc
-                                </Link>
-                                <Link href={`/lai-xe/hoc/${c.id}`} className="rounded-lg border-2 border-ink bg-gold px-2 py-0.5 font-extrabold text-black">
-                                  Luyện
-                                </Link>
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </details>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+      {/* Menu phụ */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ListCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" text={user ? "Xem kết quả & tiến trình" : "Đăng nhập để xem thống kê"} disabled={!user} />
+        <ListCard href={settingsHref} icon={Settings} title="Cài đặt" text="Hạng bằng & ngôn ngữ bản dịch" />
+      </div>
     </>
   );
 }
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
-      <SectionHero
-        emoji="🚗"
-        title="Lý thuyết lái xe Đức"
-        subtitle={`${totalQuestions().toLocaleString("vi-VN")} câu hỏi thi chính thức cho mọi hạng bằng, kèm bản dịch, giải thích, đề mẫu và thi thử như thật.`}
-      />
-      <Suspense fallback={<ListSkeleton rows={8} />}>
-        <Overview />
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
+      <Suspense fallback={<ListSkeleton rows={6} />}>
+        <Home />
       </Suspense>
     </main>
   );

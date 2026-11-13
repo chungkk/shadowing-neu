@@ -189,15 +189,17 @@ function DataExport() {
   );
 }
 
-/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · thông tin · mật khẩu · xuất dữ liệu · đăng xuất · xoá tài khoản */
+/** Trang cài đặt: hồ sơ + ảnh đại diện · thành tích (`stats`) · luyện thi (`learning`) · thông tin · mật khẩu · xuất dữ liệu · đăng xuất · xoá tài khoản */
 export default function SettingsForms({
   user,
   fixedAdmin,
   stats,
+  learning,
 }: {
   user: { id: number; name: string; email: string; admin: boolean; createdAt: string; avatarAt: number | null; hasPassword: boolean };
   fixedAdmin: boolean; // admin chính: email + mật khẩu lấy từ biến môi trường
   stats?: ReactNode; // khung thành tích học tập (kim cương, sổ từ…)
+  learning?: ReactNode; // cài đặt luyện thi (hạng bằng lái, bản dịch)
 }) {
   const { hasPassword } = user;
   const [profile, profileAction, savingProfile] = useActionState(updateProfile, {});
@@ -284,6 +286,8 @@ export default function SettingsForms({
       </section>
 
       {stats}
+
+      {learning}
 
       {/* Thông tin cá nhân */}
       <form action={profileAction}>

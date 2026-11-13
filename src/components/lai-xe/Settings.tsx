@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Car, Check, Trash2 } from "lucide-react";
 import { setLicenseClass, setLidState, setTranslationLang } from "@/app/(portal)/lai-xe/actions";
 import { clientApi } from "@/lib/client-api";
 import { LANGS, LANG_NAMES, type Lang } from "@/lib/fuehrerschein-rules";
@@ -30,6 +31,72 @@ export function LangSelect({ lang }: { lang: Lang }) {
         ))}
       </select>
     </label>
+  );
+}
+
+/** Chọn hạng bằng dạng danh sách thả xuống (trang Cài đặt) */
+export function ClassSelect({ groups, current }: { groups: { title: string; classes: ClassOption[] }[]; current: string }) {
+  const [pending, start] = useTransition();
+  return (
+    <label className="flex flex-wrap items-center gap-2 text-sm font-bold">
+      Hạng bằng:
+      <select
+        value={current}
+        disabled={pending}
+        onChange={(e) => {
+          const v = e.target.value;
+          start(() => setLicenseClass(v));
+        }}
+        className="min-w-0 max-w-full rounded-xl border-2 border-ink bg-card px-2 py-1.5 font-bold"
+      >
+        {groups.map((g) => (
+          <optgroup key={g.title} label={g.title}>
+            {g.classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.id} · {c.vi}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** Mục "Lý thuyết lái xe" trong trang Cài đặt: hạng bằng đang học + ngôn ngữ bản dịch */
+export function DrivingSettings({ groups, current, lang }: { groups: { title: string; classes: ClassOption[] }[]; current: string; lang: Lang }) {
+  const info = groups.flatMap((g) => g.classes).find((c) => c.id === current);
+  return (
+    <section id="lai-xe" className="sticker scroll-mt-20 overflow-hidden">
+      <div className="flex flex-col gap-4 p-4 sm:p-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-extrabold">
+            <Car className="size-5 text-link" /> Lý thuyết lái xe
+          </h2>
+          <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học và ngôn ngữ bản dịch câu hỏi (dùng chung cho Leben in Deutschland).</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 min-w-12 items-center justify-center rounded-2xl border-2 border-ink bg-gold px-2 text-lg font-extrabold text-black">{current}</span>
+          {info && (
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="font-extrabold">
+                Hạng {info.name} · {info.vi}
+              </span>
+              <span className="text-sm text-muted">
+                {info.count.toLocaleString("vi-VN")} câu · thi {info.exam}
+              </span>
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+          <ClassSelect groups={groups} current={current} />
+          <LangSelect lang={lang} />
+        </div>
+        <Link href="/lai-xe/hang" className="self-start text-sm font-bold text-muted underline-offset-2 hover:underline">
+          Xem mô tả từng hạng →
+        </Link>
+      </div>
+    </section>
   );
 }
 

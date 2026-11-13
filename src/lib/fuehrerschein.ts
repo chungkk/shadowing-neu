@@ -53,6 +53,17 @@ export async function prefs(): Promise<{ cls: ClassId; lang: Lang }> {
   return { cls: isClassId(c) ? c : DEFAULT_CLASS, lang: isLang(l) ? l : "vi" };
 }
 
+/** Danh sách hạng theo nhóm xe, kèm số câu và luật thi (cho trang chọn hạng / Cài đặt) */
+export function classGroups() {
+  return CLASS_GROUPS.map((g) => ({
+    title: g.title,
+    classes: g.classes.map((id) => {
+      const c = classInfo(id);
+      return { id, name: c.name, description: c.description, vi: c.vi, count: classQuestionIds(id).length, exam: `${c.exam.questions} câu, ≤ ${c.exam.maxErrorPoints} điểm lỗi` };
+    }),
+  }));
+}
+
 // ---- Cây học theo chủ đề: phần cơ bản / phần riêng hạng → chủ đề → chương ----
 
 export type ChapterNode = { id: string; de: string; vi: string; ids: string[] };

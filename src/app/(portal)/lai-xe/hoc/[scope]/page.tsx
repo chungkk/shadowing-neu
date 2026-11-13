@@ -28,7 +28,7 @@ async function Learn({ params, searchParams }: P) {
       mode={mode}
       title={s.title}
       subtitle={`${s.subtitle} · hạng ${cls}`}
-      backHref="/lai-xe"
+      backHref="/lai-xe/hoc"
       questions={await forClient(s.ids, lang)}
       loggedIn={!!user}
       lang={lang}
