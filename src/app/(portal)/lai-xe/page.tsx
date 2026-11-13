@@ -7,29 +7,13 @@ import { getCurrentUser } from "@/lib/auth";
 import { quizStats } from "@/lib/db";
 import { classInfo, classQuestionIds, prefs } from "@/lib/fuehrerschein";
 import { summarize } from "@/lib/quiz-types";
-import { ProgressBar } from "@/components/QuizParts";
+import { BigCard, ProgressBar } from "@/components/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
   title: "Lý thuyết lái xe",
   description: "Luyện thi lý thuyết bằng lái xe Đức mọi hạng (B, A, C, D…): câu hỏi chính thức kèm bản dịch tiếng Việt, giải thích, đề mẫu và thi thử như thật.",
 };
-
-/** Thẻ lớn ở giữa màn hình chính (như app): Học theo chủ đề / Thi thử */
-function BigCard({ href, icon: Icon, title, text, red }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; red?: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={`sticker sticker-link flex min-h-40 flex-col items-center justify-center gap-1 p-4 text-center sm:min-h-52 ${red ? "bg-red text-white" : ""}`}
-    >
-      <span className={`mb-2 flex size-14 items-center justify-center rounded-full border-2 sm:size-20 ${red ? "border-white bg-white/20" : "border-gold bg-gold/15 text-gold"}`}>
-        <Icon className="size-7 sm:size-9" />
-      </span>
-      <span className="text-lg font-extrabold sm:text-2xl">{title}</span>
-      <span className={`text-sm ${red ? "text-white/75" : "text-muted"}`}>{text}</span>
-    </Link>
-  );
-}
 
 /** Dòng menu phụ (Thống kê) */
 function ListCard({ href, icon: Icon, title, text, disabled }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; disabled?: boolean }) {

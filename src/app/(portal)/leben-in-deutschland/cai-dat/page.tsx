@@ -1,4 +1,5 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, type ComponentType, type ReactNode } from "react";
+import { BookOpen, Database, Languages, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { STATES, prefs } from "@/lib/lid";
@@ -9,11 +10,17 @@ import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Cài đặt · Leben in Deutschland", robots: { index: false } };
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+/** Một nhóm cài đặt: thẻ sticker có tiêu đề + mô tả — như mục Lái xe trong trang Cài đặt */
+function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ className?: string }>; title: string; text?: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="px-1 text-[11px] font-semibold tracking-[0.1em] text-white/35">{title}</h2>
-      <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{children}</div>
+    <section className="sticker flex flex-col gap-4 p-4 sm:p-6">
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-extrabold">
+          <Icon className="size-5 text-link" /> {title}
+        </h2>
+        {text && <p className="mt-0.5 text-sm text-muted">{text}</p>}
+      </div>
+      {children}
     </section>
   );
 }
@@ -23,19 +30,17 @@ async function Settings() {
   const user = await getCurrentUser();
   return (
     <>
-      <Group title="BANG">
+      <Group icon={MapPin} title="Bang" text="Câu hỏi riêng của bang dùng khi học và khi thi thử.">
         <StatePicker states={STATES} current={state.code} />
       </Group>
-      <Group title="NGÔN NGỮ">
+      <Group icon={Languages} title="Ngôn ngữ" text="Bản dịch hiện dưới câu hỏi tiếng Đức; bấm biểu tượng 文A ở màn học để ẩn / hiện.">
         <LangSelect lang={lang} />
-        <p className="text-sm text-white/45">Bản dịch hiện dưới câu hỏi tiếng Đức; bấm biểu tượng 文A ở màn học để ẩn / hiện.</p>
       </Group>
-      <Group title="HỌC TẬP">
+      <Group icon={BookOpen} title="Học tập">
         <AutoMarkToggle />
       </Group>
       {user && (
-        <Group title="DỮ LIỆU">
-          <p className="text-sm text-white/45">Xoá câu đã làm, câu đánh dấu và lịch sử thi của phần Leben in Deutschland.</p>
+        <Group icon={Database} title="Dữ liệu" text="Xoá câu đã làm, câu đánh dấu và lịch sử thi của phần Leben in Deutschland.">
           <ResetProgress module="lid" />
         </Group>
       )}

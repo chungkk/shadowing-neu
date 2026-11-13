@@ -52,3 +52,19 @@ export function SectionHero({ emoji, title, subtitle, children }: { emoji: strin
     </section>
   );
 }
+
+/** Thẻ lớn ở màn chính các tab luyện thi (Lái xe, LiD): Học / Thi thử… — red: thẻ nổi bật màu đỏ */
+export function BigCard({ href, icon: Icon, title, text, red }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; red?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`sticker sticker-link flex min-h-40 flex-col items-center justify-center gap-1 p-4 text-center sm:min-h-52 ${red ? "bg-red text-white" : ""}`}
+    >
+      <span className={`mb-2 flex size-14 items-center justify-center rounded-full border-2 sm:size-20 ${red ? "border-white bg-white/20" : "border-gold bg-gold/15 text-gold"}`}>
+        <Icon className="size-7 sm:size-9" />
+      </span>
+      <span className="text-lg font-extrabold sm:text-2xl">{title}</span>
+      <span className={`text-sm ${red ? "text-white/75" : "text-muted"}`}>{text}</span>
+    </Link>
+  );
+}

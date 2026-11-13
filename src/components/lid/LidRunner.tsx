@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCircle2, Languages, X, XCircle } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, Languages, Star, X } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { grade, isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/fuehrerschein-rules";
 import type { QuizStat } from "@/lib/quiz-types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { LoginLink } from "../LoginDialog";
-import { pill } from "./LidParts";
+import { ProgressBar } from "../QuizParts";
 
 /**
- * Màn câu hỏi Leben in Deutschland — giống hệt app LiD Ckk:
- * - ueben: học — bấm đáp án là chấm ngay (đúng viền xanh, sai viền đỏ + khung câu hỏi đỏ)
+ * Màn câu hỏi Leben in Deutschland — cách chơi như app LiD Ckk, giao diện chung của trang (giống tab Lái xe):
+ * - ueben: học — bấm đáp án là chấm ngay (đúng viền xanh, sai viền đỏ + vạch đỏ)
  * - lesen: đọc lướt — đáp án đúng tô sẵn
  * - exam: thi thử — đồng hồ đếm ngược, đổi đáp án tuỳ ý, làm hết mới hiện "Nộp bài"
  * - review: xem lại bài thi — đúng ✓ xanh, chọn sai ✗ đỏ
@@ -178,15 +178,17 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
     return (
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <Link href={backHref} className={pill}>
-            Quay lại
+          <Link href={backHref} className="btn-icon" aria-label="Quay lại">
+            <ArrowLeft className="size-5" />
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-center">{title}</h1>
-          <span className="w-20 shrink-0" aria-hidden />
+          <h1 className="min-w-0 flex-1 truncate text-xl leading-tight font-extrabold">{title}</h1>
         </div>
-        <div className="flex flex-col items-center gap-4 py-24 text-center text-lg text-[#666]">
+        <div className="sticker flex flex-col items-center gap-3 p-6 text-center">
           <BookmarkIcon />
-          {mode === "ueben" && pathname.endsWith("danh-dau") ? "Chưa có câu hỏi nào được đánh dấu" : "Không có câu hỏi"}
+          <p className="font-bold">{mode === "ueben" && pathname.endsWith("danh-dau") ? "Chưa có câu hỏi nào được đánh dấu" : "Không có câu hỏi"}</p>
+          <Link href={backHref} className="btn">
+            <ArrowLeft className="size-4" /> Quay lại
+          </Link>
         </div>
       </div>
     );
@@ -194,175 +196,219 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
 
   const isMarked = marked.has(q.id);
   const mine = isExam ? (picked[q.id]?.[0] ?? null) : answer;
-  const wrongNow = mode === "ueben" && answer !== null && !isRight(q, [answer]);
+  const answeredNow = mode === "ueben" && answer !== null;
+  const rightNow = answeredNow && isRight(q, [answer]);
   const trOn = showTr && !testing && !!q.tr;
   const trDir = lang === "ar" ? "rtl" : undefined;
-  const passed = result?.passed;
+  // Thanh tiến độ: học = đúng/sai lần gần nhất · xem lại = kết quả bài thi
+  const okCount = submitted ? questions.filter((x) => isRight(x, picked[x.id])).length : questions.filter((x) => local[x.id]?.lastOk === true).length;
+  const badCount = submitted ? questions.length - okCount : questions.filter((x) => local[x.id]?.lastOk === false).length;
 
   const confirmLeave = (e: MouseEvent<HTMLAnchorElement>) => {
     if (testing && answeredCount && !confirm("Thoát bài thi?\nCác câu trả lời hiện tại sẽ bị mất.")) e.preventDefault();
   };
 
   return (
-    <div ref={scroller} className="lid-runner flex min-h-[calc(100dvh-7rem)] scroll-mt-20 flex-col">
-      {/* Thanh đầu: [Quay lại/Thoát]  tiêu đề · giờ · điểm  [Đánh dấu] [文A] */}
-      <div className="sticky top-0 z-10 -mx-4 flex items-center gap-2 bg-background/95 px-4 py-2 backdrop-blur md:-mx-6 md:px-6">
-        <Link href={backHref} onClick={confirmLeave} className={pill}>
-          {isExam ? "Thoát" : "Quay lại"}
+    <div ref={scroller} className="flex scroll-mt-20 flex-col gap-4">
+      {/* Đầu trang: [←]  tiêu đề  [giờ] [bản dịch] */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href={backHref} onClick={confirmLeave} className="btn-icon" aria-label={isExam ? "Thoát" : "Quay lại"} title={isExam ? "Thoát" : "Quay lại"}>
+          <ArrowLeft className="size-5" />
         </Link>
-        <div className="min-w-0 flex-1 truncate text-center text-base">
-          {submitted && result ? (
-            <span className={`font-bold ${passed ? "text-[#10b981]" : "text-[#ef4444]"}`}>
-              {result.correct}/{result.total} · {passed ? "Đỗ" : "Trượt"}
-            </span>
-          ) : testing && exam ? (
-            <Timer minutes={exam.minutes} startedAt={startedAt} onEnd={submit} />
-          ) : (
-            title
-          )}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <h1 className="truncate text-xl leading-tight font-extrabold">{title}</h1>
+          {isExam && <p className="truncate text-sm text-muted">{testing ? `Thi thử · ${questions.length} câu` : "Xem lại bài thi"}</p>}
         </div>
-        {loggedIn && (
-          <button type="button" onClick={toggleMark} aria-pressed={isMarked} className={pill}>
-            {isMarked ? "Bỏ đánh dấu" : "Đánh dấu"}
-          </button>
-        )}
+        {testing && exam && <Timer minutes={exam.minutes} startedAt={startedAt} onEnd={submit} />}
         {!testing && (
           <button
             type="button"
             onClick={() => setShowTr(!showTr)}
             aria-pressed={showTr}
             aria-label={showTr ? "Ẩn bản dịch" : "Hiện bản dịch"}
-            title="Bản dịch"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10"
+            title="Hiện / ẩn bản dịch"
+            className={`btn px-3 py-1.5 ${showTr ? "bg-accent/15" : ""}`}
           >
-            <Languages className={`size-6 ${showTr ? "text-[#ffcc00]" : "text-[#007aff]"}`} />
+            <Languages className="size-4" /> <span className="hidden sm:inline">{showTr ? "Ẩn bản dịch" : "Hiện bản dịch"}</span>
           </button>
         )}
       </div>
 
+      {!testing && <ProgressBar total={questions.length} ok={okCount} wrong={badCount} />}
+
       {!loggedIn && !submitted && (
-        <p className="mt-1 text-center text-xs text-white/45">
-          Đang học thử ·{" "}
-          <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="font-bold text-white underline">
+        <p className="rounded-2xl border-2 border-dashed border-ink/40 px-3 py-2 text-sm">
+          Bạn đang học thử.{" "}
+          <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="font-extrabold text-accent-text underline">
             Đăng nhập
           </LoginLink>{" "}
-          để lưu tiến độ và đánh dấu câu
+          để lưu tiến độ và đánh dấu câu.
         </p>
       )}
 
-      {submitted && mode === "exam" && (
-        <p className="mt-2 text-center text-xs text-white/45" aria-live="polite">
-          {savedId ? (
-            <>
-              Đã lưu vào{" "}
-              <Link href="/leben-in-deutschland/thong-ke" className="font-bold text-white underline">
-                lịch sử thi
-              </Link>
-            </>
-          ) : saveError ? (
-            `Không lưu được: ${saveError}`
-          ) : loggedIn ? (
-            "Đang lưu…"
-          ) : (
-            "Đăng nhập để lưu lịch sử thi"
-          )}
-        </p>
+      {/* Kết quả bài thi */}
+      {submitted && result && (
+        <section className={`sticker flex flex-col gap-1 p-4 ${result.passed ? "bg-accent/15" : "bg-red/15"}`} aria-live="polite">
+          <p className="text-2xl font-extrabold">{result.passed ? "🎉 Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
+          <p className="font-bold">
+            Đúng {result.correct}/{result.total} câu
+            {exam ? ` · cần đúng ≥ ${result.total - exam.maxWrong} câu` : ""}
+          </p>
+          <p className="text-sm text-muted">
+            Bấm số câu để xem lại từng câu: ✓ xanh = đáp án đúng, ✗ đỏ = chọn sai.
+            {mode === "exam" && (
+              <>
+                {" "}
+                {savedId ? (
+                  <>
+                    Đã lưu vào{" "}
+                    <Link href="/leben-in-deutschland/thong-ke" className="font-bold underline">
+                      lịch sử thi
+                    </Link>
+                    .
+                  </>
+                ) : saveError ? (
+                  `Không lưu được: ${saveError}`
+                ) : loggedIn ? (
+                  "Đang lưu…"
+                ) : (
+                  "Đăng nhập để lưu lịch sử thi."
+                )}
+              </>
+            )}
+          </p>
+        </section>
       )}
 
       {/* Khung câu hỏi */}
-      <div className="flex-1 pb-4">
-        <div
-          className={`mt-4 rounded-lg p-6 ${
-            wrongNow ? "border-2 border-[#ef4444] bg-[#ef4444]/30" : isMarked && !isExam ? "border-2 border-[#f59e0b] bg-[#f59e0b]/15" : "bg-[#333]"
-          }`}
-        >
-          <p className="leading-[22px] whitespace-pre-line">{q.q}</p>
+      <article className={`sticker flex flex-col gap-4 p-4 sm:p-6 ${answeredNow && !rightNow ? "shake" : ""}`}>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
+          <span className="tabular-nums">
+            Câu {idx + 1}/{questions.length}
+          </span>
+          {q.chapter && <span className="pill border border-ink/30 px-2 py-0.5">{q.chapter}</span>}
+          <span className="flex-1" />
+          {loggedIn && (
+            <button type="button" onClick={toggleMark} aria-pressed={isMarked} className="btn-icon size-8" aria-label={isMarked ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
+              <Star className={`size-4 ${isMarked ? "fill-gold text-gold" : ""}`} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg leading-snug font-extrabold whitespace-pre-line">{q.q}</h2>
           {trOn && q.tr?.q && (
-            <p dir={trDir} className="mt-2 text-sm leading-[18px] text-[#999] italic whitespace-pre-line">
+            <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
               {q.tr.q}
             </p>
           )}
-          {q.images.map((src) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={src} src={src} alt="Hình minh hoạ câu hỏi" className="mt-4 max-h-[200px] w-full rounded object-contain sm:max-h-72" />
-          ))}
         </div>
 
-        {/* Đáp án: nút tròn bên trái */}
-        <ul className="mt-4 flex flex-col gap-2" role="radiogroup" aria-label="Đáp án">
+        {q.images.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {q.images.map((src) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className="max-h-80 w-auto max-w-full rounded-2xl border-2 border-ink bg-white object-contain" />
+            ))}
+          </div>
+        )}
+
+        {/* Đáp án: số thứ tự bên trái (như tab Lái xe) */}
+        <ul className="flex flex-col gap-2" role="radiogroup" aria-label="Đáp án">
           {q.options.map((o, n) => {
             const on = mine === o.key;
             const correct = q.answer.includes(o.key);
-            const reveal = mode === "lesen" || submitted || (mode === "ueben" && answer !== null);
-            const showOk = reveal && correct;
-            const showBad = reveal && on && !correct;
+            const reveal = mode === "lesen" || submitted || answeredNow;
+            // Đọc: tích sẵn đáp án đúng · Học/Xem lại: tô đúng/sai
+            const ticked = mode === "lesen" ? correct : on;
+            const mistake = reveal && mode !== "lesen" && on && !correct;
             const tr = q.tr?.o[n];
-            const border = showBad
-              ? "border-[#ef4444] bg-[#ef4444]/10"
-              : showOk
-                ? "border-[#10b981] bg-[#10b981]/10"
+            const tone = !reveal
+              ? on
+                ? "border-ink bg-gold/30"
+                : "border-ink/30 enabled:hover:border-ink"
+              : correct
+                ? "border-accent bg-accent/10"
                 : on
-                  ? testing
-                    ? "border-[#ffcc00] bg-[#ffcc00]/10"
-                    : "border-[#666]"
-                  : "border-transparent";
-            const dot = testing ? "#ffcc00" : "#ffffff";
+                  ? "border-red bg-red/10"
+                  : "border-ink/20";
+            const badge = ticked ? (reveal && correct ? "border-accent bg-accent text-white" : reveal ? "border-red bg-red text-white" : "bg-foreground text-background") : "bg-card";
             return (
               <li key={o.key}>
                 <button
                   type="button"
                   role="radio"
                   aria-checked={on || (mode === "lesen" && correct)}
-                  disabled={submitted || mode === "lesen" || (mode === "ueben" && answer !== null)}
+                  disabled={submitted || mode === "lesen" || answeredNow}
                   onClick={() => choose(o.key)}
-                  className={`flex w-full items-center rounded-lg border-2 bg-[#1a1a1a] px-4 py-6 text-left transition enabled:hover:bg-[#222] disabled:cursor-default ${border}`}
+                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:cursor-default ${tone}`}
                 >
-                  <span className="mr-4 flex size-6 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: on ? dot : "#666" }}>
-                    {on && <span className="size-3 rounded-full" style={{ backgroundColor: dot }} />}
+                  {mistake && <span className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />}
+                  <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-ink text-sm font-extrabold ${badge}`}>
+                    {ticked ? <Check className="size-5" strokeWidth={3} /> : <span className="text-muted">{n + 1}</span>}
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-sm leading-5">{o.text}</span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="font-bold">{o.text}</span>
                     {trOn && tr && tr !== o.text && (
-                      <span dir={trDir} className="mt-0.5 text-xs leading-4 text-[#999]">
+                      <span dir={trDir} className="text-sm text-accent-text italic">
                         {tr}
                       </span>
                     )}
                   </span>
-                  {isExam && submitted && showOk && <CheckCircle2 className="ml-2 size-6 shrink-0 text-[#10b981]" aria-label="Đáp án đúng" />}
-                  {isExam && submitted && showBad && <XCircle className="ml-2 size-6 shrink-0 text-[#ef4444]" aria-label="Chọn sai" />}
+                  {reveal && mode !== "lesen" && (
+                    <span className="shrink-0" aria-label={correct ? (on ? "Chọn đúng" : "Đáp án đúng") : on ? "Chọn sai" : undefined}>
+                      {correct ? (
+                        <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-accent text-white" : "border-2 border-accent text-accent-text"}`}>
+                          <Check className="size-4" strokeWidth={3} />
+                        </span>
+                      ) : on ? (
+                        <span className="flex size-6 items-center justify-center rounded-full bg-red text-white">
+                          <X className="size-4" strokeWidth={3} />
+                        </span>
+                      ) : null}
+                    </span>
+                  )}
                 </button>
               </li>
             );
           })}
         </ul>
-      </div>
 
-      {/* Chân: ‹trước · n của N · sau› (thi: làm hết thì giữa thành nút Nộp bài đỏ) */}
-      <div className="sticky bottom-0 -mx-4 flex items-center gap-2 bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:-mx-6 md:px-6">
-        <button type="button" className={`${pill} min-w-[70px] py-3 text-base`} onClick={() => go(idx - 1)} disabled={idx === 0}>
-          ‹trước
-        </button>
-        {testing && answeredCount === questions.length ? (
-          <button
-            type="button"
-            onClick={() => confirm("Nộp bài và xem kết quả?") && submit()}
-            className="flex-1 rounded-full bg-[#dd0000] px-4 py-3 text-base font-semibold text-white transition hover:brightness-110"
-          >
-            Nộp bài
+        {answeredNow && (
+          <p className={`rounded-2xl border-2 px-3 py-2 font-extrabold ${rightNow ? "border-accent bg-accent/15" : "border-red bg-red/15"}`} role="status">
+            {rightNow ? "✓ Đúng rồi!" : "✗ Chưa đúng"}
+          </p>
+        )}
+
+        {/* Điều hướng: ‹ Trước · n / N (mở bảng chọn câu) · Tiếp › */}
+        <div className="flex items-center gap-1.5">
+          <button type="button" className="btn" onClick={() => go(idx - 1)} disabled={idx === 0}>
+            <ChevronLeft className="size-4" /> <span className="hidden sm:inline">Trước</span>
           </button>
-        ) : (
-          <button type="button" onClick={() => setPicker(true)} className={`${pill} min-w-0 flex-1 py-3 ${testing ? "text-sm" : "text-base"}`} aria-haspopup="dialog">
+          <button type="button" onClick={() => setPicker(true)} className="btn min-w-0 flex-1" aria-haspopup="dialog">
             <span className="truncate tabular-nums">
-              {isExam
-                ? `${idx + 1} / ${questions.length}${testing ? ` (${answeredCount} đã trả lời)` : ""}`
-                : `${idx + 1} của ${questions.length}`}
+              {idx + 1} / {questions.length}
+              {testing ? ` · ${answeredCount} đã trả lời` : ""}
             </span>
           </button>
-        )}
-        <button type="button" className={`${pill} min-w-[70px] py-3 text-base`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1}>
-          sau›
-        </button>
-      </div>
+          <button type="button" className={`btn ${answeredNow || isExam ? "btn-primary" : ""}`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1}>
+            <span className="hidden sm:inline">Tiếp</span> <ChevronRight className="size-4" />
+          </button>
+        </div>
+      </article>
+
+      {testing && (
+        <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 p-3 text-sm ${answeredCount === questions.length ? "border-accent bg-accent/10" : "border-ink/20"}`}>
+          <span className="font-bold">{answeredCount === questions.length ? "Đã làm hết các câu — có thể nộp bài." : `Đã làm ${answeredCount}/${questions.length} câu · làm hết mới nộp được`}</span>
+          {answeredCount === questions.length && (
+            <button type="button" className="btn btn-red" onClick={() => confirm("Nộp bài và xem kết quả?") && submit()}>
+              Nộp bài
+            </button>
+          )}
+        </div>
+      )}
+
+      <p className="hidden text-xs text-muted sm:block">Phím tắt: ← → chuyển câu · 1–4 chọn đáp án</p>
 
       {picker && (
         <QuestionPicker
@@ -385,13 +431,13 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
 
 function BookmarkIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-16" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-12 text-muted" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
       <path d="M6 3h12v18l-6-4-6 4z" />
     </svg>
   );
 }
 
-/** Bảng chọn câu trượt lên từ dưới (như app): số câu + đầu câu hỏi */
+/** Bảng chọn câu (điện thoại: trượt lên từ dưới như app; máy tính: hộp giữa màn): số câu + đầu câu hỏi */
 function QuestionPicker({
   questions,
   idx,
@@ -419,14 +465,14 @@ function QuestionPicker({
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
-  const dot = { ok: "bg-[#10b981]", bad: "bg-[#ef4444]", answered: "bg-[#ffcc00]" };
+  const dot = { ok: "bg-accent", bad: "bg-red", answered: "bg-gold" };
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label="Chọn câu hỏi" onClick={(e) => e.stopPropagation()} className="flex max-h-[70dvh] w-full max-w-2xl flex-col rounded-t-[20px] bg-[#1a1a1a] text-white">
-        <div className="flex items-center justify-between border-b border-[#333] p-6">
-          <h2 className="text-lg font-semibold">Chọn câu hỏi</h2>
-          <button type="button" onClick={onClose} aria-label="Đóng">
-            <X className="size-6" />
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 sm:items-center sm:p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label="Chọn câu hỏi" onClick={(e) => e.stopPropagation()} className="flex max-h-[70dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border-2 border-ink bg-card text-foreground shadow-[0_4px_0_var(--ink)] sm:rounded-3xl">
+        <div className="flex items-center justify-between border-b-2 border-ink/15 px-4 py-3 sm:px-6">
+          <h2 className="text-lg font-extrabold">Chọn câu hỏi</h2>
+          <button type="button" onClick={onClose} aria-label="Đóng" className="btn-icon">
+            <X className="size-5" />
           </button>
         </div>
         <ul className="overflow-y-auto">
@@ -439,11 +485,11 @@ function QuestionPicker({
                   ref={on ? current : undefined}
                   type="button"
                   onClick={() => onPick(i)}
-                  className={`flex h-[60px] w-full items-center border-b border-[#333] px-6 text-left ${on ? "bg-[#007aff]/20" : "hover:bg-white/5"}`}
+                  className={`flex min-h-[60px] w-full items-center border-b border-ink/10 px-4 py-2 text-left transition sm:px-6 ${on ? "bg-gold/30" : "hover:bg-foreground/5"}`}
                 >
-                  <span className={`w-10 shrink-0 font-semibold tabular-nums ${on ? "text-[#007aff]" : "text-[#666]"}`}>{i + 1}</span>
-                  <span className={`line-clamp-2 min-w-0 flex-1 text-sm ${on ? "text-[#007aff]" : ""}`}>{x.q}</span>
-                  {marked.has(x.id) && <span className="ml-2 text-xs text-[#f59e0b]" aria-label="Đã đánh dấu">★</span>}
+                  <span className={`w-10 shrink-0 font-extrabold tabular-nums ${on ? "text-foreground" : "text-muted"}`}>{i + 1}</span>
+                  <span className={`line-clamp-2 min-w-0 flex-1 text-sm ${on ? "font-bold" : ""}`}>{x.q}</span>
+                  {marked.has(x.id) && <Star className="ml-2 size-3.5 shrink-0 fill-gold text-gold" aria-label="Đã đánh dấu" />}
                   {s && <span className={`ml-2 size-2.5 shrink-0 rounded-full ${dot[s]}`} aria-hidden />}
                 </button>
               </li>
@@ -471,8 +517,8 @@ function Timer({ minutes, startedAt, onEnd }: { minutes: number; startedAt: numb
     }
   }, [left, onEnd]);
   return (
-    <span role="timer" aria-label="Thời gian còn lại" className={`tabular-nums ${left < 300 ? "text-[#ef4444]" : ""}`}>
-      {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
+    <span className={`pill gap-1 border-2 border-ink px-2.5 py-1 text-sm tabular-nums ${left < 300 ? "bg-red text-white" : "bg-card"}`} role="timer" aria-label="Thời gian còn lại">
+      <Clock className="size-4" /> {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
     </span>
   );
 }
