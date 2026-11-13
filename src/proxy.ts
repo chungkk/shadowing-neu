@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { fuehrerscheinGuard } from "@/biz/fuehrerschein-guard";
+import { crawlGuard } from "@/lib/crawl-guard";
 
 // Tên miền duy nhất: ckk.biz. ckk.pro (tên cũ của Deutsch Shadowing) không dùng nữa — chỉ giữ trỏ về app này
 // để link cũ và app di động bản cũ không gãy; khi gần như mọi người đã cập nhật app (gọi ckk.biz) thì bỏ hẳn.
@@ -8,6 +9,7 @@ import { fuehrerscheinGuard } from "@/biz/fuehrerschein-guard";
 //   ckk.pro/api/v1 kèm Bearer token — chuyển hướng sang tên miền khác thì iOS bỏ header Authorization.
 //   Link pháp lý cũ của app (ckk.pro/privacy, /terms, …/de) → trang chính sách của Deutsch Shadowing trên ckk.biz.
 // - /api/fuehrerschein/*: CORS, chặn bot, App Key, giới hạn tần suất (như ckk-biz trước đây)
+// - /lai-xe, /leben-in-deutschland: chống crawl bộ câu hỏi (lib/crawl-guard.ts)
 
 const MAIN_HOST = "ckk.biz";
 const OLD_HOSTS = new Set(["ckk.pro", "www.ckk.pro", "www.ckk.biz"]);
@@ -25,7 +27,7 @@ export function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/fuehrerschein")) return fuehrerscheinGuard(request);
-  return NextResponse.next();
+  return crawlGuard(request) ?? NextResponse.next();
 }
 
 export const config = {
