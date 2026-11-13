@@ -70,6 +70,8 @@ type VideoState = { count: number; answering: boolean };
 
 export default function DrivingRunner({ module = "fuehrerschein", mode, title, subtitle, backHref, questions, loggedIn, lang, stats = {}, bookmarks = [], exam, review, modeLinks, resumeKey }: Props) {
   const cfg = MODULES[module];
+  /** Lái xe: khung xanh lá giống phần mềm thi thật */
+  const fs = module === "fuehrerschein";
   const pathname = usePathname();
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<Record<string, string[]>>(review?.picked ?? {});
@@ -330,8 +332,9 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
       {result && <ResultBar module={module} result={result} maxErrorPoints={maxErrorPoints} savedId={savedId} saveError={saveError} />}
 
-      {/* Bảng số câu (thi: chia phần cơ bản / phần riêng) */}
-      <section className="flex flex-col gap-2">
+      <div className={fs ? "theme-fahrschule flex flex-col overflow-hidden rounded-3xl border-2 border-ink bg-background shadow-[0_4px_0_var(--ink)]" : "contents"}>
+      {/* Bảng số câu (thi: chia phần cơ bản / phần riêng) — lái xe: nằm dưới câu hỏi như app */}
+      <section className={fs ? "order-last flex flex-col gap-2 border-t-2 border-ink/20 bg-card-2 p-3" : "flex flex-col gap-2"}>
         {isExam && grundCount > 0 && grundCount < questions.length && (
           <div className="flex gap-1" role="tablist" aria-label="Phần thi">
             {(["grund", "zusatz"] as const).map((t) => {
@@ -358,17 +361,17 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         </nav>
       </section>
 
-      <article key={`${q.id}-${shake}`} className={`sticker flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
-        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
+      <article key={`${q.id}-${shake}`} className={`${fs ? "" : "sticker"} flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
+        <div className={`flex flex-wrap items-center gap-2 text-xs font-bold ${fs ? "-mx-4 -mt-4 bg-accent px-4 py-2 text-white sm:-mx-6 sm:-mt-6 sm:px-6" : "text-muted"}`}>
           <span className="tabular-nums">
             Câu {idx + 1}/{questions.length}
           </span>
-          <span className="pill border border-ink/30 px-2 py-0.5 tabular-nums">{module === "lid" ? q.chapter : q.id}</span>
-          {module === "fuehrerschein" && <span className={`pill px-2 py-0.5 tabular-nums ${q.points === 5 ? "bg-red/15 text-red-400" : "bg-card-2"}`}>{q.points} điểm lỗi</span>}
+          <span className={`pill border px-2 py-0.5 tabular-nums ${fs ? "border-white/50" : "border-ink/30"}`}>{module === "lid" ? q.chapter : q.id}</span>
+          {fs && <span className={`pill px-2 py-0.5 tabular-nums ${q.points === 5 ? "bg-red text-white" : "bg-white/20"}`}>Punkte: {q.points}</span>}
           <span className="flex-1" />
           {!cfg.single && q.options.length > 0 && !reveal && <span>Có thể có nhiều đáp án đúng</span>}
           {loggedIn ? (
-            <button type="button" onClick={() => toggleMark(q.id)} aria-pressed={marked.has(q.id)} className="btn-icon size-8" aria-label={marked.has(q.id) ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
+            <button type="button" onClick={() => toggleMark(q.id)} aria-pressed={marked.has(q.id)} className={`btn-icon size-8 ${fs ? "text-white hover:bg-white/15" : ""}`} aria-label={marked.has(q.id) ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
               <Star className={`size-4 ${marked.has(q.id) ? "fill-gold text-gold" : ""}`} />
             </button>
           ) : null}
@@ -530,6 +533,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           <NavBtn label="Câu cuối" disabled={idx === questions.length - 1} onClick={() => go(questions.length - 1)} icon={ChevronLast} hideSm />
         </div>
       </article>
+      </div>
 
       {mode === "exam" && !submitted && (
         <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 p-3 text-sm ${answeredCount === questions.length ? "border-accent bg-accent/10" : "border-ink/20"}`}>

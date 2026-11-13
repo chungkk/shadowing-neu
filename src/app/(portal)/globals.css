@@ -111,6 +111,31 @@
   --gem-dark: #0369a1;
   color: var(--foreground);
 }
+/* Màn làm câu hỏi Lái xe: bảng màu xanh lá như phần mềm thi lý thuyết thật — giữ sáng cả ở giao diện tối */
+.theme-fahrschule,
+[data-theme="dark"] .theme-fahrschule {
+  color-scheme: light;
+  --background: #c8f2d8;
+  --foreground: #06301f;
+  --ink: #0b3b2a;
+  --card: #ffffff;
+  --card-2: #b3e9c7;
+  --border: #8fd3a9;
+  --muted: #2e5a45;
+  --link: #0d6a34;
+  --on-link: #ffffff;
+  --accent: #138a45;
+  --accent-dark: #0d6a34;
+  --accent-text: #0d6a34;
+  --amber: #a85605;
+  --amber-dark: #7a3e04;
+  --gold: #fbbf24;
+  --red: #e3242b;
+  --red-dark: #8f2036;
+  --red-400: #b91c1c;
+  --red-300: #b91c1c;
+  color: var(--foreground);
+}
 /* Khung màn chơi trong giao diện tối ấm: cùng tông ca cao với trang */
 [data-theme="dark"] .theme-night {
   --background: #1c1416;
