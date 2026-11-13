@@ -41,7 +41,7 @@ async function Review({ params }: PageProps<"/lai-xe/thi-thu/[id]">) {
 
 export default function Page(props: PageProps<"/lai-xe/thi-thu/[id]">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Review {...props} />
       </Suspense>

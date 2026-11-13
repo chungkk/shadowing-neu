@@ -27,7 +27,7 @@ async function Exam() {
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Exam />
       </Suspense>
