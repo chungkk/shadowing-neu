@@ -22,6 +22,7 @@ import {
   SkipBack,
   SkipForward,
   RotateCcw,
+  TriangleAlert,
   Star,
   X,
 } from "lucide-react";
@@ -338,6 +339,21 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
       <div className={fs ? "theme-fahrschule flex flex-col overflow-hidden rounded-3xl border-2 border-ink bg-background shadow-[0_4px_0_var(--ink)]" : "contents"}>
       {/* Bảng số câu (thi: chia phần cơ bản / phần riêng) — lái xe: nằm dưới câu hỏi như app */}
+      {fs && isExam ? (
+        <FsExamBar
+          tabs={grundCount > 0 && grundCount < questions.length ? ["Grundstoff", exam?.cls || "Zusatzstoff"] : ["Grundstoff"]}
+          tab={tab === "grund" || grundCount === questions.length ? 0 : 1}
+          setTab={(t) => setTab(t === 0 ? "grund" : "zusatz")}
+          items={visible.map(({ x, i }) => ({ i, state: status(x), marked: marked.has(x.id), video: !!x.video }))}
+          idx={idx}
+          go={go}
+          info={submitted && result ? `${result.errorPoints} Fehlerpunkte · ${result.passed ? "bestanden" : "nicht bestanden"}` : `noch ${questions.length - answeredCount} Aufgaben`}
+          warn={!submitted && answeredCount < questions.length}
+          onSubmit={mode === "exam" && !submitted ? askSubmit : null}
+          mark={loggedIn ? { on: marked.has(q.id), toggle: () => toggleMark(q.id) } : null}
+          last={idx === questions.length - 1}
+        />
+      ) : (
       <section className={fs ? "order-last flex flex-col bg-accent px-2 pt-2 pb-3 sm:px-4" : "flex flex-col gap-2"}>
         {isExam && grundCount > 0 && grundCount < questions.length && (
           <div className={fs ? "-mt-2 mb-2 flex gap-1" : "flex gap-1"} role="tablist" aria-label="Phần thi">
@@ -372,6 +388,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           </nav>
         )}
       </section>
+      )}
 
       <article key={`${q.id}-${shake}`} className={`${fs ? "min-h-[28rem] sm:h-[36rem]" : "sticker"} flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
         <div className={`flex flex-wrap items-center gap-2 text-xs font-bold ${fs ? "-mx-4 -mt-4 bg-accent px-4 py-2 text-white sm:-mx-6 sm:-mt-6 sm:px-6" : "text-muted"}`}>
@@ -382,7 +399,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           {fs && <span className={`pill px-2 py-0.5 tabular-nums ${q.points === 5 ? "bg-red text-white" : "bg-white/20"}`}>Punkte: {q.points}</span>}
           <span className="flex-1" />
           {!cfg.single && q.options.length > 0 && !reveal && <span>Có thể có nhiều đáp án đúng</span>}
-          {loggedIn ? (
+          {loggedIn && !(fs && isExam) ? (
             <button type="button" onClick={() => toggleMark(q.id)} aria-pressed={marked.has(q.id)} className={`btn-icon size-8 ${fs ? "text-white hover:bg-white/15" : ""}`} aria-label={marked.has(q.id) ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
               <Star className={`size-4 ${marked.has(q.id) ? "fill-gold text-gold" : ""}`} />
             </button>
@@ -570,7 +587,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
             </button>
           )}
           <div className="flex-1" />
-          {mode === "exam" && !submitted && idx === questions.length - 1 ? (
+          {mode === "exam" && !submitted && !fs && idx === questions.length - 1 ? (
             <button type="button" className="btn btn-red" onClick={askSubmit}>
               Nộp bài
             </button>
@@ -589,7 +606,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
       </article>
       </div>
 
-      {mode === "exam" && !submitted && (
+      {mode === "exam" && !submitted && !fs && (
         <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 p-3 text-sm ${answeredCount === questions.length ? "border-accent bg-accent/10" : "border-ink/20"}`}>
           <span className="font-bold">{answeredCount === questions.length ? "Đã làm hết các câu — có thể nộp bài." : `Đã làm ${answeredCount}/${questions.length} câu`}</span>
           <button type="button" className="btn btn-red" onClick={askSubmit}>
@@ -672,6 +689,110 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
       <PagerBtn label="Tiến 10 câu" disabled={last} onClick={() => go(idx + 10)} icon={FastForward} hideSm />
       <PagerBtn label="Câu cuối" disabled={last} onClick={() => go(total - 1)} icon={SkipForward} hideSm />
     </nav>
+  );
+}
+
+/** Thi thử lái xe — chân màn hình như phần mềm thi thật:
+ *  tab phần (Grundstoff / hạng) · "noch N Aufgaben" · Auswertung / ☆ / Weiter, bên dưới là lưới số câu */
+function FsExamBar({
+  tabs,
+  tab,
+  setTab,
+  items,
+  idx,
+  go,
+  info,
+  warn,
+  onSubmit,
+  mark,
+  last,
+}: {
+  tabs: string[];
+  tab: number;
+  setTab: (t: number) => void;
+  items: { i: number; state: Cell; marked: boolean; video: boolean }[];
+  idx: number;
+  go: (i: number) => void;
+  info: string;
+  warn: boolean;
+  onSubmit: (() => void) | null;
+  mark: { on: boolean; toggle: () => void } | null;
+  last: boolean;
+}) {
+  const tone: Record<Cell, string> = {
+    empty: "bg-white",
+    answered: "bg-[#fff3b0]",
+    ok: "bg-[#9fe3b5]",
+    bad: "bg-[#ffb3b8]",
+    "ok-old": "bg-white",
+    "bad-old": "bg-white",
+  };
+  const bigBtn = "flex h-10 items-center justify-center rounded-md px-4 text-lg font-medium text-white shadow-sm transition hover:brightness-105 active:brightness-95 disabled:opacity-50 sm:h-10 sm:text-xl";
+  return (
+    <section className="order-last flex flex-col">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2 pt-2 sm:flex-nowrap">
+        <div className="order-2 flex items-end gap-0.5 sm:order-none" role="tablist" aria-label="Phần thi">
+          {tabs.map((label, t) => (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={`h-10 min-w-14 rounded-t-md px-4 text-lg font-extrabold sm:h-11 sm:px-6 sm:text-xl ${
+                tab === t ? "bg-[#518f52] text-white" : "border border-b-0 border-black/20 bg-[#f2f2f2] text-black hover:bg-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="order-3 flex min-w-0 items-center gap-2 pb-2.5 whitespace-nowrap text-base font-bold text-[#1d3a2c] sm:order-none sm:text-lg">
+          {warn && <TriangleAlert className="size-6 shrink-0 fill-[#f2c443] text-[#8a6d1a]" strokeWidth={1.75} aria-hidden />}
+          {info}
+        </p>
+        <div className="order-1 flex w-full justify-end gap-2 px-2 sm:order-none sm:ml-auto sm:w-auto sm:shrink-0 sm:gap-3 sm:px-3 sm:pb-4">
+          {onSubmit && (
+            <button type="button" onClick={onSubmit} className={`${bigBtn} bg-[#e8322f]`}>
+              Auswertung
+            </button>
+          )}
+          {mark && (
+            <button type="button" onClick={mark.toggle} aria-pressed={mark.on} aria-label={mark.on ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu" className={`${bigBtn} bg-[#f2c443] !px-0 w-12 sm:w-14`}>
+              <Star className={`size-6 sm:size-7 ${mark.on ? "fill-black" : ""} text-black`} strokeWidth={2} />
+            </button>
+          )}
+          <button type="button" onClick={() => go(idx + 1)} disabled={last} className={`${bigBtn} bg-[#3f9a52] sm:min-w-32`}>
+            Weiter
+          </button>
+        </div>
+      </div>
+      <nav aria-label="Danh sách câu" className="flex flex-wrap gap-2 border-t-2 border-[#3d7a3e] bg-[#518f52] p-2 sm:gap-3.5 sm:px-2 sm:py-3">
+        {items.map(({ i, state, marked, video }) => {
+          const current = i === idx;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => go(i)}
+              aria-current={current ? "true" : undefined}
+              aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
+              className={`relative flex h-7 w-12 items-center justify-center text-sm font-bold tabular-nums sm:h-8 sm:w-14 sm:text-base ${
+                current ? "outline-[3px] outline-black outline-offset-2 border border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border border-black/40 text-black ${tone[state]} hover:brightness-95`
+              }`}
+            >
+              {video && (
+                <span className="absolute top-0 left-0 flex h-2.5 w-3.5 items-center justify-center bg-black" aria-hidden>
+                  <Play className="size-2 fill-white text-white" strokeWidth={0} />
+                </span>
+              )}
+              {marked && <span className="absolute top-0 right-0 size-4 bg-[#e3b13c] sm:size-5 [clip-path:polygon(0_0,100%_0,100%_100%)]" aria-hidden />}
+              <span className="relative">{i + 1}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </section>
   );
 }
 
