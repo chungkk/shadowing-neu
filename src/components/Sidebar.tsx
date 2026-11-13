@@ -32,7 +32,7 @@ const DEUTSCH: Item[] = [
 // — trang chủ chỉ là trang giới thiệu, logo ở thanh trên cùng vẫn dẫn về đó.
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
 const GUEST_BAR: Item[] = ITEMS;
-const USER_BAR: Item[] = [ITEMS[1], ITEMS[2], REVIEW, ITEMS[3], ITEMS[4], ITEMS[5]];
+const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3], ITEMS[4]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
