@@ -235,7 +235,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   };
 
   // Video: tối đa 5 lượt xem; xem ít nhất 1 lượt mới được trả lời; đã sang bước trả lời thì không xem lại (như thi thật)
-  const gated = !!q?.video && (mode === "ueben" || (mode === "exam" && !submitted));
+  const gated = !!q?.video && (mode === "lesen" || mode === "ueben" || (mode === "exam" && !submitted));
   const vstate = (q && videos[q.id]) || { count: 0, answering: false };
   const videoStep = gated && !vstate.answering && !checked[q.id];
   const setVideo = (patch: Partial<VideoState>) => q && setVideos((v) => ({ ...v, [q.id]: { ...vstate, ...patch } }));
@@ -835,7 +835,7 @@ function NavBtn({ label, disabled, onClick, icon: Icon, hideSm }: { label: strin
 function Media({ q, gated, fs }: { q: DrivingQ; gated: boolean; fs?: boolean }) {
   const frame = fs ? "w-full bg-black" : "w-full max-w-xl rounded-2xl border-2 border-ink bg-black";
   if (q.video) {
-    // Đã qua bước xem video (luyện / thi): chỉ hiện khung hình; đọc / xem lại: xem video tự do
+    // Đã qua bước xem video (đọc / luyện / thi): chỉ hiện khung hình; xem lại bài thi: xem video tự do
     if (gated)
       return q.poster ? (
         // eslint-disable-next-line @next/next/no-img-element
