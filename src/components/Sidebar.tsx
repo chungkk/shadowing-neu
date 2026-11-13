@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Newspaper, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(portal)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -15,7 +15,6 @@ type NavUser = AvatarUser & { role: string };
 // "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học ckk.biz/<slug>, /watch, /vocab…) — xem useCurrent
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
-  { href: "/tin-tuc", label: "Tin tức", icon: Newspaper }, // tin tự động từ các nguồn admin chọn, dịch sang tiếng Việt
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
@@ -43,11 +42,10 @@ const ADMIN_ITEMS: Item[] = [
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
-  { href: "/admin/news", label: "Tin tức & nguồn tin", icon: Newspaper },
 ];
 
 // Trang không thuộc phần Tiếng Đức (các trang khác không khớp mục nào thì coi là bài học → sáng "Tiếng Đức")
-const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "tin-tuc", "huong-dan", "deutsch-shadowing"]);
+const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing"]);
 
 /** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */
 function useCurrent(items: Item[]) {

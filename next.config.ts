@@ -30,10 +30,8 @@ const nextConfig: NextConfig = {
       ],
     },
   ],
-  // Đường dẫn cũ của các game (tên tiếng Việt) → tên tiếng Anh; mục Hướng dẫn cũ → Tin tức
+  // Đường dẫn cũ của các game (tên tiếng Việt) → tên tiếng Anh
   redirects: async () => [
-    { source: "/huong-dan", destination: "/tin-tuc", permanent: false },
-    { source: "/huong-dan/:slug", destination: "/tin-tuc/:slug", permanent: false },
     { source: "/games/mua-tu-vung", destination: "/games/word-rain", permanent: true },
     { source: "/games/ong-danh-van", destination: "/games/spelling-bee", permanent: true },
   ],

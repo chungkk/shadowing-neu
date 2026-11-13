@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Car, Check, Gamepad2, Headphones, Landmark, Languages, Mic, Newspaper, PencilLine, Smartphone } from "lucide-react";
+import { ArrowRight, Car, Check, Gamepad2, Headphones, Landmark, Languages, Mic, PencilLine, Smartphone } from "lucide-react";
 import type { ComponentType } from "react";
 import { LoginLink } from "@/components/LoginDialog";
 import Mascot from "@/components/Mascot";
 
 // Trang chủ = trang giới thiệu TĨNH: không đọc DB / cookie → được dựng sẵn lúc build.
-// Tin tự động ở /tin-tuc; việc học hằng ngày (học tiếp, ôn từ…) ở trang của từng phần.
+// Việc học hằng ngày (học tiếp, ôn từ…) ở trang của từng phần.
 
 export const metadata: Metadata = {
   title: { absolute: "CKK – Học tiếng Đức, ôn thi bằng lái và quốc tịch bằng tiếng Việt" },
@@ -166,16 +166,8 @@ export default function Home() {
         </ol>
       </section>
 
-      {/* Tin tức + app */}
-      <section className="grid gap-4 md:grid-cols-2">
-        <Link href="/tin-tuc" className="group sticker sticker-link flex flex-col gap-2 p-5">
-          <Newspaper className="size-7 text-accent-text" />
-          <h2 className="text-xl font-extrabold">Tin tức nước Đức bằng tiếng Việt</h2>
-          <p className="flex-1 text-muted">Tin mới mỗi ngày từ báo Đức, dịch toàn bài sang tiếng Việt, đọc song ngữ Việt – Đức để học thêm từ.</p>
-          <span className={moreLink}>
-            Đọc tin hôm nay <ArrowRight className="size-4 transition group-hover:translate-x-1" />
-          </span>
-        </Link>
+      {/* App */}
+      <section>
         <Link href="/about" className="group sticker sticker-link flex flex-col gap-2 p-5">
           <Smartphone className="size-7 text-accent-text" />
           <h2 className="text-xl font-extrabold">Có cả app cho điện thoại</h2>
