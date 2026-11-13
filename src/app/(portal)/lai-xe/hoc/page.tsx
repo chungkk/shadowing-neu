@@ -48,86 +48,96 @@ async function Topics() {
       {tree.map((part) => {
         const ps = summarize(part.ids, stats);
         return (
-          <section key={part.key} className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-              <div>
-                <h2 className="text-xl font-extrabold">{part.title}</h2>
-                <p className="text-sm text-muted">{part.subtitle}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted tabular-nums">
-                  {user ? `${ps.done}/` : ""}
-                  {ps.total} câu
+          // Mỗi phần thu gọn thành 1 thẻ, bấm mới xổ ra các chủ đề. Nút Đọc/Luyện nằm ngoài <summary> để không lồng link trong nút
+          <section key={part.key} className="relative">
+            <details className="sticker group/part overflow-hidden">
+              <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 pr-44 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-baseline gap-2">
+                  <span aria-hidden className="inline-block transition group-open/part:rotate-90">
+                    ▸
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-extrabold">{part.title}</span>
+                    <span className="block text-sm text-muted">
+                      {part.subtitle} · {user ? `${ps.done}/` : ""}
+                      {ps.total} câu · {part.themes.length} chủ đề
+                    </span>
+                  </span>
                 </span>
-                <Link href={`/lai-xe/hoc/${part.key}?mode=lesen`} className="btn px-3 py-1.5">
-                  Đọc
-                </Link>
-                <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-amber px-3 py-1.5">
-                  Luyện
-                </Link>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              {part.themes.map((t) => {
-                const ts = summarize(t.ids, stats);
-                return (
-                  <details key={t.id} className="sticker group overflow-hidden">
-                    <summary className="flex cursor-pointer list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden">
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className="min-w-0 font-extrabold">
-                          <span aria-hidden className="mr-1 inline-block transition group-open:rotate-90">
-                            ▸
-                          </span>
-                          {t.vi || t.de} <span className="text-sm font-bold text-muted">· {t.de}</span>
-                        </span>
-                        <span className="shrink-0 text-xs text-muted tabular-nums">
-                          {user ? `${ts.done}/` : ""}
-                          {ts.total}
-                        </span>
-                      </span>
-                      {user && <ProgressBar {...ts} />}
-                    </summary>
-                    <div className="flex flex-col gap-1 border-t-2 border-ink/10 p-2">
-                      <div className="flex justify-end gap-2 px-1 pb-1">
-                        <Link href={`/lai-xe/hoc/${t.id}?mode=lesen`} className="text-sm font-bold text-muted underline-offset-2 hover:underline">
-                          Đọc cả chủ đề
-                        </Link>
-                        <Link href={`/lai-xe/hoc/${t.id}`} className="text-sm font-extrabold text-accent-text underline-offset-2 hover:underline">
-                          Luyện cả chủ đề →
-                        </Link>
-                      </div>
-                      <ul className="grid gap-2 sm:grid-cols-2">
-                        {t.chapters.map((c) => {
-                          const cs = summarize(c.ids, stats);
-                          return (
-                            <li key={c.id} className="flex flex-col gap-2 rounded-2xl border-2 border-ink/20 p-3">
-                              <Link href={`/lai-xe/hoc/${c.id}`} className="flex flex-col hover:underline">
-                                <span className="font-bold">{c.vi || c.de}</span>
-                                <span className="text-xs text-muted">
-                                  {c.id} · {c.de}
-                                </span>
-                              </Link>
-                              {user && <ProgressBar {...cs} />}
-                              <span className="flex items-center gap-2 text-xs">
-                                <span className="flex-1 text-muted tabular-nums">
-                                  {user ? `${cs.done}/` : ""}
-                                  {cs.total} câu
-                                </span>
-                                <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="rounded-lg border-2 border-ink/30 px-2 py-0.5 font-bold hover:border-ink">
-                                  Đọc
-                                </Link>
-                                <Link href={`/lai-xe/hoc/${c.id}`} className="rounded-lg border-2 border-ink bg-gold px-2 py-0.5 font-extrabold text-black">
-                                  Luyện
-                                </Link>
+                {user && <ProgressBar {...ps} />}
+              </summary>
+              <div className="border-t-2 border-ink/10 p-2">
+                <div className="flex flex-col gap-2">
+                  {part.themes.map((t) => {
+                    const ts = summarize(t.ids, stats);
+                    return (
+                      <details key={t.id} className="group overflow-hidden rounded-2xl border-2 border-ink/20 open:border-ink/40">
+                        <summary className="flex cursor-pointer list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className="min-w-0 font-extrabold">
+                              <span aria-hidden className="mr-1 inline-block transition group-open:rotate-90">
+                                ▸
                               </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </details>
-                );
-              })}
+                              {t.vi || t.de} <span className="text-sm font-bold text-muted">· {t.de}</span>
+                            </span>
+                            <span className="shrink-0 text-xs text-muted tabular-nums">
+                              {user ? `${ts.done}/` : ""}
+                              {ts.total}
+                            </span>
+                          </span>
+                          {user && <ProgressBar {...ts} />}
+                        </summary>
+                        <div className="flex flex-col gap-1 border-t-2 border-ink/10 p-2">
+                          <div className="flex justify-end gap-2 px-1 pb-1">
+                            <Link href={`/lai-xe/hoc/${t.id}?mode=lesen`} className="text-sm font-bold text-muted underline-offset-2 hover:underline">
+                              Đọc cả chủ đề
+                            </Link>
+                            <Link href={`/lai-xe/hoc/${t.id}`} className="text-sm font-extrabold text-accent-text underline-offset-2 hover:underline">
+                              Luyện cả chủ đề →
+                            </Link>
+                          </div>
+                          <ul className="grid gap-2 sm:grid-cols-2">
+                            {t.chapters.map((c) => {
+                              const cs = summarize(c.ids, stats);
+                              return (
+                                <li key={c.id} className="flex flex-col gap-2 rounded-2xl border-2 border-ink/20 p-3">
+                                  <Link href={`/lai-xe/hoc/${c.id}`} className="flex flex-col hover:underline">
+                                    <span className="font-bold">{c.vi || c.de}</span>
+                                    <span className="text-xs text-muted">
+                                      {c.id} · {c.de}
+                                    </span>
+                                  </Link>
+                                  {user && <ProgressBar {...cs} />}
+                                  <span className="flex items-center gap-2 text-xs">
+                                    <span className="flex-1 text-muted tabular-nums">
+                                      {user ? `${cs.done}/` : ""}
+                                      {cs.total} câu
+                                    </span>
+                                    <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="rounded-lg border-2 border-ink/30 px-2 py-0.5 font-bold hover:border-ink">
+                                      Đọc
+                                    </Link>
+                                    <Link href={`/lai-xe/hoc/${c.id}`} className="rounded-lg border-2 border-ink bg-gold px-2 py-0.5 font-extrabold text-black">
+                                      Luyện
+                                    </Link>
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              <Link href={`/lai-xe/hoc/${part.key}?mode=lesen`} className="btn px-3 py-1.5">
+                Đọc
+              </Link>
+              <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-amber px-3 py-1.5">
+                Luyện
+              </Link>
             </div>
           </section>
         );

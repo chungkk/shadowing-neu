@@ -373,7 +373,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         )}
       </section>
 
-      <article key={`${q.id}-${shake}`} className={`${fs ? "" : "sticker"} flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
+      <article key={`${q.id}-${shake}`} className={`${fs ? "min-h-[28rem] sm:h-[36rem]" : "sticker"} flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
         <div className={`flex flex-wrap items-center gap-2 text-xs font-bold ${fs ? "-mx-4 -mt-4 bg-accent px-4 py-2 text-white sm:-mx-6 sm:-mt-6 sm:px-6" : "text-muted"}`}>
           <span className="tabular-nums">
             Câu {idx + 1}/{questions.length}
@@ -389,8 +389,10 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           ) : null}
         </div>
 
+        {/* Lái xe: khung cố định — nội dung dài thì cuộn bên trong, đầu/chân khung đứng yên */}
+        <div className={fs ? "-mr-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2 pb-1 [scrollbar-gutter:stable]" : "contents"}>
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg leading-snug font-extrabold whitespace-pre-line">{q.q}</h2>
+          <h2 className={`text-lg leading-snug font-extrabold whitespace-pre-line ${fs ? "min-h-[2lh]" : ""}`}>{q.q}</h2>
           {showTr && q.tr?.q && (
             <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
               {q.tr.q}
@@ -543,6 +545,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
             )}
           </div>
         )}
+        </div>
 
         {/* Điều hướng: đầu / −10 / trước · kiểm tra · sau / +10 / cuối */}
         <div className="flex flex-wrap items-center gap-1.5">
