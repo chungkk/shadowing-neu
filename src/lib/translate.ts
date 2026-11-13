@@ -190,7 +190,7 @@ export async function chatJson<T>(
   system: string,
   user: unknown,
   valid: (x: unknown) => x is T,
-  opts: { prefer?: "openai" | "large" } = {},
+  opts: { prefer?: "openai" | "large"; timeoutMs?: number } = {},
 ): Promise<T & { provider: string }> {
   const all = providers();
   // prefer "openai": ChatGPT trước (chậm hơn nhưng tiếng Việt tự nhiên nhất) → Groq lớn → Groq nhỏ
@@ -214,7 +214,7 @@ export async function chatJson<T>(
           ],
           ...p.extra,
         }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
       });
       if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const data: { choices?: { message?: { content?: string } }[] } = await res.json();

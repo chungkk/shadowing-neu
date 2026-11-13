@@ -97,6 +97,6 @@ export async function fetchNewsNow(): Promise<{ message: string }> {
   if (!r) return { message: "Đang lấy tin, thử lại sau ít giây." };
   refresh();
   return {
-    message: `Thêm ${r.added} tin, dịch ${r.translated} tin.${r.errors.length ? ` Lỗi: ${r.errors.join("; ")}` : ""}`,
+    message: `Thêm ${r.added} tin, dịch ${r.translated} tin, dịch toàn bài ${r.bodies} bài.${r.errors.length ? ` Lỗi: ${r.errors.join("; ")}` : ""}`,
   };
 }

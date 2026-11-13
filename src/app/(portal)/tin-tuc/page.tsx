@@ -10,7 +10,7 @@ import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
   title: "Tin tức nước Đức bằng tiếng Việt",
-  description: "Tin mới mỗi ngày từ báo Đức — tiêu đề và tóm tắt dịch sang tiếng Việt, kèm link bài gốc.",
+  description: "Tin mới mỗi ngày từ báo Đức, dịch toàn bài sang tiếng Việt, đọc song ngữ Việt – Đức, kèm link bài gốc.",
   alternates: { canonical: "/tin-tuc" },
 };
 
@@ -94,8 +94,8 @@ async function News({ searchParams }: { searchParams: PageProps<"/tin-tuc">["sea
         <p className="sticker p-6 text-center text-muted">Đang cập nhật tin, bạn quay lại sau ít phút nhé.</p>
       )}
       <p className="text-xs text-muted">
-        Bản dịch do AI thực hiện từ tiêu đề và đoạn tóm tắt mà các báo công bố qua RSS, có thể chưa chính xác hoàn toàn. Nội dung đầy đủ và bản quyền thuộc về
-        báo gốc — bấm “Đọc bài gốc” để xem.
+        Bản dịch do AI thực hiện từ bài của các báo, có thể chưa chính xác hoàn toàn. Nội dung và bản quyền thuộc về báo gốc — ảnh, video và bài đầy đủ
+        xem ở “Bài gốc”.
       </p>
     </>
   );

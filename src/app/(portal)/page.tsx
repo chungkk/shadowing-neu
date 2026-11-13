@@ -171,7 +171,7 @@ export default function Home() {
         <Link href="/tin-tuc" className="group sticker sticker-link flex flex-col gap-2 p-5">
           <Newspaper className="size-7 text-accent-text" />
           <h2 className="text-xl font-extrabold">Tin tức nước Đức bằng tiếng Việt</h2>
-          <p className="flex-1 text-muted">Tin mới mỗi ngày từ báo Đức, tiêu đề và tóm tắt được dịch sang tiếng Việt, kèm link bài gốc.</p>
+          <p className="flex-1 text-muted">Tin mới mỗi ngày từ báo Đức, dịch toàn bài sang tiếng Việt, đọc song ngữ Việt – Đức để học thêm từ.</p>
           <span className={moreLink}>
             Đọc tin hôm nay <ArrowRight className="size-4 transition group-hover:translate-x-1" />
           </span>

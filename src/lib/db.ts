@@ -148,7 +148,7 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, deck, word_key)
     );
-    -- Mục Tin tức (/tin-tuc): tin tự động lấy từ RSS báo Đức, dịch tiêu đề + tóm tắt sang tiếng Việt (không chép nguyên bài)
+    -- Mục Tin tức (/tin-tuc): tin tự động lấy từ RSS báo Đức, dịch tiêu đề + tóm tắt + nội dung bài sang tiếng Việt
     CREATE TABLE IF NOT EXISTS news_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source TEXT NOT NULL, -- khoá nguồn (lib/news.ts newsSources): tagesschau, zdf…
@@ -315,6 +315,13 @@ function open() {
   // Cột thời điểm lưu (cho trang admin "Phụ đề đã lưu")
   const cols = db.prepare("PRAGMA table_info(transcript_cache)").all() as { name: string }[];
   if (!cols.some((c) => c.name === "updated_at")) db.exec("ALTER TABLE transcript_cache ADD COLUMN updated_at INTEGER");
+  // Tin tức: nội dung bài lấy từ trang báo + bản dịch (xem lib/news.ts ensureArticle)
+  const newsCols = db.prepare("PRAGMA table_info(news_items)").all() as { name: string }[];
+  if (!newsCols.some((c) => c.name === "body")) {
+    db.exec("ALTER TABLE news_items ADD COLUMN body TEXT NOT NULL DEFAULT ''"); // JSON [{k: "p" | "h" | "li", t}] tiếng Đức
+    db.exec("ALTER TABLE news_items ADD COLUMN body_vi TEXT NOT NULL DEFAULT ''"); // JSON string[] cùng thứ tự ('' = chưa dịch)
+    db.exec("ALTER TABLE news_items ADD COLUMN body_state INTEGER NOT NULL DEFAULT 0"); // 0 chưa lấy · 1 đã lấy · -1 không lấy được
+  }
   // Ngôn ngữ giao diện app theo tài khoản (NULL = chưa chọn)
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "lang")) db.exec("ALTER TABLE users ADD COLUMN lang TEXT");
@@ -1848,6 +1855,43 @@ export function listNewsItems(opts: { limit?: number; sources?: string[]; admin?
 
 export function setNewsHidden(id: number, hidden: boolean) {
   conn().prepare("UPDATE news_items SET hidden = ? WHERE id = ?").run(hidden ? 1 : 0, id);
+}
+
+export type ArticleBlock = { k: "p" | "h" | "li"; t: string };
+export type NewsArticle = NewsItem & { body: ArticleBlock[]; bodyVi: string[]; bodyState: number };
+
+const parseJson = <T>(s: string, fallback: T): T => {
+  try {
+    return s ? (JSON.parse(s) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+/** 1 tin kèm nội dung bài (trang /tin-tuc/bao/<id>) */
+export function getNewsArticle(id: number): NewsArticle | null {
+  const r = conn()
+    .prepare("SELECT id, source, url, title, summary, title_vi, summary_vi, published_at, hidden, body, body_vi, body_state FROM news_items WHERE id = ?")
+    .get(id) as (NewsItemRow & { body: string; body_vi: string; body_state: number }) | undefined;
+  if (!r) return null;
+  return { ...toNewsItem(r), body: parseJson(r.body, []), bodyVi: parseJson(r.body_vi, []), bodyState: r.body_state };
+}
+
+export function setNewsBody(id: number, body: ArticleBlock[], state: 1 | -1) {
+  conn().prepare("UPDATE news_items SET body = ?, body_vi = '', body_state = ? WHERE id = ?").run(body.length ? JSON.stringify(body) : "", state, id);
+}
+
+export function setNewsBodyVi(id: number, bodyVi: string[]) {
+  conn().prepare("UPDATE news_items SET body_vi = ? WHERE id = ?").run(JSON.stringify(bodyVi), id);
+}
+
+/** Tin đã dịch tiêu đề nhưng chưa lấy nội dung bài, mới nhất trước */
+export function newsWithoutBody(limit: number): number[] {
+  return (
+    conn()
+      .prepare("SELECT id FROM news_items WHERE body_state = 0 AND title_vi != '' AND hidden = 0 ORDER BY published_at DESC LIMIT ?")
+      .all(limit) as { id: number }[]
+  ).map((r) => r.id);
 }
 
 /** Xoá mọi tin của 1 nguồn (admin bỏ nguồn đó) */

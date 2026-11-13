@@ -63,6 +63,10 @@ async function Manage() {
                 <p className="font-bold">{it.titleVi || <span className="text-muted">(chưa dịch) {it.title}</span>}</p>
                 <p className="text-xs text-muted">
                   {nameOf(it.source)} · {when(it.publishedAt)} ·{" "}
+                  <Link href={`/tin-tuc/bao/${it.id}`} className="underline">
+                    trang đọc
+                  </Link>{" "}
+                  ·{" "}
                   <a href={it.url} target="_blank" rel="noopener noreferrer" className="underline">
                     bài gốc
                   </a>

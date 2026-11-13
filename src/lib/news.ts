@@ -2,9 +2,17 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { Readability } from "@mozilla/readability";
+import { parseHTML } from "linkedom";
 import {
   NEWS_DIR,
+  type ArticleBlock,
+  type NewsArticle,
   deleteNewsItemsOf,
+  getNewsArticle,
+  newsWithoutBody,
+  setNewsBody,
+  setNewsBodyVi,
   getSetting,
   insertNewsItems,
   pruneNewsItems,
@@ -18,8 +26,9 @@ import { chatJson, looksTranslated, translationEnabled } from "./translate";
 
 /**
  * Mục "Tin tức" (/tin-tuc):
- * - Tin tự động: lấy RSS / Atom của các nguồn admin chọn (/admin/news), AI dịch TIÊU ĐỀ + ĐOẠN TÓM TẮT mà nguồn tự đưa trong feed
- *   sang tiếng Việt, ghi rõ nguồn và link về bài gốc. Không chép / dịch nguyên bài và không dùng ảnh của báo (bản quyền).
+ * - Tin tự động: lấy RSS / Atom của các nguồn admin chọn (/admin/news), AI dịch tiêu đề + tóm tắt trong feed sang tiếng Việt.
+ *   Nội dung bài: tải trang bài gốc, bóc phần chữ bằng Readability (chế độ đọc của Firefox), dịch từng đoạn → đọc ở /tin-tuc/bao/<id>,
+ *   ghi rõ nguồn + link bài gốc. Không lấy ảnh / video của báo. Trang đọc để noindex (bản quyền thuộc về báo gốc).
  * - Bài do admin viết: bảng news_posts (lib/db.ts), ảnh bìa ở NEWS_DIR.
  */
 
@@ -58,6 +67,9 @@ const MAX_AGE_MS = 3 * 86_400_000; // bỏ tin cũ hơn 3 ngày khi lấy
 const KEEP_MS = 14 * 86_400_000; // xoá khỏi DB sau 14 ngày
 const TRANSLATE_PER_RUN = 40; // giới hạn chi phí AI mỗi lần
 const TRANSLATE_BATCH = 10;
+const BODY_PER_RUN = 12; // số bài lấy + dịch nội dung mỗi lần cập nhật (bài khác: dịch khi có người mở)
+const BODY_MAX_BLOCKS = 80;
+const BODY_CHUNK_CHARS = 3500; // mỗi lần gọi AI dịch tối đa ~3500 ký tự (các phần chạy song song)
 
 // ---------- Đọc RSS (đủ cho RSS 2.0 của các báo trên, không cần thư viện) ----------
 
@@ -199,13 +211,155 @@ async function translateNews(limit: number): Promise<number> {
   return done;
 }
 
+// ---------- Nội dung bài ----------
+
+/** Đoạn không phải nội dung: dòng ngày giờ, tác giả, chú thích audio/video, lời mời xem chương trình… */
+const NOISE =
+  /^(stand:|audio:|video:|bildunterschrift|to view this video|diese nachricht wurde am|dieses thema im programm|über dieses thema berichtete|quelle:|mehr zum thema|sehen sie hier|hören sie hier|\d{1,2}\.\d{1,2}\.\d{4}\b[^a-zäöü]*(uhr)?$)/i;
+/** Tiêu đề mở phần "đọc thêm" cuối bài → bỏ từ đó trở đi */
+const TAIL = /^(mehr zum thema|mehr dazu|mehr bei|mehr aus|weitere informationen|das könnte sie auch interessieren|auch interessant|weitere nachrichten|zum weiterlesen)\b/i;
+const AUTHOR = /^(von|ein (kommentar|bericht|interview) von)\s[^.!?]{1,80}$/i;
+
+/** HTML trang bài → các khối chữ (tiêu đề phụ, đoạn, gạch đầu dòng). Rỗng = không bóc được */
+export function extractArticle(html: string): ArticleBlock[] {
+  const { document } = parseHTML(html);
+  const article = new Readability(document as unknown as Document, { charThreshold: 300 }).parse();
+  if (!article?.content) return [];
+  const { document: doc } = parseHTML(`<!doctype html><html><body>${article.content}</body></html>`);
+  const blocks: ArticleBlock[] = [];
+  const seen = new Set<string>();
+  for (const el of doc.querySelectorAll("h2, h3, h4, p, li")) {
+    const tagName = el.tagName.toLowerCase();
+    if (tagName === "p" && el.closest("li")) continue;
+    if (el.closest("figure, figcaption, aside, nav")) continue;
+    const t = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (!t || seen.has(t)) continue;
+    const k: ArticleBlock["k"] = tagName === "p" ? "p" : tagName === "li" ? "li" : "h";
+    if (k === "h" && TAIL.test(t)) break;
+    // Gạch đầu dòng lẻ loi thường là link "tin liên quan" chèn giữa bài
+    if (k === "li" && (el.parentElement?.querySelectorAll(":scope > li").length ?? 0) < 2) continue;
+    if (NOISE.test(t) || AUTHOR.test(t)) continue;
+    if (k === "p" && t.split(" ").length < 4 && !/[.!?:"“”]$/.test(t)) continue;
+    seen.add(t);
+    blocks.push({ k, t });
+    if (blocks.length >= BODY_MAX_BLOCKS) break;
+  }
+  // Bỏ tiêu đề phụ cuối bài không còn đoạn nào theo sau
+  while (blocks.length && blocks[blocks.length - 1].k === "h") blocks.pop();
+  return blocks.filter((b) => b.k !== "p").length === blocks.length ? [] : blocks;
+}
+
+async function fetchArticle(url: string): Promise<ArticleBlock[]> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; ckk.biz news)", Accept: "text/html" },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+  return extractArticle(html.length > 3_000_000 ? html.slice(0, 3_000_000) : html);
+}
+
+const BODY_PROMPT =
+  "Bạn là biên tập viên tin tức, dịch bài báo (thường là tiếng Đức, có thể là ngôn ngữ khác) sang tiếng Việt cho người Việt sống ở Đức. " +
+  'Nhận JSON {"title": tiêu đề bài (chỉ để hiểu ngữ cảnh), "p": {"1": đoạn 1, "2": đoạn 2, …}} là các đoạn liên tiếp của bài. ' +
+  "Dịch TỪNG đoạn sang tiếng Việt tự nhiên, chính xác, đầy đủ ý (không tóm tắt, không bỏ câu), giữ nguyên tên riêng " +
+  "(người, địa danh, đảng, cơ quan). Chỉ với cơ quan / khái niệm riêng của Đức mà người Việt khó hiểu mới thêm giải thích ngắn trong ngoặc ở lần đầu xuất hiện, " +
+  "vd. Bundestag (Quốc hội Liên bang); không giải thích lặp lại điều câu đã nói rõ (chức danh, quốc gia…). " +
+  "Giữ nguyên dấu ngoặc kép của câu trích dẫn. Không thêm thông tin, không bình luận, không gộp hay tách đoạn. " +
+  'Trả về đúng JSON {"t": {"1": "…", "2": "…", …}} với đủ mọi khoá của đầu vào.';
+
+type BodyOut = { t: Record<string, string> };
+
+/** Dịch các khối của bài, chia phần ~3500 ký tự chạy song song. Lỗi → ném lỗi (lần sau mở bài thử lại) */
+async function translateBody(title: string, blocks: ArticleBlock[]): Promise<string[]> {
+  const chunks: number[][] = [[]];
+  let size = 0;
+  blocks.forEach((b, i) => {
+    if (size + b.t.length > BODY_CHUNK_CHARS && chunks[chunks.length - 1].length) {
+      chunks.push([]);
+      size = 0;
+    }
+    chunks[chunks.length - 1].push(i);
+    size += b.t.length;
+  });
+  const out: string[] = blocks.map(() => "");
+  await Promise.all(
+    chunks.map(async (idx) => {
+      const valid = (x: unknown): x is BodyOut => {
+        const t = (x as BodyOut)?.t;
+        if (!t || typeof t !== "object") return false;
+        const bad = idx.filter((i, k) => typeof t[k + 1] !== "string" || !looksTranslated(blocks[i].t, t[k + 1])).length;
+        // Cho phép lọt 1 đoạn chưa dịch (câu trích tiếng Anh, tên chương trình…) nếu phần còn lại đã dịch
+        return bad === 0 || (bad === 1 && idx.length >= 6);
+      };
+      const r = await chatJson(BODY_PROMPT, { title, p: Object.fromEntries(idx.map((i, k) => [k + 1, blocks[i].t])) }, valid, {
+        prefer: "openai",
+        timeoutMs: 90_000,
+      });
+      idx.forEach((i, k) => (out[i] = (r.t[k + 1] ?? "").trim() || blocks[i].t));
+    }),
+  );
+  return out;
+}
+
+const inflight = globalThis as unknown as { __newsArticle?: Map<number, Promise<NewsArticle | null>> };
+
+/**
+ * Bảo đảm tin có nội dung bài đã dịch: chưa lấy → tải trang báo + bóc chữ; chưa dịch → dịch.
+ * Nhiều người cùng mở 1 bài chỉ chạy 1 lần. Trả về tin (bodyState -1 = không lấy được nội dung, chỉ có tóm tắt).
+ */
+export function ensureArticle(id: number): Promise<NewsArticle | null> {
+  const map = (inflight.__newsArticle ??= new Map());
+  const running = map.get(id);
+  if (running) return running;
+  const job = (async () => {
+    let a = getNewsArticle(id);
+    if (!a) return null;
+    if (a.bodyState === 0) {
+      try {
+        // Bỏ khối trùng tiêu đề bài (trang báo hay lặp lại tiêu đề trong phần nội dung)
+        const same = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+        const body = (await fetchArticle(a.url)).filter((b) => same(b.t) !== same(a!.title));
+        setNewsBody(id, body, body.length ? 1 : -1);
+        if (!body.length) console.error(`[news] không bóc được nội dung: ${a.url}`);
+      } catch (e) {
+        console.error(`[news] tải bài lỗi ${a.url}:`, (e as Error).message);
+        setNewsBody(id, [], -1);
+      }
+      a = getNewsArticle(id)!;
+    }
+    if (a.bodyState === 1 && a.bodyVi.length !== a.body.length && translationEnabled()) {
+      try {
+        setNewsBodyVi(id, await translateBody(a.title, a.body));
+        a = getNewsArticle(id)!;
+      } catch (e) {
+        console.error(`[news] dịch bài ${id} lỗi:`, (e as Error).message);
+      }
+    }
+    return a;
+  })().finally(() => map.delete(id));
+  map.set(id, job);
+  return job;
+}
+
+/** Lấy + dịch nội dung các tin mới nhất chưa có (chạy 3 bài một lúc) */
+async function fillBodies(limit: number): Promise<number> {
+  const ids = newsWithoutBody(limit);
+  let done = 0;
+  for (let i = 0; i < ids.length; i += 3) {
+    const res = await Promise.all(ids.slice(i, i + 3).map((id) => ensureArticle(id).catch(() => null)));
+    done += res.filter((a) => a && a.bodyState === 1 && a.bodyVi.length === a.body.length).length;
+  }
+  return done;
+}
+
 // ---------- Cập nhật ----------
 
 const g = globalThis as unknown as { __newsRefreshing?: Promise<NewsRefreshResult> };
-export type NewsRefreshResult = { added: number; translated: number; errors: string[] };
+export type NewsRefreshResult = { added: number; translated: number; bodies: number; errors: string[] };
 
 /**
- * Lấy tin mới + dịch. Gọi sau khi trả trang /tin-tuc (after()) — tự bỏ qua nếu vừa lấy cách đây < 30 phút.
+ * Lấy tin mới + dịch tiêu đề / tóm tắt + lấy và dịch nội dung vài bài mới nhất. Gọi sau khi trả trang /tin-tuc (after()) — tự bỏ qua nếu vừa lấy cách đây < 30 phút.
  * force: admin bấm "Lấy tin ngay".
  */
 export function refreshNews({ force = false } = {}): Promise<NewsRefreshResult> | null {
@@ -224,8 +378,9 @@ export function refreshNews({ force = false } = {}): Promise<NewsRefreshResult> 
     });
     pruneNewsItems(KEEP_MS);
     const translated = await translateNews(TRANSLATE_PER_RUN);
+    const bodies = translationEnabled() ? await fillBodies(BODY_PER_RUN) : 0;
     if (errors.length) console.error("[news]", errors.join(" · "));
-    return { added, translated, errors };
+    return { added, translated, bodies, errors };
   })().finally(() => {
     g.__newsRefreshing = undefined;
   });
