@@ -1,4 +1,4 @@
-/** Đường dẫn bài học ckk.biz/tieng-duc/<slug> — dùng được cả server lẫn trình duyệt (xem trước trong form admin) */
+/** Đường dẫn bài học hallovn.de/tieng-duc/<slug> — dùng được cả server lẫn trình duyệt (xem trước trong form admin) */
 
 /** Tên thư mục / file ở gốc app — slug bài không được trùng (route tĩnh luôn thắng route [slug]) */
 const RESERVED = new Set([
@@ -27,5 +27,5 @@ export function slugify(text: string): string {
 
 export const isReservedSlug = (slug: string) => RESERVED.has(slug) || /^\d+$/.test(slug);
 
-/** Đường dẫn trang bài học: ckk.biz/tieng-duc/<slug> (link cũ ckk.biz/<slug> và /lesson/<id> chuyển hướng 308 về đây) */
+/** Đường dẫn trang bài học: hallovn.de/tieng-duc/<slug> (link cũ hallovn.de/<slug> và /lesson/<id> chuyển hướng 308 về đây) */
 export const lessonPath = (slug: string) => `/tieng-duc/${slug}`;

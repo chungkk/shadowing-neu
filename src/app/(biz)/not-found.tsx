@@ -5,7 +5,7 @@ import NotFoundContent from '@/biz/components/business/NotFoundContent';
 // ghi đè robots ở đây để hai thẻ không mâu thuẫn nhau.
 export const metadata: Metadata = {
     title: 'Seite nicht gefunden',
-    description: 'Diese Seite gibt es auf ckk.biz nicht. Hier finden Sie die Produkte und den Support von CKK.',
+    description: 'Diese Seite gibt es auf hallovn.de nicht. Hier finden Sie die Produkte und den Support von CKK.',
     robots: { index: false, follow: true },
 };
 

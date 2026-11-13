@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/fuehrerschein/**": ["./content/laixe/catalog/*.json", "./content/laixe/catalog_all/*.json"],
   },
-  // Ảnh trên các trang giới thiệu của ckk.biz
+  // Ảnh trên các trang giới thiệu của hallovn.de
   images: {
     remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/**" }],
   },

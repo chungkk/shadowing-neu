@@ -5,6 +5,8 @@ import type { NextRequest } from 'next/server';
 
 // Allowed web origins for browser requests
 const ALLOWED_ORIGINS = new Set([
+  'https://hallovn.de',
+  'https://www.hallovn.de',
   'https://ckk.biz',
   'https://www.ckk.biz',
   'http://localhost:3000',

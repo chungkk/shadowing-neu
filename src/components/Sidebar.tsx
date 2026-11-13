@@ -12,7 +12,7 @@ type Item = { href: string; label: string; short?: string; icon: ComponentType<{
 type NavUser = AvatarUser & { role: string };
 
 // Các phần lớn của CKK (tab trên cùng / thanh dưới đáy). "/" = Trang chủ (trang giới thiệu tĩnh — chỉ khớp đúng "/");
-// "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học ckk.biz/<slug>, /watch, /vocab…) — xem useCurrent
+// "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học hallovn.de/<slug>, /watch, /vocab…) — xem useCurrent
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },

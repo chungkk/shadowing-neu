@@ -307,9 +307,9 @@ export default function TermsPage() {
         <LegalShell
             title={{ de: 'Nutzungsbedingungen', en: 'Terms of use', vi: 'Điều khoản sử dụng' }}
             intro={{
-                de: 'Endbenutzer-Lizenzvereinbarung (EULA) für unsere Apps und die Website ckk.biz.',
-                en: 'End User License Agreement (EULA) for our apps and the ckk.biz website.',
-                vi: 'Thoả thuận cấp phép người dùng cuối (EULA) cho các ứng dụng và trang web ckk.biz.',
+                de: 'Endbenutzer-Lizenzvereinbarung (EULA) für unsere Apps und die Website hallovn.de.',
+                en: 'End User License Agreement (EULA) for our apps and the hallovn.de website.',
+                vi: 'Thoả thuận cấp phép người dùng cuối (EULA) cho các ứng dụng và trang web hallovn.de.',
             }}
             content={{ de, en, vi }}
         />

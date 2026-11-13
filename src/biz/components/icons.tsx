@@ -173,7 +173,7 @@ export function MailIcon({ className = 'w-5 h-5' }: IconProps) {
   );
 }
 
-/* ───────────── Business (ckk.biz) ───────────── */
+/* ───────────── Business (hallovn.de) ───────────── */
 
 export function BrandMark({ className = 'w-9 h-9' }: IconProps) {
   return (

@@ -20,7 +20,7 @@ const COLUMNS = [
     links: [
       { href: "/deutsch-shadowing/privacy", label: "Chính sách quyền riêng tư" },
       { href: "/deutsch-shadowing/terms", label: "Điều khoản sử dụng" },
-      { href: "/privacy", label: "Datenschutz (ckk.biz)" },
+      { href: "/privacy", label: "Datenschutz (hallovn.de)" },
       { href: "/impressum", label: "Impressum" },
       { href: "/about", label: "Về CKK · App & dịch vụ" },
     ],
@@ -85,7 +85,7 @@ export default function SiteFooter() {
               </Suspense>{" "}
               CKK ·{" "}
               <Link href="/about" className="underline underline-offset-2 hover:text-foreground">
-                ckk.biz
+                hallovn.de
               </Link>
             </p>
             <p>Video thuộc quyền sở hữu của tác giả trên YouTube.</p>

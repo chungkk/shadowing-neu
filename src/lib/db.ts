@@ -13,7 +13,7 @@ export type Level = (typeof LEVELS)[number];
 export type Lesson = {
   id: number;
   title: string;
-  slug: string; // đường dẫn ckk.biz/<slug> — tạo từ tiêu đề, giữ nguyên khi sửa tiêu đề (link cũ không gãy)
+  slug: string; // đường dẫn hallovn.de/<slug> — tạo từ tiêu đề, giữ nguyên khi sửa tiêu đề (link cũ không gãy)
   videoId: string;
   description: string;
   level: Level;
@@ -324,7 +324,7 @@ function open() {
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
-  // Đường dẫn đẹp cho SEO (ckk.biz/<slug>); bài chưa có slug → tạo từ tiêu đề
+  // Đường dẫn đẹp cho SEO (hallovn.de/<slug>); bài chưa có slug → tạo từ tiêu đề
   if (!lessonCols.some((c) => c.name === "slug")) db.exec("ALTER TABLE lessons ADD COLUMN slug TEXT");
   const setSlug = db.prepare("UPDATE lessons SET slug = ? WHERE id = ?");
   for (const r of db.prepare("SELECT id, title FROM lessons WHERE slug IS NULL OR slug = '' ORDER BY id").all() as { id: number; title: string }[])

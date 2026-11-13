@@ -169,7 +169,7 @@ export const SERVICES: Service[] = [
         ink: 'var(--ink-saffron)',
         onInk: 'dark',
         platform: 'Web',
-        href: '/', // app học ngay trên ckk.biz
+        href: '/', // app học ngay trên hallovn.de
         copy: {
             de: {
                 short: 'Deutsch hören, sprechen und schreiben',
@@ -180,7 +180,7 @@ export const SERVICES: Service[] = [
                     'Vokabeln, Sprechen und Lernspiele',
                 ],
                 action: 'Jetzt lernen',
-                note: 'Direkt hier auf ckk.biz – ein Konto für Deutsch, Führerschein und Leben in Deutschland.',
+                note: 'Direkt hier auf hallovn.de – ein Konto für Deutsch, Führerschein und Leben in Deutschland.',
             },
             en: {
                 short: 'Listen to, speak and write German',
@@ -191,7 +191,7 @@ export const SERVICES: Service[] = [
                     'Vocabulary, speaking and learning games',
                 ],
                 action: 'Start learning',
-                note: 'Right here on ckk.biz – one account for German, the driving test and Leben in Deutschland.',
+                note: 'Right here on hallovn.de – one account for German, the driving test and Leben in Deutschland.',
             },
             vi: {
                 short: 'Luyện nghe, nói và viết tiếng Đức',
@@ -202,7 +202,7 @@ export const SERVICES: Service[] = [
                     'Từ vựng, luyện nói và game học tập',
                 ],
                 action: 'Học ngay',
-                note: 'Ngay trên ckk.biz – một tài khoản cho tiếng Đức, lái xe và Leben in Deutschland.',
+                note: 'Ngay trên hallovn.de – một tài khoản cho tiếng Đức, lái xe và Leben in Deutschland.',
             },
         },
     },

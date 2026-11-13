@@ -38,7 +38,7 @@ export function StoreButtons({ service }: { service: Service }) {
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
                 <a
                     href={service.href}
-                    // Link ngoài (App Store) mở tab mới; Deutsch Shadowing là app học ngay trên ckk.biz ("/")
+                    // Link ngoài (App Store) mở tab mới; Deutsch Shadowing là app học ngay trên hallovn.de ("/")
                     {...(service.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     className="inline-flex min-h-12 items-center gap-2.5 bg-[var(--ink)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-white hover:text-[var(--ink)]"
                 >

@@ -36,8 +36,8 @@ const COPY = {
         hubFormTitle: 'Allgemeine Anfrage',
         topics: ['Daten & Datenschutz', 'Feedback', 'Kooperation', 'Sonstiges'],
         websitePrivacy: 'Datenschutzerklärung der Website',
-        websiteIntro: 'Diese Seite gilt für die Website ckk.biz. Für unsere Apps und Dienste gilt jeweils eine eigene Erklärung:',
-        websiteHeading: 'Website ckk.biz',
+        websiteIntro: 'Diese Seite gilt für die Website hallovn.de. Für unsere Apps und Dienste gilt jeweils eine eigene Erklärung:',
+        websiteHeading: 'Website hallovn.de',
     },
     en: {
         support: 'Support',
@@ -59,8 +59,8 @@ const COPY = {
         hubFormTitle: 'General enquiry',
         topics: ['Data & privacy', 'Feedback', 'Partnership', 'Other'],
         websitePrivacy: 'Website privacy policy',
-        websiteIntro: 'This page applies to the website ckk.biz. Each of our apps and services has its own policy:',
-        websiteHeading: 'Website ckk.biz',
+        websiteIntro: 'This page applies to the website hallovn.de. Each of our apps and services has its own policy:',
+        websiteHeading: 'Website hallovn.de',
     },
     vi: {
         support: 'Hỗ trợ',
@@ -82,8 +82,8 @@ const COPY = {
         hubFormTitle: 'Yêu cầu chung',
         topics: ['Dữ liệu & bảo mật', 'Góp ý', 'Hợp tác', 'Khác'],
         websitePrivacy: 'Chính sách bảo mật của trang web',
-        websiteIntro: 'Trang này áp dụng cho trang web ckk.biz. Mỗi ứng dụng và dịch vụ của chúng tôi có chính sách riêng:',
-        websiteHeading: 'Trang web ckk.biz',
+        websiteIntro: 'Trang này áp dụng cho trang web hallovn.de. Mỗi ứng dụng và dịch vụ của chúng tôi có chính sách riêng:',
+        websiteHeading: 'Trang web hallovn.de',
     },
 };
 

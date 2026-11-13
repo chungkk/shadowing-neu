@@ -25,7 +25,7 @@ export async function renderOgImage({ eyebrow, title, subtitle, accent }: OgProp
                     <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={markSrc} width={72} height={72} alt="" style={{ borderRadius: 16 }} />
-                        <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1 }}>CKK · ckk.biz</div>
+                        <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1 }}>CKK · hallovn.de</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <div style={{ fontSize: 28, textTransform: 'uppercase', letterSpacing: 3, color: accent, fontWeight: 700 }}>{eyebrow}</div>

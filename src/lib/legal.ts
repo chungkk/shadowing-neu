@@ -23,7 +23,7 @@ const privacy: Record<LegalLang, LegalContent> = {
     title: "Chính sách quyền riêng tư",
     updated: UPDATED.vi,
     intro:
-      "Deutsch Shadowing (“chúng tôi”) gồm ứng dụng di động và trang web ckk.biz, giúp bạn luyện nghe, nói và chép chính tả tiếng Đức. Chính sách này giải thích chúng tôi thu thập dữ liệu nào, dùng để làm gì và bạn có những quyền gì. Chúng tôi chỉ thu thập những gì cần để dịch vụ hoạt động và không bán dữ liệu. Ứng dụng di động không có quảng cáo; trang web ckk.biz hiển thị quảng cáo của Google AdSense (xem mục 4 và 8).",
+      "Deutsch Shadowing (“chúng tôi”) gồm ứng dụng di động và trang web hallovn.de, giúp bạn luyện nghe, nói và chép chính tả tiếng Đức. Chính sách này giải thích chúng tôi thu thập dữ liệu nào, dùng để làm gì và bạn có những quyền gì. Chúng tôi chỉ thu thập những gì cần để dịch vụ hoạt động và không bán dữ liệu. Ứng dụng di động không có quảng cáo; trang web hallovn.de hiển thị quảng cáo của Google AdSense (xem mục 4 và 8).",
     sections: [
       {
         h: "1. Dữ liệu chúng tôi thu thập",
@@ -125,7 +125,7 @@ const privacy: Record<LegalLang, LegalContent> = {
     title: "Datenschutzerklärung",
     updated: UPDATED.de,
     intro:
-      "Deutsch Shadowing („wir“) besteht aus der App und der Website ckk.biz und hilft dir, Deutsch zu hören, zu sprechen und zu schreiben. Diese Erklärung beschreibt, welche Daten wir erheben, wofür wir sie nutzen und welche Rechte du hast. Wir erheben nur, was für den Dienst nötig ist, und verkaufen keine Daten. Die App enthält keine Werbung; die Website ckk.biz zeigt Werbung von Google AdSense (siehe Abschnitte 4 und 8).",
+      "Deutsch Shadowing („wir“) besteht aus der App und der Website hallovn.de und hilft dir, Deutsch zu hören, zu sprechen und zu schreiben. Diese Erklärung beschreibt, welche Daten wir erheben, wofür wir sie nutzen und welche Rechte du hast. Wir erheben nur, was für den Dienst nötig ist, und verkaufen keine Daten. Die App enthält keine Werbung; die Website hallovn.de zeigt Werbung von Google AdSense (siehe Abschnitte 4 und 8).",
     sections: [
       {
         h: "1. Welche Daten wir erheben",
@@ -230,7 +230,7 @@ const terms: Record<LegalLang, LegalContent> = {
     title: "Điều khoản sử dụng",
     updated: UPDATED.vi,
     intro:
-      "Khi tạo tài khoản hoặc sử dụng Deutsch Shadowing (ứng dụng di động và trang web ckk.biz), bạn đồng ý với các điều khoản dưới đây. Vui lòng đọc kỹ trước khi sử dụng.",
+      "Khi tạo tài khoản hoặc sử dụng Deutsch Shadowing (ứng dụng di động và trang web hallovn.de), bạn đồng ý với các điều khoản dưới đây. Vui lòng đọc kỹ trước khi sử dụng.",
     sections: [
       {
         h: "1. Dịch vụ",
@@ -314,7 +314,7 @@ const terms: Record<LegalLang, LegalContent> = {
     title: "Nutzungsbedingungen",
     updated: UPDATED.de,
     intro:
-      "Mit der Erstellung eines Kontos oder der Nutzung von Deutsch Shadowing (App und Website ckk.biz) stimmst du den folgenden Bedingungen zu. Bitte lies sie aufmerksam durch.",
+      "Mit der Erstellung eines Kontos oder der Nutzung von Deutsch Shadowing (App und Website hallovn.de) stimmst du den folgenden Bedingungen zu. Bitte lies sie aufmerksam durch.",
     sections: [
       {
         h: "1. Der Dienst",

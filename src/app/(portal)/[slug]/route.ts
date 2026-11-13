@@ -2,7 +2,7 @@ import { getLessonBySlug } from "@/lib/db";
 import { lessonPath } from "@/lib/slug";
 
 /**
- * Link bài học cũ ckk.biz/<slug> (trước khi bài học chuyển vào /tieng-duc) → 308 về /tieng-duc/<slug>:
+ * Link bài học cũ hallovn.de/<slug> (trước khi bài học chuyển vào /tieng-duc) → 308 về /tieng-duc/<slug>:
  * link đã chia sẻ không gãy, Google chuyển thứ hạng sang link mới. Không phải bài học → 404.
  * Route handler thay vì page: page đang stream chỉ chuyển hướng được phía trình duyệt, không trả đúng mã 308.
  */

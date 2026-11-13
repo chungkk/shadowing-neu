@@ -4,7 +4,7 @@ import { WebsitePrivacy } from '@/biz/components/business/ProductLegal';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Datenschutzerklärung',
-    description: 'Datenschutzerklärung der Website ckk.biz und Übersicht aller Produkte von CKK.',
+    description: 'Datenschutzerklärung der Website hallovn.de und Übersicht aller Produkte von CKK.',
     path: '/privacy',
 });
 

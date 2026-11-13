@@ -85,7 +85,7 @@ export function ResignButton({ send, className = "" }: { send: Send; className?:
 }
 
 /**
- * Linh vật kèm lời thoại (như Solo Games). Linh vật của ckk.biz là ảnh nên cảm xúc thể hiện bằng chuyển động:
+ * Linh vật kèm lời thoại (như Solo Games). Linh vật của hallovn.de là ảnh nên cảm xúc thể hiện bằng chuyển động:
  * wow = giật mình · cheer = nhảy cẫng · think = nghiêng đầu · sleep = ngủ gật · sad = ủ rũ
  */
 export type MascotMood = "happy" | "wow" | "cheer" | "think" | "sleep" | "sad";

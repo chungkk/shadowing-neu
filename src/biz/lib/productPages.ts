@@ -138,7 +138,7 @@ const fuehrerschein: ProductPage = {
             faq: [
                 { q: 'Ist der Fragenkatalog aktuell?', a: 'Ja. Die App nutzt den amtlichen Fragenkatalog, gültig ab 01.04.2025. Neue Fragen kommen per Update in die App, dein Lernfortschritt bleibt dabei erhalten.' },
                 { q: 'Kann ich ohne Internet lernen?', a: 'Ja. Lade das Sprachpaket einmal, dann funktionieren Fragen und Übersetzungen offline. Videos offline anzusehen ist Teil von Premium.' },
-                { q: 'Gibt es die App für Android?', a: 'Ja, als APK-Datei direkt von ckk.biz. Lade die Datei auf deinem Android-Gerät und erlaube die Installation aus unbekannten Quellen. Im Google Play Store ist die App nicht.' },
+                { q: 'Gibt es die App für Android?', a: 'Ja, als APK-Datei direkt von hallovn.de. Lade die Datei auf deinem Android-Gerät und erlaube die Installation aus unbekannten Quellen. Im Google Play Store ist die App nicht.' },
                 { q: 'Brauche ich ein Konto?', a: 'Nein. Die App funktioniert ohne Anmeldung.' },
             ],
         },
@@ -207,7 +207,7 @@ const fuehrerschein: ProductPage = {
             faq: [
                 { q: 'Is the question catalogue up to date?', a: 'Yes. The app uses the official catalogue valid from 1 April 2025. New questions arrive in the app by update and your progress is kept.' },
                 { q: 'Can I study without internet?', a: 'Yes. Download the language pack once and questions and translations work offline. Watching videos offline is part of Premium.' },
-                { q: 'Is there an Android version?', a: 'Yes, as an APK file straight from ckk.biz. Download it on your Android device and allow installs from unknown sources. The app is not on Google Play.' },
+                { q: 'Is there an Android version?', a: 'Yes, as an APK file straight from hallovn.de. Download it on your Android device and allow installs from unknown sources. The app is not on Google Play.' },
                 { q: 'Do I need an account?', a: 'No. The app works without signing in.' },
             ],
         },
@@ -276,7 +276,7 @@ const fuehrerschein: ProductPage = {
             faq: [
                 { q: 'Bộ câu hỏi có cập nhật không?', a: 'Có. App dùng bộ đề chính thức áp dụng từ 01.04.2025. Câu hỏi mới được cập nhật trong app và tiến độ học của bạn vẫn được giữ.' },
                 { q: 'Có học được khi không có mạng không?', a: 'Được. Tải gói ngôn ngữ một lần là câu hỏi và bản dịch chạy offline. Xem video offline thuộc gói Premium.' },
-                { q: 'Có bản cho Android không?', a: 'Có, dạng file APK tải trực tiếp từ ckk.biz. Tải file về máy Android rồi cho phép cài ứng dụng từ nguồn không xác định. App không có trên Google Play.' },
+                { q: 'Có bản cho Android không?', a: 'Có, dạng file APK tải trực tiếp từ hallovn.de. Tải file về máy Android rồi cho phép cài ứng dụng từ nguồn không xác định. App không có trên Google Play.' },
                 { q: 'Có cần tạo tài khoản không?', a: 'Không. App dùng được ngay, không cần đăng nhập.' },
             ],
         },
@@ -337,7 +337,7 @@ const lid: ProductPage = {
             faq: [
                 { q: 'Sind das die offiziellen Fragen?', a: 'Ja. Die App enthält alle 310 Fragen des offiziellen Fragenkatalogs: 300 allgemeine Fragen und 10 Fragen für jedes Bundesland.' },
                 { q: 'Wie läuft der echte Test ab?', a: 'Im Test bekommst du 33 Fragen, 30 allgemeine und 3 zu deinem Bundesland, und hast 60 Minuten Zeit. Mit 17 richtigen Antworten hast du bestanden. Die Simulation in der App folgt genau diesem Ablauf.' },
-                { q: 'Gibt es die App für Android?', a: 'Ja, als APK-Datei direkt von ckk.biz. Lade die Datei auf deinem Android-Gerät und erlaube die Installation aus unbekannten Quellen.' },
+                { q: 'Gibt es die App für Android?', a: 'Ja, als APK-Datei direkt von hallovn.de. Lade die Datei auf deinem Android-Gerät und erlaube die Installation aus unbekannten Quellen.' },
                 { q: 'Brauche ich ein Konto?', a: 'Nein. Die App funktioniert ohne Anmeldung.' },
             ],
         },
@@ -384,7 +384,7 @@ const lid: ProductPage = {
             faq: [
                 { q: 'Are these the official questions?', a: 'Yes. The app contains all 310 questions of the official catalogue: 300 general questions and 10 for each federal state.' },
                 { q: 'How does the real test work?', a: 'You get 33 questions, 30 general and 3 about your state, and have 60 minutes. 17 correct answers are a pass. The simulation in the app follows exactly this format.' },
-                { q: 'Is there an Android version?', a: 'Yes, as an APK file straight from ckk.biz. Download it on your Android device and allow installs from unknown sources.' },
+                { q: 'Is there an Android version?', a: 'Yes, as an APK file straight from hallovn.de. Download it on your Android device and allow installs from unknown sources.' },
                 { q: 'Do I need an account?', a: 'No. The app works without signing in.' },
             ],
         },
@@ -431,7 +431,7 @@ const lid: ProductPage = {
             faq: [
                 { q: 'Đây có phải câu hỏi chính thức không?', a: 'Đúng. App có đủ 310 câu của bộ đề chính thức: 300 câu chung và 10 câu cho mỗi bang.' },
                 { q: 'Bài thi thật diễn ra thế nào?', a: 'Bạn làm 33 câu, gồm 30 câu chung và 3 câu về bang của mình, trong 60 phút. Đúng 17 câu là đậu. Bài thi thử trong app theo đúng cấu trúc này.' },
-                { q: 'Có bản cho Android không?', a: 'Có, dạng file APK tải trực tiếp từ ckk.biz. Tải file về máy Android rồi cho phép cài ứng dụng từ nguồn không xác định.' },
+                { q: 'Có bản cho Android không?', a: 'Có, dạng file APK tải trực tiếp từ hallovn.de. Tải file về máy Android rồi cho phép cài ứng dụng từ nguồn không xác định.' },
                 { q: 'Có cần tạo tài khoản không?', a: 'Không. App dùng được ngay, không cần đăng nhập.' },
             ],
         },
@@ -446,7 +446,7 @@ const shadowing: ProductPage = {
     sections: [[0], [1], [2], [3]],
     seo: {
         title: 'Deutsch Shadowing – Deutsch lernen mit echten Videos',
-        description: 'Deutsch hören und nachsprechen, Satz für Satz, mit echten Videos von A1 bis C2, eigenen YouTube-Videos, Goethe-Wortlisten und Lernspielen. Auf ckk.biz.',
+        description: 'Deutsch hören und nachsprechen, Satz für Satz, mit echten Videos von A1 bis C2, eigenen YouTube-Videos, Goethe-Wortlisten und Lernspielen. Auf hallovn.de.',
     },
     copy: {
         de: {
@@ -490,7 +490,7 @@ const shadowing: ProductPage = {
                 { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche von Deutsch Shadowing und die Bedeutungen in Wortlisten und Spielen sind derzeit auf Vietnamesisch. Die Videos, Transkripte und Übungen sind auf Deutsch.' },
                 { q: 'Brauche ich ein Konto?', a: 'Nein. Die freien Lektionen und eigene YouTube-Videos funktionieren ohne Anmeldung. Mit Konto wählst du zwei weitere Lektionen und speicherst Wörter im Vokabelheft.' },
                 { q: 'Welche Videos kann ich nutzen?', a: 'Die Lektionen der Bibliothek oder jedes YouTube-Video mit Untertiteln, dessen Link du einfügst. Die Videos bleiben Eigentum ihrer Urheber auf YouTube.' },
-                { q: 'Wo finde ich Deutsch Shadowing?', a: 'Direkt hier auf ckk.biz (früher ckk.pro). Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
+                { q: 'Wo finde ich Deutsch Shadowing?', a: 'Direkt hier auf hallovn.de (früher ckk.biz). Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
             ],
         },
         en: {
@@ -534,7 +534,7 @@ const shadowing: ProductPage = {
                 { q: 'What language is the interface in?', a: 'The Deutsch Shadowing interface and the meanings in word lists and games are currently in Vietnamese. Videos, transcripts and exercises are in German.' },
                 { q: 'Do I need an account?', a: 'No. Free lessons and your own YouTube videos work without signing in. With an account you pick two more lessons and save words to your notebook.' },
                 { q: 'Which videos can I use?', a: 'The library lessons, or any YouTube video with subtitles whose link you paste in. The videos remain the property of their creators on YouTube.' },
-                { q: 'Where do I find Deutsch Shadowing?', a: 'Right here on ckk.biz (formerly ckk.pro). With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
+                { q: 'Where do I find Deutsch Shadowing?', a: 'Right here on hallovn.de (formerly ckk.biz). With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
             ],
         },
         vi: {
@@ -578,7 +578,7 @@ const shadowing: ProductPage = {
                 { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện Deutsch Shadowing và phần nghĩa trong bộ từ, game hiện bằng tiếng Việt. Video, transcript và bài luyện là tiếng Đức.' },
                 { q: 'Có cần tài khoản không?', a: 'Không. Bài học miễn phí và video YouTube tự dán đều dùng được mà không cần đăng nhập. Có tài khoản thì chọn thêm 2 bài và lưu từ vào sổ từ vựng.' },
                 { q: 'Luyện được với những video nào?', a: 'Các bài trong thư viện, hoặc bất kỳ video YouTube có phụ đề mà bạn dán link vào. Video vẫn thuộc quyền sở hữu của tác giả trên YouTube.' },
-                { q: 'Học Deutsch Shadowing ở đâu?', a: 'Ngay trên ckk.biz (trước đây là ckk.pro). Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
+                { q: 'Học Deutsch Shadowing ở đâu?', a: 'Ngay trên hallovn.de (trước đây là ckk.biz). Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
             ],
         },
     },

@@ -2,7 +2,7 @@ import { GOOGLE_PRIVACY, HOSTING, changes, controller, emailContact, perLocale, 
 import type { LegalSection, Localized } from './types';
 import type { Locale } from '@/biz/contexts/LocaleContext';
 
-const DOMAIN = 'ckk.biz';
+const DOMAIN = 'hallovn.de';
 
 const body: Record<Locale, LegalSection[]> = {
     de: [

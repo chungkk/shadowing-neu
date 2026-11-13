@@ -3,7 +3,7 @@ import type { LegalSection } from './types';
 
 export const GOOGLE_PRIVACY = 'https://policies.google.com/privacy';
 export const APPLE_PRIVACY = 'https://www.apple.com/legal/privacy/';
-export const MAIL = 'support@ckk.biz';
+export const MAIL = 'support@hallovn.de';
 
 const CONTROLLER_TITLE = { de: 'Verantwortlicher', en: 'Controller', vi: 'Bên kiểm soát dữ liệu' };
 const CONTROLLER_TEXT = {

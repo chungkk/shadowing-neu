@@ -9,7 +9,7 @@ import { accessOf, canViewLesson, lockInfo, lockSettings } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 import { lessonPath } from "@/lib/slug";
 
-/** Trang bài học: ckk.biz/tieng-duc/<slug> (link cũ ckk.biz/<slug> và /lesson/<id> chuyển hướng 308 về đây) */
+/** Trang bài học: hallovn.de/tieng-duc/<slug> (link cũ hallovn.de/<slug> và /lesson/<id> chuyển hướng 308 về đây) */
 async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
   const { slug } = await params;
   const lesson = getLessonBySlug(slug);

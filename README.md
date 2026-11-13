@@ -1,9 +1,9 @@
-# CKK (ckk.biz)
+# CKK (hallovn.de)
 
-Tên miền duy nhất là **ckk.biz**. ckk.pro (tên cũ của Deutsch Shadowing) không dùng nữa, chỉ còn chuyển hướng về ckk.biz
+Tên miền chính thức là **hallovn.de**. ckk.biz và ckk.pro (tên cũ) không dùng nữa, chỉ còn chuyển hướng về hallovn.de
 (và phục vụ `/api/*` cho app di động bản cũ — xem `src/proxy.ts`).
 
-Một app Next.js cho cả ckk.biz: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
+Một app Next.js cho cả hallovn.de: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
 cộng các trang doanh nghiệp / pháp lý của CKK (chuyển từ repo `ckk-biz`).
 
 ## Cấu trúc
@@ -13,8 +13,8 @@ cộng các trang doanh nghiệp / pháp lý của CKK (chuyển từ repo `ckk-
   `/privacy`, `/terms`, `/impressum`, `/support`, `/refund`, `/delete-account`, `/<app>/privacy|support`…
   Các URL này app iOS/Android đang dùng → **không đổi đường dẫn**.
 - `src/app/api/fuehrerschein/*` — API câu hỏi cho app lái xe, đọc `content/laixe/` (bảo vệ trong `src/proxy.ts`).
-- `src/proxy.ts` — `ckk.pro/*` và `www.ckk.biz/*` → 308 về `ckk.biz` (trừ `/api/*`: app di động đã phát hành gọi thẳng
-  `ckk.pro/api/v1` kèm Bearer token). Link pháp lý cũ `ckk.pro/privacy|terms` → `/deutsch-shadowing/privacy|terms`.
+- `src/proxy.ts` — `www.hallovn.de/*`, `ckk.biz/*`, `www.ckk.biz/*`, `ckk.pro/*` → 308 về `hallovn.de` (trừ `/api/*`: app di động
+  đã phát hành gọi thẳng `ckk.pro/api/v1` hoặc `ckk.biz/api/v1` kèm Bearer token). Link pháp lý cũ `ckk.pro/privacy|terms` → `/deutsch-shadowing/privacy|terms`.
 - Hai root layout → đổi qua lại giữa app học và trang doanh nghiệp là tải lại cả trang (bình thường). 404 chung: `app/global-not-found.tsx`.
 
 ## Dữ liệu Lái xe / LiD

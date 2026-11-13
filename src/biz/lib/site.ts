@@ -1,12 +1,12 @@
-// Cấu hình thương hiệu & liên kết dùng chung cho toàn bộ website ckk.biz
+// Cấu hình thương hiệu & liên kết dùng chung cho toàn bộ website hallovn.de
 
 export const SITE = {
   name: 'CKK',
   fullName: 'CKK',
-  domain: 'ckk.biz',
-  url: 'https://ckk.biz',
-  supportEmail: 'support@ckk.biz',
-  contactEmail: 'support@ckk.biz',
+  domain: 'hallovn.de',
+  url: 'https://hallovn.de',
+  supportEmail: 'support@hallovn.de',
+  contactEmail: 'support@hallovn.de',
   description:
     'CKK entwickelt Software: eigene Apps wie Führerschein Theorie, Leben in Deutschland und Deutsch Shadowing – und Apps und Web-Anwendungen für Sie.',
 } as const;
@@ -24,7 +24,7 @@ export const COMPANY = {
   street: '',
   postalCity: '06110 Halle (Saale)',
   country: 'Deutschland',
-  email: 'support@ckk.biz',
+  email: 'support@hallovn.de',
   /** Optional – leer lassen, wenn nicht vorhanden */
   phone: '',
   /** Optional – USt-IdNr. nach § 27a UStG, leer lassen, wenn nicht vorhanden */
@@ -40,8 +40,8 @@ export const APP_LINKS = {
   lid: 'https://apps.apple.com/us/app/leben-in-deutschland-unlimited/id6758165563',
   // APK tải trực tiếp (không qua Google Play), do container nginx ckk-downloads trên VPS phục vụ
   // (xem docs/downloads.md). Bản mới ghi đè lên đúng tên file này nên link không bao giờ đổi.
-  fuehrerscheinAndroid: 'https://ckk.biz/download/fuehrerschein-ckk.apk',
-  lidAndroid: 'https://ckk.biz/download/lid-ckk.apk',
+  fuehrerscheinAndroid: 'https://hallovn.de/download/fuehrerschein-ckk.apk',
+  lidAndroid: 'https://hallovn.de/download/lid-ckk.apk',
 } as const;
 
 export const LEGAL_UPDATED = { de: 'November 2026', en: 'November 2026', vi: 'Tháng 11/2026' } as const;
