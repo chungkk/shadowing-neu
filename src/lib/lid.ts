@@ -57,9 +57,11 @@ export function listSets() {
 }
 
 /**
- * Phạm vi học: "tat-ca" (300 câu chung), nhóm chủ đề ("politik"…), bộ 30 câu ("1".."10") hoặc mã bang ("bw"…)
+ * Phạm vi học: "hoc" (câu chung + câu của bang), "tat-ca" (300 câu chung), nhóm chủ đề ("politik"…), bộ 30 câu ("1".."10") hoặc mã bang ("bw"…)
  */
-export function getSet(id: string): { title: string; subtitle: string; ids: string[] } | null {
+export function getSet(id: string, stateCode = DEFAULT_STATE): { title: string; subtitle: string; ids: string[] } | null {
+  // "hoc": nút Học của app — 300 câu chung + 10 câu của bang đang chọn
+  if (id === "hoc") return { title: "Tất cả", subtitle: `${GENERAL.length} câu chung + câu của bang`, ids: [...generalIds(), ...stateIds(stateCode)] };
   if (id === "tat-ca") return { title: "Tất cả câu chung", subtitle: `${GENERAL.length} câu`, ids: generalIds() };
   const cat = CATEGORIES.find((c) => c.key === id);
   if (cat) return { title: cat.vi, subtitle: `${cat.de} · câu ${cat.from}–${cat.to}`, ids: GENERAL.slice(cat.from - 1, cat.to).map((q) => q.id) };
@@ -70,7 +72,7 @@ export function getSet(id: string): { title: string; subtitle: string; ids: stri
   return { title: `Câu ${set.from}–${set.to}`, subtitle: "300 câu chung", ids: set.ids };
 }
 
-export const setIds = () => ["tat-ca", ...CATEGORIES.map((c) => c.key), ...listSets().map((s) => s.id), ...STATES.map((s) => s.code)];
+export const setIds = () => ["hoc", "tat-ca", ...CATEGORIES.map((c) => c.key), ...listSets().map((s) => s.id), ...STATES.map((s) => s.code)];
 
 const shuffle = <T,>(xs: T[]) => {
   const a = [...xs];

@@ -5,7 +5,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getQuizExam, listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
 import { isRight } from "@/lib/fuehrerschein-rules";
 import { forClient, generalIds, gradable, prefs, stateIds } from "@/lib/lid";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import LidRunner from "@/components/lid/LidRunner";
+import { LidShell } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Câu sai · Leben in Deutschland", robots: { index: false } };
@@ -18,24 +19,20 @@ async function Wrong({ searchParams }: P) {
   const { state, lang } = await prefs();
   const stats = quizStats(user.id, "lid");
   let ids: string[];
-  let title = "Ôn câu sai";
-  let subtitle = `Các câu lần gần nhất làm sai · câu chung + ${state.name}`;
+  let title = "Câu sai";
   if ((await searchParams).tu === "bai-thi") {
     const last = listQuizExams(user.id, "lid", 1)[0];
     const exam = last ? getQuizExam(user.id, "lid", last.id) : null;
     const picked = Object.fromEntries((exam?.answers ?? []).map((a) => [a.qid, a.picked]));
     ids = exam ? gradable(exam.answers.map((a) => a.qid)).filter((q) => !isRight(q, picked[q.id])).map((q) => q.id) : [];
-    title = "Câu sai của bài thi gần nhất";
-    subtitle = exam ? `${ids.length} câu` : "Chưa có bài thi nào";
+    title = "Câu sai bài thi";
   } else {
     ids = [...generalIds(), ...stateIds(state.code)].filter((id) => stats[id] && !stats[id].lastOk);
   }
   return (
-    <DrivingRunner
-      module="lid"
+    <LidRunner
       mode="ueben"
       title={title}
-      subtitle={subtitle}
       backHref="/leben-in-deutschland"
       questions={await forClient(ids, lang)}
       loggedIn
@@ -48,10 +45,10 @@ async function Wrong({ searchParams }: P) {
 
 export default function Page(props: P) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6">
+    <LidShell>
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Wrong {...props} />
       </Suspense>
-    </main>
+    </LidShell>
   );
 }

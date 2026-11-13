@@ -2,13 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
-import { STATES, generalIds, getState, prefs, stateIds } from "@/lib/lid";
+import { generalIds, getState, prefs, stateIds } from "@/lib/lid";
 import { summarize } from "@/lib/quiz-types";
 import { ExamHistory } from "@/components/lai-xe/ExamHistory";
-import { AutoMarkToggle, LangSelect, ResetProgress, StateSelect } from "@/components/lai-xe/Settings";
+import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Thống kê · Leben in Deutschland", robots: { index: false } };
@@ -55,7 +54,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 async function Stats() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/leben-in-deutschland/thong-ke");
-  const { state, lang } = await prefs();
+  const { state } = await prefs();
   const stats = quizStats(user.id, "lid");
   const grund = summarize(generalIds(), stats);
   const zusatz = summarize(stateIds(state.code), stats);
@@ -100,32 +99,17 @@ async function Stats() {
           </p>
         )}
       </section>
-
-      <section className="sticker flex flex-col gap-3 p-4">
-        <h2 className="text-lg font-extrabold">Cài đặt</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <LangSelect lang={lang} />
-          <StateSelect states={STATES} current={state.code} />
-        </div>
-        <AutoMarkToggle />
-        <ResetProgress module="lid" />
-      </section>
     </>
   );
 }
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4 md:p-6">
-      <div className="flex items-center gap-2">
-        <Link href="/leben-in-deutschland" className="btn-icon" aria-label="Quay lại">
-          <ArrowLeft className="size-5" />
-        </Link>
-        <h1 className="text-2xl font-extrabold">Thống kê</h1>
-      </div>
+    <LidShell wide>
+      <LidTopBar back="/leben-in-deutschland" title="Thống kê" />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Stats />
       </Suspense>
-    </main>
+    </LidShell>
   );
 }

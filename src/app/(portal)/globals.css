@@ -136,6 +136,32 @@
   --red-300: #b91c1c;
   color: var(--foreground);
 }
+/* Leben in Deutschland: nền đen xanh đêm như app LiD Ckk (iOS/Android) — luôn tối, cả ở giao diện sáng */
+.theme-lid,
+[data-theme="dark"] .theme-lid {
+  color-scheme: dark;
+  --background: #080812;
+  --sidebar: #000000;
+  --foreground: #ffffff;
+  --ink: #2a2a3a;
+  --card: #15151f;
+  --card-2: #26263a;
+  --border: #2a2a3a;
+  --muted: #9a9ab0;
+  --link: #4d8bff;
+  --on-link: #ffffff;
+  --accent: #10b981;
+  --accent-dark: #047857;
+  --accent-text: #34d399;
+  --amber: #ffcc00;
+  --amber-dark: #ffdc4d;
+  --gold: #ffcc00;
+  --red: #dd0000;
+  --red-dark: #7f1d1d;
+  --red-400: #f87171;
+  --red-300: #fca5a5;
+  color: var(--foreground);
+}
 /* Khung màn chơi trong giao diện tối ấm: cùng tông ca cao với trang */
 [data-theme="dark"] .theme-night {
   --background: #1c1416;
@@ -445,6 +471,10 @@ select {
 }
 /* Màn học trên điện thoại: thanh điều khiển của trình phát thay chỗ thanh điều hướng dưới đáy (cùng chiều cao) */
 body:has(.lesson) .bottom-nav {
+  display: none;
+}
+/* Màn câu hỏi LiD: như app — không có thanh tab, thanh ‹trước · sau› nằm sát đáy */
+body:has(.lid-runner) .bottom-nav {
   display: none;
 }
 /* Màn học: chân trang gọn — chỉ dòng bản quyền, không cột link (đỡ phân tán khi đang tập trung) */
