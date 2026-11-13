@@ -31,12 +31,13 @@ export async function POST(req: Request) {
   return Response.json({ ok: true });
 }
 
-/** DELETE { module } → xoá tiến độ của phần đó */
+/** DELETE { module, all? } → xoá tiến độ của phần đó (all: cả câu đánh dấu + lịch sử thi) */
 export async function DELETE(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  const m = moduleOf((await body<{ module: string }>(req)).module);
+  const b = await body<{ module: string; all: boolean }>(req);
+  const m = moduleOf(b.module);
   if (!m) return fail("module không hợp lệ");
-  resetQuiz(user.id, m);
+  resetQuiz(user.id, m, b.all === true);
   return Response.json({ ok: true });
 }

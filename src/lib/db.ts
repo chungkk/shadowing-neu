@@ -157,6 +157,33 @@ function open() {
       at INTEGER NOT NULL, -- ms
       PRIMARY KEY (user_id, module, qid)
     );
+    -- Câu được đánh dấu ⭐ (tab Lái xe)
+    CREATE TABLE IF NOT EXISTS quiz_bookmarks (
+      user_id INTEGER NOT NULL,
+      module TEXT NOT NULL,
+      qid TEXT NOT NULL,
+      at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, module, qid)
+    );
+    -- Bài thi thử đã nộp (tab Lái xe): giữ 100 bài gần nhất / người
+    CREATE TABLE IF NOT EXISTS quiz_exams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      module TEXT NOT NULL,
+      kind TEXT NOT NULL, -- 'random' (đề ngẫu nhiên) | 'bogen' (đề mẫu)
+      ref TEXT NOT NULL, -- hạng ('B') / số đề mẫu ('17')
+      license_class TEXT NOT NULL,
+      correct INTEGER NOT NULL,
+      total INTEGER NOT NULL,
+      error_points INTEGER NOT NULL,
+      max_error_points INTEGER NOT NULL,
+      passed INTEGER NOT NULL,
+      fail_reason TEXT, -- 'tooManyErrors' | 'twoFivePointErrors'
+      duration_s INTEGER NOT NULL,
+      answers TEXT NOT NULL, -- JSON [{ qid, picked, order }]
+      at INTEGER NOT NULL -- ms
+    );
+    CREATE INDEX IF NOT EXISTS quiz_exams_user ON quiz_exams (user_id, module, at);
     CREATE TABLE IF NOT EXISTS vocab_examples (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       vocab_id INTEGER NOT NULL,
@@ -698,6 +725,8 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM starred_sentences WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM deck_learned WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM quiz_answers WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM quiz_bookmarks WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM quiz_exams WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
@@ -728,6 +757,8 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     starredSentences: rows("SELECT text, source_url, source_title, created_at FROM starred_sentences WHERE user_id = ? ORDER BY id"),
     deckLearned: rows("SELECT deck, word_key, at FROM deck_learned WHERE user_id = ? ORDER BY at"),
     quizAnswers: rows("SELECT module, qid, correct, wrong, last_ok, at FROM quiz_answers WHERE user_id = ? ORDER BY at"),
+    quizBookmarks: rows("SELECT module, qid, at FROM quiz_bookmarks WHERE user_id = ? ORDER BY at"),
+    quizExams: rows("SELECT module, kind, ref, license_class, correct, total, error_points, max_error_points, passed, fail_reason, duration_s, answers, at FROM quiz_exams WHERE user_id = ? ORDER BY at"),
     progress: rows("SELECT source, title, idx, total, mode, dict_level, dict_done, updated_at FROM progress WHERE user_id = ? ORDER BY updated_at DESC"),
     reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
     crazyReps: rows("SELECT source, idx, reps, passed, updated_at FROM crazy_reps WHERE user_id = ?"),
@@ -1737,7 +1768,125 @@ export function quizStats(userId: number, module: QuizModule): Record<string, Qu
   return Object.fromEntries(rows.map((r) => [r.qid, { correct: r.correct, wrong: r.wrong, lastOk: !!r.last_ok }]));
 }
 
-/** Xoá tiến độ của 1 phần (bắt đầu lại từ đầu) */
-export function resetQuiz(userId: number, module: QuizModule) {
+/** Xoá tiến độ của 1 phần (bắt đầu lại từ đầu) · all: xoá cả câu đánh dấu và lịch sử thi */
+export function resetQuiz(userId: number, module: QuizModule, all = false) {
   conn().prepare("DELETE FROM quiz_answers WHERE user_id = ? AND module = ?").run(userId, module);
+  if (!all) return;
+  conn().prepare("DELETE FROM quiz_bookmarks WHERE user_id = ? AND module = ?").run(userId, module);
+  conn().prepare("DELETE FROM quiz_exams WHERE user_id = ? AND module = ?").run(userId, module);
+}
+
+/** Câu đã đánh dấu (mới nhất trước) */
+export function quizBookmarks(userId: number, module: QuizModule): string[] {
+  const rows = conn().prepare("SELECT qid FROM quiz_bookmarks WHERE user_id = ? AND module = ? ORDER BY at DESC").all(userId, module) as { qid: string }[];
+  return rows.map((r) => r.qid);
+}
+
+export function setQuizBookmark(userId: number, module: QuizModule, qid: string, on: boolean) {
+  if (on) conn().prepare("INSERT OR IGNORE INTO quiz_bookmarks (user_id, module, qid, at) VALUES (?, ?, ?, ?)").run(userId, module, qid, Date.now());
+  else conn().prepare("DELETE FROM quiz_bookmarks WHERE user_id = ? AND module = ? AND qid = ?").run(userId, module, qid);
+}
+
+export type QuizExamInput = {
+  kind: "random" | "bogen";
+  ref: string;
+  cls: string;
+  correct: number;
+  total: number;
+  errorPoints: number;
+  maxErrorPoints: number;
+  passed: boolean;
+  failReason: string | null;
+  durationS: number;
+  answers: { qid: string; picked: string[]; order: number[] }[];
+};
+
+type ExamRow = {
+  id: number;
+  kind: "random" | "bogen";
+  ref: string;
+  license_class: string;
+  correct: number;
+  total: number;
+  error_points: number;
+  max_error_points: number;
+  passed: number;
+  fail_reason: string | null;
+  duration_s: number;
+  answers: string;
+  at: number;
+};
+
+const examFromRow = (r: ExamRow) => ({
+  id: r.id,
+  kind: r.kind,
+  ref: r.ref,
+  cls: r.license_class,
+  correct: r.correct,
+  total: r.total,
+  errorPoints: r.error_points,
+  maxErrorPoints: r.max_error_points,
+  passed: !!r.passed,
+  failReason: r.fail_reason as "tooManyErrors" | "twoFivePointErrors" | null,
+  durationS: r.duration_s,
+  at: r.at,
+});
+
+/** Lưu 1 bài thi (đã chấm ở server) + ghi kết quả từng câu đã làm vào tiến độ. Trả về id bài */
+export function recordQuizExam(userId: number, module: QuizModule, e: QuizExamInput, results: { qid: string; ok: boolean }[]): number {
+  const db = conn();
+  let id: number;
+  db.exec("BEGIN");
+  try {
+    id = Number(
+      db
+        .prepare(
+          `INSERT INTO quiz_exams (user_id, module, kind, ref, license_class, correct, total, error_points, max_error_points, passed, fail_reason, duration_s, answers, at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(userId, module, e.kind, e.ref, e.cls, e.correct, e.total, e.errorPoints, e.maxErrorPoints, e.passed ? 1 : 0, e.failReason, e.durationS, JSON.stringify(e.answers), Date.now()).lastInsertRowid,
+    );
+    db.prepare(
+      `DELETE FROM quiz_exams WHERE user_id = ? AND module = ? AND id NOT IN (SELECT id FROM quiz_exams WHERE user_id = ? AND module = ? ORDER BY at DESC, id DESC LIMIT 100)`,
+    ).run(userId, module, userId, module);
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+  if (results.length) recordQuizAnswers(userId, module, results);
+  return id;
+}
+
+/** Lịch sử thi (mới nhất trước) */
+export function listQuizExams(userId: number, module: QuizModule, limit = 100) {
+  const rows = conn()
+    .prepare("SELECT * FROM quiz_exams WHERE user_id = ? AND module = ? ORDER BY at DESC, id DESC LIMIT ?")
+    .all(userId, module, limit) as ExamRow[];
+  return rows.map(examFromRow);
+}
+
+/** 1 bài thi kèm câu trả lời (để xem lại) */
+export function getQuizExam(userId: number, module: QuizModule, id: number) {
+  const r = conn().prepare("SELECT * FROM quiz_exams WHERE user_id = ? AND module = ? AND id = ?").get(userId, module, id) as ExamRow | undefined;
+  if (!r) return null;
+  let answers: QuizExamInput["answers"] = [];
+  try {
+    answers = JSON.parse(r.answers);
+  } catch {}
+  return { ...examFromRow(r), answers };
+}
+
+/** Đề mẫu: 3 lần làm gần nhất (mới trước) + đã từng đậu chưa · số đề → kết quả */
+export function bogenProgress(userId: number, module: QuizModule): Record<string, { last: boolean[]; everPassed: boolean }> {
+  const rows = conn()
+    .prepare("SELECT ref, passed FROM quiz_exams WHERE user_id = ? AND module = ? AND kind = 'bogen' ORDER BY at DESC, id DESC")
+    .all(userId, module) as { ref: string; passed: number }[];
+  const out: Record<string, { last: boolean[]; everPassed: boolean }> = {};
+  for (const r of rows) {
+    const p = (out[r.ref] ??= { last: [], everPassed: false });
+    if (p.last.length < 3) p.last.push(!!r.passed);
+    if (r.passed) p.everPassed = true;
+  }
+  return out;
 }

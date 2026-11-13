@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
   redirects: async () => [
     { source: "/games/mua-tu-vung", destination: "/games/word-rain", permanent: true },
     { source: "/games/ong-danh-van", destination: "/games/spelling-bee", permanent: true },
+    // Tab Lái xe: link cũ của chương / ôn câu sai
+    { source: "/lai-xe/:c(\\d\\.\\d\\.\\d{2})", destination: "/lai-xe/hoc/:c", permanent: true },
+    { source: "/lai-xe/on-tap", destination: "/lai-xe/cau-sai", permanent: true },
+    { source: "/leben-in-deutschland/on-tap", destination: "/leben-in-deutschland/cau-sai", permanent: true },
   ],
   cacheComponents: true,
   partialPrefetching: true,

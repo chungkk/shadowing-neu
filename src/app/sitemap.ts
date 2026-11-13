@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
 import { listLessons } from "@/lib/db";
-import { chapterIds } from "@/lib/fuehrerschein";
+import { allChapterIds } from "@/lib/fuehrerschein";
 import { setIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { lessonPath } from "@/lib/slug";
@@ -41,7 +41,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/games/der-die-das`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/lai-xe`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/leben-in-deutschland`, changeFrequency: "monthly", priority: 0.9 },
-    ...chapterIds().map((id) => ({ url: `${SITE_URL}/lai-xe/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
+    { url: `${SITE_URL}/lai-xe/thi-thu`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/lai-xe/de-mau`, changeFrequency: "monthly", priority: 0.7 },
+    ...allChapterIds().map((id) => ({ url: `${SITE_URL}/lai-xe/hoc/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
     ...setIds().map((id) => ({ url: `${SITE_URL}/leben-in-deutschland/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
     ...bizPages(),
     ...["/deutsch-shadowing/privacy", "/deutsch-shadowing/privacy/de", "/deutsch-shadowing/terms", "/deutsch-shadowing/terms/de"].map((p) => ({ url: SITE_URL + p, changeFrequency: "yearly" as const, priority: 0.2 })),
