@@ -16,7 +16,11 @@ import {
   Languages,
   Lightbulb,
   Pause,
+  FastForward,
   Play,
+  Rewind,
+  SkipBack,
+  SkipForward,
   RotateCcw,
   Star,
   X,
@@ -334,9 +338,9 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
       <div className={fs ? "theme-fahrschule flex flex-col overflow-hidden rounded-3xl border-2 border-ink bg-background shadow-[0_4px_0_var(--ink)]" : "contents"}>
       {/* Bảng số câu (thi: chia phần cơ bản / phần riêng) — lái xe: nằm dưới câu hỏi như app */}
-      <section className={fs ? "order-last flex flex-col gap-2 border-t-2 border-ink/20 bg-card-2 p-3" : "flex flex-col gap-2"}>
+      <section className={fs ? "order-last flex flex-col bg-accent px-2 pt-2 pb-3 sm:px-4" : "flex flex-col gap-2"}>
         {isExam && grundCount > 0 && grundCount < questions.length && (
-          <div className="flex gap-1" role="tablist" aria-label="Phần thi">
+          <div className={fs ? "-mt-2 mb-2 flex gap-1" : "flex gap-1"} role="tablist" aria-label="Phần thi">
             {(["grund", "zusatz"] as const).map((t) => {
               const n = t === "grund" ? grundCount : questions.length - grundCount;
               return (
@@ -346,7 +350,11 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                   role="tab"
                   aria-selected={tab === t}
                   onClick={() => setTab(t)}
-                  className={`rounded-xl border-2 px-3 py-1 text-sm font-extrabold ${tab === t ? "border-ink bg-gold text-black" : "border-ink/30 text-muted"}`}
+                  className={
+                    fs
+                      ? `rounded-b-lg px-3 py-1 text-sm font-extrabold ${tab === t ? "bg-white text-accent-dark" : "text-white/80 hover:text-white"}`
+                      : `rounded-xl border-2 px-3 py-1 text-sm font-extrabold ${tab === t ? "border-ink bg-gold text-black" : "border-ink/30 text-muted"}`
+                  }
                 >
                   {t === "grund" ? cfg.parts[0] : module === "lid" ? cfg.parts[1] : `${cfg.parts[1]} ${exam?.cls ?? ""}`.trim()} · {n}
                 </button>
@@ -354,11 +362,15 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
             })}
           </div>
         )}
-        <nav aria-label="Danh sách câu" className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto p-0.5">
-          {visible.map(({ x, i }) => (
-            <GridCell key={x.id} n={i + 1} state={status(x)} current={i === idx} marked={marked.has(x.id)} onClick={() => go(i)} />
-          ))}
-        </nav>
+        {fs ? (
+          <FsPager idx={idx} total={questions.length} items={visible.map(({ x, i }) => ({ i, state: status(x), marked: marked.has(x.id) }))} go={go} />
+        ) : (
+          <nav aria-label="Danh sách câu" className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto p-0.5">
+            {visible.map(({ x, i }) => (
+              <GridCell key={x.id} n={i + 1} state={status(x)} current={i === idx} marked={marked.has(x.id)} onClick={() => go(i)} />
+            ))}
+          </nav>
+        )}
       </section>
 
       <article key={`${q.id}-${shake}`} className={`${fs ? "" : "sticker"} flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
@@ -503,11 +515,15 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
         {/* Điều hướng: đầu / −10 / trước · kiểm tra · sau / +10 / cuối */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <NavBtn label="Câu đầu" disabled={idx === 0} onClick={() => go(0)} icon={ChevronFirst} hideSm />
-          <NavBtn label="Lùi 10 câu" disabled={idx === 0} onClick={() => go(idx - 10)} icon={ChevronsLeft} hideSm />
-          <button type="button" className="btn" onClick={() => go(idx - 1)} disabled={idx === 0}>
-            <ChevronLeft className="size-4" /> Trước
-          </button>
+          {!fs && (
+            <>
+              <NavBtn label="Câu đầu" disabled={idx === 0} onClick={() => go(0)} icon={ChevronFirst} hideSm />
+              <NavBtn label="Lùi 10 câu" disabled={idx === 0} onClick={() => go(idx - 10)} icon={ChevronsLeft} hideSm />
+              <button type="button" className="btn" onClick={() => go(idx - 1)} disabled={idx === 0}>
+                <ChevronLeft className="size-4" /> Trước
+              </button>
+            </>
+          )}
           <div className="flex-1" />
           {mode === "ueben" && !reveal && !videoStep && !cfg.single && (
             <button type="button" className="btn btn-amber" onClick={() => check()} disabled={!mine.length}>
@@ -524,13 +540,17 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
             <button type="button" className="btn btn-red" onClick={askSubmit}>
               Nộp bài
             </button>
-          ) : (
+          ) : fs ? null : (
             <button type="button" className={`btn ${reveal || mode === "exam" ? "btn-primary" : ""}`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1}>
               Tiếp <ChevronRight className="size-4" />
             </button>
           )}
-          <NavBtn label="Tiến 10 câu" disabled={idx === questions.length - 1} onClick={() => go(idx + 10)} icon={ChevronsRight} hideSm />
-          <NavBtn label="Câu cuối" disabled={idx === questions.length - 1} onClick={() => go(questions.length - 1)} icon={ChevronLast} hideSm />
+          {!fs && (
+            <>
+              <NavBtn label="Tiến 10 câu" disabled={idx === questions.length - 1} onClick={() => go(idx + 10)} icon={ChevronsRight} hideSm />
+              <NavBtn label="Câu cuối" disabled={idx === questions.length - 1} onClick={() => go(questions.length - 1)} icon={ChevronLast} hideSm />
+            </>
+          )}
         </div>
       </article>
       </div>
@@ -570,6 +590,68 @@ function GridCell({ n, state, current, marked, onClick }: { n: number; state: Ce
     >
       {n}
       {marked && <Star className="absolute -top-1.5 -right-1.5 size-3 fill-gold text-gold" aria-hidden />}
+    </button>
+  );
+}
+
+/** Thanh dưới kiểu phần mềm thi thật: |◀ ◀◀ ◀ · 10 ô số · ▶ ▶▶ ▶| */
+function FsPager({ idx, total, items, go }: { idx: number; total: number; items: { i: number; state: Cell; marked: boolean }[]; go: (i: number) => void }) {
+  const pos = Math.max(0, items.findIndex((it) => it.i === idx));
+  const start = Math.floor(pos / 10) * 10;
+  const page = items.slice(start, start + 10);
+  const first = idx === 0;
+  const last = idx === total - 1;
+  const tone: Record<Cell, string> = {
+    empty: "bg-white",
+    answered: "bg-[#fff3b0]",
+    ok: "bg-[#9fe3b5]",
+    bad: "bg-[#ffb3b8]",
+    "ok-old": "bg-[#d9f5e2]",
+    "bad-old": "bg-[#ffe0e2]",
+  };
+  return (
+    <nav aria-label="Danh sách câu" className="flex items-center gap-1 sm:gap-1.5">
+      <PagerBtn label="Câu đầu" disabled={first} onClick={() => go(0)} icon={SkipBack} hideSm />
+      <PagerBtn label="Lùi 10 câu" disabled={first} onClick={() => go(idx - 10)} icon={Rewind} hideSm />
+      <PagerBtn label="Câu trước" disabled={first} onClick={() => go(idx - 1)} icon={Play} flip />
+      <div className="flex min-w-0 flex-1 justify-center gap-1 sm:gap-1.5">
+        {page.map(({ i, state, marked }) => {
+          const current = i === idx;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => go(i)}
+              aria-current={current ? "true" : undefined}
+              aria-label={`Câu ${i + 1}${marked ? " (đã đánh dấu)" : ""}`}
+              className={`relative flex h-8 max-w-12 min-w-0 flex-1 items-center justify-center border text-xs font-bold text-black tabular-nums ${
+                current ? "border-2 border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border-black/70 ${tone[state]} hover:brightness-95`
+              }`}
+            >
+              {i + 1}
+              {marked && <Star className="absolute -top-1.5 -right-1.5 size-3 fill-gold text-gold" aria-hidden />}
+            </button>
+          );
+        })}
+      </div>
+      <PagerBtn label="Câu sau" disabled={last} onClick={() => go(idx + 1)} icon={Play} />
+      <PagerBtn label="Tiến 10 câu" disabled={last} onClick={() => go(idx + 10)} icon={FastForward} hideSm />
+      <PagerBtn label="Câu cuối" disabled={last} onClick={() => go(total - 1)} icon={SkipForward} hideSm />
+    </nav>
+  );
+}
+
+function PagerBtn({ label, disabled, onClick, icon: Icon, hideSm, flip }: { label: string; disabled: boolean; onClick: () => void; icon: typeof Play; hideSm?: boolean; flip?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={`${hideSm ? "hidden sm:flex" : "flex"} size-9 shrink-0 items-center justify-center border border-black bg-white text-black hover:bg-[#eee] disabled:opacity-50`}
+    >
+      <Icon className={`size-5 fill-current ${flip ? "rotate-180" : ""}`} strokeWidth={1.5} />
     </button>
   );
 }
