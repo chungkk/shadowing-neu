@@ -32,7 +32,7 @@ function BigCard({ href, icon: Icon, title, text, red }: { href: string; icon: C
   );
 }
 
-/** Dòng menu phụ (Thống kê, Cài đặt) */
+/** Dòng menu phụ (Thống kê) */
 function ListCard({ href, icon: Icon, title, text, disabled }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; disabled?: boolean }) {
   const body = (
     <>
@@ -124,10 +124,7 @@ async function Home() {
       </div>
 
       {/* Menu phụ */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ListCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" text={user ? "Xem kết quả & tiến trình" : "Đăng nhập để xem thống kê"} disabled={!user} />
-        <ListCard href={settingsHref} icon={Settings} title="Cài đặt" text="Hạng bằng & ngôn ngữ bản dịch" />
-      </div>
+      <ListCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" text={user ? "Xem kết quả & tiến trình" : "Đăng nhập để xem thống kê"} disabled={!user} />
     </>
   );
 }
