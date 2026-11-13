@@ -682,7 +682,7 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
       <PagerBtn label="Câu đầu" disabled={first} onClick={() => go(0)} icon={SkipBack} hideSm />
       <PagerBtn label="Lùi 10 câu" disabled={first} onClick={() => go(idx - 10)} icon={Rewind} hideSm />
       <PagerBtn label="Câu trước" disabled={first} onClick={() => go(idx - 1)} icon={Play} flip />
-      <div className="flex min-w-0 flex-1 justify-center gap-1 sm:gap-1.5 lg:gap-2.5">
+      <div className="flex min-w-0 flex-1 justify-center gap-1 sm:gap-1.5 lg:gap-2">
         {page.map(({ i, state, marked, video, num }) => {
           const current = i === idx;
           return (
@@ -692,7 +692,7 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
               onClick={() => go(i)}
               aria-current={current ? "true" : undefined}
               aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
-              className={`relative flex h-8 max-w-12 min-w-0 flex-1 items-center justify-center border text-xs font-bold lg:h-10 lg:max-w-18 lg:text-base text-black tabular-nums ${
+              className={`relative flex h-8 max-w-12 min-w-0 flex-1 items-center justify-center border text-xs font-bold lg:h-9 lg:max-w-15 lg:text-sm text-black tabular-nums ${
                 current ? "border-2 border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border-black/70 ${tone[state]} hover:brightness-95`
               }`}
             >
