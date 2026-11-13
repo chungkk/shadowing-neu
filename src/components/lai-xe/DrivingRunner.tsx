@@ -408,8 +408,15 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
             onAnswer={() => setVideo({ answering: true })}
           />
         ) : (
-          <>
-            <Media q={q} gated={gated} />
+          <div className={fs ? "grid items-start gap-4 sm:grid-cols-2 sm:gap-8" : "contents"}>
+            {fs ? (
+              <div className="min-w-0 empty:hidden sm:empty:block">
+                <Media q={q} gated={gated} fs />
+              </div>
+            ) : (
+              <Media q={q} gated={gated} />
+            )}
+            <div className={fs ? "flex min-w-0 flex-col gap-3" : "contents"}>
             {q.stem && <p className="font-bold text-muted">{q.stem}</p>}
             {q.options.length ? (
               <ul className="flex flex-col gap-2">
@@ -422,7 +429,15 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                   // Đọc: tích sẵn đáp án đúng · Luyện/Thi sau khi chấm: tô đúng/sai
                   const ticked = mode === "lesen" ? correct : on;
                   const mistake = reveal && mode !== "lesen" && on !== correct;
-                  const tone = !reveal
+                  const tone = fs
+                    ? !reveal
+                      ? "hover:bg-white/50"
+                      : correct
+                        ? "bg-accent/15"
+                        : on
+                          ? "bg-red/15"
+                          : ""
+                    : !reveal
                     ? on
                       ? "border-ink bg-gold/30"
                       : "border-ink/30 hover:border-ink"
@@ -439,18 +454,24 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                         aria-checked={ticked}
                         disabled={reveal}
                         onClick={() => toggle(o.key)}
-                        className={`relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:cursor-default ${tone}`}
+                        className={`relative flex w-full items-center gap-3 overflow-hidden text-left transition disabled:cursor-default ${fs ? "rounded-md p-2" : "rounded-2xl border-2 p-3"} ${tone}`}
                       >
                         {mistake && <span className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />}
-                        <span className={`flex size-9 shrink-0 items-center justify-center ${cfg.single ? "rounded-full" : "rounded-lg"} border-2 border-ink text-sm font-extrabold ${ticked ? (reveal && correct ? "border-accent bg-accent text-white" : reveal ? "border-red bg-red text-white" : "bg-foreground text-background") : "bg-card"}`}>
-                          {ticked ? <Check className="size-5" strokeWidth={3} /> : <span className="text-muted">{n + 1}</span>}
-                        </span>
+                        {fs ? (
+                          <span className="flex size-9 shrink-0 items-center justify-center border-2 border-black bg-white text-black">
+                            {ticked && <Check className="size-6" strokeWidth={3.5} />}
+                          </span>
+                        ) : (
+                          <span className={`flex size-9 shrink-0 items-center justify-center ${cfg.single ? "rounded-full" : "rounded-lg"} border-2 border-ink text-sm font-extrabold ${ticked ? (reveal && correct ? "border-accent bg-accent text-white" : reveal ? "border-red bg-red text-white" : "bg-foreground text-background") : "bg-card"}`}>
+                            {ticked ? <Check className="size-5" strokeWidth={3} /> : <span className="text-muted">{n + 1}</span>}
+                          </span>
+                        )}
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           {img ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={img} alt={`Lựa chọn ${n + 1}`} className="max-h-28 w-auto self-start rounded-lg bg-white" loading="lazy" />
                           ) : (
-                            <span className="font-bold">{o.text || `Lựa chọn ${o.key} (xem hình)`}</span>
+                            <span className={fs ? "text-sm font-bold sm:text-base" : "font-bold"}>{o.text || `Lựa chọn ${o.key} (xem hình)`}</span>
                           )}
                           {showTr && trText && trText !== o.text && (
                             <span dir={trDir} className="text-sm text-accent-text italic">
@@ -476,6 +497,15 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                   );
                 })}
               </ul>
+            ) : fs ? (
+              <FsNumberAnswer
+                value={mode === "lesen" ? q.answer[0] : (mine[0] ?? "")}
+                hint={q.num ?? null}
+                disabled={reveal}
+                onChange={(v) => setPicked((p) => ({ ...p, [q.id]: v ? [v] : [] }))}
+                onEnter={() => mode === "ueben" && check()}
+                correct={reveal && mode !== "lesen" ? q.answer[0] : null}
+              />
             ) : (
               <NumberAnswer
                 value={mode === "lesen" ? q.answer[0] : (mine[0] ?? "")}
@@ -485,7 +515,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                 correct={reveal && mode !== "lesen" ? q.answer[0] : null}
               />
             )}
-          </>
+            </div>
+          </div>
         )}
 
         {reveal && mode !== "lesen" && (
@@ -664,16 +695,17 @@ function NavBtn({ label, disabled, onClick, icon: Icon, hideSm }: { label: strin
   );
 }
 
-function Media({ q, gated }: { q: DrivingQ; gated: boolean }) {
+function Media({ q, gated, fs }: { q: DrivingQ; gated: boolean; fs?: boolean }) {
+  const frame = fs ? "w-full bg-black" : "w-full max-w-xl rounded-2xl border-2 border-ink bg-black";
   if (q.video) {
     // Đã qua bước xem video (luyện / thi): chỉ hiện khung hình; đọc / xem lại: xem video tự do
     if (gated)
       return q.poster ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={q.poster} alt="Khung hình cuối của video" className="w-full max-w-xl rounded-2xl border-2 border-ink bg-black object-contain" />
+        <img src={q.poster} alt="Khung hình cuối của video" className={`${frame} object-contain`} />
       ) : null;
     return (
-      <video src={q.video} poster={q.poster ?? undefined} controls playsInline preload="none" className="w-full max-w-xl rounded-2xl border-2 border-ink bg-black">
+      <video src={q.video} poster={q.poster ?? undefined} controls playsInline preload="none" className={frame}>
         Trình duyệt không phát được video.
       </video>
     );
@@ -683,7 +715,7 @@ function Media({ q, gated }: { q: DrivingQ; gated: boolean }) {
     <div className="flex flex-wrap gap-2">
       {q.images.map((src) => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className="max-h-80 w-auto max-w-full rounded-2xl border-2 border-ink bg-white object-contain" />
+        <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className={fs ? "w-full bg-white object-contain" : "max-h-80 w-auto max-w-full rounded-2xl border-2 border-ink bg-white object-contain"} />
       ))}
     </div>
   );
@@ -781,6 +813,66 @@ function NumberAnswer({ value, disabled, onChange, onEnter, correct }: { value: 
       />
       {correct !== null && <span className="text-sm text-muted">Đáp án đúng: {correct}</span>}
     </label>
+  );
+}
+
+const KEYS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "C"] as const;
+
+/** Câu điền số kiểu phần mềm thi: "Antwort: … [ô] đơn vị" + bàn phím số (C xoá 1 ký tự, Löschen xoá hết) */
+function FsNumberAnswer({
+  value,
+  hint,
+  disabled,
+  onChange,
+  onEnter,
+  correct,
+}: {
+  value: string;
+  hint: { pre?: string; unit?: string } | null;
+  disabled: boolean;
+  onChange: (v: string) => void;
+  onEnter: () => void;
+  correct: string | null;
+}) {
+  const clean = (v: string) => {
+    const s = v.replace(/\./g, ",").replace(/[^\d,]/g, "");
+    const i = s.indexOf(",");
+    return (i < 0 ? s : s.slice(0, i + 1) + s.slice(i + 1).replace(/,/g, "")).slice(0, 8);
+  };
+  const press = (k: (typeof KEYS)[number]) => onChange(k === "C" ? value.slice(0, -1) : clean(value + k));
+  const ok = correct !== null && isRight({ options: [], answer: [correct] }, [value]);
+  return (
+    <div className="flex flex-col gap-3 text-sm font-bold">
+      <label className="flex flex-col gap-1">
+        <span>Antwort:{hint?.pre ? ` ${hint.pre}` : ""}</span>
+        <span className="flex items-center gap-3">
+          <input
+            inputMode="decimal"
+            value={value}
+            disabled={disabled}
+            onChange={(e) => onChange(clean(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onEnter();
+            }}
+            className={`h-8 w-28 border bg-white px-2 text-base text-black tabular-nums outline-none focus:border-2 ${correct === null ? "border-black/60" : ok ? "border-2 border-accent" : "border-2 border-red"}`}
+          />
+          {hint?.unit && <span>{hint.unit}</span>}
+        </span>
+      </label>
+      {correct !== null && !ok && <p className="text-accent-text">Đáp án đúng: {correct}{hint?.unit ? ` ${hint.unit}` : ""}</p>}
+      {!disabled && (
+        <div className="grid w-44 grid-cols-3 gap-1.5" aria-label="Bàn phím số">
+          {KEYS.map((k) => (
+            <button key={k} type="button" onClick={() => press(k)} aria-label={k === "C" ? "Xoá 1 ký tự" : k} className="h-9 border border-black/30 bg-white text-black hover:bg-[#eee] active:bg-[#ddd]">
+              {k}
+            </button>
+          ))}
+          <button type="button" onClick={() => onChange("")} className="col-span-3 h-9 border border-black/30 bg-white text-black hover:bg-[#eee] active:bg-[#ddd]">
+            Löschen
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

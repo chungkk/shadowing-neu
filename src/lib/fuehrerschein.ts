@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import data from "@/content/fuehrerschein/questions.json";
+import { NUM_HINTS } from "./fuehrerschein-units";
 import { isLang, type DrivingQ, type ExamConfig, type Lang, type Tr } from "./fuehrerschein-rules";
 
 // Bộ câu hỏi lý thuyết lái xe Đức cho mọi hạng bằng (nhập bằng scripts/import-portal-content.mjs, giống app iOS/Android)
@@ -165,6 +166,7 @@ export async function forClient(ids: string[], lang: Lang, orders?: Record<strin
         q: q.q,
         stem: q.stem,
         options: q.options,
+        num: q.options.length ? null : (NUM_HINTS[q.id] ?? null),
         answer: q.answer,
         explain: q.explain,
         images: q.images,

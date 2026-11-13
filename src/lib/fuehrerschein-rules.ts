@@ -20,6 +20,8 @@ export type DrivingQ = {
   stem: string | null;
   /** Rỗng = câu điền số (đáp án là answer[0]) */
   options: { key: string; text: string }[];
+  /** Câu điền số: chữ trước ô nhập / đơn vị sau ô nhập */
+  num?: { pre?: string; unit?: string } | null;
   answer: string[];
   explain: string;
   images: string[];
