@@ -136,7 +136,10 @@
   --red-300: #b91c1c;
   color: var(--foreground);
 }
-/* Leben in Deutschland: nền đen xanh đêm như app LiD Ckk (iOS/Android) — luôn tối, cả ở giao diện sáng */
+/* Leben in Deutschland: nền đen xanh đêm như app LiD Ckk (iOS/Android) — luôn tối, cả ở giao diện sáng.
+   :root:has(.theme-lid): cả khung trang (thanh trên, chân trang, thanh menu dưới) cũng đổi theo app */
+:root:has(.theme-lid),
+:root[data-theme]:has(.theme-lid),
 .theme-lid,
 [data-theme="dark"] .theme-lid {
   color-scheme: dark;
@@ -160,7 +163,42 @@
   --red-dark: #7f1d1d;
   --red-400: #f87171;
   --red-300: #fca5a5;
+  --stripe: #ffcc00;
   color: var(--foreground);
+}
+:root:has(.theme-lid) {
+  /* Font hệ thống như app (đè biến của next/font trên <html>) */
+  --font-nunito: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-baloo: var(--font-nunito);
+}
+:root:has(.theme-lid) body {
+  background-image: none;
+}
+:root:has(.theme-lid) body::before {
+  display: none;
+}
+/* Không sọc kẹo: chỉ một đường kẻ mảnh như thanh điều hướng của app */
+:root:has(.theme-lid) .candy-stripe {
+  height: 1px;
+  background: rgb(255 255 255 / 0.08);
+}
+/* Thẻ, nút kiểu app: viền mảnh, bóng mềm thay cho bóng cứng kiểu sticker */
+:root:has(.theme-lid) .sticker,
+:root:has(.theme-lid) .card {
+  border-width: 1px;
+  border-color: rgb(255 255 255 / 0.1);
+  border-radius: 18px;
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.35);
+}
+:root:has(.theme-lid) .sticker-link:hover {
+  transform: none;
+  background-color: #1d1d2a;
+}
+:root:has(.theme-lid) .btn {
+  border-width: 1px;
+  border-color: rgb(255 255 255 / 0.12);
+  border-radius: 9999px;
+  box-shadow: none;
 }
 /* Khung màn chơi trong giao diện tối ấm: cùng tông ca cao với trang */
 [data-theme="dark"] .theme-night {
