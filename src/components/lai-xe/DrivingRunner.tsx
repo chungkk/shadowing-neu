@@ -344,7 +344,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           tabs={grundCount > 0 && grundCount < questions.length ? ["Grundstoff", exam?.cls || "Zusatzstoff"] : ["Grundstoff"]}
           tab={tab === "grund" || grundCount === questions.length ? 0 : 1}
           setTab={(t) => setTab(t === 0 ? "grund" : "zusatz")}
-          items={visible.map(({ x, i }) => ({ i, state: status(x), marked: marked.has(x.id), video: !!x.video }))}
+          items={visible.map(({ x, i }) => ({ i, state: status(x), marked: marked.has(x.id), video: !!x.video, num: !x.options.length }))}
           idx={idx}
           go={go}
           info={submitted && result ? `${result.errorPoints} Fehlerpunkte · ${result.passed ? "bestanden" : "nicht bestanden"}` : `noch ${questions.length - answeredCount} Aufgaben`}
@@ -379,7 +379,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           </div>
         )}
         {fs ? (
-          <FsPager idx={idx} total={questions.length} items={visible.map(({ x, i }) => ({ i, state: status(x), marked: marked.has(x.id) }))} go={go} />
+          <FsPager idx={idx} total={questions.length} items={visible.map(({ x, i }) => ({ i, state: status(x), marked: marked.has(x.id), video: !!x.video, num: !x.options.length }))} go={go} />
         ) : (
           <nav aria-label="Danh sách câu" className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto p-0.5">
             {visible.map(({ x, i }) => (
@@ -645,8 +645,25 @@ function GridCell({ n, state, current, marked, onClick }: { n: number; state: Ce
   );
 }
 
+type PagerItem = { i: number; state: Cell; marked: boolean; video: boolean; num: boolean };
+
+/** Dấu góc ô số như phần mềm thi: ▶ đen = câu video, tam giác vàng = câu điền số, ⭐ = câu đã đánh dấu */
+function CellMarks({ video, num, marked }: { video: boolean; num: boolean; marked: boolean }) {
+  return (
+    <>
+      {video && (
+        <span className="absolute top-0 left-0 flex h-2.5 w-3.5 items-center justify-center bg-black lg:h-3 lg:w-4" aria-hidden>
+          <Play className="size-2 fill-white text-white" strokeWidth={0} />
+        </span>
+      )}
+      {num && <span className="absolute top-0 right-0 size-4 bg-[#e3b13c] [clip-path:polygon(0_0,100%_0,100%_100%)] sm:size-5" aria-hidden />}
+      {marked && <Star className={`absolute -top-1.5 size-3.5 fill-gold text-black ${num ? "-left-1.5" : "-right-1.5"}`} strokeWidth={1.5} aria-hidden />}
+    </>
+  );
+}
+
 /** Thanh dưới kiểu phần mềm thi thật: |◀ ◀◀ ◀ · 10 ô số · ▶ ▶▶ ▶| */
-function FsPager({ idx, total, items, go }: { idx: number; total: number; items: { i: number; state: Cell; marked: boolean }[]; go: (i: number) => void }) {
+function FsPager({ idx, total, items, go }: { idx: number; total: number; items: PagerItem[]; go: (i: number) => void }) {
   const pos = Math.max(0, items.findIndex((it) => it.i === idx));
   const start = Math.floor(pos / 10) * 10;
   const page = items.slice(start, start + 10);
@@ -666,7 +683,7 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
       <PagerBtn label="Lùi 10 câu" disabled={first} onClick={() => go(idx - 10)} icon={Rewind} hideSm />
       <PagerBtn label="Câu trước" disabled={first} onClick={() => go(idx - 1)} icon={Play} flip />
       <div className="flex min-w-0 flex-1 justify-center gap-1 sm:gap-1.5 lg:gap-2.5">
-        {page.map(({ i, state, marked }) => {
+        {page.map(({ i, state, marked, video, num }) => {
           const current = i === idx;
           return (
             <button
@@ -674,13 +691,13 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
               type="button"
               onClick={() => go(i)}
               aria-current={current ? "true" : undefined}
-              aria-label={`Câu ${i + 1}${marked ? " (đã đánh dấu)" : ""}`}
+              aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
               className={`relative flex h-8 max-w-12 min-w-0 flex-1 items-center justify-center border text-xs font-bold lg:h-10 lg:max-w-18 lg:text-base text-black tabular-nums ${
                 current ? "border-2 border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border-black/70 ${tone[state]} hover:brightness-95`
               }`}
             >
-              {i + 1}
-              {marked && <Star className="absolute -top-1.5 -right-1.5 size-3 fill-gold text-gold" aria-hidden />}
+              <CellMarks video={video} num={num} marked={marked} />
+              <span className="relative">{i + 1}</span>
             </button>
           );
         })}
@@ -710,7 +727,7 @@ function FsExamBar({
   tabs: string[];
   tab: number;
   setTab: (t: number) => void;
-  items: { i: number; state: Cell; marked: boolean; video: boolean }[];
+  items: PagerItem[];
   idx: number;
   go: (i: number) => void;
   info: string;
@@ -768,7 +785,7 @@ function FsExamBar({
         </div>
       </div>
       <nav aria-label="Danh sách câu" className="flex flex-wrap gap-2 border-t-2 border-[#3d7a3e] bg-[#518f52] p-2 sm:gap-3.5 sm:px-2 sm:py-3">
-        {items.map(({ i, state, marked, video }) => {
+        {items.map(({ i, state, marked, video, num }) => {
           const current = i === idx;
           return (
             <button
@@ -776,17 +793,12 @@ function FsExamBar({
               type="button"
               onClick={() => go(i)}
               aria-current={current ? "true" : undefined}
-              aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
+              aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
               className={`relative flex h-7 w-12 items-center justify-center text-sm font-bold tabular-nums sm:h-8 sm:w-14 sm:text-base ${
                 current ? "outline-[3px] outline-black outline-offset-2 border border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border border-black/40 text-black ${tone[state]} hover:brightness-95`
               }`}
             >
-              {video && (
-                <span className="absolute top-0 left-0 flex h-2.5 w-3.5 items-center justify-center bg-black" aria-hidden>
-                  <Play className="size-2 fill-white text-white" strokeWidth={0} />
-                </span>
-              )}
-              {marked && <span className="absolute top-0 right-0 size-4 bg-[#e3b13c] sm:size-5 [clip-path:polygon(0_0,100%_0,100%_100%)]" aria-hidden />}
+              <CellMarks video={video} num={num} marked={marked} />
               <span className="relative">{i + 1}</span>
             </button>
           );
