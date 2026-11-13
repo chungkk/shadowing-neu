@@ -2,11 +2,10 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { ComponentType } from "react";
-import { ArrowLeftRight, BarChart3, BookOpen, ChevronRight, Flag, Settings } from "lucide-react";
+import { BarChart3, BookOpen, ChevronRight, Flag, Settings } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizStats } from "@/lib/db";
 import { classInfo, classQuestionIds, prefs } from "@/lib/fuehrerschein";
-import { LANG_NAMES } from "@/lib/fuehrerschein-rules";
 import { summarize } from "@/lib/quiz-types";
 import { ProgressBar } from "@/components/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
@@ -55,7 +54,7 @@ function ListCard({ href, icon: Icon, title, text, disabled }: { href: string; i
 }
 
 async function Home() {
-  const { cls, lang } = await prefs();
+  const { cls } = await prefs();
   const user = await getCurrentUser();
   const stats = user ? quizStats(user.id, "fuehrerschein") : {};
   const info = classInfo(cls);
@@ -65,28 +64,14 @@ async function Home() {
 
   return (
     <>
-      {/* Đầu trang: tiêu đề + nút cài đặt, thẻ hạng đang học (bấm để đổi) */}
-      <section className="sticker flex flex-col gap-4 p-4 sm:p-6">
+      {/* Đầu trang: tiêu đề + nút cài đặt (đổi hạng/ngôn ngữ trong Cài đặt) */}
+      <section className="sticker p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <h1 className="min-w-0 flex-1 text-2xl leading-tight font-extrabold sm:text-3xl">Bằng lái xe Đức</h1>
           <Link href={settingsHref} className="btn-icon" aria-label="Cài đặt lái xe">
             <Settings className="size-5" />
           </Link>
         </div>
-        <Link href={settingsHref} className="flex items-center gap-3 rounded-2xl border-2 border-ink/20 p-2.5 transition hover:border-ink" aria-label={`Đổi hạng bằng (đang học hạng ${cls})`}>
-          <span className="flex h-11 min-w-11 items-center justify-center rounded-xl bg-gold px-1.5 text-base font-extrabold text-black">{cls}</span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="font-extrabold">
-              Hạng {info.name} · {info.vi}
-            </span>
-            <span className="truncate text-sm text-muted">
-              {ids.length.toLocaleString("vi-VN")} câu · thi {info.exam.questions} câu, tối đa {info.exam.maxErrorPoints} điểm lỗi · bản dịch {LANG_NAMES[lang]}
-            </span>
-          </span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card-2">
-            <ArrowLeftRight className="size-4" />
-          </span>
-        </Link>
       </section>
 
       {/* Tiến trình */}
