@@ -17,7 +17,7 @@ async function Exam() {
       mode="exam"
       title="Test"
       backHref="/leben-in-deutschland/thi-thu"
-      questions={await forClient(examQuestionIds(state.code), lang)}
+      questions={await forClient(examQuestionIds(state.code))}
       loggedIn={!!user}
       lang={lang}
       bookmarks={user ? quizBookmarks(user.id, "lid") : []}

@@ -20,7 +20,7 @@ async function Marked() {
       mode="ueben"
       title="Đã đánh dấu"
       backHref="/leben-in-deutschland"
-      questions={await forClient(ids, lang)}
+      questions={await forClient(ids)}
       loggedIn
       lang={lang}
       stats={quizStats(user.id, "lid")}

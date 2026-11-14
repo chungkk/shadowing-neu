@@ -1,6 +1,6 @@
 import data from "@content/fuehrerschein/questions.json";
 import { NUM_HINTS } from "@shared/fuehrerschein-units";
-import type { DrivingQ, ExamConfig, Lang, Tr } from "@shared/fuehrerschein-rules";
+import type { DrivingQ, ExamConfig } from "@shared/fuehrerschein-rules";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi lý thuyết lái xe cho mọi hạng — cùng file dữ liệu với tab Lái xe của web (src/content/fuehrerschein),
@@ -102,19 +102,6 @@ export const bogenIds = (n: number): string[] | null => data.musterboegen[n - 1]
 
 // ---- Câu cho màn làm bài ----
 
-// Gói dịch nạp khi cần (require của Metro chỉ chạy lúc gọi)
-const packs: Partial<Record<Lang, Record<string, Tr>>> = {};
-function pack(lang: Lang): Record<string, Tr> | null {
-  if (lang === "vi") return null;
-  return (packs[lang] ??= (
-    {
-      en: () => require("@content/fuehrerschein/tr-en.json"),
-      ar: () => require("@content/fuehrerschein/tr-ar.json"),
-      zh: () => require("@content/fuehrerschein/tr-zh.json"),
-      ru: () => require("@content/fuehrerschein/tr-ru.json"),
-    } as Record<Exclude<Lang, "vi">, () => Record<string, Tr>>
-  )[lang]());
-}
 
 /** Không xáo khi lựa chọn trống chữ: chúng chỉ tới nhãn A/B/C trong hình */
 const optionOrder = (q: Raw, shuffled: boolean) => {
@@ -123,8 +110,7 @@ const optionOrder = (q: Raw, shuffled: boolean) => {
 };
 
 /** Câu theo thứ tự `ids` kèm bản dịch; `orders` = thứ tự lựa chọn đã dùng (xem lại bài thi), không có thì xáo mới */
-export function questions(ids: string[], lang: Lang, orders?: Record<string, number[]>): DrivingQ[] {
-  const tr = pack(lang);
+export function questions(ids: string[], orders?: Record<string, number[]>): DrivingQ[] {
   return ids.flatMap((id) => {
     const q = BY_ID.get(id);
     if (!q) return [];
@@ -146,7 +132,7 @@ export function questions(ids: string[], lang: Lang, orders?: Record<string, num
         optionImages: q.optionImages,
         poster: q.poster,
         video: q.video,
-        tr: (tr ? tr[q.id] : q.vi) ?? null,
+        tr: q.vi ?? null,
         order,
       },
     ];

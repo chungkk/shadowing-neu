@@ -8,7 +8,7 @@ import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
 import { classQuestionIds, isGrund, prefs } from "@/lib/fuehrerschein";
 import { summarize } from "@/lib/quiz-types";
 import { ExamHistory } from "@/components/lai-xe/ExamHistory";
-import { LangSelect, ResetProgress } from "@/components/lai-xe/Settings";
+import { ResetProgress } from "@/components/lai-xe/Settings";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Thống kê · Lý thuyết lái xe", robots: { index: false } };
@@ -55,7 +55,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 async function Stats() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/lai-xe/thong-ke");
-  const { cls, lang } = await prefs();
+  const { cls } = await prefs();
   const stats = quizStats(user.id, "fuehrerschein");
   const ids = classQuestionIds(cls);
   const all = summarize(ids, stats);
@@ -105,7 +105,6 @@ async function Stats() {
       <section className="card flex flex-col gap-3">
         <h2 className="section-title">Cài đặt</h2>
         <div className="flex flex-wrap items-center gap-3">
-          <LangSelect lang={lang} />
           <Link href="/lai-xe/hang" className="btn">
             Hạng đang học: {cls}
           </Link>

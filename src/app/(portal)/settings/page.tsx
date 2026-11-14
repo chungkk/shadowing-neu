@@ -9,7 +9,7 @@ import { classGroups, prefs } from "@/lib/fuehrerschein";
 
 async function Settings() {
   const user = await requireUser("/settings");
-  const { cls, lang } = await prefs();
+  const { cls } = await prefs();
   return (
     <SettingsForms
       user={{
@@ -23,7 +23,7 @@ async function Settings() {
       }}
       fixedAdmin={user.email === envAdminEmail()}
       stats={<AccountStats stats={accountStats(user.id)} />}
-      learning={<DrivingSettings groups={classGroups()} current={cls} lang={lang} />}
+      learning={<DrivingSettings groups={classGroups()} current={cls} />}
     />
   );
 }

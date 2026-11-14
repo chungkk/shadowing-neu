@@ -88,16 +88,9 @@ export function examQuestionIds(stateCode: string): string[] {
   return [...shuffle(generalIds()).slice(0, EXAM.general), ...shuffle(stateIds(stateCode)).slice(0, EXAM.state)];
 }
 
-const PACKS: Record<Exclude<Lang, "vi">, () => Promise<Record<string, Tr>>> = {
-  en: () => import("@/content/lid/tr-en.json").then((m) => m.default as Record<string, Tr>),
-  ar: () => import("@/content/lid/tr-ar.json").then((m) => m.default as Record<string, Tr>),
-  zh: () => import("@/content/lid/tr-zh.json").then((m) => m.default as Record<string, Tr>),
-  ru: () => import("@/content/lid/tr-ru.json").then((m) => m.default as Record<string, Tr>),
-};
 
 /** Câu theo thứ tự `ids` cho màn làm bài chung (DrivingRunner). Không xáo lựa chọn: có câu chọn hình "1"–"4" như app */
-export async function forClient(ids: string[], lang: Lang): Promise<DrivingQ[]> {
-  const pack = lang === "vi" ? null : await PACKS[lang]();
+export async function forClient(ids: string[]): Promise<DrivingQ[]> {
   return ids.flatMap((id) => {
     const x = ALL.get(id);
     if (!x) return [];
@@ -118,7 +111,7 @@ export async function forClient(ids: string[], lang: Lang): Promise<DrivingQ[]> 
         optionImages: false,
         poster: null,
         video: null,
-        tr: (pack ? pack[id] : vi) ?? null,
+        tr: vi ?? null,
         order: q.options.map((_, i) => i),
       },
     ];

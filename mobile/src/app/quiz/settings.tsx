@@ -1,7 +1,6 @@
 import { Pressable, Switch, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { LANGS, LANG_NAMES } from "@shared/fuehrerschein-rules";
 import { Text } from "@/components/Text";
 import { Group, QuizPage } from "@/components/quiz/QuizParts";
 import { C } from "@/lib/theme";
@@ -10,7 +9,7 @@ import { STATES } from "@/lib/quiz/lid";
 import { setPrefs, usePrefs } from "@/lib/quiz/store";
 import { useL } from "@/lib/quiz/strings";
 
-/** Cài đặt phần Lái xe (hạng bằng) / LiD (bang) + ngôn ngữ bản dịch (dùng chung 2 phần) */
+/** Cài đặt phần Lái xe (hạng bằng) / LiD (bang) + hiện/ẩn bản dịch tiếng Việt (dùng chung 2 phần) */
 export default function QuizSettingsScreen() {
   const L = useL();
   const p = useLocalSearchParams<{ module: string }>();
@@ -20,12 +19,6 @@ export default function QuizSettingsScreen() {
   return (
     <QuizPage>
       <Stack.Screen options={{ title: L("Cài đặt", "Einstellungen") }} />
-
-      <Group title={L("Ngôn ngữ bản dịch", "Sprache der Übersetzung")}>
-        {LANGS.map((code, i) => (
-          <Choice key={code} first={i === 0} title={LANG_NAMES[code]} on={prefs.lang === code} onPress={() => setPrefs({ lang: code })} />
-        ))}
-      </Group>
 
       <Group>
         <Toggle first title={L("Hiện bản dịch khi học", "Übersetzung beim Lernen")} value={prefs.trLearn} onChange={(v) => setPrefs({ trLearn: v })} />

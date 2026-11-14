@@ -34,7 +34,7 @@ async function Wrong({ searchParams }: P) {
       mode="ueben"
       title={title}
       backHref="/leben-in-deutschland"
-      questions={await forClient(ids, lang)}
+      questions={await forClient(ids)}
       loggedIn
       lang={lang}
       stats={stats}

@@ -1,0 +1,23 @@
+{
+  "note": "Sửa 18 phương án tiếng Việt bị dịch ngược nghĩa so với bản tiếng Đức. Áp dụng: node scripts/patch-laixe-vi.mjs content/laixe/corrections/2026-11-14-vi-dao-nghia.json",
+  "options": {
+    "2.2.23-403": { "A.": "- không trong trường hợp nào" },
+    "2.2.12-106": { "B.": "- được phép đỗ tại các bãi đỗ xe được đánh dấu tương ứng lâu hơn 2 tuần" },
+    "2.1.08-008-B": { "C.": "Đi càng sát bên trái càng tốt để tạo khoảng trống bên phải cho một làn cứu hộ" },
+    "1.2.26-113": { "C.": "Tôi vượt các phương tiện đang chờ với sự cẩn thận đặc biệt" },
+    "2.1.06-105": { "C.": "Tôi chạy xe vượt qua những người đi bộ." },
+    "2.1.06-106-M": { "C.": "Tôi vượt người đi xe đạp." },
+    "1.4.41-023": { "C.": "- được đỗ xe trước biển báo" },
+    "2.2.18-103": { "B.": "Tôi lùi lại trên dải lề đường nếu lối ra cách đó chưa đến 100 m." },
+    "2.1.07-029": { "C.": "- tôi được bảo vệ khỏi trơn trượt do băng giá" },
+    "2.1.08-013": { "C.": "Lưu thông trên làn đường chính bên phải phải tạo điều kiện cho việc vào đường" },
+    "2.7.01-065": { "C.": "Tính năng lái xe tương đương với ô tô con" },
+    "2.7.01-120": { "C.": "Cần điều chỉnh bánh chống để nó có thể lăn theo trong khi di chuyển" },
+    "2.7.01-136": { "C.": "Việc sạc có thể thực hiện tại bất kỳ trạm xăng nào" },
+    "2.7.01-141": { "C.": "- luôn giữ ổn định khi có hệ thống kiểm soát độ ổn định" },
+    "2.7.02-109": { "C.": "Chỉ cần bổ sung dầu phanh là đủ" },
+    "2.7.05-005": { "C.": "Sự mài mòn của lốp sẽ giảm mạnh" },
+    "2.7.01-102": { "C.": "Quãng đường phanh sẽ ngắn hơn nhiều" },
+    "2.6.03-119": { "C.": "- bán kính cần thiết khi rẽ sẽ nhỏ hơn" }
+  }
+}

@@ -1,9 +1,9 @@
 import { Suspense, type ComponentType, type ReactNode } from "react";
-import { BookOpen, Database, Languages, MapPin } from "lucide-react";
+import { BookOpen, Database, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { STATES, prefs } from "@/lib/lid";
-import { AutoMarkToggle, LangSelect, ResetProgress } from "@/components/lai-xe/Settings";
+import { AutoMarkToggle, ResetProgress } from "@/components/lai-xe/Settings";
 import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
@@ -26,16 +26,13 @@ function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ cl
 }
 
 async function Settings() {
-  const { state, lang } = await prefs();
+  const { state } = await prefs();
   const user = await getCurrentUser();
   // Form cài đặt: giới hạn bề ngang bên trong, khung ngoài vẫn .page để tiêu đề thẳng hàng subnav
   return (
     <div className="flex w-full max-w-3xl flex-col gap-5">
       <Group icon={MapPin} title="Bang" text="Câu hỏi riêng của bang dùng khi học và khi thi thử.">
         <StatePicker states={STATES} current={state.code} />
-      </Group>
-      <Group icon={Languages} title="Ngôn ngữ" text="Bản dịch hiện dưới câu hỏi tiếng Đức; bấm biểu tượng 文A ở màn học để ẩn / hiện.">
-        <LangSelect lang={lang} />
       </Group>
       <Group icon={BookOpen} title="Học tập">
         <AutoMarkToggle />

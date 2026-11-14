@@ -4,35 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Car, Check, Trash2 } from "lucide-react";
-import { setLicenseClass, setLidState, setTranslationLang } from "@/app/(portal)/lai-xe/actions";
+import { setLicenseClass, setLidState } from "@/app/(portal)/lai-xe/actions";
 import { clientApi } from "@/lib/client-api";
-import { LANGS, LANG_NAMES, type Lang } from "@/lib/fuehrerschein-rules";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-
-/** Chọn ngôn ngữ bản dịch (lưu cookie, trang tải lại với bản dịch mới) */
-export function LangSelect({ lang }: { lang: Lang }) {
-  const [pending, start] = useTransition();
-  return (
-    <label className="flex flex-wrap items-center gap-2 text-sm font-bold">
-      Bản dịch:
-      <select
-        value={lang}
-        disabled={pending}
-        onChange={(e) => {
-          const v = e.target.value;
-          start(() => setTranslationLang(v));
-        }}
-        className="rounded-xl border-2 border-ink bg-card px-2 py-1.5 font-bold"
-      >
-        {LANGS.map((l) => (
-          <option key={l} value={l}>
-            {LANG_NAMES[l]}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 /** Chọn hạng bằng dạng danh sách thả xuống (trang Cài đặt) */
 export function ClassSelect({ groups, current }: { groups: { title: string; classes: ClassOption[] }[]; current: string }) {
@@ -63,8 +37,8 @@ export function ClassSelect({ groups, current }: { groups: { title: string; clas
   );
 }
 
-/** Mục "Lý thuyết lái xe" trong trang Cài đặt: hạng bằng đang học + ngôn ngữ bản dịch */
-export function DrivingSettings({ groups, current, lang }: { groups: { title: string; classes: ClassOption[] }[]; current: string; lang: Lang }) {
+/** Mục "Lý thuyết lái xe" trong trang Cài đặt: hạng bằng đang học */
+export function DrivingSettings({ groups, current }: { groups: { title: string; classes: ClassOption[] }[]; current: string }) {
   const info = groups.flatMap((g) => g.classes).find((c) => c.id === current);
   return (
     <section id="lai-xe" className="sticker scroll-mt-20 overflow-hidden">
@@ -73,7 +47,7 @@ export function DrivingSettings({ groups, current, lang }: { groups: { title: st
           <h2 className="section-title flex items-center gap-2">
             <Car className="size-5 text-link" /> Lý thuyết lái xe
           </h2>
-          <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học và ngôn ngữ bản dịch câu hỏi (dùng chung cho Leben in Deutschland).</p>
+          <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học. Bản dịch câu hỏi là tiếng Việt.</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="flex h-12 min-w-12 items-center justify-center rounded-2xl border-2 border-ink bg-gold px-2 text-lg font-extrabold text-black">{current}</span>
@@ -90,7 +64,6 @@ export function DrivingSettings({ groups, current, lang }: { groups: { title: st
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <ClassSelect groups={groups} current={current} />
-          <LangSelect lang={lang} />
         </div>
         <Link href="/lai-xe/hang" className="self-start text-sm font-bold text-muted underline-offset-2 hover:underline">
           Xem mô tả từng hạng →

@@ -32,14 +32,14 @@ function Field({
   const [hidden, setHidden] = useState(true);
   const borderColor = error ? C.red : focused ? C.accent : C.border;
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 4 }}>
       <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{label}</Text>
       <View
         style={{
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
-          height: 52,
+          height: 46,
           paddingHorizontal: 14,
           borderRadius: 14,
           borderWidth: 1.5,
@@ -81,7 +81,7 @@ function PrimaryButton({ title, onPress, busy, disabled }: { title: string; onPr
       onPress={onPress}
       disabled={busy || disabled}
       style={({ pressed }) => ({
-        height: 54,
+        height: 48,
         borderRadius: 16,
         backgroundColor: C.accent,
         ...STICKER,
@@ -147,14 +147,14 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
   };
 
   return (
-    <View style={{ gap: 28, paddingTop: 24 }}>
-      <View style={{ alignItems: "center", gap: 14 }}>
+    <View style={{ gap: 18, paddingTop: 4 }}>
+      <View style={{ alignItems: "center", gap: 8 }}>
         <View
           style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: C.accent, alignItems: "center", justifyContent: "center" }}
         >
           <SymbolView name={step === "code" ? "envelope.badge" : "key.fill"} size={32} tintColor="#fff" />
         </View>
-        <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 26, fontWeight: "800" }}>
+        <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 22, fontWeight: "800" }}>
           {step === "code" ? t("auth.resetTitle") : t("auth.forgotTitle")}
         </Text>
         <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", lineHeight: 21 }}>
@@ -162,7 +162,7 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
         </Text>
       </View>
 
-      <View style={{ gap: 16 }}>
+      <View style={{ gap: 12 }}>
         {step === "email" ? (
           <Field
             label={t("auth.email")}
@@ -337,9 +337,9 @@ export function AuthForm() {
   }
 
   return (
-    <View style={{ gap: 28, paddingTop: 24 }}>
+    <View style={{ gap: 18, paddingTop: 4 }}>
       {/* Thương hiệu */}
-      <View style={{ alignItems: "center", gap: 14 }}>
+      <View style={{ alignItems: "center", gap: 8 }}>
         {codeStep ? (
           <View
             style={{
@@ -358,10 +358,10 @@ export function AuthForm() {
             <SymbolView name="envelope.badge" size={34} tintColor="#fff" weight="bold" />
           </View>
         ) : (
-          <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 132, height: 132 }} />
+          <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 84, height: 84 }} />
         )}
-        <View style={{ alignItems: "center", gap: 6 }}>
-          <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 26, fontWeight: "800" }}>
+        <View style={{ alignItems: "center", gap: 2 }}>
+          <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 22, fontWeight: "800" }}>
             {codeStep ? t("auth.codeTitle") : isRegister ? t("auth.createTitle") : t("auth.welcome")}
           </Text>
           <Text
@@ -378,7 +378,7 @@ export function AuthForm() {
       </View>
 
       {/* Form */}
-      <View style={{ gap: 16 }}>
+      <View style={{ gap: 12 }}>
         {codeStep && (
           <Field
             label={t("auth.code")}
@@ -450,7 +450,7 @@ export function AuthForm() {
           />
         )}
         {mode === "login" && (
-          <Pressable onPress={() => setMode("forgot")} hitSlop={8} style={{ alignSelf: "flex-end", marginTop: -6 }}>
+          <Pressable onPress={() => setMode("forgot")} hitSlop={8} style={{ alignSelf: "flex-end", marginTop: -4 }}>
             <Text style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}>{t("auth.forgot")}</Text>
           </Pressable>
         )}
@@ -479,8 +479,8 @@ export function AuthForm() {
           onPress={codeStep ? () => confirm() : submit}
           disabled={busy || (codeStep && code.length !== 6)}
           style={({ pressed }) => ({
-            height: 54,
-            marginTop: 4,
+            height: 48,
+            marginTop: 2,
             borderRadius: 16,
             backgroundColor: C.accent,
             ...STICKER,
@@ -505,7 +505,7 @@ export function AuthForm() {
 
       {/* Bước nhập mã: đổi email / gửi lại mã */}
       {codeStep && (
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -12 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -6 }}>
           <Pressable onPress={() => setStep("info")} hitSlop={8}>
             <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
           </Pressable>

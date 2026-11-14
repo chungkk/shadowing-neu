@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Nhập dữ liệu cho tab "Lái xe" và "Leben in Deutschland" từ các repo khác trong ~/Code/ckk.
 // Chạy lại khi bộ câu hỏi bên đó đổi:   node scripts/import-portal-content.mjs
-//   - Lái xe:  ../ckk-biz/data/laixe/catalog_all (mọi hạng) + bản dịch + dữ liệu hạng/đề mẫu từ ../fuehrerschein-app/DrivingTheoryApp
+//   - Lái xe:  content/laixe/catalog_all (mọi hạng + bản dịch tiếng Việt) + dữ liệu hạng/đề mẫu từ ../fuehrerschein-app/DrivingTheoryApp
 //   - LiD:     ../lid-app/src/data/lebenInDeutschland.ts + ảnh ../lid-app/assets/images/lid → public/lid
-// Kết quả: src/content/fuehrerschein/{questions,tr-*}.json, src/content/lid/questions.json (gọn, chỉ giữ tiếng Đức + tiếng Việt)
-//   + content/laixe/{catalog,catalog_all}: bản sao nguyên catalog mà /api/fuehrerschein/* phục vụ cho app iOS/Android
-//     (vẫn tạo/publish bằng scripts của ckk-biz: npm run catalog:publish, rồi chạy script này và deploy)
-import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+// Kết quả: src/content/fuehrerschein/questions.json, src/content/lid/questions.json (gọn, chỉ giữ tiếng Đức + tiếng Việt)
+// content/laixe/{catalog,catalog_all} là nguồn chính trong repo này (không chép từ ckk-biz nữa);
+// sửa bản dịch bằng scripts/patch-laixe-vi.mjs rồi chạy lại script này.
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -18,18 +18,11 @@ const write = (p, data) => {
   console.log(`✔ ${path.relative(root, p)} (${(JSON.stringify(data).length / 1024).toFixed(0)} KB)`);
 };
 
-// ---------- Catalog cho API của app lái xe ----------
-for (const dir of ["catalog", "catalog_all"]) {
-  const from = path.join(ckk, "ckk-biz/data/laixe", dir);
-  cpSync(from, path.join(root, "content/laixe", dir), { recursive: true, filter: (f) => !path.basename(f).startsWith(".") });
-  console.log(`✔ content/laixe/${dir}`);
-}
-
 // ---------- Lái xe (mọi hạng bằng, giống app iOS/Android) ----------
-// Nguồn: catalog_all (1746 câu + bản dịch vi/en/ar/zh/ru) + từ app DrivingTheoryApp: classes.json (câu theo hạng),
+// Nguồn: catalog_all (1746 câu + bản dịch vi) + từ app DrivingTheoryApp: classes.json (câu theo hạng),
 // answer_stems.json (phần đầu chung của đáp án), musterboegen.ts (99 đề mẫu hạng B). Tên chương: scripts/laixe-chapters.json
 {
-  const dir = path.join(ckk, "ckk-biz/data/laixe/catalog_all");
+  const dir = path.join(root, "content/laixe/catalog_all");
   const app = path.join(ckk, "fuehrerschein-app/DrivingTheoryApp");
   const names = readJson(path.join(root, "scripts/laixe-chapters.json"));
   const manifest = readJson(path.join(dir, "manifest.json"));
@@ -123,10 +116,6 @@ for (const dir of ["catalog", "catalog_all"]) {
     musterboegen,
     questions: out,
   });
-  for (const lang of ["en", "ar", "zh", "ru"]) {
-    const t = tr(lang);
-    write(path.join(root, `src/content/fuehrerschein/tr-${lang}.json`), Object.fromEntries(out.map((q) => [q.id, t(q.id)]).filter(([, x]) => x)));
-  }
 }
 
 // ---------- Leben in Deutschland ----------
@@ -168,21 +157,4 @@ for (const dir of ["catalog", "catalog_all"]) {
     general: general.map((q) => conv(q, `g${q.id}`)),
     state: Object.fromEntries(Object.entries(byState).map(([code, qs]) => [code, qs.map((q) => conv(q, `${code}${q.id}`))])),
   });
-  // Bản dịch khác (giống app): en/zh nằm trong từng câu, ar/ru (và zh dự phòng) ở src/data/translations/<lang>.json
-  // Khoá file dịch: "general-1", "state-bw-1" → id web: "g1", "bw1"
-  const files = Object.fromEntries(
-    ["ar", "ru", "zh"].map((l) => [l, readJson(path.join(ckk, `lid-app/src/data/translations/${l}.json`))]),
-  );
-  const all = [
-    ...general.map((q) => ({ q, id: `g${q.id}`, key: `general-${q.id}` })),
-    ...Object.entries(byState).flatMap(([code, qs]) => qs.map((q) => ({ q, id: `${code}${q.id}`, key: `state-${code}-${q.id}` }))),
-  ];
-  for (const lang of ["en", "zh", "ar", "ru"]) {
-    const pack = {};
-    for (const { q, id, key } of all) {
-      const t = q[lang] ?? files[lang]?.[key];
-      if (t?.q) pack[id] = { q: t.q, o: t.o ?? [], c: "" };
-    }
-    write(path.join(root, `src/content/lid/tr-${lang}.json`), pack);
-  }
 }

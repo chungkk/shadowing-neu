@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
-export const LANGUAGES = ['vi', 'en', 'ar', 'zh', 'ru'];
+// Chỉ còn bản dịch tiếng Việt (các ngôn ngữ khác đã bỏ 2026-11-14).
+export const LANGUAGES = ['vi'];
 export const CATALOG_DIR = path.join(process.cwd(), 'content', 'laixe', 'catalog');
 // Multi-class catalog (all license classes), served under /api/fuehrerschein/all/*.
 export const CATALOG_ALL_DIR = path.join(process.cwd(), 'content', 'laixe', 'catalog_all');
@@ -107,7 +108,7 @@ export function publishCatalog({ directory = CATALOG_DIR, questions, translation
     let previous = {};
     if (fs.existsSync(path.join(directory, 'manifest.json'))) previous = readManifest(directory).translations;
     // Never relabel an old translation as compatible with a changed source.
-    const metadata = Object.fromEntries(Object.entries(previous).filter(([, info]) => info.questionsVersion === source.version));
+    const metadata = Object.fromEntries(Object.entries(previous).filter(([lang, info]) => LANGUAGES.includes(lang) && info.questionsVersion === source.version));
     // A translation-only update must not silently retain another incomplete active pack.
     for (const [lang, info] of Object.entries(metadata)) {
         if (Object.hasOwn(translations, lang)) continue;

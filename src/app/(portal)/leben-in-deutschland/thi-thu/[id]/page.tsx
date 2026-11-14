@@ -22,7 +22,7 @@ async function Review({ params }: PageProps<"/leben-in-deutschland/thi-thu/[id]"
       mode="review"
       title="Test"
       backHref="/leben-in-deutschland/thong-ke"
-      questions={await forClient(exam.answers.map((a) => a.qid), lang)}
+      questions={await forClient(exam.answers.map((a) => a.qid))}
       loggedIn
       lang={lang}
       bookmarks={quizBookmarks(user.id, "lid")}

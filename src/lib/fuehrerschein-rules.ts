@@ -1,8 +1,9 @@
 // Kiểu dữ liệu + luật chấm của tab Lái xe, dùng chung server + trình duyệt (giống utils/examRules.ts của app)
 
-export const LANGS = ["vi", "en", "ar", "zh", "ru"] as const;
+/** Chỉ còn bản dịch tiếng Việt (bỏ en/ar/zh/ru từ 2026-11-14) */
+export const LANGS = ["vi"] as const;
 export type Lang = (typeof LANGS)[number];
-export const LANG_NAMES: Record<Lang, string> = { vi: "Tiếng Việt", en: "English", ar: "العربية", zh: "中文", ru: "Русский" };
+export const LANG_NAMES: Record<Lang, string> = { vi: "Tiếng Việt" };
 export const isLang = (v: unknown): v is Lang => (LANGS as readonly unknown[]).includes(v);
 
 /** Bản dịch 1 câu: câu hỏi, từng lựa chọn (theo thứ tự gốc), giải thích */

@@ -29,7 +29,7 @@ async function SetView({ params, searchParams }: P) {
       mode={mode}
       title={s.title}
       backHref="/leben-in-deutschland"
-      questions={await forClient(s.ids, lang)}
+      questions={await forClient(s.ids)}
       loggedIn={!!user}
       lang={lang}
       stats={user ? quizStats(user.id, "lid") : {}}

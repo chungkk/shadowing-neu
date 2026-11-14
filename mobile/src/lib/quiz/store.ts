@@ -2,14 +2,16 @@ import { useSyncExternalStore } from "react";
 import { File, Paths } from "expo-file-system";
 import { isLang, type ExamAnswer, type ExamRecord, type ExamResult, type Lang } from "@shared/fuehrerschein-rules";
 import type { QuizStat } from "@shared/quiz-types";
-import { api } from "../api";
+import { ApiError, api } from "../api";
 import { DEFAULT_CLASS, isClassId, type ClassId } from "./fuehrerschein";
 import { DEFAULT_STATE, getState } from "./lid";
 
 /**
  * Tiến độ tab Lái xe + Leben in Deutschland, lưu trong file trên máy → khách học được, không cần mạng.
- * Đăng nhập: mỗi câu trả lời / đánh dấu / bài thi gửi thêm lên server (/api/v1/quiz — chung với web);
- * mở tab thì tải tiến độ trên server về (server là bản chính). Lần đầu đăng nhập: đẩy tiến độ đã học khi là khách lên.
+ * Đăng nhập: mỗi câu trả lời / đánh dấu / bài thi / xoá tiến độ vào hàng đợi `outbox` (lưu cùng file) rồi gửi lên
+ * server (/api/v1/quiz — chung với web). Mục chỉ rời hàng đợi khi server nhận → mất mạng không mất kết quả.
+ * Mở tab: gửi hết hàng đợi trước, rồi mới tải tiến độ trên server về (server là bản chính).
+ * Lần đầu đăng nhập: tiến độ khi là khách cũng đi qua hàng đợi.
  */
 
 export type QuizModule = "fuehrerschein" | "lid";
@@ -37,6 +39,14 @@ export type Prefs = {
   autoMark: boolean;
 };
 
+/** Việc chờ gửi lên server, gửi lần lượt theo thứ tự */
+type OutItem =
+  | { m: QuizModule; t: "answers"; answers: { qid: string; ok: boolean }[] }
+  | { m: QuizModule; t: "mark"; qid: string; on: boolean }
+  /** Bài thi trên máy (theo id) chưa có serverId */
+  | { m: QuizModule; t: "exam"; id: string }
+  | { m: QuizModule; t: "reset"; all: boolean };
+
 type Data = {
   v: 1;
   /** Tài khoản có tiến độ này: null = khách (chưa đẩy lên server) */
@@ -45,6 +55,7 @@ type Data = {
   mods: Record<QuizModule, ModuleData>;
   /** Câu đang học dở theo phạm vi (mở lại đúng chỗ) */
   pos: Record<string, string>;
+  outbox: OutItem[];
 };
 
 const emptyModule = (): ModuleData => ({ stats: {}, marked: [], exams: [], remote: [] });
@@ -54,6 +65,7 @@ const DEFAULTS: Data = {
   prefs: { cls: DEFAULT_CLASS, state: DEFAULT_STATE, lang: "vi", trLearn: true, trExam: false, autoMark: true },
   mods: { fuehrerschein: emptyModule(), lid: emptyModule() },
   pos: {},
+  outbox: [],
 };
 
 const FILE = new File(Paths.document, "quiz-progress.json");
@@ -64,12 +76,19 @@ function load(): Data {
     if (!FILE.exists) return DEFAULTS;
     const d = JSON.parse(FILE.textSync()) as Partial<Data>;
     const p = { ...DEFAULTS.prefs, ...d.prefs };
+    const owner = typeof d.owner === "number" ? d.owner : null;
+    // File cũ (chưa có hàng đợi): bài thi của tài khoản chưa lên server được → gửi lại
+    const legacy: OutItem[] =
+      owner !== null && !Array.isArray(d.outbox)
+        ? MODULES.flatMap((m) => (d.mods?.[m]?.exams ?? []).filter((e) => !e.serverId).reverse().map((e) => ({ m, t: "exam" as const, id: e.id })))
+        : [];
     return {
       v: 1,
-      owner: typeof d.owner === "number" ? d.owner : null,
+      owner,
       prefs: { ...p, cls: isClassId(p.cls) ? p.cls : DEFAULT_CLASS, state: getState(p.state) ? p.state : DEFAULT_STATE, lang: isLang(p.lang) ? p.lang : "vi" },
       mods: { fuehrerschein: { ...emptyModule(), ...d.mods?.fuehrerschein }, lid: { ...emptyModule(), ...d.mods?.lid } },
       pos: d.pos ?? {},
+      outbox: Array.isArray(d.outbox) ? d.outbox : legacy,
     };
   } catch {
     return DEFAULTS;
@@ -80,14 +99,27 @@ let data = load();
 const listeners = new Set<() => void>();
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+const save = () => {
+  saveTimer = null;
+  FILE.write(JSON.stringify(data)).catch(() => {});
+};
+
+/** Ghi file ngay (đồng bộ) — dùng cho việc không được mất khi app bị tắt ngay sau đó */
+const saveNow = () => {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  try {
+    FILE.writeSync(JSON.stringify(data));
+  } catch {
+    // hết chỗ / lỗi ghi: lần commit sau ghi lại
+  }
+};
+
 function commit(next: Data) {
   data = next;
   listeners.forEach((l) => l());
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    saveTimer = null;
-    FILE.write(JSON.stringify(data)).catch(() => {});
-  }, 400);
+  saveTimer = setTimeout(save, 400);
 }
 
 const patchModule = (m: QuizModule, patch: (d: ModuleData) => Partial<ModuleData>) =>
@@ -112,7 +144,66 @@ export const setPos = (key: string, qid: string) => {
 };
 
 type UserLike = { id: number } | null;
-const quiet = (p: Promise<unknown>) => void p.catch(() => {});
+
+/** Hàng đợi chỉ dành cho tài khoản sở hữu tiến độ trên máy (owner === null: chưa đồng bộ lần đầu, syncQuiz sẽ đẩy) */
+function enqueue(item: OutItem, user: UserLike) {
+  if (!user || data.owner !== user.id) return;
+  const box = data.outbox;
+  const last = box[box.length - 1];
+  // Gộp các câu trả lời liên tiếp của cùng phần (server nhận tối đa 100 câu / lần)
+  if (item.t === "answers" && last?.t === "answers" && last.m === item.m && last.answers.length + item.answers.length <= 100)
+    commit({ ...data, outbox: [...box.slice(0, -1), { ...last, answers: [...last.answers, ...item.answers] }] });
+  else commit({ ...data, outbox: [...box, item] });
+  void flush(user);
+}
+
+/** Lỗi không thử lại được (dữ liệu không hợp lệ với server): bỏ mục đó để không chặn cả hàng đợi */
+const permanent = (e: unknown) => e instanceof ApiError && e.status >= 400 && e.status < 500 && ![401, 403, 408, 429].includes(e.status);
+
+async function send(item: OutItem) {
+  const m = item.m;
+  if (item.t === "answers") await api("/quiz", { method: "POST", body: { module: m, answers: item.answers } });
+  else if (item.t === "mark") await api("/quiz/bookmarks", { method: "POST", body: { module: m, qid: item.qid, on: item.on } });
+  else if (item.t === "reset") await api("/quiz", { method: "DELETE", body: { module: m, all: item.all } });
+  else {
+    const e = data.mods[m].exams.find((x) => x.id === item.id);
+    if (!e || e.serverId) return; // đã xoá / đã gửi
+    const r = await api<{ id: number }>("/quiz/exams", {
+      method: "POST",
+      body: { module: m, kind: e.kind, ref: e.ref, cls: e.cls, durationS: e.durationS, answers: e.answers },
+    });
+    patchModule(m, (d) => ({ exams: d.exams.map((x) => (x.id === item.id ? { ...x, serverId: r.id } : x)) }));
+  }
+}
+
+let flushing: Promise<boolean> | null = null;
+
+/** Gửi lần lượt hàng đợi; lỗi mạng / server thì dừng, giữ phần còn lại cho lần sau. true = đã gửi hết */
+function flush(user: UserLike): Promise<boolean> {
+  if (!user || data.owner !== user.id) return Promise.resolve(false);
+  if (flushing) return flushing;
+  flushing = (async () => {
+    try {
+      while (data.outbox.length && data.owner === user.id) {
+        const item = data.outbox[0];
+        try {
+          await send(item);
+        } catch (e) {
+          if (!permanent(e)) return false;
+        }
+        // Mục đầu có thể vừa được gộp thêm câu trả lời trong lúc gửi → chỉ bỏ đúng phần đã gửi
+        const head = data.outbox[0];
+        if (head === item) commit({ ...data, outbox: data.outbox.slice(1) });
+        else if (head?.t === "answers" && item.t === "answers" && head.m === item.m)
+          commit({ ...data, outbox: [{ ...head, answers: head.answers.slice(item.answers.length) }, ...data.outbox.slice(1)] });
+      }
+      return !data.outbox.length;
+    } finally {
+      flushing = null;
+    }
+  })();
+  return flushing;
+}
 
 /** Ghi kết quả 1 câu (luyện) */
 export function recordAnswer(m: QuizModule, qid: string, ok: boolean, user: UserLike) {
@@ -120,7 +211,7 @@ export function recordAnswer(m: QuizModule, qid: string, ok: boolean, user: User
     const s = d.stats[qid];
     return { stats: { ...d.stats, [qid]: { correct: (s?.correct ?? 0) + +ok, wrong: (s?.wrong ?? 0) + +!ok, lastOk: ok } } };
   });
-  if (user) quiet(api("/quiz", { method: "POST", body: { module: m, answers: [{ qid, ok }] } }));
+  enqueue({ m, t: "answers", answers: [{ qid, ok }] }, user);
 }
 
 /** Ghi kết quả cả bài thi vào thống kê từng câu (câu bỏ trống không tính) */
@@ -137,7 +228,7 @@ function recordMany(m: QuizModule, answers: { qid: string; ok: boolean }[]) {
 
 export function setMarked(m: QuizModule, qid: string, on: boolean, user: UserLike) {
   patchModule(m, (d) => ({ marked: on ? [qid, ...d.marked.filter((x) => x !== qid)] : d.marked.filter((x) => x !== qid) }));
-  if (user) quiet(api("/quiz/bookmarks", { method: "POST", body: { module: m, qid, on } }));
+  enqueue({ m, t: "mark", qid, on }, user);
 }
 
 /** Lưu bài thi vừa nộp (trên máy + server khi đăng nhập) → id trên máy */
@@ -165,13 +256,8 @@ export function saveExam(
   };
   patchModule(m, (d) => ({ exams: [rec, ...d.exams].slice(0, MAX_EXAMS) }));
   recordMany(m, exam.results);
-  if (user)
-    api<{ id: number }>("/quiz/exams", {
-      method: "POST",
-      body: { module: m, kind: exam.kind, ref: exam.ref, cls: exam.cls, durationS: exam.durationS, answers: exam.answers },
-    })
-      .then((r) => patchModule(m, (d) => ({ exams: d.exams.map((e) => (e.id === id ? { ...e, serverId: r.id } : e)) })))
-      .catch(() => {});
+  enqueue({ m, t: "exam", id }, user);
+  saveNow(); // bài thi vừa nộp: ghi file ngay, không chờ debounce
   return id;
 }
 
@@ -179,40 +265,49 @@ export function saveExam(
 export function resetModule(m: QuizModule, all: boolean, user: UserLike) {
   patchModule(m, () => (all ? emptyModule() : { stats: {} }));
   commit({ ...data, pos: Object.fromEntries(Object.entries(data.pos).filter(([k]) => !k.startsWith(`${m}:`))) });
-  if (user) quiet(api("/quiz", { method: "DELETE", body: { module: m, all } }));
+  // Câu trả lời chờ gửi của phần này không còn ý nghĩa sau khi xoá; chỉ xoá thống kê thì vẫn gửi đánh dấu + bài thi (lịch sử còn)
+  commit({ ...data, outbox: data.outbox.filter((i) => i.m !== m || (!all && i.t !== "answers")) });
+  enqueue({ m, t: "reset", all }, user);
 }
 
 // ---- Đồng bộ với server ----
 
 let syncing: Promise<void> | null = null;
 
-/** Đẩy tiến độ khi là khách lên tài khoản vừa đăng nhập (chỉ lần đầu) */
-async function pushGuest(m: QuizModule) {
-  const d = data.mods[m];
-  const answers = Object.entries(d.stats).map(([qid, s]) => ({ qid, ok: s.lastOk }));
-  for (let i = 0; i < answers.length; i += 100) await api("/quiz", { method: "POST", body: { module: m, answers: answers.slice(i, i + 100) } });
-  for (const qid of d.marked) await api("/quiz/bookmarks", { method: "POST", body: { module: m, qid, on: true } });
+/** Tiến độ khi là khách → hàng đợi của tài khoản vừa đăng nhập (chỉ lần đầu). Bài thi khi là khách vẫn chỉ ở trên máy */
+function adoptGuest(userId: number) {
+  const outbox: OutItem[] = [...data.outbox];
+  for (const m of MODULES) {
+    const d = data.mods[m];
+    const answers = Object.entries(d.stats).map(([qid, s]) => ({ qid, ok: s.lastOk }));
+    for (let i = 0; i < answers.length; i += 100) outbox.push({ m, t: "answers", answers: answers.slice(i, i + 100) });
+    for (const qid of d.marked) outbox.push({ m, t: "mark", qid, on: true });
+  }
+  commit({ ...data, owner: userId, outbox });
+  saveNow();
 }
 
-/** Tải tiến độ trên server về (gọi khi mở tab Lái xe / LiD). Mất mạng thì giữ bản trên máy */
+/** Gửi hàng đợi rồi tải tiến độ trên server về (gọi khi mở tab Lái xe / LiD). Mất mạng thì giữ bản trên máy */
 export function syncQuiz(user: UserLike): Promise<void> {
   if (!user) return Promise.resolve();
   if (syncing) return syncing;
   syncing = (async () => {
     try {
-      if (data.owner === null) {
-        for (const m of MODULES) await pushGuest(m);
-        commit({ ...data, owner: user.id });
-      } else if (data.owner !== user.id) {
-        // Tài khoản khác đã dùng máy này: bỏ tiến độ của tài khoản cũ (vẫn còn trên server của họ)
-        commit({ ...data, owner: user.id, mods: { fuehrerschein: emptyModule(), lid: emptyModule() }, pos: {} });
+      if (data.owner === null) adoptGuest(user.id);
+      else if (data.owner !== user.id) {
+        // Tài khoản khác đã dùng máy này: bỏ tiến độ + hàng đợi của tài khoản cũ (vẫn còn trên server của họ)
+        commit({ ...data, owner: user.id, mods: { fuehrerschein: emptyModule(), lid: emptyModule() }, pos: {}, outbox: [] });
       }
+      // Chưa gửi hết thì không lấy bản server về: sẽ ghi đè kết quả chưa gửi
+      if (!(await flush(user))) return;
       for (const m of MODULES) {
         const [s, b, e] = await Promise.all([
           api<{ stats: Record<string, QuizStat> }>(`/quiz?module=${m}`),
           api<{ ids: string[] }>(`/quiz/bookmarks?module=${m}`),
           api<{ exams: ExamRecord[] }>(`/quiz/exams?module=${m}`),
         ]);
+        // Có việc mới vào hàng đợi trong lúc tải: giữ bản trên máy, lần sau đồng bộ lại
+        if (data.owner !== user.id || data.outbox.some((i) => i.m === m)) continue;
         patchModule(m, (d) => {
           const mine = new Set(d.exams.map((x) => x.serverId).filter(Boolean));
           return { stats: s.stats, marked: b.ids, remote: e.exams.filter((x) => !mine.has(x.id)) };

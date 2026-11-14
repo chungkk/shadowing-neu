@@ -34,8 +34,7 @@ const markedIds = (m: QuizModule, pool: Set<string>) => getModule(m).marked.filt
 
 export function buildRun(m: QuizModule, mode: RunMode, scope: string): Run | null {
   const prefs = getPrefs();
-  const lang = prefs.lang;
-  const load = (ids: string[], orders?: Record<string, number[]>) => (m === "lid" ? lid.questions(ids, lang) : fs.questions(ids, lang, orders));
+  const load = (ids: string[], orders?: Record<string, number[]>) => (m === "lid" ? lid.questions(ids) : fs.questions(ids, orders));
 
   if (mode === "review") {
     const rec = getModule(m).exams.find((e) => e.id === scope);

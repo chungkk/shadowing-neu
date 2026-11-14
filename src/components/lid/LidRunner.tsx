@@ -37,7 +37,7 @@ type Props = {
   resumeKey?: string;
 };
 
-export default function LidRunner({ mode, title, backHref, questions, loggedIn, lang, stats = {}, bookmarks = [], exam, review, resumeKey }: Props) {
+export default function LidRunner({ mode, title, backHref, questions, loggedIn, stats = {}, bookmarks = [], exam, review, resumeKey }: Props) {
   const pathname = usePathname();
   const [idx, setIdx] = useState(0);
   // Học: như app, mỗi lần mở câu là làm lại từ đầu → chỉ giữ đáp án của câu đang xem
@@ -203,7 +203,6 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
   const answeredNow = mode === "ueben" && answer !== null;
   const rightNow = answeredNow && isRight(q, [answer]);
   const trOn = showTr && !testing && !!q.tr;
-  const trDir = lang === "ar" ? "rtl" : undefined;
   // Thanh tiến độ: học = đúng/sai lần gần nhất · xem lại = kết quả bài thi
   const okCount = submitted ? questions.filter((x) => isRight(x, picked[x.id])).length : questions.filter((x) => local[x.id]?.lastOk === true).length;
   const badCount = submitted ? questions.length - okCount : questions.filter((x) => local[x.id]?.lastOk === false).length;
@@ -297,7 +296,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
           <div className="flex flex-col gap-1">
             <h2 className="section-title min-h-[2lh] whitespace-pre-line">{q.q}</h2>
             {trOn && q.tr?.q && (
-              <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
+              <p className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
                 {q.tr.q}
               </p>
             )}
@@ -349,7 +348,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="font-bold">{o.text}</span>
                       {trOn && tr && tr !== o.text && (
-                        <span dir={trDir} className="text-sm text-accent-text italic">
+                        <span className="text-sm text-accent-text italic">
                           {tr}
                         </span>
                       )}

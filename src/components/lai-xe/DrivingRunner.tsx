@@ -72,7 +72,7 @@ type Props = {
 const MAX_VIEWS = 5;
 type VideoState = { count: number; answering: boolean };
 
-export default function DrivingRunner({ module = "fuehrerschein", mode, title, subtitle, backHref, questions, loggedIn, lang, stats = {}, bookmarks = [], exam, review, modeLinks, resumeKey }: Props) {
+export default function DrivingRunner({ module = "fuehrerschein", mode, title, subtitle, backHref, questions, loggedIn, stats = {}, bookmarks = [], exam, review, modeLinks, resumeKey }: Props) {
   const cfg = MODULES[module];
   /** Lái xe: khung xanh lá giống phần mềm thi thật */
   const fs = module === "fuehrerschein";
@@ -281,7 +281,6 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   };
 
   const right = isRight(q, mine);
-  const trDir = lang === "ar" ? "rtl" : undefined;
   const grundCount = questions.filter((x) => x.grund).length;
   const visible = isExam && grundCount && grundCount < questions.length ? questions.map((x, i) => ({ x, i })).filter(({ x }) => x.grund === (tab === "grund")) : questions.map((x, i) => ({ x, i }));
 
@@ -407,7 +406,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
             {videoStep ? "Bitte starten Sie den Film, um sich mit der Situation vertraut zu machen." : q.q}
           </h2>
           {showTr && !videoStep && q.tr?.q && (
-            <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
+            <p className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
               {q.tr.q}
             </p>
           )}
@@ -489,7 +488,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                             <span className={fs ? "text-sm font-bold sm:text-base" : "font-bold"}>{o.text || `Lựa chọn ${o.key} (xem hình)`}</span>
                           )}
                           {showTr && trText && trText !== o.text && (
-                            <span dir={trDir} className="text-sm text-accent-text italic">
+                            <span className="text-sm text-accent-text italic">
                               {trText}
                             </span>
                           )}
@@ -550,7 +549,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                 <p className="font-extrabold">💡 Giải thích</p>
                 <p className="mt-1 whitespace-pre-line">{q.explain}</p>
                 {showTr && q.tr?.c && (
-                  <p dir={trDir} className="mt-2 border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
+                  <p className="mt-2 border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
                     {q.tr.c}
                   </p>
                 )}

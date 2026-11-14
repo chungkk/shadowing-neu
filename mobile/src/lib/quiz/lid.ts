@@ -1,5 +1,5 @@
 import data from "@content/lid/questions.json";
-import type { DrivingQ, Lang, Tr } from "@shared/fuehrerschein-rules";
+import type { DrivingQ, Tr } from "@shared/fuehrerschein-rules";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi "Leben in Deutschland" — cùng file dữ liệu với web (src/content/lid), đóng gói trong app.
@@ -64,23 +64,9 @@ export const examQuestionIds = (stateCode: string): string[] => [
   ...shuffle(stateIds(stateCode)).slice(0, EXAM.state),
 ];
 
-// Gói dịch nạp khi cần (require của Metro chỉ chạy lúc gọi)
-const packs: Partial<Record<Lang, Record<string, Tr>>> = {};
-function pack(lang: Lang): Record<string, Tr> | null {
-  if (lang === "vi") return null;
-  return (packs[lang] ??= (
-    {
-      en: () => require("@content/lid/tr-en.json"),
-      ar: () => require("@content/lid/tr-ar.json"),
-      zh: () => require("@content/lid/tr-zh.json"),
-      ru: () => require("@content/lid/tr-ru.json"),
-    } as Record<Exclude<Lang, "vi">, () => Record<string, Tr>>
-  )[lang]());
-}
 
 /** Câu theo thứ tự `ids` cho màn làm bài. Không xáo lựa chọn: có câu chọn hình "1"–"4" */
-export function questions(ids: string[], lang: Lang): DrivingQ[] {
-  const tr = pack(lang);
+export function questions(ids: string[]): DrivingQ[] {
   return ids.flatMap((id) => {
     const x = ALL.get(id);
     if (!x) return [];
@@ -101,7 +87,7 @@ export function questions(ids: string[], lang: Lang): DrivingQ[] {
         optionImages: false,
         poster: null,
         video: null,
-        tr: (tr ? tr[id] : vi) ?? null,
+        tr: vi ?? null,
         order: q.options.map((_, i) => i),
       },
     ];

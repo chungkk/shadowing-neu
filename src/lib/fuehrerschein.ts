@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import data from "@/content/fuehrerschein/questions.json";
 import { NUM_HINTS } from "./fuehrerschein-units";
-import { isLang, type DrivingQ, type ExamConfig, type Lang, type Tr } from "./fuehrerschein-rules";
+import { isLang, type DrivingQ, type ExamConfig, type Lang } from "./fuehrerschein-rules";
 
 // Bộ câu hỏi lý thuyết lái xe Đức cho mọi hạng bằng (nhập bằng scripts/import-portal-content.mjs, giống app iOS/Android)
 
@@ -146,12 +146,6 @@ export const bogenIds = (n: number): string[] | null => data.musterboegen[n - 1]
 
 // ---- Gửi câu xuống trình duyệt ----
 
-const PACKS: Record<Exclude<Lang, "vi">, () => Promise<Record<string, Tr>>> = {
-  en: () => import("@/content/fuehrerschein/tr-en.json").then((m) => m.default as Record<string, Tr>),
-  ar: () => import("@/content/fuehrerschein/tr-ar.json").then((m) => m.default as Record<string, Tr>),
-  zh: () => import("@/content/fuehrerschein/tr-zh.json").then((m) => m.default as Record<string, Tr>),
-  ru: () => import("@/content/fuehrerschein/tr-ru.json").then((m) => m.default as Record<string, Tr>),
-};
 
 /** Không xáo khi lựa chọn trống chữ: chúng chỉ tới nhãn A/B/C trong hình */
 const optionOrder = (q: Raw, shuffled: boolean) => {
@@ -160,11 +154,10 @@ const optionOrder = (q: Raw, shuffled: boolean) => {
 };
 
 /**
- * Câu theo thứ tự `ids` (bỏ id không có), kèm bản dịch `lang` và thứ tự lựa chọn.
+ * Câu theo thứ tự `ids` (bỏ id không có), kèm bản dịch tiếng Việt và thứ tự lựa chọn.
  * `orders`: thứ tự đã dùng khi làm bài (xem lại bài thi); không có thì xáo mới — khi đó gọi sau connection()/cookies().
  */
 export async function forClient(ids: string[], lang: Lang, orders?: Record<string, number[]>): Promise<DrivingQ[]> {
-  const pack = lang === "vi" ? null : await PACKS[lang]();
   return ids.flatMap((id) => {
     const q = BY_ID.get(id);
     if (!q) return [];
@@ -186,7 +179,7 @@ export async function forClient(ids: string[], lang: Lang, orders?: Record<strin
         optionImages: q.optionImages,
         poster: q.poster,
         video: q.video,
-        tr: (pack ? pack[q.id] : q.vi) ?? null,
+        tr: q.vi ?? null,
         order,
       },
     ];

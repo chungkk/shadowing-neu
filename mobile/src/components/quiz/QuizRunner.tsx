@@ -358,7 +358,6 @@ export function QuizRunner({
   }
 
   const right = isRight(q, mine);
-  const rtl = prefs.lang === "ar";
 
   return (
     <View style={[styles.screen, { paddingTop: headerHeight }]}>
@@ -463,7 +462,7 @@ export function QuizRunner({
               : q.q}
           </Text>
           {showTr && !videoStep && !!q.tr?.q && (
-            <Translation text={q.tr.q} rtl={rtl} />
+            <Translation text={q.tr.q} />
           )}
         </View>
 
@@ -504,7 +503,6 @@ export function QuizRunner({
                       n={n}
                       text={o.text}
                       tr={showTr ? q.tr?.o[orig] : undefined}
-                      rtl={rtl}
                       image={q.optionImages ? q.images[orig] : undefined}
                       single={single}
                       on={mine.includes(o.key)}
@@ -581,7 +579,7 @@ export function QuizRunner({
                 <Text style={{ color: C.text, fontSize: 15, lineHeight: 21 }}>
                   {q.explain}
                 </Text>
-                {showTr && !!q.tr?.c && <Translation text={q.tr.c} rtl={rtl} />}
+                {showTr && !!q.tr?.c && <Translation text={q.tr.c} />}
               </View>
             )}
           </View>
@@ -708,7 +706,7 @@ function Pill({ text, strong }: { text: string; strong?: boolean }) {
   );
 }
 
-function Translation({ text, rtl }: { text: string; rtl: boolean }) {
+function Translation({ text }: { text: string }) {
   return (
     <Text
       style={{
@@ -719,7 +717,6 @@ function Translation({ text, rtl }: { text: string; rtl: boolean }) {
         borderLeftWidth: 3,
         borderLeftColor: alpha(C.accent, 0.6),
         paddingLeft: 8,
-        writingDirection: rtl ? "rtl" : "auto",
       }}
     >
       {text}
@@ -809,7 +806,6 @@ function OptionRow({
   n,
   text,
   tr,
-  rtl,
   image,
   single,
   on,
@@ -821,7 +817,6 @@ function OptionRow({
   n: number;
   text: string;
   tr?: string;
-  rtl: boolean;
   image?: string;
   single: boolean;
   on: boolean;
@@ -945,7 +940,6 @@ function OptionRow({
               fontStyle: "italic",
               fontSize: 14,
               lineHeight: 19,
-              writingDirection: rtl ? "rtl" : "auto",
             }}
           >
             {tr}
