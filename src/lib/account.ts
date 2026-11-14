@@ -356,7 +356,7 @@ export async function oauthSignIn(input: {
     linkOAuth(provider, profile.subject, userId, email);
   }
   if (provider === "apple" && input.authorizationCode) {
-    const refresh = await appleRefreshToken(input.authorizationCode, input.web);
+    const refresh = await appleRefreshToken(input.authorizationCode, input.web, profile.audience);
     if (refresh) setOAuthRefreshToken("apple", profile.subject, refresh);
   }
   return userId;

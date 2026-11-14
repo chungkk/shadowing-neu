@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Stack, router, useLocalSearchParams, useNavigation, usePreventRemove } from "expo-router";
+import { Stack, router, useLocalSearchParams, usePreventRemove } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
@@ -41,15 +41,18 @@ export default function FeedbackScreen() {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const navigation = useNavigation();
+  const [leaving, setLeaving] = useState(false);
   const device = deviceInfo();
 
   const text = message.trim();
-  const dirty = !!text && !sent;
+  const dirty = !!text && !sent && !leaving;
 
   // Chặn đóng modal khi còn nội dung chưa gửi
-  usePreventRemove(dirty, ({ data }) =>
-    confirmDestructive(t("fb.discard"), t("fb.discardBody"), t("fb.discardAction"), () => navigation.dispatch(data.action)),
+  usePreventRemove(dirty, ({ repeat }) =>
+    confirmDestructive(t("fb.discard"), t("fb.discardBody"), t("fb.discardAction"), () => {
+      setLeaving(true);
+      repeat();
+    }),
   );
 
   const send = async () => {

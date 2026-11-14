@@ -15,7 +15,7 @@ export function CandyStripe() {
   );
 }
 
-/** Thanh trên cùng các tab, như web: linh vật + "Deutsch Shadowing" · tổng điểm · dải sọc kẹo */
+/** Thanh trên cùng các tab, như web: linh vật + "HalloVN" · tổng điểm · dải sọc kẹo */
 export function BrandBar() {
   const { top } = useSafeAreaInsets();
   return (
@@ -23,7 +23,7 @@ export function BrandBar() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 58, paddingHorizontal: 12 }}>
         <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 44, height: 44 }} />
         <Text numberOfLines={1} style={{ flex: 1, color: C.text, fontFamily: DISPLAY, fontWeight: "800", fontSize: 20 }} accessibilityRole="header">
-          Deutsch Shadowing
+          HalloVN
         </Text>
         <PointsBadge />
         <ThemeToggle />

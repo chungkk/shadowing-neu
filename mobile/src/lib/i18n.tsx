@@ -36,8 +36,10 @@ const vi = {
   "admin.isPublished": "Đã đăng — mọi người đều thấy",
   "admin.lockedTitle": "Không thể thay đổi tài khoản này",
   "addLesson.existsTitle": "Video này đã có bài học",
-  "tabs.lessons": "Bài học",
+  "tabs.lessons": "Tiếng Đức",
   "tabs.vocab": "Từ vựng",
+  "tabs.driving": "Lái xe",
+  "tabs.lid": "LiD",
   "tabs.settings": "Cài đặt",
 
   // Bài học
@@ -674,8 +676,10 @@ const de: Dict = {
   "admin.isPublished": "Veröffentlicht — für alle sichtbar",
   "admin.lockedTitle": "Dieses Konto kann nicht geändert werden",
   "addLesson.existsTitle": "Für dieses Video gibt es schon eine Lektion",
-  "tabs.lessons": "Lektionen",
+  "tabs.lessons": "Deutsch",
   "tabs.vocab": "Vokabeln",
+  "tabs.driving": "Führerschein",
+  "tabs.lid": "LiD",
   "tabs.settings": "Einstellungen",
 
   "theme.title": "Design",

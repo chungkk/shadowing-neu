@@ -573,7 +573,7 @@ export default function SettingsScreen() {
             <Text style={{ color: C.muted, fontSize: 12, fontWeight: "600" }}>
               {Constants.expoConfig?.name} · {t("acc.version", { v: Constants.expoConfig?.version ?? "—" })}
             </Text>
-            <Text style={{ color: C.muted, fontSize: 12 }}>© {new Date().getFullYear()} Deutsch Shadowing</Text>
+            <Text style={{ color: C.muted, fontSize: 12 }}>© {new Date().getFullYear()} HalloVN</Text>
             {__DEV__ && <Text style={{ color: C.muted, fontSize: 12 }}>Server: {API_URL}</Text>}
           </View>
         </ScrollView>

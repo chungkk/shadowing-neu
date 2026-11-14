@@ -9,7 +9,8 @@ import type { OAuthProvider } from "./db";
  * Biến môi trường:
  * - GOOGLE_CLIENT_IDS: các OAuth client ID của Google được chấp nhận (cách nhau dấu phẩy) — Web client ID dùng trong app
  *   (ID đầu tiên cũng là client ID của nút Google trên web, trừ khi đặt GOOGLE_WEB_CLIENT_ID)
- * - APPLE_CLIENT_IDS: bundle ID của app iOS (mặc định com.chungkk.deutschshadowing)
+ * - APPLE_CLIENT_IDS: bundle ID các app iOS (mặc định com.chungkk.deutschshadowing,com.chungkk.hallovn — app cũ trước:
+ *   refresh token lưu không kèm client là của app đầu tiên)
  * - APPLE_WEB_CLIENT_ID: Services ID cho nút Apple trên web (không đặt → ẩn nút)
  * - APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY (.p8): để thu hồi quyền Sign in with Apple khi xoá tài khoản (tuỳ chọn)
  */
@@ -23,7 +24,7 @@ const PROVIDERS = {
   apple: {
     jwks: "https://appleid.apple.com/auth/keys",
     issuers: ["https://appleid.apple.com"],
-    audiences: () => list(`${process.env.APPLE_CLIENT_IDS ?? "com.chungkk.deutschshadowing"},${process.env.APPLE_WEB_CLIENT_ID ?? ""}`),
+    audiences: () => list(`${process.env.APPLE_CLIENT_IDS ?? "com.chungkk.deutschshadowing,com.chungkk.hallovn"},${process.env.APPLE_WEB_CLIENT_ID ?? ""}`),
   },
 } satisfies Record<OAuthProvider, unknown>;
 
@@ -51,7 +52,8 @@ async function publicKey(p: OAuthProvider, kid: string): Promise<KeyObject | nul
   return map.get(kid) ?? null;
 }
 
-export type OAuthProfile = { subject: string; email: string; emailVerified: boolean; name: string };
+/** audience: client ID (bundle ID / Services ID) đã cấp token — mã Apple phải đổi bằng đúng client đó */
+export type OAuthProfile = { subject: string; email: string; emailVerified: boolean; name: string; audience: string };
 
 const b64json = (s: string) => JSON.parse(Buffer.from(s, "base64url").toString("utf8"));
 
@@ -76,7 +78,8 @@ export async function verifyIdToken(p: OAuthProvider, token: string): Promise<OA
   const now = Date.now() / 1000;
   const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   if (!cfg.issuers.includes(String(claims.iss))) return invalid;
-  if (!aud.some((a) => cfg.audiences().includes(String(a)))) return invalid;
+  const audience = aud.map(String).find((a) => cfg.audiences().includes(a));
+  if (!audience) return invalid;
   if (typeof claims.exp !== "number" || claims.exp < now - 60) return "Phiên đăng nhập đã hết hạn, thử lại.";
   if (typeof claims.sub !== "string" || !claims.sub) return invalid;
 
@@ -87,6 +90,7 @@ export async function verifyIdToken(p: OAuthProvider, token: string): Promise<OA
     // Apple trả "true" (chuỗi) hoặc true
     emailVerified: !!email && (claims.email_verified === true || claims.email_verified === "true"),
     name: typeof claims.name === "string" ? claims.name.trim() : "",
+    audience,
   };
 }
 
@@ -122,15 +126,18 @@ async function appleRequest(path: "token" | "revoke", clientId: string, params: 
   });
 }
 
-/** authorizationCode (lần đăng nhập Apple) → refresh token để lưu, null nếu chưa cấu hình khoá hoặc lỗi */
-export async function appleRefreshToken(code: string, web = false): Promise<string | null> {
-  const clientId = web ? appleWebClientId() : appleClientId();
+/**
+ * authorizationCode (lần đăng nhập Apple) → refresh token để lưu, null nếu chưa cấu hình khoá hoặc lỗi.
+ * `audience`: client đã cấp ID token (app nào / web). Token của client khác app đầu tiên lưu kèm client.
+ */
+export async function appleRefreshToken(code: string, web = false, audience?: string): Promise<string | null> {
+  const clientId = web ? appleWebClientId() : audience || appleClientId();
   if (!appleKeyConfigured() || !code || !clientId) return null;
   try {
     const res = await appleRequest("token", clientId, { code, grant_type: "authorization_code" });
     const data = (await res.json()) as { refresh_token?: string };
     if (!data.refresh_token) return null;
-    return web ? `${clientId} ${data.refresh_token}` : data.refresh_token;
+    return clientId === appleClientId() ? data.refresh_token : `${clientId} ${data.refresh_token}`;
   } catch (e) {
     console.error("[apple] đổi authorizationCode lỗi:", (e as Error).message);
     return null;

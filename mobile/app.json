@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Deutsch Shadowing",
-    "slug": "deutsch-shadowing",
-    "version": "1.0.1",
+    "name": "HalloVN",
+    "slug": "hallovn",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "deutschshadowing",
+    "scheme": "hallovn",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": {
@@ -13,7 +13,7 @@
         "dark": "./assets/images/icon-dark.png",
         "tinted": "./assets/images/icon-tinted.png"
       },
-      "bundleIdentifier": "com.chungkk.deutschshadowing",
+      "bundleIdentifier": "com.chungkk.hallovn",
       "buildNumber": "1",
       "supportsTablet": true,
       "config": {
@@ -30,7 +30,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.chungkk.deutschshadowing"
+      "package": "com.chungkk.hallovn"
     },
     "web": {
       "output": "single",
@@ -115,7 +115,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Ứng dụng cần micro để bạn ghi âm giọng nói khi luyện shadowing.",
+          "microphonePermission": "Ứng dụng cần micro để bạn ghi âm giọng nói khi luyện nói tiếng Đức.",
           "enableBackgroundPlayback": false
         }
       ],
@@ -125,8 +125,15 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Ứng dụng cần micro để bạn ghi âm giọng nói khi luyện shadowing.",
+          "microphonePermission": "Ứng dụng cần micro để bạn ghi âm giọng nói khi luyện nói tiếng Đức.",
           "speechRecognitionPermission": "Ứng dụng nhận dạng giọng nói để tô sáng từng từ khi bạn nói theo câu mẫu."
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": false
         }
       ]
     ],

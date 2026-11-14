@@ -36,6 +36,14 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} md="bookmark" />
         <NativeTabs.Trigger.Badge hidden={!due}>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="laixe">
+        <NativeTabs.Trigger.Label>{t("tabs.driving")}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: "car", selected: "car.fill" }} md="directions_car" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="lid">
+        <NativeTabs.Trigger.Label>{t("tabs.lid")}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: "building.columns", selected: "building.columns.fill" }} md="account_balance" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Label>{t("tabs.settings")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />

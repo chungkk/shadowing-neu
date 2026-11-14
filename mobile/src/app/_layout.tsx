@@ -29,6 +29,11 @@ function AppStack() {
             <Stack.Screen name="deck/[slug]" options={{ title: "" }} />
             <Stack.Screen name="game/[variant]" options={{ headerShown: false }} />
             <Stack.Screen name="privacy" options={{ title: "" }} />
+            <Stack.Screen name="quiz/run" options={{ title: "" }} />
+            <Stack.Screen name="quiz/stats" options={{ title: "" }} />
+            <Stack.Screen name="quiz/settings" options={{ title: "", presentation: "modal" }} />
+            <Stack.Screen name="laixe/learn" options={{ title: "" }} />
+            <Stack.Screen name="laixe/bogen" options={{ title: "" }} />
             <Stack.Screen name="feedback" options={{ title: "", presentation: "modal" }} />
           </Stack>
         </ThemeProvider>

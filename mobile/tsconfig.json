@@ -5,7 +5,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"],
-      "@shared/*": ["../src/lib/*"]
+      "@shared/*": ["../src/lib/*"],
+      "@content/*": ["../src/content/*"]
     }
   },
   "include": [
@@ -19,6 +20,9 @@
     "../src/lib/phrase-match.ts",
     "../src/lib/review.ts",
     "../src/lib/srs.ts",
-    "../src/lib/deck-study.ts"
+    "../src/lib/deck-study.ts",
+    "../src/lib/fuehrerschein-rules.ts",
+    "../src/lib/fuehrerschein-units.ts",
+    "../src/lib/quiz-types.ts"
   ]
 }
