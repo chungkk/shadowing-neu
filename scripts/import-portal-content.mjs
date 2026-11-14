@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Nhập dữ liệu cho tab "Lái xe" và "Leben in Deutschland" từ các repo khác trong ~/Code/ckk.
 // Chạy lại khi bộ câu hỏi bên đó đổi:   node scripts/import-portal-content.mjs
-//   - Lái xe:  content/laixe/catalog_all (mọi hạng + bản dịch tiếng Việt) + dữ liệu hạng/đề mẫu từ ../fuehrerschein-app/DrivingTheoryApp
+//   - Lái xe:  ../ckk-biz/data/laixe/catalog_all (mọi hạng) + bản dịch + dữ liệu hạng/đề mẫu từ ../fuehrerschein-app/DrivingTheoryApp
 //   - LiD:     ../lid-app/src/data/lebenInDeutschland.ts + ảnh ../lid-app/assets/images/lid → public/lid
 // Kết quả: src/content/fuehrerschein/questions.json, src/content/lid/questions.json (gọn, chỉ giữ tiếng Đức + tiếng Việt)
-// content/laixe/{catalog,catalog_all} là nguồn chính trong repo này (không chép từ ckk-biz nữa);
-// sửa bản dịch bằng scripts/patch-laixe-vi.mjs rồi chạy lại script này.
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+//   App HalloVN (web + mobile) chỉ dùng bản dịch tiếng Việt, có sửa thêm theo scripts/laixe-vi-fixes.json
+//   + content/laixe/{catalog,catalog_all}: bản sao nguyên catalog mà /api/fuehrerschein/* phục vụ cho app iOS/Android
+//     (vẫn tạo/publish bằng scripts của ckk-biz: npm run catalog:publish, rồi chạy script này và deploy) — giữ nguyên, không sửa
+import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -18,11 +19,18 @@ const write = (p, data) => {
   console.log(`✔ ${path.relative(root, p)} (${(JSON.stringify(data).length / 1024).toFixed(0)} KB)`);
 };
 
+// ---------- Catalog cho API của app lái xe ----------
+for (const dir of ["catalog", "catalog_all"]) {
+  const from = path.join(ckk, "ckk-biz/data/laixe", dir);
+  cpSync(from, path.join(root, "content/laixe", dir), { recursive: true, filter: (f) => !path.basename(f).startsWith(".") });
+  console.log(`✔ content/laixe/${dir}`);
+}
+
 // ---------- Lái xe (mọi hạng bằng, giống app iOS/Android) ----------
 // Nguồn: catalog_all (1746 câu + bản dịch vi) + từ app DrivingTheoryApp: classes.json (câu theo hạng),
 // answer_stems.json (phần đầu chung của đáp án), musterboegen.ts (99 đề mẫu hạng B). Tên chương: scripts/laixe-chapters.json
 {
-  const dir = path.join(root, "content/laixe/catalog_all");
+  const dir = path.join(ckk, "ckk-biz/data/laixe/catalog_all");
   const app = path.join(ckk, "fuehrerschein-app/DrivingTheoryApp");
   const names = readJson(path.join(root, "scripts/laixe-chapters.json"));
   const manifest = readJson(path.join(dir, "manifest.json"));
@@ -66,7 +74,25 @@ const write = (p, data) => {
       return x ? { q: cleanQuestion(x.question_text), o: (x.options ?? []).map((o) => cleanOption(o.text)), c: cleanText(x.comment ?? "") } : null;
     };
   };
-  const vi = tr("vi");
+  // Sửa bản dịch tiếng Việt chỉ cho HalloVN (catalog của app lái xe riêng giữ nguyên): { id: { "A.": "chữ mới" } }
+  const viFixes = readJson(path.join(root, "scripts/laixe-vi-fixes.json")).options;
+  const viBase = tr("vi");
+  const known0 = new Set(questions.map((q) => q.question_id));
+  const vi = (id) => {
+    const x = viBase(id);
+    const fix = viFixes[id];
+    if (!x || !fix) return x;
+    const letters = questions.find((q) => q.question_id === id).options.map((o) => o.letter);
+    const o = [...x.o];
+    for (const [letter, text] of Object.entries(fix)) {
+      const i = letters.indexOf(letter);
+      if (i < 0) throw new Error(`laixe-vi-fixes: ${id} không có phương án ${letter}`);
+      o[i] = cleanOption(text);
+    }
+    return { ...x, o };
+  };
+  const unknownFix = Object.keys(viFixes).filter((id) => !known0.has(id));
+  if (unknownFix.length) throw new Error(`laixe-vi-fixes: không có câu ${unknownFix.join(", ")}`);
   const order = ["B", "A", "A2", "A1", "AM", "Mofa", "C", "CE", "C1", "D", "D1", "L", "T"];
   const inClass = Object.fromEntries(order.map((c) => [c, new Set(classes[c].questionIds)]));
 

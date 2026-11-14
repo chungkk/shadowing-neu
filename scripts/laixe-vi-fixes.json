@@ -1,5 +1,5 @@
 {
-  "note": "Sửa 18 phương án tiếng Việt bị dịch ngược nghĩa so với bản tiếng Đức. Áp dụng: node scripts/patch-laixe-vi.mjs content/laixe/corrections/2026-11-14-vi-dao-nghia.json",
+  "note": "Sửa 18 phương án tiếng Việt bị dịch ngược nghĩa so với bản tiếng Đức. Chỉ áp dụng cho app HalloVN (web + mobile) khi chạy scripts/import-portal-content.mjs; catalog content/laixe của app lái xe riêng giữ nguyên.",
   "options": {
     "2.2.23-403": { "A.": "- không trong trường hợp nào" },
     "2.2.12-106": { "B.": "- được phép đỗ tại các bãi đỗ xe được đánh dấu tương ứng lâu hơn 2 tuần" },
