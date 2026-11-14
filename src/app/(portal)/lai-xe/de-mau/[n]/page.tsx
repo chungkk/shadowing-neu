@@ -3,10 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { BOGEN_COUNT, WEB_BOGEN_LIMIT, bogenIds, classInfo, forClient, prefs } from "@/lib/fuehrerschein";
-import AppOnlyCard from "@/components/lai-xe/AppOnlyCard";
+import { WEB_BOGEN_LIMIT, bogenIds, classInfo, forClient, prefs } from "@/lib/fuehrerschein";
 import DrivingRunner from "@/components/lai-xe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -22,22 +19,8 @@ async function Sheet({ params, searchParams }: P) {
   const { n } = await params;
   const num = /^\d+$/.test(n) ? Number(n) : 0;
   const ids = bogenIds(num);
-  if (!ids) notFound();
-  if (num > WEB_BOGEN_LIMIT)
-    return (
-      <>
-        <div className="flex items-center gap-2">
-          <Link href="/lai-xe/de-mau" className="btn-icon" aria-label="Quay lại">
-            <ArrowLeft className="size-5" />
-          </Link>
-          <h1 className="page-title">Đề mẫu {num}</h1>
-        </div>
-        <AppOnlyCard
-          title="Đề này chỉ có trên app"
-          text={`Web chỉ mở ${WEB_BOGEN_LIMIT} đề mẫu đầu tiên. Tải app để làm đề ${num} và trọn ${BOGEN_COUNT} đề mẫu chính thức.`}
-        />
-      </>
-    );
+  // Web chỉ có vài đề đầu (chống crawl trọn bộ đề); đề còn lại chỉ có trên app
+  if (!ids || num > WEB_BOGEN_LIMIT) notFound();
   const m = (await searchParams).mode;
   const mode = m === "lesen" ? "lesen" : m === "ueben" ? "ueben" : "exam";
   const { lang } = await prefs();
