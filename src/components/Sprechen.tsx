@@ -180,7 +180,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
           </button>
         </div>
       ) : (
-        <button className="btn btn-primary py-3 text-base" disabled={busy || !s.connected} onClick={() => run((c) => c.match(level, topics))}>
+        <button className="btn btn-primary btn-lg" disabled={busy || !s.connected} onClick={() => run((c) => c.match(level, topics))}>
           <Mic className="size-5" /> Gọi ngẫu nhiên
         </button>
       )}
@@ -203,7 +203,7 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
         run((c) => c.create({ name: name.trim() || `Deutsch üben mit ${me.name}`, level, topics, max, private: priv }));
       }}
     >
-      <h2 className="flex items-center gap-2 font-extrabold">
+      <h2 className="section-title flex items-center gap-2">
         <Users className="size-5 text-accent-text" /> Tạo phòng
       </h2>
       <label className="field text-sm font-bold">
@@ -245,7 +245,7 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
         Trình độ {level}
         {topics.length ? ` · ${topics.join(", ")}` : ""} (lấy theo lựa chọn bên cạnh)
       </p>
-      <button className="btn btn-primary py-3 text-base" disabled={busy}>
+      <button className="btn btn-primary btn-lg" disabled={busy}>
         Tạo phòng
       </button>
     </form>
@@ -255,7 +255,7 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
 function RoomList({ rooms, busy, run, me }: { rooms: RoomView[]; busy: boolean; run: Run; me: { id: number } }) {
   return (
     <section className="card flex flex-col gap-3 p-5">
-      <h2 className="flex items-center gap-2 font-extrabold">
+      <h2 className="section-title flex items-center gap-2">
         <Users className="size-5 text-accent-text" /> Phòng đang mở
         <span className="ml-auto text-xs font-bold text-muted">tự cập nhật</span>
       </h2>
@@ -384,11 +384,11 @@ function Room({
       </section>
 
       <div className="flex flex-wrap justify-center gap-3">
-        <button className={`btn min-w-40 py-3 ${self?.muted ? "btn-red" : "btn-amber"}`} onClick={() => call.current?.setMuted(!self?.muted)}>
+        <button className={`btn btn-lg min-w-40 ${self?.muted ? "btn-red" : "btn-amber"}`} onClick={() => call.current?.setMuted(!self?.muted)}>
           {self?.muted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           {self?.muted ? "Bật micro" : "Tắt micro"}
         </button>
-        <button className="btn btn-red min-w-40 py-3" onClick={() => act((c) => c.leave())}>
+        <button className="btn btn-red btn-lg min-w-40" onClick={() => act((c) => c.leave())}>
           <LogOut className="size-5" /> Rời phòng
         </button>
       </div>

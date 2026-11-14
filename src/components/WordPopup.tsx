@@ -197,7 +197,7 @@ export default function WordPopup({
             >
               <Volume2 className="size-4" />
             </button>
-            <button onClick={close} title="Đóng (Esc)" className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-card-2 text-muted hover:text-foreground">
+            <button onClick={close} title="Đóng (Esc)" className="btn-icon shrink-0 rounded-full bg-card-2 text-muted hover:text-foreground">
               <X className="size-3.5" strokeWidth={3} />
             </button>
           </div>
