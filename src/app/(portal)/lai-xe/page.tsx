@@ -1,41 +1,18 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { ComponentType } from "react";
-import { BarChart3, BookOpen, ChevronRight, Flag, Settings } from "lucide-react";
+import { BarChart3, BookOpen, Flag, RotateCcw, Settings, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { quizStats } from "@/lib/db";
+import { quizBookmarks, quizStats } from "@/lib/db";
 import { classInfo, classQuestionIds, prefs } from "@/lib/fuehrerschein";
 import { summarize } from "@/lib/quiz-types";
-import { BigCard, ProgressBar } from "@/components/QuizParts";
+import { ActionCard, BigCard, ProgressBar } from "@/components/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
   title: "Lý thuyết lái xe",
   description: "Luyện thi lý thuyết bằng lái xe Đức mọi hạng (B, A, C, D…): câu hỏi chính thức kèm bản dịch tiếng Việt, giải thích, đề mẫu và thi thử như thật.",
 };
-
-/** Dòng menu phụ (Thống kê) */
-function ListCard({ href, icon: Icon, title, text, disabled }: { href: string; icon: ComponentType<{ className?: string }>; title: string; text: string; disabled?: boolean }) {
-  const body = (
-    <>
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-card-2 text-gold">
-        <Icon className="size-5" />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="font-extrabold">{title}</span>
-        <span className="text-sm text-muted">{text}</span>
-      </span>
-      {!disabled && <ChevronRight className="size-5 shrink-0 text-muted" />}
-    </>
-  );
-  if (disabled) return <div className="sticker flex items-center gap-3 p-3 opacity-60">{body}</div>;
-  return (
-    <Link href={href} className="sticker sticker-link flex items-center gap-3 p-3">
-      {body}
-    </Link>
-  );
-}
 
 async function Home() {
   const { cls } = await prefs();
@@ -44,14 +21,18 @@ async function Home() {
   const info = classInfo(cls);
   const ids = classQuestionIds(cls);
   const all = summarize(ids, stats);
+  const marked = user ? quizBookmarks(user.id, "fuehrerschein").length : 0;
   const settingsHref = user ? "/settings#lai-xe" : "/lai-xe/hang";
 
   return (
     <>
-      {/* Đầu trang: tiêu đề + nút cài đặt (đổi hạng/ngôn ngữ trong Cài đặt) */}
+      {/* Đầu trang: tiêu đề + phụ đề + nút cài đặt (đổi hạng/ngôn ngữ trong Cài đặt) — cùng khuôn với LiD */}
       <section className="sticker p-4 sm:p-6">
         <div className="flex items-center gap-3">
-          <h1 className="min-w-0 flex-1 text-2xl leading-tight font-extrabold sm:text-3xl">Bằng lái xe Đức</h1>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Bằng lái xe Đức</h1>
+            <p className="text-sm text-muted">Ôn thi lý thuyết hạng {cls} · Theorieprüfung</p>
+          </div>
           <Link href={settingsHref} className="btn-icon" aria-label="Cài đặt lái xe">
             <Settings className="size-5" />
           </Link>
@@ -86,21 +67,39 @@ async function Home() {
         )}
       </section>
 
-      {/* 2 thẻ lớn */}
+      {/* 2 thẻ lớn: Học / Thi thử (thẻ chính) */}
       <div className="grid grid-cols-2 gap-3">
         <BigCard href="/lai-xe/hoc" icon={BookOpen} title="Học theo chủ đề" text="Học lý thuyết theo chủ đề" />
-        <BigCard href="/lai-xe/thi-thu" icon={Flag} title="Thi thử" text={cls === "B" ? "Thi thử & bộ đề mẫu" : `${info.exam.questions} câu · ${info.exam.minutes} phút`} red />
+        <BigCard href="/lai-xe/thi-thu" icon={Flag} title="Thi thử" text={cls === "B" ? "Thi thử & bộ đề mẫu" : `${info.exam.questions} câu · ${info.exam.minutes} phút`} primary />
       </div>
 
-      {/* Menu phụ */}
-      <ListCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" text={user ? "Xem kết quả & tiến trình" : "Đăng nhập để xem thống kê"} disabled={!user} />
+      {/* Menu phụ — cùng 3 mục, cùng thứ tự với LiD */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <ActionCard
+          href="/lai-xe/cau-sai"
+          icon={RotateCcw}
+          title="Ôn câu sai"
+          locked={!user}
+          disabled={!!user && !all.wrong}
+          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
+        />
+        <ActionCard
+          href="/lai-xe/danh-dau"
+          icon={Star}
+          title="Đánh dấu"
+          locked={!user}
+          disabled={!!user && !marked}
+          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ⭐ ở câu hỏi để đánh dấu"}
+        />
+        <ActionCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Kết quả và tiến trình" : "Đăng nhập để xem thống kê"} />
+      </div>
     </>
   );
 }
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />
       </Suspense>

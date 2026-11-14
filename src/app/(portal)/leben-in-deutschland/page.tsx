@@ -7,7 +7,7 @@ import { quizBookmarks, quizStats } from "@/lib/db";
 import { CATEGORIES, EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
 import { summarize } from "@/lib/quiz-types";
 import { ActionCard, BigCard, ProgressBar } from "@/components/QuizParts";
-import { LidInfo, LidShell } from "@/components/lid/LidParts";
+import { LidInfo } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -72,38 +72,40 @@ async function Home() {
         )}
       </section>
 
-      {/* 4 thẻ lớn: Học / Thi thử / Đánh dấu / Cài đặt */}
+      {/* 2 thẻ lớn: Học / Thi thử (thẻ chính). Cài đặt nằm ở nút bánh răng trên đầu trang */}
       <div className="grid grid-cols-2 gap-3">
         <BigCard href="/leben-in-deutschland/hoc" icon={BookOpen} title="Học" text={`${mine.length} câu hỏi`} />
-        <BigCard href="/leben-in-deutschland/thi-thu" icon={Flag} title="Thi thử" text={`${EXAM_TOTAL} câu · ${EXAM.minutes} phút`} red />
-        <BigCard href={user ? "/leben-in-deutschland/danh-dau" : "/login?next=/leben-in-deutschland/danh-dau"} icon={Bookmark} title="Đánh dấu" text={user ? `${marked} câu` : "Đăng nhập để lưu"} />
-        <BigCard href="/leben-in-deutschland/cai-dat" icon={Settings} title="Cài đặt" text="Bang, ngôn ngữ, dữ liệu" />
+        <BigCard href="/leben-in-deutschland/thi-thu" icon={Flag} title="Thi thử" text={`${EXAM_TOTAL} câu · ${EXAM.minutes} phút`} primary />
+      </div>
+
+      {/* Menu phụ — cùng 3 mục, cùng thứ tự với Lái xe */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <ActionCard
+          href="/leben-in-deutschland/cau-sai"
+          icon={RotateCcw}
+          title="Ôn câu sai"
+          locked={!user}
+          disabled={!!user && !all.wrong}
+          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
+        />
+        <ActionCard href="/leben-in-deutschland/danh-dau" icon={Bookmark} title="Đánh dấu" locked={!user} text={user ? `${marked} câu` : "Đăng nhập để đánh dấu câu"} />
+        <ActionCard href="/leben-in-deutschland/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Tiến độ và lịch sử thi" : "Đăng nhập để xem thống kê"} />
       </div>
 
       <LidInfo>
         Cần đạt ít nhất {EXAM.pass}/{EXAM_TOTAL} câu đúng để đậu bài thi.
       </LidInfo>
 
-      {/* Menu phụ: thống kê, ôn câu sai */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ActionCard href="/leben-in-deutschland/thong-ke" icon={BarChart3} title="Thống kê" text={user ? "Tiến độ và lịch sử thi" : "Đăng nhập để xem thống kê"} disabled={!user} />
-        <ActionCard
-          href="/leben-in-deutschland/cau-sai"
-          icon={RotateCcw}
-          title="Ôn câu sai"
-          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
-          disabled={!user || !all.wrong}
-        />
-      </div>
-
       {/* Học theo chủ đề */}
       <section className="flex flex-col gap-2">
         <h2 className="mt-1 text-lg font-extrabold">Học theo chủ đề</h2>
-        {CATEGORIES.map((c) => (
-          <ActionCard key={c.key} href={`/leben-in-deutschland/${c.key}`} icon={BookOpen} title={c.vi} text={`${c.de} · câu ${c.from}–${c.to}`} />
-        ))}
-        <ActionCard href={`/leben-in-deutschland/${state.code}`} icon={MapPin} title={`Câu riêng của ${state.name}`} text={`${stateIds(state.code).length} câu · câu 301–310`} />
-        <ActionCard href="/leben-in-deutschland/tat-ca?mode=lesen" icon={Eye} title="Đọc lướt đáp án" text={`${generalCount()} câu chung, đáp án đúng có sẵn`} />
+        <div className="grid gap-2 md:grid-cols-2">
+          {CATEGORIES.map((c) => (
+            <ActionCard key={c.key} href={`/leben-in-deutschland/${c.key}`} icon={BookOpen} title={c.vi} text={`${c.de} · câu ${c.from}–${c.to}`} />
+          ))}
+          <ActionCard href={`/leben-in-deutschland/${state.code}`} icon={MapPin} title={`Câu riêng của ${state.name}`} text={`${stateIds(state.code).length} câu · câu 301–310`} />
+          <ActionCard href="/leben-in-deutschland/tat-ca?mode=lesen" icon={Eye} title="Đọc lướt đáp án" text={`${generalCount()} câu chung, đáp án đúng có sẵn`} />
+        </div>
       </section>
     </>
   );
@@ -111,10 +113,10 @@ async function Home() {
 
 export default function Page() {
   return (
-    <LidShell>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />
       </Suspense>
-    </LidShell>
+    </main>
   );
 }

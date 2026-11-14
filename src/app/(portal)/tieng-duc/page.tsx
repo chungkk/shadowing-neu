@@ -144,7 +144,7 @@ async function OwnVideoForUser() {
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-4 md:gap-10 md:p-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 md:gap-10 md:p-6">
       <Suspense fallback={<div className="sticker h-48 animate-pulse motion-reduce:animate-none" />}>
         <Top />
       </Suspense>

@@ -31,14 +31,16 @@ async function Topics() {
           href="/lai-xe/danh-dau"
           icon={Star}
           title="Câu đánh dấu"
-          disabled={!user || !marked}
+          locked={!user}
+          disabled={!!user && !marked}
           text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ⭐ ở câu hỏi để đánh dấu"}
         />
         <ActionCard
           href="/lai-xe/cau-sai"
           icon={RotateCcw}
           title="Ôn câu sai"
-          disabled={!user || !all.wrong}
+          locked={!user}
+          disabled={!!user && !all.wrong}
           text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
         />
         <ActionCard href="/lai-xe/hoc/grund?mode=lesen" icon={BookOpen} title="Đọc lướt đáp án" text="Câu hỏi có sẵn đáp án đúng" />
