@@ -13,9 +13,9 @@ export const metadata: Metadata = { title: "Cài đặt · Leben in Deutschland"
 /** Một nhóm cài đặt: thẻ sticker có tiêu đề + mô tả — như mục Lái xe trong trang Cài đặt */
 function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ className?: string }>; title: string; text?: string; children: ReactNode }) {
   return (
-    <section className="sticker flex flex-col gap-4 p-4 sm:p-6">
+    <section className="card flex flex-col gap-3">
       <div>
-        <h2 className="flex items-center gap-2 text-lg font-extrabold">
+        <h2 className="section-title flex items-center gap-2">
           <Icon className="size-5 text-link" /> {title}
         </h2>
         {text && <p className="mt-0.5 text-sm text-muted">{text}</p>}
@@ -28,8 +28,9 @@ function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ cl
 async function Settings() {
   const { state, lang } = await prefs();
   const user = await getCurrentUser();
+  // Form cài đặt: giới hạn bề ngang bên trong, khung ngoài vẫn .page để tiêu đề thẳng hàng subnav
   return (
-    <>
+    <div className="flex w-full max-w-3xl flex-col gap-5">
       <Group icon={MapPin} title="Bang" text="Câu hỏi riêng của bang dùng khi học và khi thi thử.">
         <StatePicker states={STATES} current={state.code} />
       </Group>
@@ -44,7 +45,7 @@ async function Settings() {
           <ResetProgress module="lid" />
         </Group>
       )}
-    </>
+    </div>
   );
 }
 

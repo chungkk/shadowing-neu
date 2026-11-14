@@ -171,7 +171,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
       {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
 
       <div className="flex gap-2 max-sm:*:flex-1">
-        <button className="btn btn-primary py-3 sm:py-2" disabled={saving || fetching}>
+        <button className="btn btn-lg btn-primary" disabled={saving || fetching}>
           {saving ? "Đang lưu…" : "Lưu bài học"}
         </button>
         <Link href="/admin" className="btn">

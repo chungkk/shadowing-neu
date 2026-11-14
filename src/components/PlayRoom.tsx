@@ -117,11 +117,11 @@ function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; logged
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="btn px-4 py-2"
+          className="btn"
         >
           <Trophy className="size-4" /> {title}
         </button>
-        <Link href={onAgain} className="btn btn-amber px-4 py-2">
+        <Link href={onAgain} className="btn btn-amber">
           <Play className="size-4 fill-current" /> Chơi ván mới
         </Link>
       </div>
@@ -158,13 +158,13 @@ function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; logged
         </p>
         <p className="text-sm text-muted">{line}</p>
         <div className="mt-2 flex w-full flex-col gap-2">
-          <Link href={onAgain} className="btn btn-amber w-full px-6 py-3">
+          <Link href={onAgain} className="btn btn-amber btn-lg w-full">
             <Play className="size-4 fill-current" /> Chơi ván mới
           </Link>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="btn w-full px-6 py-2"
+            className="btn btn-lg w-full"
           >
             <Eye className="size-4" /> Xem lại bàn chơi
           </button>
@@ -216,7 +216,7 @@ function Waiting({
         ? "Sẵn sàng rồi! Chờ chủ phòng bắt đầu nhé."
         : "Chuẩn bị xong thì bấm Sẵn sàng nhé!";
   return (
-    <div className="sticker flex flex-col gap-4 p-5">
+    <div className="card flex flex-col gap-4">
       <MascotSay mood={everyoneReady || me?.ready ? "cheer" : "happy"}>
         {say}
       </MascotSay>
@@ -284,7 +284,7 @@ function Waiting({
         <div className="flex flex-col gap-2">
           {host ? (
             <button
-              className="btn btn-primary py-3"
+              className="btn btn-primary btn-lg"
               disabled={!everyoneReady}
               onClick={() => send({ action: "start" })}
             >
@@ -293,7 +293,7 @@ function Waiting({
             </button>
           ) : (
             <button
-              className={`btn py-3 ${me.ready ? "" : "btn-amber"}`}
+              className={`btn btn-lg ${me.ready ? "" : "btn-amber"}`}
               onClick={() => send({ action: "ready", ready: !me.ready })}
             >
               {me.ready ? (
@@ -321,7 +321,7 @@ function Waiting({
         </div>
       ) : (
         <button
-          className="btn btn-amber py-3"
+          className="btn btn-amber btn-lg"
           onClick={() => send({ action: "join" })}
         >
           <Users className="size-4" /> Vào phòng
@@ -447,13 +447,13 @@ export default function PlayRoom({
     return (
       <>
         {header}
-        <div className="sticker flex flex-col gap-3 p-5 text-center">
+        <div className="card flex flex-col gap-3 text-center">
           <p className="text-lg font-black">Vào phòng {code}</p>
           <p className="text-sm text-muted">Không cần tài khoản — nhập tên tạm là vào chơi được.</p>
           {guest.name ? (
             <p className="text-sm text-muted">{guest.error || "Đang vào phòng…"}</p>
           ) : (
-            <button className="btn btn-amber mx-auto px-6 py-3" onClick={() => guest.ask()}>
+            <button className="btn btn-amber btn-lg mx-auto" onClick={() => guest.ask()}>
               <Users className="size-4" /> Nhập tên để vào phòng
             </button>
           )}

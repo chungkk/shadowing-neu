@@ -50,7 +50,7 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
         required
       />
       <ErrorBox>{error}</ErrorBox>
-      <button className="btn btn-primary mt-1 py-3.5 text-base uppercase" disabled={pending}>
+      <button className="btn btn-lg btn-primary mt-1 uppercase" disabled={pending}>
         {pending ? "Đang kiểm tra…" : "Tiếp tục với email"}
       </button>
     </form>
@@ -76,7 +76,7 @@ function LoginForm({ email, next, close, back }: { email: string; next: string; 
         Quên mật khẩu?
       </Link>
       <ErrorBox>{state.error}</ErrorBox>
-      <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending}>
+      <button className="btn btn-lg btn-primary mt-1" disabled={pending}>
         {pending ? "Đang xử lý…" : "Đăng nhập"}
       </button>
     </form>
@@ -139,7 +139,7 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
           required
         />
         <ErrorBox>{err}</ErrorBox>
-        <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={sending}>
+        <button className="btn btn-lg btn-primary mt-1" disabled={sending}>
           {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
         </button>
       </form>
@@ -170,7 +170,7 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
         required
       />
       <ErrorBox>{err}</ErrorBox>
-      <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending || code.length !== 6}>
+      <button className="btn btn-lg btn-primary mt-1" disabled={pending || code.length !== 6}>
         {pending ? "Đang xử lý…" : "Xác nhận & đăng ký"}
       </button>
       <div className="flex justify-between text-sm font-bold">
@@ -221,7 +221,7 @@ export default function AuthForm({
 
         <div className="flex flex-col gap-4 px-5 pt-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-8 md:p-10">
           <div className="text-center">
-            <h1 className="text-2xl font-extrabold sm:text-3xl">{title}</h1>
+            <h1 className="page-title">{title}</h1>
             <p className="mt-2 text-link">{subtitle}</p>
           </div>
 

@@ -110,15 +110,15 @@ async function Topics() {
                                     </span>
                                   </Link>
                                   {user && <ProgressBar {...cs} />}
-                                  <span className="flex items-center gap-2 text-xs">
-                                    <span className="flex-1 text-muted tabular-nums">
+                                  <span className="flex items-center gap-2">
+                                    <span className="flex-1 text-xs text-muted tabular-nums">
                                       {user ? `${cs.done}/` : ""}
                                       {cs.total} câu
                                     </span>
-                                    <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="rounded-lg border-2 border-ink/30 px-2 py-0.5 font-bold hover:border-ink">
+                                    <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="btn btn-sm">
                                       Đọc
                                     </Link>
-                                    <Link href={`/lai-xe/hoc/${c.id}`} className="rounded-lg border-2 border-ink bg-gold px-2 py-0.5 font-extrabold text-black">
+                                    <Link href={`/lai-xe/hoc/${c.id}`} className="btn btn-sm btn-amber">
                                       Luyện
                                     </Link>
                                   </span>
@@ -134,10 +134,10 @@ async function Topics() {
               </div>
             </details>
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              <Link href={`/lai-xe/hoc/${part.key}?mode=lesen`} className="btn px-3 py-1.5">
+              <Link href={`/lai-xe/hoc/${part.key}?mode=lesen`} className="btn btn-sm">
                 Đọc
               </Link>
-              <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-amber px-3 py-1.5">
+              <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-sm btn-amber">
                 Luyện
               </Link>
             </div>
@@ -150,12 +150,12 @@ async function Topics() {
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
+    <main className="page">
       <div className="flex items-center gap-2">
         <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
           <ArrowLeft className="size-5" />
         </Link>
-        <h1 className="text-2xl font-extrabold">Học theo chủ đề</h1>
+        <h1 className="page-title">Học theo chủ đề</h1>
       </div>
       <Suspense fallback={<ListSkeleton rows={8} />}>
         <Topics />

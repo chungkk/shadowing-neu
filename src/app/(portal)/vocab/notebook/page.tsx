@@ -13,7 +13,7 @@ async function Vocab({ searchParams }: { searchParams: PageProps<"/vocab/noteboo
   return (
     <>
       <div>
-        <h1 className="text-2xl font-extrabold">Sổ từ vựng</h1>
+        <h1 className="page-title">Sổ từ vựng</h1>
         <p className="text-sm text-muted" title="Ôn đúng hẹn mỗi ngày để nhớ lâu">
           {items.length} từ đã lưu · {items.filter((v) => v.stage >= 5).length} từ thuộc lâu
         </p>
@@ -26,7 +26,7 @@ async function Vocab({ searchParams }: { searchParams: PageProps<"/vocab/noteboo
 
 export default function NotebookPage({ searchParams }: PageProps<"/vocab/notebook">) {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
+    <main className="page">
       <Link href="/vocab" className="inline-flex items-center gap-1 self-start text-sm font-bold text-muted hover:text-foreground">
         <ChevronLeft className="size-4" /> Từ vựng
       </Link>

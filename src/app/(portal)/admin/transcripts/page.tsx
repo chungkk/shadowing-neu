@@ -22,7 +22,7 @@ async function Transcripts() {
   return (
     <>
       <div className="flex items-start gap-2">
-        <h1 className="flex-1 text-xl font-extrabold sm:text-2xl">Phụ đề đã lưu ({list.length} video)</h1>
+        <h1 className="page-title flex-1">Phụ đề đã lưu ({list.length} video)</h1>
         <Link href="/admin" className="btn">
           Bài học
         </Link>
@@ -38,7 +38,7 @@ async function Transcripts() {
 
 export default function TranscriptsPage() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 md:p-6">
+    <main className="page page-narrow">
       <Suspense fallback={<ListSkeleton thumb />}>
         <Transcripts />
       </Suspense>

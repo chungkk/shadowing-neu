@@ -4,10 +4,10 @@ import { ArrowLeft, Info } from "lucide-react";
 
 /**
  * Khung trang chung của phần Leben in Deutschland — cùng kiểu với tab Lái xe:
- * khung giữa màn hình, dùng màu theo giao diện sáng / tối của trang.
+ * khung .page (max-w-6xl, thẳng hàng thanh subnav) cho mọi tab để chuyển tab không nhảy khung.
  */
-export function LidShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
-  return <main className={`mx-auto flex w-full flex-col gap-5 p-4 md:p-6 ${wide ? "max-w-4xl" : "max-w-3xl"}`}>{children}</main>;
+export function LidShell({ children }: { children: ReactNode }) {
+  return <main className="page">{children}</main>;
 }
 
 /** Thanh đầu màn con như Lái xe: [←] Tiêu đề  [nút phải] */
@@ -17,7 +17,7 @@ export function LidTopBar({ back, title, right }: { back: string; title: ReactNo
       <Link href={back} className="btn-icon" aria-label="Quay lại">
         <ArrowLeft className="size-5" />
       </Link>
-      <h1 className="min-w-0 flex-1 truncate text-2xl font-extrabold">{title}</h1>
+      <h1 className="page-title min-w-0 flex-1 truncate">{title}</h1>
       {right}
     </div>
   );

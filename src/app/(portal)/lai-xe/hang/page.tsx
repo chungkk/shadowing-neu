@@ -15,12 +15,12 @@ async function Picker() {
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-4 md:p-6">
+    <main className="page">
       <div className="flex items-center gap-2">
         <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
           <ArrowLeft className="size-5" />
         </Link>
-        <h1 className="text-2xl font-extrabold">Chọn hạng bằng</h1>
+        <h1 className="page-title">Chọn hạng bằng</h1>
       </div>
       <p className="text-muted">Mỗi hạng có bộ câu hỏi và luật thi riêng. Phần cơ bản (Grundstoff) dùng chung, phần riêng (Zusatzstoff) theo hạng.</p>
       <Suspense fallback={<ListSkeleton rows={6} />}>

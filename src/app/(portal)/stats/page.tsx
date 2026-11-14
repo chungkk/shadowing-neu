@@ -29,8 +29,8 @@ async function Stats() {
 
 export default function StatsPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Thành tích</h1>
+    <main className="page page-narrow">
+      <h1 className="page-title">Thành tích</h1>
       <Suspense fallback={<SettingsSkeleton />}>
         <Stats />
       </Suspense>

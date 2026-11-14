@@ -119,7 +119,7 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
             <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Nhận kim cương khi học, leo bảng xếp hạng
           </li>
         </ul>
-        <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-amber py-3 font-black">
+        <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-amber btn-lg font-black">
           <LogIn className="size-4" /> Đăng nhập / Đăng ký
         </LoginLink>
         <Link href={backHref} className="-mt-1 inline-flex items-center justify-center gap-1 text-sm font-bold text-muted hover:text-foreground">

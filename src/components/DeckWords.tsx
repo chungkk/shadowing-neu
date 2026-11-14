@@ -65,15 +65,15 @@ export default function DeckWords({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         {!loggedIn ? (
-          <LoginLink href={`/login?next=/vocab/decks/${slug}`} className="btn btn-primary h-11">
+          <LoginLink href={`/login?next=/vocab/decks/${slug}`} className="btn btn-primary btn-lg">
             Đăng nhập để thêm vào sổ và ôn tập
           </LoginLink>
         ) : left.length ? (
-          <button className="btn btn-primary h-11" disabled={busy === "all"} onClick={() => add(left.map((w) => w.key), true)}>
+          <button className="btn btn-primary btn-lg" disabled={busy === "all"} onClick={() => add(left.map((w) => w.key), true)}>
             {busy === "all" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Thêm {left.length} từ vào sổ
           </button>
         ) : (
-          <Link href="/vocab/notebook" className="btn btn-primary h-11">
+          <Link href="/vocab/notebook" className="btn btn-primary btn-lg">
             <Layers className="size-4" /> Cả bộ đã ở trong sổ · Ôn tập
           </Link>
         )}
@@ -107,7 +107,7 @@ export default function DeckWords({
                 </div>
               </div>
               {tts && (
-                <button type="button" title="Nghe phát âm" className="btn-icon size-9 shrink-0 text-link" onClick={() => speak(a ? `${a} ${w.word}` : w.word)}>
+                <button type="button" title="Nghe phát âm" className="btn-icon shrink-0 text-link" onClick={() => speak(a ? `${a} ${w.word}` : w.word)}>
                   <Volume2 className="size-4" />
                 </button>
               )}
@@ -116,7 +116,7 @@ export default function DeckWords({
                   type="button"
                   title={w.saved ? "Đã có trong sổ" : "Thêm vào sổ"}
                   disabled={w.saved || adding || busy === "all"}
-                  className={`btn-icon size-9 shrink-0 ${w.saved ? "text-accent-text" : "text-foreground"}`}
+                  className={`btn-icon shrink-0 ${w.saved ? "text-accent-text" : "text-foreground"}`}
                   onClick={() => add([w.key], false)}
                 >
                   {adding ? <Loader2 className="size-4 animate-spin" /> : w.saved ? <Check className="size-5" /> : <Plus className="size-5" />}

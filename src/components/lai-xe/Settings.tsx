@@ -70,7 +70,7 @@ export function DrivingSettings({ groups, current, lang }: { groups: { title: st
     <section id="lai-xe" className="sticker scroll-mt-20 overflow-hidden">
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-extrabold">
+          <h2 className="section-title flex items-center gap-2">
             <Car className="size-5 text-link" /> Lý thuyết lái xe
           </h2>
           <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học và ngôn ngữ bản dịch câu hỏi (dùng chung cho Leben in Deutschland).</p>
@@ -111,8 +111,8 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
     <div className="flex flex-col gap-5">
       {groups.map((g) => (
         <section key={g.title} className="flex flex-col gap-2">
-          <h2 className="text-lg font-extrabold">{g.title}</h2>
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="section-title">{g.title}</h2>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {g.classes.map((c) => {
               const on = c.id === current;
               return (
@@ -128,7 +128,7 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
                         router.push("/lai-xe");
                       });
                     }}
-                    className={`sticker sticker-link flex w-full items-start gap-3 p-3 text-left ${on ? "bg-gold/25" : ""}`}
+                    className={`tile sticker-link flex h-full w-full items-start gap-3 text-left ${on ? "bg-gold/25" : ""}`}
                   >
                     <span className={`flex h-11 min-w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink px-1.5 text-base font-extrabold ${on ? "bg-gold text-black" : "bg-card-2"}`}>{c.id}</span>
                     <span className="flex min-w-0 flex-1 flex-col">

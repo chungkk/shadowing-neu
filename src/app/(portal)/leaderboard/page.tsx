@@ -68,8 +68,8 @@ async function Board() {
 
 export default function LeaderboardPage() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Bảng xếp hạng</h1>
+    <main className="page page-narrow">
+      <h1 className="page-title">Bảng xếp hạng</h1>
       <Suspense fallback={<LeaderboardSkeleton />}>
         <Board />
       </Suspense>

@@ -101,7 +101,7 @@ export default function LockedLesson({
   freeLessons: { title: string; slug: string }[];
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
+    <main className="page page-narrow">
       <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-40 blur-[2px]" />
@@ -113,12 +113,12 @@ export default function LockedLesson({
       </div>
 
       <div className="flex items-start gap-2">
-        <h1 className="flex-1 text-xl font-extrabold sm:text-2xl">{lesson.title}</h1>
+        <h1 className="page-title flex-1">{lesson.title}</h1>
         <LevelBadge level={lesson.level} className="mt-1 shrink-0" />
       </div>
       {lesson.description && <p className="whitespace-pre-line text-sm text-muted">{lesson.description}</p>}
 
-      <section className="card p-4 sm:p-5">
+      <section className="card sm:p-5">
         <UnlockBox lesson={lesson} lock={lock} confirmFirst />
       </section>
 

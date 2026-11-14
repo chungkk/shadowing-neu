@@ -19,7 +19,7 @@ async function FeedbackList() {
   const items = listFeedback();
   return (
     <>
-      <h1 className="text-2xl font-extrabold">Góp ý ({items.length})</h1>
+      <h1 className="page-title">Góp ý ({items.length})</h1>
       <div className="card divide-y divide-border p-0">
         {items.map((f) => (
           <div key={f.id} className="flex flex-col gap-2 p-4">
@@ -48,7 +48,7 @@ async function FeedbackList() {
 
 export default function FeedbackPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
+    <main className="page page-narrow">
       <Link href="/admin" className="text-sm text-muted hover:underline">
         ← Quản trị
       </Link>

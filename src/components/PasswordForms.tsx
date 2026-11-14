@@ -44,7 +44,7 @@ export function ForgotForm() {
           <div className="flex size-14 items-center justify-center rounded-2xl bg-accent text-white">
             <KeyRound className="size-7" />
           </div>
-          <h1 className="text-2xl font-extrabold">{step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}</h1>
+          <h1 className="page-title">{step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}</h1>
           <p className="text-link">
             {step === "email" ? (
               "Nhập email đã đăng ký, chúng tôi sẽ gửi mã 6 số để đặt mật khẩu mới."
@@ -75,7 +75,7 @@ export function ForgotForm() {
               required
             />
             <ErrorBox>{err}</ErrorBox>
-            <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={sending}>
+            <button className="btn btn-lg btn-primary mt-1" disabled={sending}>
               {sending ? "Đang gửi…" : "Gửi mã"}
             </button>
           </form>
@@ -97,7 +97,7 @@ export function ForgotForm() {
             <input name="password" type="password" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" aria-label="Mật khẩu mới (ít nhất 8 ký tự)" className="input" autoComplete="new-password" minLength={8} required />
             <input name="confirm" type="password" placeholder="Nhập lại mật khẩu mới" aria-label="Nhập lại mật khẩu mới" className="input" autoComplete="new-password" minLength={8} required />
             <ErrorBox>{err}</ErrorBox>
-            <button className="btn btn-primary mt-1 py-3.5 text-base" disabled={pending || code.length !== 6}>
+            <button className="btn btn-lg btn-primary mt-1" disabled={pending || code.length !== 6}>
               {pending ? "Đang lưu…" : "Lưu mật khẩu mới"}
             </button>
             <div className="flex justify-between text-sm font-bold">

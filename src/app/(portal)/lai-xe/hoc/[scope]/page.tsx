@@ -41,7 +41,7 @@ async function Learn({ params, searchParams }: P) {
 
 export default function Page(props: P) {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
+    <main className="page">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Learn {...props} />
       </Suspense>

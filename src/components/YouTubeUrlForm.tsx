@@ -34,7 +34,7 @@ export default function YouTubeUrlForm({ secondary = false }: { secondary?: bool
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className={`btn px-6 py-3 ${secondary ? "" : "btn-primary"}`} disabled={pending}>
+        <button className={`btn btn-lg ${secondary ? "" : "btn-primary"}`} disabled={pending}>
           {pending ? "Đang lấy phụ đề…" : secondary ? "Mở video" : "Bắt đầu"}
         </button>
       </div>

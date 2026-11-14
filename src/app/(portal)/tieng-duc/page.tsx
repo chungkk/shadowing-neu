@@ -76,12 +76,12 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
       <Mascot className="bob size-20 sm:row-span-3 sm:size-36" />
       <div className="flex flex-col items-start gap-1.5">
         <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">Hallo! Cùng nói nào!</span>
-        <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Luyện nói tiếng Đức với video thật</h1>
+        <h1 className="page-title">Luyện nói tiếng Đức với video thật</h1>
       </div>
       <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
         <p className="text-muted">Nghe từng câu, nói theo và ghi âm để so với người bản xứ.</p>
         {first && (
-          <Link href={lessonPath(first.slug)} className="btn btn-primary self-start px-5 py-3 text-base max-sm:w-full">
+          <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg self-start max-sm:w-full">
             Thử bài {first.level} đầu tiên <ChevronRight className="size-5" />
           </Link>
         )}
@@ -89,7 +89,7 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold text-muted">Trình độ của bạn:</span>
             {levels.map((lv) => (
-              <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="btn px-3 py-1.5 pointer-coarse:py-2.5">
+              <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="btn btn-sm hit-44">
                 {lv}
               </Link>
             ))}
@@ -113,7 +113,7 @@ async function Top() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <Mascot className="size-12 shrink-0" />
-            <h1 className="text-xl leading-tight font-extrabold sm:text-2xl">Hallo, {user.name}! Hôm nay học gì?</h1>
+            <h1 className="page-title">Hallo, {user.name}! Hôm nay học gì?</h1>
           </div>
           <TodayStrip userId={user.id} />
         </section>
@@ -144,7 +144,7 @@ async function OwnVideoForUser() {
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 md:gap-10 md:p-6">
+    <main className="page gap-8 md:gap-10">
       <Suspense fallback={<div className="sticker h-48 animate-pulse motion-reduce:animate-none" />}>
         <Top />
       </Suspense>

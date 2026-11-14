@@ -125,7 +125,7 @@ export function HeaderNav() {
 export function ReviewPill({ due }: { due: number }) {
   if (!due) return null;
   return (
-    <Link href="/vocab/notebook?review=1" title={`${due} từ đến hạn ôn — bấm để ôn ngay`} className="btn gap-1.5 px-3 py-1.5 max-md:hidden">
+    <Link href="/vocab/notebook?review=1" title={`${due} từ đến hạn ôn — bấm để ôn ngay`} className="btn gap-1.5 max-md:hidden">
       <Layers className="size-4" /> Ôn
       <DueBadge due={due} />
     </Link>

@@ -263,7 +263,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
   if (!q) {
     return (
-      <div className="sticker flex flex-col items-center gap-3 p-6 text-center">
+      <div className="card flex flex-col items-center gap-3 p-6 text-center">
         <p className="font-bold">Không có câu nào ở đây.</p>
         <Link href={backHref} className="btn">
           <ArrowLeft className="size-4" /> Quay lại
@@ -300,11 +300,11 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           <ArrowLeft className="size-5" />
         </Link>
         <div className="flex min-w-0 flex-1 flex-col">
-          <h1 className="text-xl leading-tight font-extrabold">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           {subtitle && <p className="truncate text-sm text-muted">{subtitle}</p>}
         </div>
         {mode === "exam" && !submitted && exam && <Timer minutes={exam.minutes} startedAt={startedAt} onEnd={submit} />}
-        <button type="button" onClick={() => setShowTr(!showTr)} aria-pressed={showTr} className={`btn px-3 py-1.5 ${showTr ? "bg-accent/15" : ""}`} title="Hiện / ẩn bản dịch">
+        <button type="button" onClick={() => setShowTr(!showTr)} aria-pressed={showTr} className={`btn ${showTr ? "bg-accent/15" : ""}`} title="Hiện / ẩn bản dịch">
           <Languages className="size-4" /> <span className="hidden sm:inline">{showTr ? "Ẩn bản dịch" : "Hiện bản dịch"}</span>
         </button>
       </div>
@@ -384,7 +384,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
       </section>
       )}
 
-      <article key={`${q.id}-${shake}`} className={`${fs ? "min-h-[28rem] sm:h-[36rem]" : "sticker"} flex flex-col gap-4 p-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
+      <article key={`${q.id}-${shake}`} className={`${fs ? "min-h-[28rem] p-4 sm:h-[36rem]" : "card"} flex flex-col gap-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
         <div className={`flex flex-wrap items-center gap-2 text-xs font-bold ${fs ? "-mx-4 -mt-4 bg-accent px-4 py-2 text-white sm:-mx-6 sm:-mt-6 sm:px-6" : "text-muted"}`}>
           <span className="tabular-nums">
             Câu {idx + 1}/{questions.length}
@@ -403,7 +403,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         {/* Lái xe: khung cố định — nội dung dài thì cuộn bên trong, đầu/chân khung đứng yên */}
         <div className={fs ? "-mr-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2 pb-1 [scrollbar-gutter:stable]" : "contents"}>
         <div className="flex flex-col gap-1">
-          <h2 className={`text-lg leading-snug font-extrabold whitespace-pre-line ${fs ? "min-h-[2lh]" : ""}`}>
+          <h2 className={`section-title whitespace-pre-line ${fs ? "min-h-[2lh]" : ""}`}>
             {videoStep ? "Bitte starten Sie den Film, um sich mit der Situation vertraut zu machen." : q.q}
           </h2>
           {showTr && !videoStep && q.tr?.q && (
@@ -542,7 +542,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
         {(reveal || mode === "ueben") && !videoStep && q.explain && (
           <div className="flex flex-col gap-2">
-            <button type="button" className="btn self-start px-3 py-1.5" aria-expanded={showExplain} onClick={() => setShowExplain(!showExplain)}>
+            <button type="button" className="btn btn-sm self-start" aria-expanded={showExplain} onClick={() => setShowExplain(!showExplain)}>
               <Lightbulb className="size-4" /> {showExplain ? "Ẩn giải thích" : "Giải thích"}
             </button>
             {showExplain && (
@@ -821,7 +821,7 @@ function PagerBtn({ label, disabled, onClick, icon: Icon, hideSm, flip }: { labe
 
 function NavBtn({ label, disabled, onClick, icon: Icon, hideSm }: { label: string; disabled: boolean; onClick: () => void; icon: typeof ChevronFirst; hideSm?: boolean }) {
   return (
-    <button type="button" className={`btn px-2.5 ${hideSm ? "hidden sm:inline-flex" : ""}`} onClick={onClick} disabled={disabled} aria-label={label} title={label}>
+    <button type="button" className={`btn size-10 p-0 ${hideSm ? "hidden sm:inline-flex" : ""}`} onClick={onClick} disabled={disabled} aria-label={label} title={label}>
       <Icon className="size-4" />
     </button>
   );
@@ -1063,7 +1063,7 @@ function Timer({ minutes, startedAt, onEnd }: { minutes: number; startedAt: numb
 
 function ResultBar({ module, result, maxErrorPoints, savedId, saveError }: { module: QuizModule; result: ExamResult; maxErrorPoints: number; savedId: number | null; saveError: string }) {
   return (
-    <section className={`sticker flex flex-col gap-1 p-4 ${result.passed ? "bg-accent/15" : "bg-red/15"}`} aria-live="polite">
+    <section className={`card flex flex-col gap-1 ${result.passed ? "bg-accent/15" : "bg-red/15"}`} aria-live="polite">
       <p className="text-2xl font-extrabold">{result.passed ? "🎉 Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
       <p className="font-bold">
         {module === "lid" ? (

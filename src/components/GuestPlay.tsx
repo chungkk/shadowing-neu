@@ -103,7 +103,7 @@ function GuestNameDialog({ initial, editing, onSubmit, onCancel }: { initial: st
           autoComplete="nickname"
           className="w-full rounded-xl border-2 border-ink/20 bg-card-2 px-3 py-2.5 text-base font-bold outline-none focus:border-ink"
         />
-        <button type="submit" className="btn btn-amber py-3 font-black" disabled={!name}>
+        <button type="submit" className="btn btn-amber btn-lg font-black" disabled={!name}>
           <Play className="size-4 fill-current" /> {editing ? "Lưu tên" : "Vào chơi"}
         </button>
         <p className="-mt-1 text-center text-sm text-muted">
@@ -219,7 +219,7 @@ export function GuestResult({ name, score, record }: { name: string; score: numb
           <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Luyện bài nhận kim cương, leo bảng xếp hạng
         </li>
       </ul>
-      <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-amber py-3 font-black">
+      <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-amber btn-lg font-black">
         <LogIn className="size-4" /> Đăng nhập / Đăng ký
       </LoginLink>
     </div>

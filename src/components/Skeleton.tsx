@@ -137,7 +137,7 @@ export function SettingsSkeleton() {
         <div className="flex flex-col items-center gap-2 sm:items-start">
           <Bone className="h-6 w-40" />
           <Bone className="h-4 w-52" />
-          <Bone className="h-9 w-28 rounded-xl" />
+          <Bone className="h-10 w-28 rounded-2xl" />
         </div>
       </section>
       {Array.from({ length: 2 }, (_, i) => (
@@ -157,8 +157,8 @@ export function SettingsSkeleton() {
 /** Danh sách hàng trong 1 khung (trang quản trị) */
 export function ListSkeleton({ rows = 6, thumb = false, title = true }: { rows?: number; thumb?: boolean; title?: boolean }) {
   return (
-    <div className="flex flex-col gap-4" aria-busy="true">
-      {title && <Bone className="h-8 w-48" />}
+    <div className="flex flex-col gap-5" aria-busy="true">
+      {title && <Bone className="h-8 w-48 sm:h-9" />}
       <div className="card divide-y divide-border p-0">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="flex items-center gap-3 p-3">
@@ -167,8 +167,8 @@ export function ListSkeleton({ rows = 6, thumb = false, title = true }: { rows?:
               <Bone className={`h-4 ${i % 2 ? "w-1/2" : "w-2/3"}`} />
               <Bone className="h-3 w-32" />
             </div>
-            <Bone className="h-9 w-16 rounded-xl max-sm:hidden" />
-            <Bone className="h-9 w-16 rounded-xl" />
+            <Bone className="h-10 w-16 rounded-2xl max-sm:hidden" />
+            <Bone className="h-10 w-16 rounded-2xl" />
           </div>
         ))}
       </div>
@@ -187,7 +187,7 @@ export function FormSkeleton({ fields = 4 }: { fields?: number }) {
         </div>
       ))}
       <Bone className="h-60 rounded-xl" />
-      <Bone className="h-11 w-32 self-end rounded-xl" />
+      <Bone className="h-12 w-32 self-end rounded-2xl" />
     </div>
   );
 }

@@ -57,8 +57,8 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
 
 export default function EditTranscriptPage(props: PageProps<"/admin/transcripts/[videoId]">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Sửa phụ đề đã lưu</h1>
+    <main className="page page-narrow">
+      <h1 className="page-title">Sửa phụ đề đã lưu</h1>
       <Suspense fallback={<FormSkeleton fields={1} />}>
         <Edit {...props} />
       </Suspense>

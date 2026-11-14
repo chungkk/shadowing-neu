@@ -11,14 +11,14 @@ export const metadata: Metadata = {
 
 export default function SprechenPage() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
+    <main className="page">
       <div className="card mx-auto flex max-w-md flex-col items-center gap-4 p-8 text-center">
         <span className="flex size-16 items-center justify-center rounded-full bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]">
           <Mic className="size-8" />
         </span>
-        <h1 className="text-2xl font-extrabold md:text-3xl">Sắp ra mắt</h1>
+        <h1 className="page-title">Sắp ra mắt</h1>
         <p className="text-sm text-muted">Tính năng luyện nói tiếng Đức với người thật đang được hoàn thiện. Trong lúc chờ, bạn có thể luyện nói theo video ngay bây giờ.</p>
-        <Link href="/#lessons" className="btn btn-primary w-full py-3">
+        <Link href="/#lessons" className="btn btn-primary btn-lg w-full">
           Luyện nói với Shadowing <ChevronRight className="size-5" />
         </Link>
       </div>

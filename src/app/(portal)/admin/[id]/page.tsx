@@ -32,8 +32,8 @@ async function Edit({ params }: PageProps<"/admin/[id]">) {
 
 export default function EditLessonPage(props: PageProps<"/admin/[id]">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Sửa bài học</h1>
+    <main className="page page-narrow">
+      <h1 className="page-title">Sửa bài học</h1>
       <Suspense fallback={<FormSkeleton />}>
         <Edit {...props} />
       </Suspense>

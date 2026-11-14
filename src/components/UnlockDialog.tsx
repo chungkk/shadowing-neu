@@ -73,7 +73,7 @@ export default function UnlockDialog({
         </div>
         <div className="flex flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="flex items-start gap-2">
-            <h2 className="line-clamp-2 flex-1 text-lg font-extrabold leading-snug">{lesson.title}</h2>
+            <h2 className="section-title line-clamp-2 flex-1">{lesson.title}</h2>
             <LevelBadge level={lesson.level} className="shrink-0" />
           </div>
           <UnlockBox lesson={lesson} lock={lock} onLogin={onClose} onUnlocked={() => router.push(lessonPath(lesson.slug))} />

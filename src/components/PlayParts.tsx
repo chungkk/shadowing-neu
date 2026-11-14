@@ -63,7 +63,7 @@ export function PausedCover({ v, send, children }: { v: View; send: Send; childr
       <p className="text-sm text-muted">Tự chạy tiếp sau {clock(left)}</p>
       {children}
       {mine && (
-        <button className="btn btn-amber px-6 py-3" onClick={() => send({ action: "pause", paused: false })}>
+        <button className="btn btn-amber btn-lg" onClick={() => send({ action: "pause", paused: false })}>
           <Play className="size-4 fill-current" /> Chạy tiếp
         </button>
       )}

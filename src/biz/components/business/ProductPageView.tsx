@@ -208,7 +208,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
             <section aria-labelledby="gallery-title">
                 <div className="mx-auto max-w-6xl px-4 sm:px-6">
                     <div className="flex border-t border-[var(--ink)]/20 pt-16 md:pt-24 flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-                        <h2 id="gallery-title" className="font-display text-4xl font-bold tracking-tight md:text-5xl">
+                        <h2 id="gallery-title" className="font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
                             {copy.galleryTitle}
                         </h2>
                         <p className="text-sm text-[var(--ink)]/80">{t.galleryHint}</p>

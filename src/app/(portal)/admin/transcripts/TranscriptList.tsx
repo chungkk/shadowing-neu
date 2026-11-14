@@ -22,7 +22,7 @@ export default function TranscriptList({ videos }: { videos: SavedVideo[] }) {
 
   return (
     <>
-      <label className="input flex items-center gap-2 py-2.5">
+      <label className="input flex items-center gap-2">
         <Search className="size-4 text-muted" />
         <input
           className="flex-1 bg-transparent outline-none"

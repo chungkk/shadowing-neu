@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function SpellingBeePage() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
+    <main className="page">
       <Suspense fallback={<VocabSkeleton />}>
         <FallingWordsPage variant="gold" />
       </Suspense>

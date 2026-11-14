@@ -34,7 +34,7 @@ function Choice<T extends string | number>({ options, value, onChange, label }: 
       <p className="mb-2 text-sm font-extrabold">{label}</p>
       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
-          <button key={o.value} aria-pressed={o.value === value} className={`btn px-0 py-2.5 ${o.value === value ? "bg-gem/20 ring-2 ring-gem" : ""}`} onClick={() => onChange(o.value)}>
+          <button key={o.value} aria-pressed={o.value === value} className={`btn px-0 ${o.value === value ? "bg-gem/20 ring-2 ring-gem" : ""}`} onClick={() => onChange(o.value)}>
             {o.label}
           </button>
         ))}
@@ -108,7 +108,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
       </div>
       {guest.chip}
       {active && (
-        <button className="sticker flex items-center gap-3 p-4 text-left font-bold" onClick={() => router.push(`/games/${active.game}/${active.code}`)}>
+        <button className="card flex items-center gap-3 text-left font-bold" onClick={() => router.push(`/games/${active.game}/${active.code}`)}>
           <Play className="size-5 shrink-0 fill-current text-gem" />
           <span className="flex-1">Bạn đang có ván {GAME_TITLE[active.game]} chưa xong (phòng {active.code})</span>
           <ArrowRight className="size-5" />
@@ -116,25 +116,25 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
       )}
 
       {game === "sudoku" && (
-        <div className="sticker p-4">
+        <div className="card">
           <Choice label="Độ khó" options={SUDOKU_LEVELS.map((l) => ({ value: l, label: SUDOKU_LEVEL_LABEL[l] }))} value={level} onChange={setLevel} />
         </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <section className="sticker flex flex-col gap-3 p-4">
-          <h2 className="flex items-center gap-2 text-lg font-extrabold">
+        <section className="card flex flex-col gap-3">
+          <h2 className="section-title flex items-center gap-2">
             {game === "sudoku" ? <User className="size-5" /> : <Bot className="size-5" />}
             {game === "sudoku" ? "Chơi một mình" : "Đấu với máy"}
           </h2>
           <p className="flex-1 text-sm text-muted">{game === "sudoku" ? "Giải 1 đề trong thời gian cho phép." : "Bạn cầm X đi trước, thử xem có thắng nổi máy không."}</p>
-          <button className="btn btn-amber py-3" disabled={busy || !!active} onClick={() => go({ mode: "solo" })}>
+          <button className="btn btn-amber btn-lg" disabled={busy || !!active} onClick={() => go({ mode: "solo" })}>
             <Play className="size-4 fill-current" /> Bắt đầu
           </button>
         </section>
 
-        <section className="sticker flex flex-col gap-3 p-4">
-          <h2 className="flex items-center gap-2 text-lg font-extrabold">
+        <section className="card flex flex-col gap-3">
+          <h2 className="section-title flex items-center gap-2">
             <Users className="size-5" />
             Chơi với bạn
           </h2>
@@ -147,7 +147,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
             />
           )}
           <p className="flex-1 text-sm text-muted">Tạo phòng rồi gửi mã cho bạn. Bạn bè chưa có tài khoản cũng vào được bằng tên tạm.</p>
-          <button className="btn btn-primary py-3" disabled={busy || !!active} onClick={() => go({ mode: "room", capacity })}>
+          <button className="btn btn-primary btn-lg" disabled={busy || !!active} onClick={() => go({ mode: "room", capacity })}>
             <Users className="size-4" /> Tạo phòng
           </button>
           <form
@@ -164,7 +164,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/[^a-z0-9]/gi, ""))}
             />
-            <button className="btn" disabled={code.length !== 6}>
+            <button className="btn btn-lg" disabled={code.length !== 6}>
               <LogIn className="size-4" /> Vào
             </button>
           </form>
@@ -173,7 +173,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
 
       {(error || guest.error) && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{error || guest.error}</p>}
 
-      <div className="sticker p-4">
+      <div className="card">
         <Rules game={game} />
       </div>
       {guest.dialog}

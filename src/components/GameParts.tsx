@@ -37,7 +37,7 @@ const TONE = {
 
 /** Nút bấm chính kiểu "nổi" theo màu game */
 const toneButton = (tone: Tone) =>
-  `btn px-5 py-2.5 tracking-wide uppercase hover:brightness-110 active:translate-y-0.5 ${TONE[tone].button}`;
+  `btn btn-lg tracking-wide uppercase hover:brightness-110 active:translate-y-0.5 ${TONE[tone].button}`;
 
 /** Ô bộ từ: màu theo nhóm trình độ (như DeckCover) */
 const LEVEL_TILE: Record<string, string> = { A: "bg-emerald-200 text-emerald-900", B: "bg-sky-200 text-sky-900", C: "bg-violet-200 text-violet-900" };
@@ -82,7 +82,7 @@ export function GameHeader({
         <Icon className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <h1 className="text-lg leading-tight font-extrabold md:text-xl">{title}</h1>
+        <h1 className="page-title">{title}</h1>
         <p className={`truncate text-xs md:text-sm ${TONE[tone].text}`}>{subtitle}</p>
       </div>
       {right}
@@ -198,7 +198,7 @@ export function DeckMenu({
             </p>
           </div>
           {from > 0 && (
-            <button className="btn max-sm:px-3" title="Từ đầu" aria-label="Từ đầu" disabled={loading} onClick={() => onStart(0)}>
+            <button className="btn btn-lg max-sm:px-3" title="Từ đầu" aria-label="Từ đầu" disabled={loading} onClick={() => onStart(0)}>
               <RotateCcw className="size-4" /> <span className="max-sm:hidden">Từ đầu</span>
             </button>
           )}

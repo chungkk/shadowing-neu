@@ -9,7 +9,7 @@ export function ExamHistory({ exams, module = "fuehrerschein", stateName }: { ex
     <ul className="flex flex-col gap-2">
       {exams.map((e) => (
         <li key={e.id}>
-          <Link href={`${base}/thi-thu/${e.id}`} className="sticker sticker-link flex items-center gap-3 p-3">
+          <Link href={`${base}/thi-thu/${e.id}`} className="tile sticker-link flex items-center gap-3">
             <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border-2 border-ink text-lg font-extrabold ${e.passed ? "bg-accent text-white" : "bg-red text-white"}`} aria-label={e.passed ? "Đậu" : "Trượt"}>
               {e.passed ? "✓" : "✗"}
             </span>

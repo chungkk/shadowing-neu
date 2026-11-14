@@ -242,8 +242,28 @@ select {
   .label {
     @apply text-sm font-extrabold tracking-wider text-foreground uppercase;
   }
+  /* ===== Thang kích thước chung — mọi trang dùng các class này, không tự đặt độ rộng / cỡ nút riêng =====
+     Khung trang: .page (max-w-6xl, khớp thanh subnav) · .page-narrow (max-w-3xl: form, cài đặt, admin, văn bản dài)
+     Tiêu đề: .page-title (h1) · .section-title (h2 của từng khối)
+     Nút: .btn (40px) · .btn-sm (32px, nút phụ trong hàng/thẻ) · .btn-lg (48px, hành động chính, nút toàn chiều ngang)
+     Khối: .card (khung lớn, p-4 rounded-3xl) · .tile (ô nhỏ bên trong lưới / danh sách, p-3 rounded-2xl) */
+  .page {
+    @apply mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6;
+  }
+  .page-narrow {
+    @apply max-w-3xl;
+  }
+  .page-title {
+    @apply text-2xl leading-tight font-extrabold sm:text-3xl;
+  }
+  .section-title {
+    @apply text-lg leading-snug font-extrabold;
+  }
+  .tile {
+    @apply rounded-2xl border-2 border-ink bg-card p-3 shadow-[0_3px_0_var(--ink)];
+  }
   .btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-card px-3.5 py-2 text-sm font-bold shadow-[0_3px_0_var(--ink)] transition select-none hover:-translate-y-px active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-ink/30 disabled:bg-card-2 disabled:text-muted disabled:shadow-none disabled:brightness-100;
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-card px-3.5 py-2 text-sm font-bold shadow-[0_3px_0_var(--ink)] transition select-none hover:-translate-y-px active:translate-y-0.5 active:shadow-[0_1px_0_var(--ink)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-ink/30 disabled:bg-card-2 disabled:text-muted disabled:shadow-none disabled:brightness-100;
   }
   /* Nút lớn kiểu "nổi" có viền dưới đậm. Không in hoa: chữ Việt có dấu chồng viết thường dễ đọc hơn */
   .btn-primary {
@@ -269,6 +289,13 @@ select {
   }
   @media (prefers-reduced-motion: reduce) {
     .btn-recording { animation: none; }
+  }
+  /* Cỡ nút — đặt sau .btn để thắng px/py/text của .btn */
+  .btn-sm {
+    @apply min-h-8 gap-1.5 rounded-xl px-2.5 py-1 text-xs;
+  }
+  .btn-lg {
+    @apply min-h-12 px-5 py-2.5 text-base;
   }
   /* Vùng chạm ≥ 44px mà không đổi kích thước nhìn thấy */
   .hit-44 {

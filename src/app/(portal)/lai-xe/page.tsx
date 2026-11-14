@@ -30,7 +30,7 @@ async function Home() {
       <section className="sticker p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Bằng lái xe Đức</h1>
+            <h1 className="page-title">Bằng lái xe Đức</h1>
             <p className="text-sm text-muted">Ôn thi lý thuyết hạng {cls} · Theorieprüfung</p>
           </div>
           <Link href={settingsHref} className="btn-icon" aria-label="Cài đặt lái xe">
@@ -99,7 +99,7 @@ async function Home() {
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
+    <main className="page">
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />
       </Suspense>

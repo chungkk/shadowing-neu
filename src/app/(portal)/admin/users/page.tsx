@@ -14,7 +14,7 @@ async function Users() {
 
   return (
     <>
-      <h1 className="text-2xl font-extrabold">Người dùng ({users.length})</h1>
+      <h1 className="page-title">Người dùng ({users.length})</h1>
       <div className="card divide-y divide-border p-0">
         {users.map((u) => {
           const locked = u.id === me.id || u.email === fixedAdmin;
@@ -53,7 +53,7 @@ async function Users() {
 
 export default function UsersPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
+    <main className="page page-narrow">
       <Link href="/admin" className="text-sm text-muted hover:underline">
         ← Quản trị
       </Link>

@@ -20,7 +20,7 @@ export default function TodayStreak() {
   }, []);
 
   return (
-    <Link href="/stats" className="flex min-w-0 flex-col gap-0.5 rounded-2xl border-2 border-ink bg-card p-3 transition hover:bg-card-2">
+    <Link href="/stats" className="tile sticker-link flex min-w-0 flex-col gap-0.5">
       <span className="flex items-center gap-1.5 text-xs font-bold text-muted">
         <Flame className="size-4 text-amber" /> Chuỗi ngày
       </span>

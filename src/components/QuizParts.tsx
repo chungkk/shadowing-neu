@@ -55,7 +55,7 @@ export function SectionHero({ emoji, title, subtitle, children }: { emoji: strin
           {emoji}
         </span>
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           <p className="text-sm text-muted sm:text-base">{subtitle}</p>
         </div>
       </div>

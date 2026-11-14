@@ -12,7 +12,7 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
 
   return (
     <main className="mx-auto flex max-w-xl flex-col items-center gap-4 p-4 pt-20 text-center">
-      <h1 className="text-2xl font-extrabold">Có lỗi xảy ra</h1>
+      <h1 className="page-title">Có lỗi xảy ra</h1>
       <p className="text-sm text-muted">
         Trang này tạm thời không hiển thị được. Thử lại sau giây lát — nếu vẫn lỗi, hãy gửi góp ý cho chúng tôi
         {digest && <> (mã lỗi: <code>{digest}</code>)</>}.

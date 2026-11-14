@@ -28,10 +28,10 @@ async function Home() {
   return (
     <>
       {/* Đầu trang: tiêu đề + nút cài đặt — như Lái xe */}
-      <section className="sticker p-4 sm:p-6">
+      <section className="card">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Leben in Deutschland</h1>
+            <h1 className="page-title">Leben in Deutschland</h1>
             <p className="text-sm text-muted">Ôn thi nhập tịch Đức · Einbürgerungstest</p>
           </div>
           <Link href="/leben-in-deutschland/cai-dat" className="btn-icon" aria-label="Cài đặt Leben in Deutschland">
@@ -43,7 +43,7 @@ async function Home() {
       <StatePicker states={STATES} current={state.code} />
 
       {/* Tiến trình */}
-      <section className="sticker flex flex-col gap-3 p-4">
+      <section className="card flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-extrabold tracking-wider text-muted uppercase">Tiến trình</span>
           <span className="rounded-full bg-card-2 px-2.5 py-1 text-xs font-bold text-muted">
@@ -101,7 +101,7 @@ async function Home() {
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
+    <main className="page">
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />
       </Suspense>

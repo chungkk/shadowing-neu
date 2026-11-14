@@ -32,9 +32,9 @@ const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 export function SectionHeader({ title, count, children }: { title: string; count?: number; children?: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-      <h2 className="flex items-baseline gap-2 text-xl font-extrabold md:text-2xl">
+      <h2 className="section-title flex items-baseline gap-2">
         {title}
-        {count !== undefined && <span className="text-base font-bold text-muted">{count}</span>}
+        {count !== undefined && <span className="text-sm font-bold text-muted">{count}</span>}
       </h2>
       {children && <div className="min-w-0 max-sm:w-full sm:ml-auto">{children}</div>}
     </div>
@@ -207,7 +207,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
                       top.current?.scrollIntoView();
                       setLevel(g.level);
                     }}
-                    className="cursor-pointer rounded-full border-2 border-ink bg-card px-3 py-1 text-xs font-bold"
+                    className="btn btn-sm rounded-full"
                   >
                     Xem tất cả ({g.count})
                   </button>
@@ -224,7 +224,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
           ))}
         </div>
       )}
-      <div className={`grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 ${level ? "" : "max-sm:hidden"}`}>
+      <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${level ? "" : "max-sm:hidden"}`}>
         {shown.map((l) => (
           <LessonCard key={l.id} l={l} onLocked={onLocked} />
         ))}

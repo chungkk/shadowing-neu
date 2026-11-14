@@ -53,7 +53,7 @@ export function StoreButtons({ service }: { service: Service }) {
                     <a
                         href={service.android.href}
                         download
-                        className="inline-flex min-h-12 items-center gap-2.5 border-2 border-[var(--ink)] bg-white px-5 py-3 font-display text-lg font-bold text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-white"
+                        className="inline-flex min-h-12 items-center gap-2.5 border-2 border-[var(--ink)] bg-white px-5 py-2.5 font-display text-lg font-bold text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-white"
                     >
                         <AndroidIcon className="h-5 w-5" />
                         {service.android.copy[locale].action}

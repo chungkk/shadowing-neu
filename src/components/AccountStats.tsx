@@ -64,7 +64,7 @@ export default function AccountStats({ stats }: { stats: AccountStatsData }) {
   return (
     <section className="card flex flex-col gap-4 p-4 sm:p-6">
       <div>
-        <h2 className="flex items-center gap-2 text-lg font-extrabold">
+        <h2 className="section-title flex items-center gap-2">
           <Trophy className="size-5 text-link" /> Thành tích học tập
         </h2>
         <p className="mt-0.5 text-sm text-muted">Mỗi từ chép chính tả đúng +1 kim cương, mỗi từ bấm xem −2.</p>

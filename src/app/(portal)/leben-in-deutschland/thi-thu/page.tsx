@@ -18,13 +18,13 @@ async function Start() {
   const history = user ? listQuizExams(user.id, "lid", 10) : [];
   return (
     <>
-      <section className="sticker flex flex-col gap-4 p-5">
+      <section className="card flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2">
             <Wappen code={state.code} className="h-10 w-8" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-xl font-extrabold">Einbürgerungstest · {state.name}</h2>
+            <h2 className="section-title">Einbürgerungstest · {state.name}</h2>
             <p className="text-sm text-muted">Thi thử Leben in Deutschland như thật</p>
           </div>
         </div>
@@ -41,17 +41,17 @@ async function Start() {
           </li>
         </ul>
         <div className="flex flex-wrap gap-2">
-          <Link href="/leben-in-deutschland/thi-thu/lam-bai" className="btn btn-red">
+          <Link href="/leben-in-deutschland/thi-thu/lam-bai" className="btn btn-lg btn-red">
             <Play className="size-4" /> Bắt đầu thi
           </Link>
-          <Link href="/leben-in-deutschland/cai-dat" className="btn">
+          <Link href="/leben-in-deutschland/cai-dat" className="btn btn-lg">
             Đổi bang
           </Link>
         </div>
       </section>
       {user && history.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-extrabold">Bài thi gần đây</h2>
+        <section className="flex flex-col gap-3">
+          <h2 className="section-title">Bài thi gần đây</h2>
           <ExamHistory exams={history} module="lid" stateName={(c) => getState(c)?.name ?? c} />
         </section>
       )}

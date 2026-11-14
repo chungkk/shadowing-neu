@@ -62,7 +62,7 @@ async function Dashboard() {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="flex-1 text-2xl font-extrabold max-sm:basis-full">Bài học ({lessons.length})</h1>
+        <h1 className="page-title flex-1 max-sm:basis-full">Bài học ({lessons.length})</h1>
         <Link href="/admin/transcripts" className="btn">
           Phụ đề đã lưu
         </Link>
@@ -129,7 +129,7 @@ async function Dashboard() {
 
 export default function AdminPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
+    <main className="page page-narrow">
       <Suspense fallback={<ListSkeleton thumb />}>
         <Dashboard />
       </Suspense>

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function SudokuRoute() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 md:p-6">
+    <main className="page">
       <Suspense fallback={<VocabSkeleton />}>
         <PlayLobbyPage game="sudoku" />
       </Suspense>

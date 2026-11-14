@@ -117,7 +117,7 @@ export default function SocialLogin({
           <div className={`group relative ${pending || !googleReady ? "pointer-events-none opacity-50" : ""}`}>
             <div
               aria-hidden
-              className="btn w-full bg-white py-3 text-[15px] text-neutral-900 group-focus-within:border-accent group-hover:border-accent"
+              className="btn btn-lg w-full bg-white text-neutral-900 group-focus-within:border-accent group-hover:border-accent"
             >
               {pending === "google" ? <Loader2 className="size-5 animate-spin" /> : <GoogleLogo />}
               Tiếp tục với Google
@@ -137,7 +137,7 @@ export default function SocialLogin({
             onReady={initApple}
           />
           {/* Cùng kiểu với nút Google; logo Apple bên trái chữ */}
-          <button type="button" onClick={signInApple} disabled={!appleReady || !!pending} className="btn w-full py-3 text-[15px]">
+          <button type="button" onClick={signInApple} disabled={!appleReady || !!pending} className="btn btn-lg w-full">
             {pending === "apple" ? <Loader2 className="size-5 animate-spin" /> : <AppleLogo />}
             Tiếp tục với Apple
           </button>

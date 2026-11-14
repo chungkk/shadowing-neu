@@ -338,10 +338,10 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
               {phase === "pause" ? (
                 <>
                   <p className="text-xl font-extrabold">Tạm dừng</p>
-                  <button className="btn btn-primary w-full py-3" onClick={() => setPhase("play")}>
+                  <button className="btn btn-primary btn-lg w-full" onClick={() => setPhase("play")}>
                     <Play className="size-5" /> Tiếp tục
                   </button>
-                  <button className="btn w-full" onClick={quit}>
+                  <button className="btn btn-lg w-full" onClick={quit}>
                     Thoát ván
                   </button>
                 </>
@@ -385,7 +385,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                       ) : loggedIn ? (
                         <>
                           {saveError && <p className="mt-2 text-center text-sm text-red-400">{saveError}</p>}
-                          <button className="btn btn-amber mt-3 w-full" disabled={saving} onClick={saveMissed}>
+                          <button className="btn btn-amber btn-lg mt-3 w-full" disabled={saving} onClick={saveMissed}>
                             <BookmarkPlus className="size-4" /> {saveError ? "Thử lưu lại" : "Lưu vào sổ để ôn"}
                           </button>
                         </>
@@ -393,10 +393,10 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                     </div>
                   )}
                   <div className="flex w-full gap-2">
-                    <button className="btn flex-1" onClick={quit}>
+                    <button className="btn btn-lg flex-1" onClick={quit}>
                       Đổi bộ từ
                     </button>
-                    <button className="btn btn-primary flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
+                    <button className="btn btn-primary btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
                       <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
                     </button>
                   </div>

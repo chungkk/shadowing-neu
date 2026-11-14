@@ -163,10 +163,10 @@ export default function GamesPage() {
   const practice = GAMES.filter((g) => !g.fun);
   const fun = GAMES.filter((g) => g.fun);
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 md:p-6">
+    <main className="page gap-8">
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold">Game luyện từ</h1>
+          <h1 className="page-title">Game luyện từ</h1>
           <p className="text-sm text-muted">Ôn từ vựng theo bộ Goethe A1–B1, Aspekte B2 và điều dưỡng. Từ sai lưu vào sổ để ôn sau.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -179,7 +179,7 @@ export default function GamesPage() {
                 </span>
               </div>
               <div className="flex flex-1 flex-col gap-3 p-4">
-                <h2 className="flex items-center gap-2.5 text-lg font-extrabold">
+                <h2 className="section-title flex items-center gap-2.5">
                   <span className="flex size-8 items-center justify-center rounded-full border border-amber/40 text-amber">
                     <g.icon className="size-4" />
                   </span>
@@ -197,9 +197,9 @@ export default function GamesPage() {
       </section>
 
       {/* Chơi cho vui (không luyện tiếng Đức): hàng nhỏ, không tranh chỗ với game luyện từ */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-extrabold">Giải trí</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <section className="flex flex-col gap-4">
+        <h2 className="section-title">Giải trí</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
           {fun.map((g) => (
             <Link key={g.href} href={g.href} className="group sticker sticker-link flex items-center gap-3 p-3">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2 text-amber">

@@ -18,11 +18,11 @@ async function Start() {
   const zusatz = info.exam.questions - info.exam.grundstoff;
   return (
     <>
-      <section className="sticker flex flex-col gap-4 p-5">
+      <section className="card flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <span className="flex h-14 min-w-14 items-center justify-center rounded-2xl border-2 border-ink bg-red px-2 text-xl font-extrabold text-white">{cls}</span>
           <div>
-            <h2 className="text-xl font-extrabold">Prüfungssimulation · hạng {info.name}</h2>
+            <h2 className="section-title">Prüfungssimulation · hạng {info.name}</h2>
             <p className="text-sm text-muted">{info.vi}</p>
           </div>
         </div>
@@ -42,22 +42,22 @@ async function Start() {
           </li>
         </ul>
         <div className="flex flex-wrap gap-2">
-          <Link href="/lai-xe/thi-thu/lam-bai" className="btn btn-red">
+          <Link href="/lai-xe/thi-thu/lam-bai" className="btn btn-lg btn-red">
             <Play className="size-4" /> Bắt đầu thi
           </Link>
           {cls === "B" && (
-            <Link href="/lai-xe/de-mau" className="btn">
+            <Link href="/lai-xe/de-mau" className="btn btn-lg">
               <FileStack className="size-4" /> Làm đề mẫu chính thức
             </Link>
           )}
-          <Link href="/lai-xe/hang" className="btn">
+          <Link href="/lai-xe/hang" className="btn btn-lg">
             Đổi hạng
           </Link>
         </div>
       </section>
       {user && history.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-extrabold">Bài thi gần đây</h2>
+        <section className="flex flex-col gap-3">
+          <h2 className="section-title">Bài thi gần đây</h2>
           <ExamHistory exams={history} />
         </section>
       )}
@@ -67,12 +67,12 @@ async function Start() {
 
 export default function Page() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 md:p-6">
+    <main className="page">
       <div className="flex items-center gap-2">
         <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
           <ArrowLeft className="size-5" />
         </Link>
-        <h1 className="text-2xl font-extrabold">Thi thử</h1>
+        <h1 className="page-title">Thi thử</h1>
       </div>
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Start />

@@ -42,7 +42,7 @@ export default function LegalPage({ doc, lang }: { doc: LegalDoc; lang: LegalLan
   const c = LEGAL[doc][lang];
   const other = OTHER[doc];
   return (
-    <main lang={lang} className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-8">
+    <main lang={lang} className="page page-narrow">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">{c.updated}</p>
         <nav className="flex rounded-xl bg-card-2 p-1 text-sm font-bold">
@@ -58,12 +58,12 @@ export default function LegalPage({ doc, lang }: { doc: LegalDoc; lang: LegalLan
         </nav>
       </div>
       <header className="flex flex-col gap-3">
-        <h1 className="text-3xl font-extrabold">{c.title}</h1>
+        <h1 className="page-title">{c.title}</h1>
         <p className="leading-relaxed text-foreground/85">{c.intro}</p>
       </header>
       {c.sections.map((s) => (
         <section key={s.h} className="card flex flex-col gap-3 p-5">
-          <h2 className="text-lg font-extrabold">{s.h}</h2>
+          <h2 className="section-title">{s.h}</h2>
           {s.body.map((b, i) =>
             typeof b === "string" ? (
               <p key={i} className="leading-relaxed text-foreground/85">

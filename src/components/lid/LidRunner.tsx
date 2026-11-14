@@ -185,9 +185,9 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
           <Link href={backHref} className="btn-icon" aria-label="Quay lại">
             <ArrowLeft className="size-5" />
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-xl leading-tight font-extrabold">{title}</h1>
+          <h1 className="page-title min-w-0 flex-1 truncate">{title}</h1>
         </div>
-        <div className="sticker flex flex-col items-center gap-3 p-6 text-center">
+        <div className="card flex flex-col items-center gap-3 p-6 text-center">
           <BookmarkIcon />
           <p className="font-bold">{mode === "ueben" && pathname.endsWith("danh-dau") ? "Chưa có câu hỏi nào được đánh dấu" : "Không có câu hỏi"}</p>
           <Link href={backHref} className="btn">
@@ -220,7 +220,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
           <ArrowLeft className="size-5" />
         </Link>
         <div className="flex min-w-0 flex-1 flex-col">
-          <h1 className="truncate text-xl leading-tight font-extrabold">{title}</h1>
+          <h1 className="page-title truncate">{title}</h1>
           {isExam && <p className="truncate text-sm text-muted">{testing ? `Thi thử · ${questions.length} câu` : "Xem lại bài thi"}</p>}
         </div>
         {testing && exam && <Timer minutes={exam.minutes} startedAt={startedAt} onEnd={submit} />}
@@ -231,7 +231,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
             aria-pressed={showTr}
             aria-label={showTr ? "Ẩn bản dịch" : "Hiện bản dịch"}
             title="Hiện / ẩn bản dịch"
-            className={`btn px-3 py-1.5 ${showTr ? "bg-accent/15" : ""}`}
+            className={`btn ${showTr ? "bg-accent/15" : ""}`}
           >
             <Languages className="size-4" /> <span className="hidden sm:inline">{showTr ? "Ẩn bản dịch" : "Hiện bản dịch"}</span>
           </button>
@@ -245,7 +245,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
 
       {/* Kết quả bài thi */}
       {submitted && result && (
-        <section className={`sticker flex flex-col gap-1 p-4 ${result.passed ? "bg-accent/15" : "bg-red/15"}`} aria-live="polite">
+        <section className={`card flex flex-col gap-1 ${result.passed ? "bg-accent/15" : "bg-red/15"}`} aria-live="polite">
           <p className="text-2xl font-extrabold">{result.passed ? "🎉 Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
           <p className="font-bold">
             Đúng {result.correct}/{result.total} câu
@@ -278,7 +278,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
       )}
 
       {/* Khung câu hỏi */}
-      <article className={`sticker flex min-h-[28rem] flex-col gap-4 p-4 sm:h-[36rem] sm:p-6 ${answeredNow && !rightNow ? "shake" : ""}`}>
+      <article className={`card flex min-h-[28rem] flex-col gap-4 sm:h-[36rem] sm:p-6 ${answeredNow && !rightNow ? "shake" : ""}`}>
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
           <span className="tabular-nums">
             Câu {idx + 1}/{questions.length}
@@ -295,7 +295,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
         {/* Khung cố định: câu dài cuộn bên trong, không làm trang nhảy */}
         <div className="-mr-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2 pb-1 [scrollbar-gutter:stable]">
           <div className="flex flex-col gap-1">
-            <h2 className="min-h-[2lh] text-lg leading-snug font-extrabold whitespace-pre-line">{q.q}</h2>
+            <h2 className="section-title min-h-[2lh] whitespace-pre-line">{q.q}</h2>
             {trOn && q.tr?.q && (
               <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
                 {q.tr.q}
@@ -470,7 +470,7 @@ function QuestionPicker({
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 sm:items-center sm:p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="Chọn câu hỏi" onClick={(e) => e.stopPropagation()} className="flex max-h-[70dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border-2 border-ink bg-card text-foreground shadow-[0_4px_0_var(--ink)] sm:rounded-3xl">
         <div className="flex items-center justify-between border-b-2 border-ink/15 px-4 py-3 sm:px-6">
-          <h2 className="text-lg font-extrabold">Chọn câu hỏi</h2>
+          <h2 className="section-title">Chọn câu hỏi</h2>
           <button type="button" onClick={onClose} aria-label="Đóng" className="btn-icon">
             <X className="size-5" />
           </button>

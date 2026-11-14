@@ -86,7 +86,7 @@ function ZoomBoard({ v, myTurn, send }: { v: View; myTurn: boolean; send: Send }
     setTimeout(() => (suppressClick.current = false), 50);
   };
 
-  const zoomBtn = "btn size-9 rounded-full p-0";
+  const zoomBtn = "btn size-10 rounded-full p-0";
   return (
     <div className="relative">
       <div className="absolute -top-1 right-1 z-10 flex -translate-y-full gap-1 pb-1">

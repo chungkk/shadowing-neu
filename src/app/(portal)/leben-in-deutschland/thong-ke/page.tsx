@@ -18,7 +18,7 @@ function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: 
   const a = p(ok);
   const b = a + p(wrong);
   return (
-    <figure className="sticker flex flex-col items-center gap-3 p-4">
+    <figure className="card flex h-full flex-col items-center gap-3">
       <div
         className="relative size-36 rounded-full"
         style={{ background: `conic-gradient(var(--accent) 0 ${a}%, var(--red) ${a}% ${b}%, color-mix(in srgb, var(--foreground) 12%, transparent) ${b}% 100%)` }}
@@ -44,7 +44,7 @@ function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: 
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="sticker flex flex-col p-3">
+    <div className="tile flex h-full flex-col">
       <span className="text-2xl font-extrabold tabular-nums">{value}</span>
       <span className="text-sm text-muted">{label}</span>
     </div>
@@ -79,9 +79,9 @@ async function Stats() {
         <Stat label={`Số câu đúng trung bình (/${exams[0]?.total ?? 33})`} value={exams.length ? avgCorrect.toFixed(1) : "–"} />
       </div>
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-extrabold">10 bài thi gần nhất</h2>
+          <h2 className="section-title">10 bài thi gần nhất</h2>
           {exams.length > 0 && (
             <Link href="/leben-in-deutschland/cau-sai?tu=bai-thi" className="text-sm font-bold text-accent-text underline-offset-2 hover:underline">
               Ôn câu sai của bài gần nhất →
@@ -105,7 +105,7 @@ async function Stats() {
 
 export default function Page() {
   return (
-    <LidShell wide>
+    <LidShell>
       <LidTopBar back="/leben-in-deutschland" title="Thống kê" />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Stats />

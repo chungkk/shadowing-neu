@@ -10,8 +10,8 @@ async function Guard({ children }: { children: React.ReactNode }) {
 
 export default function NewLessonPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
-      <h1 className="text-2xl font-extrabold">Bài học mới</h1>
+    <main className="page page-narrow">
+      <h1 className="page-title">Bài học mới</h1>
       <Suspense fallback={<FormSkeleton />}>
         <Guard>
           <LessonForm />

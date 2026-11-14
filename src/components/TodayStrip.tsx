@@ -4,7 +4,7 @@ import { dueCount } from "@/lib/db";
 import { percent, unfinished } from "./ContinueLearning";
 import TodayStreak from "./TodayStreak";
 
-const TILE = "sticker-link flex min-w-0 flex-col gap-0.5 rounded-2xl border-2 border-ink bg-card p-3 shadow-[0_3px_0_var(--ink)]";
+const TILE = "tile sticker-link flex min-w-0 flex-col gap-0.5";
 
 /**
  * Dải "Hôm nay" trong hero trang chủ (đã đăng nhập): học tiếp bài dở · số từ đến hạn ôn · chuỗi ngày + điểm hôm nay.

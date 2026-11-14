@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Phòng Caro", robots: { index: false
 
 export default function CaroRoomRoute({ params }: PageProps<"/games/caro/[code]">) {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 md:p-6">
+    <main className="page">
       <Suspense fallback={<VocabSkeleton />}>
         <PlayRoomPage game="caro" params={params} />
       </Suspense>

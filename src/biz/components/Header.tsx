@@ -86,7 +86,7 @@ export default function Header() {
         <header
             className="fixed top-0 inset-x-0 z-50 bg-[var(--paper)] border-b border-[var(--ink)]/20"
         >
-            <div className="max-w-[88rem] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
                 <Link href="/about" id="header-logo" className="flex items-center gap-2.5 shrink-0" aria-label={t.home}>
                     <BrandMark className="w-8 h-8" />
                     <span className="font-display text-xl font-bold tracking-tight">
@@ -114,7 +114,7 @@ export default function Header() {
                     <Link
                         id="header-cta"
                         href="/about#auftrag"
-                        className="hidden sm:inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-[var(--ink-ultra)] hover:bg-[var(--ink)] transition-colors"
+                        className="hidden sm:inline-flex min-h-10 items-center px-4 py-2 text-sm font-semibold text-white bg-[var(--ink-ultra)] hover:bg-[var(--ink)] transition-colors"
                     >
                         {t.cta}
                     </Link>
@@ -148,7 +148,7 @@ export default function Header() {
                         <Link
                             href="/about#auftrag"
                             onClick={() => setOpen(false)}
-                            className="flex-1 py-2.5 bg-[var(--ink-ultra)] text-white text-sm font-semibold text-center"
+                            className="flex-1 min-h-10 py-2.5 bg-[var(--ink-ultra)] text-white text-sm font-semibold text-center"
                         >
                             {t.cta}
                         </Link>

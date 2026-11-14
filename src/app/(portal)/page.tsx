@@ -77,7 +77,7 @@ const moreLink = "inline-flex items-center gap-1 text-sm font-extrabold text-lin
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 p-4 md:gap-14 md:p-6">
+    <main className="page gap-10 md:gap-14">
       {/* Mở đầu */}
       <section className="sticker flex flex-col items-center gap-5 p-6 text-center sm:p-10 md:flex-row md:gap-10 md:text-left">
         <Mascot animated className="bob size-32 md:order-last md:size-56" />
@@ -88,10 +88,10 @@ export default function Home() {
             Video bài học với người bản xứ, hơn 1.100 câu lý thuyết lái xe và 460 câu Leben in Deutschland có bản dịch. Một tài khoản cho tất cả, miễn phí.
           </p>
           <div className="flex flex-wrap justify-center gap-3 md:justify-start">
-            <Link href="/tieng-duc" className="btn btn-primary px-5 py-3 text-base">
+            <Link href="/tieng-duc" className="btn btn-primary btn-lg">
               Bắt đầu học <ArrowRight className="size-5" />
             </Link>
-            <LoginLink href="/register" className="btn px-5 py-3 text-base">
+            <LoginLink href="/register" className="btn btn-lg">
               Đăng ký miễn phí
             </LoginLink>
           </div>
@@ -183,10 +183,10 @@ export default function Home() {
         <h2 className="text-2xl font-extrabold text-balance sm:text-3xl">Bắt đầu hôm nay — mười phút mỗi ngày là đủ</h2>
         <p className="max-w-xl text-muted">Tạo tài khoản để lưu tiến độ, sổ từ và điểm thi thử trên mọi thiết bị. Chưa muốn đăng ký thì cứ học thử trước.</p>
         <div className="flex flex-wrap justify-center gap-3">
-          <LoginLink href="/register" className="btn btn-primary px-5 py-3 text-base">
+          <LoginLink href="/register" className="btn btn-primary btn-lg">
             Đăng ký miễn phí
           </LoginLink>
-          <Link href="/lai-xe/thi-thu" className="btn px-5 py-3 text-base">
+          <Link href="/lai-xe/thi-thu" className="btn btn-lg">
             Thi thử lái xe ngay
           </Link>
         </div>

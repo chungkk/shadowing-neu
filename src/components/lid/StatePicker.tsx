@@ -30,7 +30,7 @@ export function StatePicker({ states, current }: { states: S[]; current: string 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="sticker sticker-link flex w-full cursor-pointer items-center gap-3 p-3 text-left"
+        className="card sticker-link flex w-full cursor-pointer items-center gap-3 text-left"
       >
         <span className="flex size-13 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-card-2">
           <Wappen code={current} />
@@ -52,7 +52,7 @@ export function StatePicker({ states, current }: { states: S[]; current: string 
             className="flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl border-2 border-b-0 border-ink bg-card text-foreground sm:max-w-3xl sm:rounded-3xl sm:border-b-2"
           >
             <div className="flex items-center justify-between border-b-2 border-ink/10 px-5 py-4">
-              <h2 className="text-lg font-extrabold">Chọn bang</h2>
+              <h2 className="section-title">Chọn bang</h2>
               <button type="button" onClick={() => setOpen(false)} aria-label="Đóng" className="btn-icon">
                 <X className="size-5" />
               </button>

@@ -33,7 +33,7 @@ function Section({
     <section className={`sticker overflow-hidden ${danger ? "border-red" : ""}`}>
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <div>
-          <h2 className={`flex items-center gap-2 text-lg font-extrabold ${danger ? "text-red-400" : ""}`}>
+          <h2 className={`section-title flex items-center gap-2 ${danger ? "text-red-400" : ""}`}>
             <Icon className={`size-5 ${danger ? "" : "text-link"}`} /> {title}
           </h2>
           <p className="mt-0.5 text-sm text-muted">{desc}</p>

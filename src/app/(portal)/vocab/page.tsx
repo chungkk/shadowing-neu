@@ -38,7 +38,7 @@ function VocabHero() {
         <Suspense fallback={<span className={BUBBLE}>Hallo! Học từ mới nào!</span>}>
           <MascotSays />
         </Suspense>
-        <h1 className="text-2xl leading-tight font-extrabold sm:text-3xl">Từ vựng</h1>
+        <h1 className="page-title">Từ vựng</h1>
         <p className="text-sm text-muted sm:text-base">Học theo bộ từ từng trình độ, lưu từ vào sổ và ôn đúng lúc.</p>
       </div>
     </section>
@@ -71,7 +71,7 @@ function NotebookBanner({ notebook }: { notebook: { total: number; due: number }
         <Link href="/vocab/notebook" className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl">
           {inner}
         </Link>
-        <Link href="/vocab/notebook?review=1" className="btn btn-primary shrink-0 px-3 py-2">
+        <Link href="/vocab/notebook?review=1" className="btn btn-primary shrink-0">
           <Layers className="size-4" /> Ôn {notebook.due}
         </Link>
       </div>
@@ -133,7 +133,7 @@ async function Decks() {
     <>
       {byCategory(decks).map(([title, list]) => (
         <section key={title} className="flex flex-col gap-3">
-          <h2 className="flex items-center gap-2 text-xl font-extrabold md:text-2xl">
+          <h2 className="section-title flex items-center gap-2">
             <SoundMark />
             {title}
             <span className="flex h-6 min-w-7 items-center justify-center rounded-full border-2 border-ink bg-accent px-2 font-sans text-sm text-white">{list.length}</span>
@@ -163,7 +163,7 @@ async function Decks() {
 
 export default function VocabPage() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
+    <main className="page">
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr] lg:gap-6">
         <VocabHero />
         <Suspense fallback={<div className="skeleton min-h-24 rounded-3xl" />}>

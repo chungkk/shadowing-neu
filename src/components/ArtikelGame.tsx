@@ -157,7 +157,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
     return (
       <>
         {header}
-        <div className="sticker flex flex-col gap-5 p-5">
+        <div className="card mx-auto flex w-full max-w-3xl flex-col gap-5">
           <div className="flex items-center justify-between text-sm font-bold">
             <span className="inline-flex items-center gap-1">
               <Flame className="size-4 text-amber" /> {streak} từ liên tiếp
@@ -198,7 +198,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
     <>
       {header}
       {phase === "over" && last && (
-        <div className="sticker flex flex-col items-center gap-2 p-5 text-center">
+        <div className="card flex flex-col items-center gap-2 text-center">
           {last.miss && (
             <>
               <p className="inline-flex items-center justify-center gap-1.5 text-sm font-extrabold text-red-500 dark:text-red-400">
@@ -217,7 +217,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
           {!loggedIn && <GuestResult name={guest.name} score={last.score} record={last.score > last.best} />}
         </div>
       )}
-      <div className="sticker flex flex-col gap-4 p-4">
+      <div className="card flex flex-col gap-4">
         {guest.chip}
         <div>
           <p className="mb-2 text-sm font-extrabold">Bộ từ</p>
@@ -242,7 +242,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
         </div>
         <Rules />
         {errorLine}
-        <button className="btn btn-amber py-3" disabled={!current || phase === "loading"} onClick={() => guest.gate(0)}>
+        <button className="btn btn-amber btn-lg" disabled={!current || phase === "loading"} onClick={() => guest.gate(0)}>
           <Play className="size-4 fill-current" /> {phase === "over" ? "Chơi lại" : phase === "loading" ? "Đang tải…" : "Bắt đầu"}
         </button>
       </div>
