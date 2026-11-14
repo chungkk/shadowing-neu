@@ -42,7 +42,7 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Label>{t("tabs.settings")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />
-        <NativeTabs.Trigger.Badge hidden={!due}>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>
+        {due > 0 && <NativeTabs.Trigger.Badge>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>}
       </NativeTabs.Trigger>
     </NativeTabs>
   );

@@ -37,6 +37,7 @@ import { api, deckCover, type DeckSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
+import { CONTENT_MAX, FORM_MAX } from "@/lib/layout";
 import { LEVEL_COLORS, NIGHT as C } from "@/lib/theme";
 
 /**
@@ -644,7 +645,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
   }
 
   const header = (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+    <View style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
       <Pressable onPress={playing ? quit : () => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel={playing ? t("games.changeDeck") : t("close")} style={{ padding: 4 }}>
         <SymbolView name="chevron.left" size={22} tintColor={C.amber} />
       </Pressable>
@@ -668,7 +669,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
       <SafeAreaView style={{ flex: 1, backgroundColor: C.background }} edges={["top", "bottom"]}>
         <Stack.Screen options={{ headerShown: false }} />
         {header}
-        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 12 }}>
+        <ScrollView contentContainerStyle={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", padding: 16, paddingTop: 4, gap: 12 }}>
           <View style={{ flexDirection: "row", gap: 14, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: th.tileBorder, backgroundColor: th.tile }}>
             <Image source={emoji(variant === "gold" ? "1f477" : "1f327-fe0f")} style={{ width: 44, height: 44 }} />
             <View style={{ flex: 1, gap: 4 }}>
@@ -726,19 +727,21 @@ export default function FallingWords({ variant }: { variant: Variant }) {
         </ScrollView>
         {/* Thanh bắt đầu ở đáy */}
         {current && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 12, marginBottom: 8, padding: 10, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.card }}>
-            <LevelTile level={current.level} size={40} />
-            <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={{ color: C.text, fontWeight: "800", fontSize: 15 }}>
-                {current.title}
-              </Text>
-              <Text numberOfLines={1} style={{ color: th.soft, fontSize: 12 }}>
-                {from ? t("games.continueAt", { n: current.wordCount, m: from + 1, total }) : t("games.deckInfo", { n: current.wordCount, m: total })}
-                {best > 0 ? t("games.bestSuffix", { n: best }) : ""}
-              </Text>
+          <View style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", paddingHorizontal: 12, marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.card }}>
+              <LevelTile level={current.level} size={40} />
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ color: C.text, fontWeight: "800", fontSize: 15 }}>
+                  {current.title}
+                </Text>
+                <Text numberOfLines={1} style={{ color: th.soft, fontSize: 12 }}>
+                  {from ? t("games.continueAt", { n: current.wordCount, m: from + 1, total }) : t("games.deckInfo", { n: current.wordCount, m: total })}
+                  {best > 0 ? t("games.bestSuffix", { n: best }) : ""}
+                </Text>
+              </View>
+              {from > 0 && <PlainButton title={t("games.fromStart")} onPress={() => start(0)} disabled={phase === "loading"} style={{ paddingHorizontal: 10 }} />}
+              <ToneButton title={phase === "loading" ? t("loading") : t("games.start")} icon="play.fill" th={th} disabled={phase === "loading"} onPress={() => start(from)} />
             </View>
-            {from > 0 && <PlainButton title={t("games.fromStart")} onPress={() => start(0)} disabled={phase === "loading"} style={{ paddingHorizontal: 10 }} />}
-            <ToneButton title={phase === "loading" ? t("loading") : t("games.start")} icon="play.fill" th={th} disabled={phase === "loading"} onPress={() => start(from)} />
           </View>
         )}
       </SafeAreaView>
@@ -953,7 +956,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
           {/* Lớp phủ: tạm dừng / thua / thắng */}
           {phase !== "play" && (
             <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 20, backgroundColor: th.overlay }}>
-              <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 18, gap: 14, alignItems: "center" }}>
+              <ScrollView contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: FORM_MAX, alignSelf: "center", justifyContent: "center", padding: 18, gap: 14, alignItems: "center" }}>
                 {phase === "pause" ? (
                   <>
                     <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>{t("games.paused")}</Text>

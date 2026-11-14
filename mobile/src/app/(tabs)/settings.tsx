@@ -5,14 +5,32 @@ import { Image } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import Constants from "expo-constants";
-import { ActionSheetIOS, ActivityIndicator, Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Share, View } from "react-native";
+import {
+  ActionSheetIOS,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  View,
+} from "react-native";
 import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
 import { Row, Section } from "@/components/SettingsList";
 import { useSwitchTheme } from "@/components/ThemeRoot";
-import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/lib/api";
+import {
+  api,
+  API_URL,
+  avatarSource,
+  fileForm,
+  type Stats,
+  type User,
+} from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
@@ -34,7 +52,9 @@ const initials = (name: string) =>
 /** "2026-10-19 08:00:00" (UTC) → "tháng 10 năm 2026" / "October 2026" / "Oktober 2026" */
 const monthYear = (createdAt: string, lang: string) => {
   const d = new Date(createdAt.replace(" ", "T") + "Z");
-  return isNaN(+d) ? createdAt.slice(0, 10) : d.toLocaleDateString(lang, { month: "long", year: "numeric" });
+  return isNaN(+d)
+    ? createdAt.slice(0, 10)
+    : d.toLocaleDateString(lang, { month: "long", year: "numeric" });
 };
 
 const AVATAR_SIZE = 400; // cạnh ảnh đại diện gửi lên server (px) — đủ nét cho màn Retina, chỉ ~50 KB
@@ -46,14 +66,27 @@ function Avatar({ user }: { user: User }) {
   const [busy, setBusy] = useState(false);
 
   const upload = async () => {
-    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 1 });
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
     if (picked.canceled || !picked.assets[0]) return;
     setBusy(true);
     try {
       // Cắt vuông (đã chọn khung ở bước trên) → thu nhỏ → JPEG trước khi gửi
-      const img = await ImageManipulator.manipulate(picked.assets[0].uri).resize({ width: AVATAR_SIZE, height: AVATAR_SIZE }).renderAsync();
-      const out = await img.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
-      const r = await api<{ user: User }>("/me/avatar", { method: "POST", body: fileForm(out.uri) });
+      const img = await ImageManipulator.manipulate(picked.assets[0].uri)
+        .resize({ width: AVATAR_SIZE, height: AVATAR_SIZE })
+        .renderAsync();
+      const out = await img.saveAsync({
+        compress: 0.8,
+        format: SaveFormat.JPEG,
+      });
+      const r = await api<{ user: User }>("/me/avatar", {
+        method: "POST",
+        body: fileForm(out.uri),
+      });
       setUser(r.user);
     } catch (e) {
       showError(e, t("acc.avatarFailed"));
@@ -62,16 +95,24 @@ function Avatar({ user }: { user: User }) {
     }
   };
   const remove = () =>
-    confirmDestructive(t("acc.avatarRemoveConfirm"), t("acc.avatarRemoveBody"), t("acc.avatarRemove"), async () => {
-      setBusy(true);
-      try {
-        setUser((await api<{ user: User }>("/me/avatar", { method: "DELETE" })).user);
-      } catch (e) {
-        showError(e);
-      } finally {
-        setBusy(false);
-      }
-    });
+    confirmDestructive(
+      t("acc.avatarRemoveConfirm"),
+      t("acc.avatarRemoveBody"),
+      t("acc.avatarRemove"),
+      async () => {
+        setBusy(true);
+        try {
+          setUser(
+            (await api<{ user: User }>("/me/avatar", { method: "DELETE" }))
+              .user,
+          );
+        } catch (e) {
+          showError(e);
+        } finally {
+          setBusy(false);
+        }
+      },
+    );
   const menu = () => {
     if (busy) return;
     if (!user.avatarUrl) return upload();
@@ -84,13 +125,21 @@ function Avatar({ user }: { user: User }) {
       return;
     }
     ActionSheetIOS.showActionSheetWithOptions(
-      { options: [t("acc.avatarPick"), t("acc.avatarRemove"), t("cancel")], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
+      {
+        options: [t("acc.avatarPick"), t("acc.avatarRemove"), t("cancel")],
+        destructiveButtonIndex: 1,
+        cancelButtonIndex: 2,
+      },
       (i) => (i === 0 ? upload() : i === 1 ? remove() : undefined),
     );
   };
 
   return (
-    <Pressable onPress={menu} accessibilityRole="button" accessibilityLabel={t("acc.avatarChange")}>
+    <Pressable
+      onPress={menu}
+      accessibilityRole="button"
+      accessibilityLabel={t("acc.avatarChange")}
+    >
       <View
         style={{
           width: 72,
@@ -105,12 +154,28 @@ function Avatar({ user }: { user: User }) {
         }}
       >
         {user.avatarUrl ? (
-          <Image source={avatarSource(user.avatarUrl)} alt="" style={{ width: "100%", height: "100%" }} contentFit="cover" transition={150} />
+          <Image
+            source={avatarSource(user.avatarUrl)}
+            alt=""
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+            transition={150}
+          />
         ) : (
-          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "800" }}>{initials(user.name)}</Text>
+          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "800" }}>
+            {initials(user.name)}
+          </Text>
         )}
         {busy && (
-          <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.45)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <ActivityIndicator color="#fff" />
           </View>
         )}
@@ -138,11 +203,33 @@ function Avatar({ user }: { user: User }) {
 }
 
 /** Một ô số liệu trong thẻ hồ sơ */
-function Tile({ value, label, first }: { value: string; label: string; first?: boolean }) {
+function Tile({
+  value,
+  label,
+  first,
+}: {
+  value: string;
+  label: string;
+  first?: boolean;
+}) {
   return (
-    <View style={{ flex: 1, alignItems: "center", gap: 2, paddingVertical: 12, borderLeftWidth: first ? 0 : 1, borderLeftColor: C.border }}>
-      <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>{value}</Text>
-      <Text style={{ color: C.muted, fontSize: 12, textAlign: "center" }} numberOfLines={1}>
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        gap: 2,
+        paddingVertical: 12,
+        borderLeftWidth: first ? 0 : 1,
+        borderLeftColor: C.border,
+      }}
+    >
+      <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>
+        {value}
+      </Text>
+      <Text
+        style={{ color: C.muted, fontSize: 12, textAlign: "center" }}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </View>
@@ -150,23 +237,58 @@ function Tile({ value, label, first }: { value: string; label: string; first?: b
 }
 
 /** Thẻ đầu trang: ảnh · tên · email · vai trò — bên dưới là số liệu học tập (chạm → màn Thống kê) */
-function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" | "dueToday" | "mastery"> | null }) {
+function ProfileCard({
+  user,
+  stats,
+}: {
+  user: User;
+  stats: Pick<Stats, "streak" | "dueToday" | "mastery"> | null;
+}) {
   const { t, lang } = useI18n();
-  const words = stats && Object.values(stats.mastery).reduce((a, b) => a + b, 0); // như web: không tính câu ⭐
-  const num = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
+  const words =
+    stats && Object.values(stats.mastery).reduce((a, b) => a + b, 0); // như web: không tính câu ⭐
+  const num = (n: number | null | undefined) =>
+    n === null || n === undefined ? "—" : String(n);
   return (
-    <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 24, overflow: "hidden" }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+    <View
+      style={{
+        backgroundColor: C.card,
+        ...STICKER,
+        borderRadius: 24,
+        overflow: "hidden",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          padding: 16,
+        }}
+      >
         <Avatar user={user} />
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={{ color: C.text, fontSize: 20, fontWeight: "800" }} numberOfLines={1}>
+          <Text
+            style={{ color: C.text, fontSize: 20, fontWeight: "800" }}
+            numberOfLines={1}
+          >
             {user.name}
           </Text>
           <Text style={{ color: C.muted, fontSize: 14 }} numberOfLines={1}>
             {user.email}
           </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-            <Pill color={user.role === "admin" ? C.amber : C.accentText}>{user.role === "admin" ? t("acc.admin") : t("acc.student")}</Pill>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 4,
+              flexWrap: "wrap",
+            }}
+          >
+            <Pill color={user.role === "admin" ? C.amber : C.accentText}>
+              {user.role === "admin" ? t("acc.admin") : t("acc.student")}
+            </Pill>
             <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>
               {t("acc.memberSince", { date: monthYear(user.createdAt, lang) })}
             </Text>
@@ -177,7 +299,11 @@ function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" 
         onPress={() => router.push("/stats")}
         accessibilityRole="button"
         accessibilityLabel={t("acc.viewStats")}
-        style={({ pressed }) => ({ borderTopWidth: 1, borderTopColor: C.border, backgroundColor: pressed ? C.card2 : "transparent" })}
+        style={({ pressed }) => ({
+          borderTopWidth: 1,
+          borderTopColor: C.border,
+          backgroundColor: pressed ? C.card2 : "transparent",
+        })}
       >
         <View style={{ flexDirection: "row" }}>
           <Tile first value={num(words)} label={t("acc.tileWords")} />
@@ -195,9 +321,22 @@ function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" 
             borderTopColor: C.border,
           }}
         >
-          <SymbolView name="chart.bar.fill" size={13} tintColor={C.accentText} />
-          <Text style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}>{t("acc.viewStats")}</Text>
-          <SymbolView name="chevron.right" size={11} tintColor={C.accentText} weight="semibold" />
+          <SymbolView
+            name="chart.bar.fill"
+            size={13}
+            tintColor={C.accentText}
+          />
+          <Text
+            style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}
+          >
+            {t("acc.viewStats")}
+          </Text>
+          <SymbolView
+            name="chevron.right"
+            size={11}
+            tintColor={C.accentText}
+            weight="semibold"
+          />
         </View>
       </Pressable>
     </View>
@@ -206,7 +345,16 @@ function ProfileCard({ user, stats }: { user: User; stats: Pick<Stats, "streak" 
 
 function Pill({ color, children }: { color: string; children: ReactNode }) {
   return (
-    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, borderWidth: 1, borderColor: C.border, backgroundColor: C.card2 }}>
+    <View
+      style={{
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 99,
+        borderWidth: 1,
+        borderColor: C.border,
+        backgroundColor: C.card2,
+      }}
+    >
       <Text style={{ color, fontSize: 12, fontWeight: "700" }}>{children}</Text>
     </View>
   );
@@ -229,7 +377,12 @@ function SettingsSection() {
 
   const scheme = useScheme();
   const switchTheme = useSwitchTheme();
-  const voiceNote = voices === null ? undefined : voices ? t(Platform.OS === "ios" ? "voice.note" : "voice.noteAndroid") : t("voice.none");
+  const voiceNote =
+    voices === null
+      ? undefined
+      : voices
+        ? t(Platform.OS === "ios" ? "voice.note" : "voice.noteAndroid")
+        : t("voice.none");
   return (
     <Section title={t("acc.sectionSettings")} footer={voiceNote}>
       <Row
@@ -238,7 +391,17 @@ function SettingsSection() {
         iconBg="#b45309"
         title={t("theme.title")}
         chevron={false}
-        trailing={<Segmented shrink options={[["light", t("theme.light")], ["dark", t("theme.dark")]]} value={scheme} onChange={switchTheme} />}
+        trailing={
+          <Segmented
+            shrink
+            options={[
+              ["light", t("theme.light")],
+              ["dark", t("theme.dark")],
+            ]}
+            value={scheme}
+            onChange={switchTheme}
+          />
+        }
       />
       <Row
         icon="globe"
@@ -251,8 +414,14 @@ function SettingsSection() {
           setLangOpen(!langOpen);
         }}
       >
-        <Segmented options={LANGS.map((l) => [l.code, l.label] as const)} value={lang} onChange={changeLang} />
-        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{user ? t("acc.langNote") : t("acc.langNoteGuest")}</Text>
+        <Segmented
+          options={LANGS.map((l) => [l.code, l.label] as const)}
+          value={lang}
+          onChange={changeLang}
+        />
+        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>
+          {user ? t("acc.langNote") : t("acc.langNoteGuest")}
+        </Text>
       </Row>
       {voices !== null && (
         <Row
@@ -261,7 +430,13 @@ function SettingsSection() {
           title={t("voice.title")}
           value={t("voice.auto")}
           chevron={false}
-          trailing={<SymbolView name="play.circle.fill" size={22} tintColor={C.accentText} />}
+          trailing={
+            <SymbolView
+              name="play.circle.fill"
+              size={22}
+              tintColor={C.accentText}
+            />
+          }
           onPress={() => speakGerman(t("voice.sample")).catch(() => {})}
         />
       )}
@@ -272,11 +447,21 @@ function SettingsSection() {
 /** Quyền riêng tư · hỗ trợ (góp ý, báo lỗi, chia sẻ) · pháp lý — giống nhau khi đã / chưa đăng nhập */
 function MoreSections() {
   const { t } = useI18n();
-  const share = () => Share.share({ message: t("set.shareMessage", { url: API_URL }) }).catch(() => {});
+  const share = () =>
+    Share.share({ message: t("set.shareMessage", { url: API_URL }) }).catch(
+      () => {},
+    );
   return (
     <>
       <Section title={t("set.sectionPrivacy")}>
-        <Row first icon="hand.raised.fill" iconBg="#0d9488" title={t("set.privacy")} subtitle={t("set.privacySub")} onPress={() => router.push("/privacy")} />
+        <Row
+          first
+          icon="hand.raised.fill"
+          iconBg="#0d9488"
+          title={t("set.privacy")}
+          subtitle={t("set.privacySub")}
+          onPress={() => router.push("/privacy")}
+        />
       </Section>
 
       <Section title={t("set.sectionSupport")}>
@@ -286,21 +471,44 @@ function MoreSections() {
           iconBg="#2563eb"
           title={t("set.feedback")}
           subtitle={t("set.feedbackSub")}
-          onPress={() => router.push({ pathname: "/feedback", params: { kind: "idea" } })}
+          onPress={() =>
+            router.push({ pathname: "/feedback", params: { kind: "idea" } })
+          }
         />
         <Row
           icon="ant.fill"
           iconBg="#dc2626"
           title={t("set.reportBug")}
           subtitle={t("set.reportBugSub")}
-          onPress={() => router.push({ pathname: "/feedback", params: { kind: "bug" } })}
+          onPress={() =>
+            router.push({ pathname: "/feedback", params: { kind: "bug" } })
+          }
         />
-        <Row icon="square.and.arrow.up" iconBg="#7c3aed" title={t("set.share")} chevron={false} onPress={share} />
+        <Row
+          icon="square.and.arrow.up"
+          iconBg="#7c3aed"
+          title={t("set.share")}
+          chevron={false}
+          onPress={share}
+        />
       </Section>
 
       <Section title={t("set.sectionLegal")}>
-        <Row first icon="lock.shield.fill" iconBg="#475569" title={t("set.privacyPolicy")} external onPress={() => openLegal("privacy")} />
-        <Row icon="doc.text.fill" iconBg="#475569" title={t("set.terms")} external onPress={() => openLegal("terms")} />
+        <Row
+          first
+          icon="lock.shield.fill"
+          iconBg="#475569"
+          title={t("set.privacyPolicy")}
+          external
+          onPress={() => openLegal("privacy")}
+        />
+        <Row
+          icon="doc.text.fill"
+          iconBg="#475569"
+          title={t("set.terms")}
+          external
+          onPress={() => openLegal("terms")}
+        />
       </Section>
     </>
   );
@@ -310,12 +518,25 @@ function MoreSections() {
 function Consent() {
   const { t } = useI18n();
   const link = (doc: "terms" | "privacy", label: string) => (
-    <Text style={{ color: C.accentText, fontWeight: "700" }} onPress={() => openLegal(doc)} accessibilityRole="link">
+    <Text
+      style={{ color: C.accentText, fontWeight: "700" }}
+      onPress={() => openLegal(doc)}
+      accessibilityRole="link"
+    >
       {label}
     </Text>
   );
   return (
-    <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19, textAlign: "center", marginHorizontal: 14, marginTop: -8 }}>
+    <Text
+      style={{
+        color: C.muted,
+        fontSize: 13,
+        lineHeight: 19,
+        textAlign: "center",
+        marginHorizontal: 14,
+        marginTop: -8,
+      }}
+    >
       {t("set.consentPre")}
       {link("terms", t("set.terms"))}
       {t("set.consentAnd")}
@@ -331,7 +552,10 @@ function Signed({ user }: { user: User }) {
   const { logout, setUser, setToken } = useAuth();
   const { t } = useI18n();
   const [panel, setPanel] = useState<Panel>(null);
-  const [stats, setStats] = useState<Pick<Stats, "streak" | "dueToday" | "mastery"> | null>(null);
+  const [stats, setStats] = useState<Pick<
+    Stats,
+    "streak" | "dueToday" | "mastery"
+  > | null>(null);
   const [name, setName] = useState(user.name);
   const [newEmail, setNewEmail] = useState("");
   const [emailPw, setEmailPw] = useState("");
@@ -349,7 +573,10 @@ function Signed({ user }: { user: User }) {
   // Số từ đã lưu + chuỗi ngày / mục đến hạn: tải lại mỗi lần mở tab
   useFocusEffect(
     useCallback(() => {
-      api<Stats>(`/stats?tz=${new Date().getTimezoneOffset()}`).then(setStats, () => {});
+      api<Stats>(`/stats?tz=${new Date().getTimezoneOffset()}`).then(
+        setStats,
+        () => {},
+      );
     }, []),
   );
 
@@ -375,14 +602,20 @@ function Signed({ user }: { user: User }) {
 
   const saveProfile = () =>
     run(async () => {
-      const r = await api<{ user: User }>("/me", { method: "PATCH", body: { name } });
+      const r = await api<{ user: User }>("/me", {
+        method: "PATCH",
+        body: { name },
+      });
       setUser(r.user);
       setMsg(t("acc.saved"));
     });
 
   const sendEmailCode = () =>
     run(async () => {
-      await api("/me/email/code", { method: "POST", body: { email: newEmail, password: emailPw } });
+      await api("/me/email/code", {
+        method: "POST",
+        body: { email: newEmail, password: emailPw },
+      });
       setCodeSentTo(newEmail.trim().toLowerCase());
       setEmailPw("");
       setEmailCode("");
@@ -390,7 +623,10 @@ function Signed({ user }: { user: User }) {
 
   const confirmEmail = () =>
     run(async () => {
-      const r = await api<{ user: User }>("/me/email", { method: "POST", body: { email: codeSentTo, code: emailCode } });
+      const r = await api<{ user: User }>("/me/email", {
+        method: "POST",
+        body: { email: codeSentTo, code: emailCode },
+      });
       setUser(r.user);
       setCodeSentTo("");
       setNewEmail("");
@@ -401,7 +637,10 @@ function Signed({ user }: { user: User }) {
   const changePassword = () =>
     run(async () => {
       if (next !== confirmPw) throw new Error(t("acc.pwMismatch"));
-      const r = await api<{ token: string }>("/me/password", { method: "POST", body: { current, next } });
+      const r = await api<{ token: string }>("/me/password", {
+        method: "POST",
+        body: { current, next },
+      });
       await setToken(r.token);
       setCurrent("");
       setNext("");
@@ -410,31 +649,50 @@ function Signed({ user }: { user: User }) {
       setUser({ ...user, hasPassword: true });
     });
 
-  const confirmLogout = () => confirmDestructive(t("acc.logoutConfirm"), t("acc.logoutBody"), t("acc.logout"), logout);
+  const confirmLogout = () =>
+    confirmDestructive(
+      t("acc.logoutConfirm"),
+      t("acc.logoutBody"),
+      t("acc.logout"),
+      logout,
+    );
 
   const logoutOthers = () =>
-    confirmDestructive(t("acc.logoutOthersConfirm"), t("acc.logoutOthersBody"), t("acc.logoutOthers"), async () => {
-      try {
-        const r = await api<{ token: string }>("/me/logout-all", { method: "POST" });
-        await setToken(r.token);
-        notice(t("acc.logoutOthersDone"));
-      } catch (e) {
-        showError(e);
-      }
-    });
+    confirmDestructive(
+      t("acc.logoutOthersConfirm"),
+      t("acc.logoutOthersBody"),
+      t("acc.logoutOthers"),
+      async () => {
+        try {
+          const r = await api<{ token: string }>("/me/logout-all", {
+            method: "POST",
+          });
+          await setToken(r.token);
+          notice(t("acc.logoutOthersDone"));
+        } catch (e) {
+          showError(e);
+        }
+      },
+    );
 
   const deleteAccount = () =>
-    confirmDestructive(t("acc.deleteConfirm"), t("acc.deleteConfirmSub"), t("acc.deleteAction"), () =>
-      run(async () => {
-        await api("/me", { method: "DELETE", body: { password: delPw } });
-        await logout();
-      }),
+    confirmDestructive(
+      t("acc.deleteConfirm"),
+      t("acc.deleteConfirmSub"),
+      t("acc.deleteAction"),
+      () =>
+        run(async () => {
+          await api("/me", { method: "DELETE", body: { password: delPw } });
+          await logout();
+        }),
     );
 
   const feedback = (
     <>
       <ErrorText>{err}</ErrorText>
-      {!!msg && <Text style={{ color: C.accentText, fontWeight: "600" }}>{msg}</Text>}
+      {!!msg && (
+        <Text style={{ color: C.accentText, fontWeight: "600" }}>{msg}</Text>
+      )}
     </>
   );
   const nameChanged = name.trim() !== user.name;
@@ -444,33 +702,106 @@ function Signed({ user }: { user: User }) {
       <ProfileCard user={user} stats={stats} />
 
       <Section>
-        <Row first icon="trophy.fill" iconBg="#d97706" title={t("board.title")} onPress={() => router.push("/leaderboard")} />
+        <Row
+          first
+          icon="trophy.fill"
+          iconBg="#d97706"
+          title={t("board.title")}
+          onPress={() => router.push("/leaderboard")}
+        />
       </Section>
 
       <Section title={t("acc.sectionAccount")}>
-        <Row first icon="person.text.rectangle" iconBg="#2563eb" title={t("acc.profile")} open={panel === "profile"} onPress={() => toggle("profile")}>
-          <Input value={name} onChangeText={setName} placeholder={t("acc.displayName")} autoComplete="name" textContentType="name" />
+        <Row
+          first
+          icon="person.text.rectangle"
+          iconBg="#2563eb"
+          title={t("acc.profile")}
+          open={panel === "profile"}
+          onPress={() => toggle("profile")}
+        >
+          <Input
+            value={name}
+            onChangeText={setName}
+            placeholder={t("acc.displayName")}
+            autoComplete="name"
+            textContentType="name"
+          />
           {feedback}
-          <Button title={t("acc.save")} variant="primary" onPress={saveProfile} loading={busy} disabled={!nameChanged || !name.trim()} />
+          <Button
+            title={t("acc.save")}
+            variant="primary"
+            onPress={saveProfile}
+            loading={busy}
+            disabled={!nameChanged || !name.trim()}
+          />
         </Row>
         {!user.fixedAdmin && (
           <>
-            <Row icon="envelope.fill" iconBg="#0891b2" title={t("acc.changeEmail")} open={panel === "email"} onPress={() => toggle("email")}>
+            <Row
+              icon="envelope.fill"
+              iconBg="#0891b2"
+              title={t("acc.changeEmail")}
+              open={panel === "email"}
+              onPress={() => toggle("email")}
+            >
               {codeSentTo ? (
                 <>
-                  <Text style={styles.muted}>{t("auth.codeSub", { email: codeSentTo })}</Text>
-                  <Input value={emailCode} onChangeText={setEmailCode} placeholder={t("auth.code")} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
+                  <Text style={styles.muted}>
+                    {t("auth.codeSub", { email: codeSentTo })}
+                  </Text>
+                  <Input
+                    value={emailCode}
+                    onChangeText={setEmailCode}
+                    placeholder={t("auth.code")}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    textContentType="oneTimeCode"
+                  />
                   {feedback}
-                  <Button title={t("acc.confirmEmail")} variant="primary" onPress={confirmEmail} loading={busy} disabled={emailCode.length !== 6} />
-                  <Button title={t("acc.backEmail")} onPress={() => setCodeSentTo("")} />
+                  <Button
+                    title={t("acc.confirmEmail")}
+                    variant="primary"
+                    onPress={confirmEmail}
+                    loading={busy}
+                    disabled={emailCode.length !== 6}
+                  />
+                  <Button
+                    title={t("acc.backEmail")}
+                    onPress={() => setCodeSentTo("")}
+                  />
                 </>
               ) : (
                 <>
                   <Text style={styles.muted}>{user.email}</Text>
-                  <Input value={newEmail} onChangeText={setNewEmail} placeholder={t("acc.newEmail")} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" />
-                  {hasPassword && <Input value={emailPw} onChangeText={setEmailPw} placeholder={t("acc.currentPw")} secureTextEntry autoComplete="current-password" textContentType="password" />}
+                  <Input
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    placeholder={t("acc.newEmail")}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                  />
+                  {hasPassword && (
+                    <Input
+                      value={emailPw}
+                      onChangeText={setEmailPw}
+                      placeholder={t("acc.currentPw")}
+                      secureTextEntry
+                      autoComplete="current-password"
+                      textContentType="password"
+                    />
+                  )}
                   {feedback}
-                  <Button title={t("auth.sendCode")} variant="primary" onPress={sendEmailCode} loading={busy} disabled={!newEmail.trim() || (hasPassword && !emailPw)} />
+                  <Button
+                    title={t("auth.sendCode")}
+                    variant="primary"
+                    onPress={sendEmailCode}
+                    loading={busy}
+                    disabled={!newEmail.trim() || (hasPassword && !emailPw)}
+                  />
                 </>
               )}
             </Row>
@@ -482,19 +813,42 @@ function Signed({ user }: { user: User }) {
               onPress={() => toggle("password")}
             >
               {hasPassword ? (
-                <Input value={current} onChangeText={setCurrent} placeholder={t("acc.currentPw")} secureTextEntry autoComplete="current-password" textContentType="password" />
+                <Input
+                  value={current}
+                  onChangeText={setCurrent}
+                  placeholder={t("acc.currentPw")}
+                  secureTextEntry
+                  autoComplete="current-password"
+                  textContentType="password"
+                />
               ) : (
                 <Text style={styles.muted}>{t("acc.setPwNote")}</Text>
               )}
-              <Input value={next} onChangeText={setNext} placeholder={t("acc.newPw")} secureTextEntry autoComplete="new-password" textContentType="newPassword" />
-              <Input value={confirmPw} onChangeText={setConfirmPw} placeholder={t("acc.confirmPw")} secureTextEntry autoComplete="new-password" textContentType="newPassword" />
+              <Input
+                value={next}
+                onChangeText={setNext}
+                placeholder={t("acc.newPw")}
+                secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+              />
+              <Input
+                value={confirmPw}
+                onChangeText={setConfirmPw}
+                placeholder={t("acc.confirmPw")}
+                secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+              />
               {feedback}
               <Button
                 title={hasPassword ? t("acc.changePw") : t("acc.setPw")}
                 variant="primary"
                 onPress={changePassword}
                 loading={busy}
-                disabled={(hasPassword && !current) || next.length < 8 || !confirmPw}
+                disabled={
+                  (hasPassword && !current) || next.length < 8 || !confirmPw
+                }
               />
             </Row>
           </>
@@ -507,7 +861,13 @@ function Signed({ user }: { user: User }) {
 
       {user.role === "admin" && (
         <Section title={t("admin.section")} footer={t("admin.hint")}>
-          <Row first icon="person.2.fill" iconBg="#b45309" title={t("admin.users")} onPress={() => router.push("/admin/users")} />
+          <Row
+            first
+            icon="person.2.fill"
+            iconBg="#b45309"
+            title={t("admin.users")}
+            onPress={() => router.push("/admin/users")}
+          />
         </Section>
       )}
 
@@ -521,19 +881,47 @@ function Signed({ user }: { user: User }) {
           chevron={false}
           onPress={confirmLogout}
         />
-        <Row icon="iphone.and.arrow.forward" iconBg={C.card2} color={C.redText} title={t("acc.logoutOthers")} chevron={false} onPress={logoutOthers} />
+        <Row
+          icon="iphone.and.arrow.forward"
+          iconBg={C.card2}
+          color={C.redText}
+          title={t("acc.logoutOthers")}
+          chevron={false}
+          onPress={logoutOthers}
+        />
       </Section>
 
       {!user.fixedAdmin && (
         <Section footer={t("acc.deleteSub")}>
-          <Row first icon="trash.fill" iconBg={alpha(C.red, 0.25)} color={C.redText} title={t("acc.deleteTitle")} open={panel === "delete"} onPress={() => toggle("delete")}>
+          <Row
+            first
+            icon="trash.fill"
+            iconBg={alpha(C.red, 0.25)}
+            color={C.redText}
+            title={t("acc.deleteTitle")}
+            open={panel === "delete"}
+            onPress={() => toggle("delete")}
+          >
             {hasPassword ? (
-              <Input value={delPw} onChangeText={setDelPw} placeholder={t("acc.deletePw")} secureTextEntry autoComplete="current-password" textContentType="password" />
+              <Input
+                value={delPw}
+                onChangeText={setDelPw}
+                placeholder={t("acc.deletePw")}
+                secureTextEntry
+                autoComplete="current-password"
+                textContentType="password"
+              />
             ) : (
               <Text style={styles.muted}>{t("acc.deleteNoPw")}</Text>
             )}
             {feedback}
-            <Button title={t("acc.deleteTitle")} variant="red" onPress={deleteAccount} loading={busy} disabled={hasPassword && !delPw} />
+            <Button
+              title={t("acc.deleteTitle")}
+              variant="red"
+              onPress={deleteAccount}
+              loading={busy}
+              disabled={hasPassword && !delPw}
+            />
           </Row>
         </Section>
       )}
@@ -563,18 +951,21 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.h1}>{t("tabs.settings")}</Text>
-          <Section>
-            <Row
-              first
-              icon="book.closed.fill"
-              iconBg={C.accent}
-              title={t("tabs.vocab")}
-              value={due ? t("decks.due", { n: due }) : undefined}
-              valueColor={C.amber}
-              onPress={() => router.push("/vocab")}
-            />
-          </Section>
-          {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
+          {ready && !!user && (
+            <Section>
+              <Row
+                first
+                icon="book.closed.fill"
+                iconBg={C.accent}
+                title={t("tabs.vocab")}
+                value={due ? t("decks.due", { n: due }) : undefined}
+                valueColor={C.amber}
+                onPress={() => router.push("/vocab")}
+              />
+            </Section>
+          )}
+          {ready &&
+            (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
           {ready && !user && (
             <>
               <Consent />
@@ -584,10 +975,17 @@ export default function SettingsScreen() {
           )}
           <View style={{ alignItems: "center", gap: 2 }}>
             <Text style={{ color: C.muted, fontSize: 12, fontWeight: "600" }}>
-              {Constants.expoConfig?.name} · {t("acc.version", { v: Constants.expoConfig?.version ?? "—" })}
+              {Constants.expoConfig?.name} ·{" "}
+              {t("acc.version", { v: Constants.expoConfig?.version ?? "—" })}
             </Text>
-            <Text style={{ color: C.muted, fontSize: 12 }}>© {new Date().getFullYear()} HalloVN</Text>
-            {__DEV__ && <Text style={{ color: C.muted, fontSize: 12 }}>Server: {API_URL}</Text>}
+            <Text style={{ color: C.muted, fontSize: 12 }}>
+              © {new Date().getFullYear()} HalloVN
+            </Text>
+            {__DEV__ && (
+              <Text style={{ color: C.muted, fontSize: 12 }}>
+                Server: {API_URL}
+              </Text>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

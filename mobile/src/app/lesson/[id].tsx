@@ -12,6 +12,7 @@ import { api, ApiError, thumb, type Lesson, type LessonSummary, type LockInfo } 
 import { useAuth } from "@/lib/auth";
 import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useI18n } from "@/lib/i18n";
+import { FORM_MAX } from "@/lib/layout";
 import { C } from "@/lib/theme";
 
 type Locked = { lesson: LessonSummary; lock: LockInfo };
@@ -47,7 +48,7 @@ function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => v
     );
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+    <ScrollView contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 20, gap: 14 }}>
       <View style={{ borderRadius: 16, overflow: "hidden" }}>
         <Image source={thumb(lesson.videoId, "hq")} alt="" style={{ width: "100%", aspectRatio: 16 / 9, opacity: 0.4 }} contentFit="cover" />
         <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
