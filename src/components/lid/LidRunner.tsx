@@ -278,7 +278,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
       )}
 
       {/* Khung câu hỏi */}
-      <article className={`sticker flex flex-col gap-4 p-4 sm:p-6 ${answeredNow && !rightNow ? "shake" : ""}`}>
+      <article className={`sticker flex min-h-[28rem] flex-col gap-4 p-4 sm:h-[36rem] sm:p-6 ${answeredNow && !rightNow ? "shake" : ""}`}>
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
           <span className="tabular-nums">
             Câu {idx + 1}/{questions.length}
@@ -292,90 +292,93 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
           )}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg leading-snug font-extrabold whitespace-pre-line">{q.q}</h2>
-          {trOn && q.tr?.q && (
-            <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
-              {q.tr.q}
+        {/* Khung cố định: câu dài cuộn bên trong, không làm trang nhảy */}
+        <div className="-mr-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2 pb-1 [scrollbar-gutter:stable]">
+          <div className="flex flex-col gap-1">
+            <h2 className="min-h-[2lh] text-lg leading-snug font-extrabold whitespace-pre-line">{q.q}</h2>
+            {trOn && q.tr?.q && (
+              <p dir={trDir} className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
+                {q.tr.q}
+              </p>
+            )}
+          </div>
+
+          {q.images.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {q.images.map((src) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className="max-h-80 w-auto max-w-full rounded-2xl border-2 border-ink bg-white object-contain" />
+              ))}
+            </div>
+          )}
+
+          {/* Đáp án: số thứ tự bên trái (như tab Lái xe) */}
+          <ul className="flex flex-col gap-2" role="radiogroup" aria-label="Đáp án">
+            {q.options.map((o, n) => {
+              const on = mine === o.key;
+              const correct = q.answer.includes(o.key);
+              const reveal = mode === "lesen" || submitted || answeredNow;
+              // Đọc: tích sẵn đáp án đúng · Học/Xem lại: tô đúng/sai
+              const ticked = mode === "lesen" ? correct : on;
+              const mistake = reveal && mode !== "lesen" && on && !correct;
+              const tr = q.tr?.o[n];
+              const tone = !reveal
+                ? on
+                  ? "border-ink bg-gold/30"
+                  : "border-ink/30 enabled:hover:border-ink"
+                : correct
+                  ? "border-accent bg-accent/10"
+                  : on
+                    ? "border-red bg-red/10"
+                    : "border-ink/20";
+              const badge = ticked ? (reveal && correct ? "border-accent bg-accent text-white" : reveal ? "border-red bg-red text-white" : "bg-foreground text-background") : "bg-card";
+              return (
+                <li key={o.key}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={on || (mode === "lesen" && correct)}
+                    disabled={submitted || mode === "lesen" || answeredNow}
+                    onClick={() => choose(o.key)}
+                    className={`relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:cursor-default ${tone}`}
+                  >
+                    {mistake && <span className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />}
+                    <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-ink text-sm font-extrabold ${badge}`}>
+                      {ticked ? <Check className="size-5" strokeWidth={3} /> : <span className="text-muted">{n + 1}</span>}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="font-bold">{o.text}</span>
+                      {trOn && tr && tr !== o.text && (
+                        <span dir={trDir} className="text-sm text-accent-text italic">
+                          {tr}
+                        </span>
+                      )}
+                    </span>
+                    {reveal && mode !== "lesen" && (
+                      <span className="shrink-0" aria-label={correct ? (on ? "Chọn đúng" : "Đáp án đúng") : on ? "Chọn sai" : undefined}>
+                        {correct ? (
+                          <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-accent text-white" : "border-2 border-accent text-accent-text"}`}>
+                            <Check className="size-4" strokeWidth={3} />
+                          </span>
+                        ) : on ? (
+                          <span className="flex size-6 items-center justify-center rounded-full bg-red text-white">
+                            <X className="size-4" strokeWidth={3} />
+                          </span>
+                        ) : null}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {answeredNow && (
+            <p className={`rounded-2xl border-2 px-3 py-2 font-extrabold ${rightNow ? "border-accent bg-accent/15" : "border-red bg-red/15"}`} role="status">
+              {rightNow ? "✓ Đúng rồi!" : "✗ Chưa đúng"}
             </p>
           )}
         </div>
-
-        {q.images.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {q.images.map((src) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className="max-h-80 w-auto max-w-full rounded-2xl border-2 border-ink bg-white object-contain" />
-            ))}
-          </div>
-        )}
-
-        {/* Đáp án: số thứ tự bên trái (như tab Lái xe) */}
-        <ul className="flex flex-col gap-2" role="radiogroup" aria-label="Đáp án">
-          {q.options.map((o, n) => {
-            const on = mine === o.key;
-            const correct = q.answer.includes(o.key);
-            const reveal = mode === "lesen" || submitted || answeredNow;
-            // Đọc: tích sẵn đáp án đúng · Học/Xem lại: tô đúng/sai
-            const ticked = mode === "lesen" ? correct : on;
-            const mistake = reveal && mode !== "lesen" && on && !correct;
-            const tr = q.tr?.o[n];
-            const tone = !reveal
-              ? on
-                ? "border-ink bg-gold/30"
-                : "border-ink/30 enabled:hover:border-ink"
-              : correct
-                ? "border-accent bg-accent/10"
-                : on
-                  ? "border-red bg-red/10"
-                  : "border-ink/20";
-            const badge = ticked ? (reveal && correct ? "border-accent bg-accent text-white" : reveal ? "border-red bg-red text-white" : "bg-foreground text-background") : "bg-card";
-            return (
-              <li key={o.key}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={on || (mode === "lesen" && correct)}
-                  disabled={submitted || mode === "lesen" || answeredNow}
-                  onClick={() => choose(o.key)}
-                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:cursor-default ${tone}`}
-                >
-                  {mistake && <span className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />}
-                  <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-ink text-sm font-extrabold ${badge}`}>
-                    {ticked ? <Check className="size-5" strokeWidth={3} /> : <span className="text-muted">{n + 1}</span>}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="font-bold">{o.text}</span>
-                    {trOn && tr && tr !== o.text && (
-                      <span dir={trDir} className="text-sm text-accent-text italic">
-                        {tr}
-                      </span>
-                    )}
-                  </span>
-                  {reveal && mode !== "lesen" && (
-                    <span className="shrink-0" aria-label={correct ? (on ? "Chọn đúng" : "Đáp án đúng") : on ? "Chọn sai" : undefined}>
-                      {correct ? (
-                        <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-accent text-white" : "border-2 border-accent text-accent-text"}`}>
-                          <Check className="size-4" strokeWidth={3} />
-                        </span>
-                      ) : on ? (
-                        <span className="flex size-6 items-center justify-center rounded-full bg-red text-white">
-                          <X className="size-4" strokeWidth={3} />
-                        </span>
-                      ) : null}
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        {answeredNow && (
-          <p className={`rounded-2xl border-2 px-3 py-2 font-extrabold ${rightNow ? "border-accent bg-accent/15" : "border-red bg-red/15"}`} role="status">
-            {rightNow ? "✓ Đúng rồi!" : "✗ Chưa đúng"}
-          </p>
-        )}
 
         {/* Điều hướng: ‹ Trước · n / N (mở bảng chọn câu) · Tiếp › */}
         <div className="flex items-center gap-1.5">
