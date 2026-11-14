@@ -16,6 +16,7 @@ import { api, API_URL, avatarSource, fileForm, type Stats, type User } from "@/l
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
+import { useDueCount } from "@/lib/due";
 import { openLegal } from "@/lib/legal";
 import { C, STICKER, useScheme, alpha } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
@@ -542,6 +543,7 @@ function Signed({ user }: { user: User }) {
 
 export default function SettingsScreen() {
   const { user, ready } = useAuth();
+  const due = useDueCount();
   const { t } = useI18n();
   const { tablet } = useLayout();
   return (
@@ -561,6 +563,17 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.h1}>{t("tabs.settings")}</Text>
+          <Section>
+            <Row
+              first
+              icon="book.closed.fill"
+              iconBg={C.accent}
+              title={t("tabs.vocab")}
+              value={due ? t("decks.due", { n: due }) : undefined}
+              valueColor={C.amber}
+              onPress={() => router.push("/vocab")}
+            />
+          </Section>
           {ready && (user ? <Signed key={user.id} user={user} /> : <AuthForm />)}
           {ready && !user && (
             <>

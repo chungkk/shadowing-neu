@@ -12,7 +12,7 @@ export default function TabLayout() {
   const { user } = useAuth();
   const due = useDueCount();
 
-  // Badge "Từ vựng": tải số mục đến hạn lúc mở app và mỗi lần quay lại app (số đến hạn đổi theo thời gian)
+  // Badge tab Cài đặt (lối vào Từ vựng): tải số mục đến hạn lúc mở app và mỗi lần quay lại app (số đến hạn đổi theo thời gian)
   useEffect(() => {
     if (!user) return setDueCount(0);
     const load = () =>
@@ -31,11 +31,6 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Label>{t("tabs.lessons")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "books.vertical", selected: "books.vertical.fill" }} md="school" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="vocab">
-        <NativeTabs.Trigger.Label>{t("tabs.vocab")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} md="bookmark" />
-        <NativeTabs.Trigger.Badge hidden={!due}>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="laixe">
         <NativeTabs.Trigger.Label>{t("tabs.driving")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "car", selected: "car.fill" }} md="directions_car" />
@@ -47,6 +42,7 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Label>{t("tabs.settings")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />
+        <NativeTabs.Trigger.Badge hidden={!due}>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

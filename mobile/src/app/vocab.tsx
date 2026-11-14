@@ -9,14 +9,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
 import { ErrorText, styles } from "@/components/ui";
 import { api, deckCover, getVocabVersion, type DeckSummary } from "@/lib/api";
-import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
 import { setDueCount } from "@/lib/due";
 import { C, STICKER } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 
-const STALE_MS = 10 * 60_000; // lâu chưa tải → mở tab thì tải lại (số mục đến hạn đổi theo thời gian)
+const STALE_MS = 10 * 60_000; // lâu chưa tải → mở màn thì tải lại (số mục đến hạn đổi theo thời gian)
 const GAP = 12;
 
 type Notebook = { total: number; due: number };
@@ -34,7 +33,7 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
   const due = notebook?.due ?? 0;
   return (
     <Pressable
-      onPress={() => router.push(loggedIn ? "/notebook" : "/settings")}
+      onPress={() => (loggedIn ? router.push("/notebook") : router.back())}
       accessibilityRole="button"
       style={({ pressed }) => ({
         flexDirection: "row",
@@ -179,7 +178,7 @@ export default function VocabTab() {
       const r = await api<{ decks: DeckSummary[]; notebook: Notebook | null }>("/vocab/decks");
       setDecks(r.decks);
       setNotebook(r.notebook);
-      setDueCount(r.notebook?.due ?? 0); // badge tab Từ vựng
+      setDueCount(r.notebook?.due ?? 0); // badge tab Cài đặt
       loaded.current = { version, at: Date.now() };
     } catch (e) {
       setError((e as Error).message);
@@ -209,10 +208,9 @@ export default function VocabTab() {
 
   return (
     <SafeAreaView style={styles.screen} edges={[]}>
-      <BrandBar />
       <ScrollView
         style={{ width: "100%", maxWidth: CONTENT_MAX + 2 * PAD, alignSelf: "center" }}
-        contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: tablet ? 20 : 12, paddingBottom: 120, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: tablet ? 20 : 12, paddingBottom: 40, gap: 16 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
