@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   Check,
@@ -30,7 +29,7 @@ import { clientApi } from "@/lib/client-api";
 import { FAIL_TEXT, grade, isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/fuehrerschein-rules";
 import type { QuizStat } from "@/lib/quiz-types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { LoginLink } from "../LoginDialog";
+import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../GuestQuota";
 
 /**
  * Màn làm câu hỏi của tab Lái xe và Leben in Deutschland (giống app iOS/Android):
@@ -77,7 +76,6 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   const cfg = MODULES[module];
   /** Lái xe: khung xanh lá giống phần mềm thi thật */
   const fs = module === "fuehrerschein";
-  const pathname = usePathname();
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<Record<string, string[]>>(review?.picked ?? {});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -104,6 +102,10 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
   const submitted = mode === "review" || (mode === "exam" && !!result);
   const q = questions[idx];
+  // Khách: học thử có giới hạn số câu mỗi ngày · thi thử cần tài khoản
+  const quota = useGuestQuota(module, loggedIn);
+  const guestExam = !loggedIn && mode === "exam";
+  const blocked = useGuestCount(quota, q?.id, mode === "ueben" || mode === "lesen") || guestExam;
   const mine = picked[q?.id] ?? [];
   const reveal = mode === "lesen" || submitted || (mode === "ueben" && !!checked[q?.id]);
   const maxErrorPoints = review?.maxErrorPoints ?? exam?.maxErrorPoints ?? 10;
@@ -145,7 +147,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   }, [mode, submitted]);
 
   const toggle = (key: string) => {
-    if (reveal || !q) return;
+    if (reveal || !q || blocked) return;
     if (cfg.single) {
       setPicked((p) => ({ ...p, [q.id]: [key] }));
       if (mode === "ueben") check([key]); // 1 đáp án: chọn là chấm luôn (như app)
@@ -168,7 +170,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   };
 
   const check = (answer = mine) => {
-    if (!q || !answer.length) return;
+    if (!q || !answer.length || blocked) return;
     const ok = isRight(q, answer);
     setChecked((c) => ({ ...c, [q.id]: true }));
     setLocal((s) => ({ ...s, [q.id]: { correct: (s[q.id]?.correct ?? 0) + +ok, wrong: (s[q.id]?.wrong ?? 0) + +!ok, lastOk: ok } }));
@@ -324,15 +326,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         </div>
       )}
 
-      {!loggedIn && mode !== "review" && (
-        <p className="rounded-2xl border-2 border-dashed border-ink/40 px-3 py-2 text-sm">
-          Bạn đang học thử.{" "}
-          <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="font-extrabold text-accent-text underline">
-            Đăng nhập
-          </LoginLink>{" "}
-          để lưu tiến độ, đánh dấu câu và xem lại lịch sử thi.
-        </p>
-      )}
+      {!loggedIn && !isExam && <GuestTrialNote area={module} quota={quota} extra="lưu tiến độ và đánh dấu câu" />}
+      <GuestWall area={module} quota={quota} backHref={backHref} exam={guestExam} />
 
       {result && <ResultBar module={module} result={result} maxErrorPoints={maxErrorPoints} savedId={savedId} saveError={saveError} />}
 

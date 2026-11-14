@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Eye, Lightbulb, List, RotateCcw, Volume2, X } from "lucide-react";
 import { addDeck } from "@/app/(portal)/account-actions";
@@ -10,7 +10,7 @@ import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { shuffle } from "@/lib/review";
 import DeckWords from "./DeckWords";
-import { LoginLink } from "./LoginDialog";
+import { GuestTrialNote, GuestWall, useGuestQuota } from "./GuestQuota";
 
 type Word = DeckWord & { saved: boolean; learned: boolean };
 type Mode = StudyMode | "list";
@@ -285,7 +285,9 @@ function Session({
   onLearned,
   onPractice,
   nextTopic,
+  onShow,
 }: {
+  onShow: (w: Word) => void;
   words: Word[];
   pool: DeckWord[];
   mode: StudyMode;
@@ -298,6 +300,9 @@ function Session({
   const [queue, setQueue] = useState(() => (practice ? shuffle(words) : words.filter((w) => !w.learned)));
   const [seq, setSeq] = useState(0); // đổi key thẻ mỗi lần sang thẻ mới
   const w = queue[0];
+  useEffect(() => {
+    if (w) onShow(w);
+  }, [w, onShow]);
   if (!w)
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
@@ -362,6 +367,10 @@ export default function DeckStudy({
   };
   const [error, setError] = useState("");
   const [, startTransition] = useTransition();
+  // Khách: học thử có giới hạn số từ mỗi ngày (đếm khi thẻ từ hiện ra)
+  const quota = useGuestQuota("deck", loggedIn);
+  const { open } = quota;
+  const onShow = useCallback((w: Word) => void open(`${slug}:${w.key}`), [open, slug]);
   const tts = useHasGermanVoice();
   const mounted = useMounted();
 
@@ -471,11 +480,8 @@ export default function DeckStudy({
             <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(learned * 100) / Math.max(1, topicWords.length)}%` }} />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
-          {!loggedIn && (
-            <p className="text-sm text-muted">
-              Bạn đang học thử — <LoginLink href={`/login?next=/vocab/decks/${slug}/${topic.id}`} className="font-bold text-link hover:underline">đăng nhập</LoginLink> để lưu tiến độ và ôn lại theo lịch.
-            </p>
-          )}
+          {!loggedIn && <GuestTrialNote area="deck" quota={quota} extra="lưu tiến độ và ôn lại theo lịch" />}
+          <GuestWall area="deck" quota={quota} backHref="/vocab" />
           <div className="card min-h-96 p-5 md:p-8">
             {!mounted ? null : study === "list" ? (
               <DeckWords key={topic.id} slug={slug} words={topicWords} loggedIn={loggedIn} onSaved={markSaved} />
@@ -490,6 +496,7 @@ export default function DeckStudy({
                 onLearned={learn}
                 onPractice={() => setPractice((p) => p + 1)}
                 nextTopic={nextTopic}
+                onShow={onShow}
               />
             )}
           </div>

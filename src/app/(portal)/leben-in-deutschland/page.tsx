@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, BookOpen, Bookmark, Eye, Flag, MapPin, RotateCcw, Settings } from "lucide-react";
+import { BarChart3, BookOpen, Bookmark, Flag, RotateCcw, Settings } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { CATEGORIES, EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
+import { EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
 import { summarize } from "@/lib/quiz-types";
 import { ActionCard, BigCard, ProgressBar } from "@/components/QuizParts";
 import { LidInfo } from "@/components/lid/LidParts";
@@ -95,18 +95,6 @@ async function Home() {
       <LidInfo>
         Cần đạt ít nhất {EXAM.pass}/{EXAM_TOTAL} câu đúng để đậu bài thi.
       </LidInfo>
-
-      {/* Học theo chủ đề */}
-      <section className="flex flex-col gap-2">
-        <h2 className="mt-1 text-lg font-extrabold">Học theo chủ đề</h2>
-        <div className="grid gap-2 md:grid-cols-2">
-          {CATEGORIES.map((c) => (
-            <ActionCard key={c.key} href={`/leben-in-deutschland/${c.key}`} icon={BookOpen} title={c.vi} text={`${c.de} · câu ${c.from}–${c.to}`} />
-          ))}
-          <ActionCard href={`/leben-in-deutschland/${state.code}`} icon={MapPin} title={`Câu riêng của ${state.name}`} text={`${stateIds(state.code).length} câu · câu 301–310`} />
-          <ActionCard href="/leben-in-deutschland/tat-ca?mode=lesen" icon={Eye} title="Đọc lướt đáp án" text={`${generalCount()} câu chung, đáp án đúng có sẵn`} />
-        </div>
-      </section>
     </>
   );
 }

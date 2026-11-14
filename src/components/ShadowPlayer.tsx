@@ -36,6 +36,7 @@ import YouTubePlayer from "./YouTubePlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
 import Mascot from "./Mascot";
+import { GuestTrialNote, GuestWall, useGuestQuota } from "./GuestQuota";
 import { Gem } from "./PointsBadge";
 import { SoundMark } from "./SoundBars";
 import WordPopup from "./WordPopup";
@@ -310,6 +311,10 @@ export default function ShadowPlayer({
     [setStored],
   );
 
+  // Khách: học thử có giới hạn số câu mỗi ngày — phát câu mới khi hết lượt thì dừng video, hiện popup mời đăng nhập
+  const quota = useGuestQuota("shadow", loggedIn);
+  const guestOpen = quota.open;
+
   // Câu vừa được phát → tính là đã nghe (chỉ chọn câu mà không phát thì không tính)
   const markSeen = useCallback((i: number) => {
     if (live.current.settings.practice !== "dictation") setSeen((s) => (s.has(i) ? s : new Set(s).add(i)));
@@ -328,6 +333,12 @@ export default function ShadowPlayer({
       const s = segments[i];
       if (!h || !s) return;
       clearGap();
+      if (!guestOpen(`${videoId}:${i}`)) {
+        h.pause();
+        stopAtRef.current = null;
+        setPlaying(false);
+        return;
+      }
       setIdx(i);
       markSeen(i);
       live.current.idx = i;
@@ -339,7 +350,7 @@ export default function ShadowPlayer({
       stopAtRef.current = settings.mode === "free" && settings.practice !== "dictation" ? null : s.end;
       setPlaying(true);
     },
-    [clearGap, markSeen],
+    [clearGap, markSeen, guestOpen, videoId],
   );
 
   /** Người dùng chủ động chọn câu → reset bộ đếm lặp */
@@ -422,13 +433,18 @@ export default function ShadowPlayer({
         let i = segments.findIndex((s, k) => t >= s.start && t < (segments[k + 1]?.start ?? Infinity));
         if (i === -1) i = 0;
         if (i !== idx) {
+          if (!guestOpen(`${videoId}:${i}`)) {
+            h.pause();
+            setPlaying(false);
+            return;
+          }
           setIdx(i);
           markSeen(i);
         }
       }
     }, 40);
     return () => clearInterval(timer);
-  }, [onSegmentEnd, markSeen]);
+  }, [onSegmentEnd, markSeen, guestOpen, videoId]);
 
   useEffect(() => clearGap, [clearGap]);
 
@@ -992,6 +1008,9 @@ export default function ShadowPlayer({
           {toggles}
         </div>
       </div>
+
+      {!loggedIn && <GuestTrialNote area="shadow" quota={quota} extra="tra từ, lưu tiến độ và nhận kim cương" />}
+      <GuestWall area="shadow" quota={quota} backHref={backHref} />
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
         {/* Cột 1: video + điều khiển */}

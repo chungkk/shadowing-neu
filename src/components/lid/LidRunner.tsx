@@ -8,7 +8,7 @@ import { clientApi } from "@/lib/client-api";
 import { grade, isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/fuehrerschein-rules";
 import type { QuizStat } from "@/lib/quiz-types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { LoginLink } from "../LoginDialog";
+import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../GuestQuota";
 import { ProgressBar } from "../QuizParts";
 
 /**
@@ -56,6 +56,10 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
   const scroller = useRef<HTMLDivElement>(null);
 
   const q = questions[idx];
+  // Khách: học thử có giới hạn số câu mỗi ngày · thi thử cần tài khoản
+  const quota = useGuestQuota("lid", loggedIn);
+  const guestExam = !loggedIn && mode === "exam";
+  const blocked = useGuestCount(quota, q?.id, mode === "ueben" || mode === "lesen") || guestExam;
   const isExam = mode === "exam" || mode === "review";
   const submitted = mode === "review" || (mode === "exam" && !!result);
   const testing = mode === "exam" && !submitted;
@@ -120,7 +124,7 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
   };
 
   const choose = (key: string) => {
-    if (!q || submitted || mode === "lesen") return;
+    if (!q || submitted || mode === "lesen" || blocked) return;
     if (testing) {
       setPicked((p) => ({ ...p, [q.id]: [key] }));
       return;
@@ -236,15 +240,8 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
 
       {!testing && <ProgressBar total={questions.length} ok={okCount} wrong={badCount} />}
 
-      {!loggedIn && !submitted && (
-        <p className="rounded-2xl border-2 border-dashed border-ink/40 px-3 py-2 text-sm">
-          Bạn đang học thử.{" "}
-          <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="font-extrabold text-accent-text underline">
-            Đăng nhập
-          </LoginLink>{" "}
-          để lưu tiến độ và đánh dấu câu.
-        </p>
-      )}
+      {!loggedIn && !isExam && <GuestTrialNote area="lid" quota={quota} extra="lưu tiến độ và đánh dấu câu" />}
+      <GuestWall area="lid" quota={quota} backHref={backHref} exam={guestExam} />
 
       {/* Kết quả bài thi */}
       {submitted && result && (
