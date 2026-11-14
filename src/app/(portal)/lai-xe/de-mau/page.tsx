@@ -4,29 +4,30 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
-import { BOGEN_COUNT } from "@/lib/fuehrerschein";
+import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/fuehrerschein";
+import AppOnlyCard from "@/components/lai-xe/AppOnlyCard";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {
   title: "Đề mẫu chính thức hạng B · Lý thuyết lái xe",
-  description: `${BOGEN_COUNT} đề mẫu chính thức (Musterbögen) thi lý thuyết lái xe Đức hạng B, mỗi đề 30 câu: đọc, luyện hoặc thi như thật.`,
+  description: `Đề mẫu chính thức (Musterbögen) thi lý thuyết lái xe Đức hạng B, mỗi đề 30 câu: làm thử ${WEB_BOGEN_LIMIT} đề trên web, trọn ${BOGEN_COUNT} đề trên app.`,
 };
 
 async function Sheets() {
   const user = await getCurrentUser();
   const progress = user ? bogenProgress(user.id, "fuehrerschein") : {};
-  const passed = Object.values(progress).filter((p) => p.everPassed).length;
+  const passed = Object.entries(progress).filter(([n, p]) => Number(n) <= WEB_BOGEN_LIMIT && p.everPassed).length;
   return (
     <>
       {user ? (
         <p className="font-bold">
-          Đã đậu {passed}/{BOGEN_COUNT} đề · mỗi chấm là 1 lần thi gần nhất (xanh = đậu, đỏ = trượt)
+          Đã đậu {passed}/{WEB_BOGEN_LIMIT} đề · mỗi chấm là 1 lần thi gần nhất (xanh = đậu, đỏ = trượt)
         </p>
       ) : (
         <p className="text-sm text-muted">Đăng nhập để lưu kết quả từng đề.</p>
       )}
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-        {Array.from({ length: BOGEN_COUNT }, (_, i) => i + 1).map((n) => {
+        {Array.from({ length: Math.min(WEB_BOGEN_LIMIT, BOGEN_COUNT) }, (_, i) => i + 1).map((n) => {
           const p = progress[n];
           return (
             <li key={n} className={`tile flex flex-col gap-2 ${p?.everPassed ? "bg-accent/10" : ""}`}>
@@ -54,6 +55,12 @@ async function Sheets() {
           );
         })}
       </ul>
+      {BOGEN_COUNT > WEB_BOGEN_LIMIT && (
+        <AppOnlyCard
+          title={`Còn ${BOGEN_COUNT - WEB_BOGEN_LIMIT} đề mẫu nữa trên app`}
+          text={`Web chỉ có ${WEB_BOGEN_LIMIT} đề làm thử. Tải app để luyện trọn ${BOGEN_COUNT} đề mẫu chính thức, đọc – luyện – thi như thật.`}
+        />
+      )}
     </>
   );
 }

@@ -140,6 +140,8 @@ export function examQuestionIds(cls: ClassId): string[] {
 
 /** 99 đề mẫu chính thức hạng B (mỗi đề 20 câu cơ bản + 10 câu hạng B) */
 export const BOGEN_COUNT = data.musterboegen.length;
+/** Web chỉ mở vài đề mẫu đầu; số còn lại học trên app (API /api/v1 cho app vẫn trả đủ). */
+export const WEB_BOGEN_LIMIT = 3;
 export const bogenIds = (n: number): string[] | null => data.musterboegen[n - 1] ?? null;
 
 // ---- Gửi câu xuống trình duyệt ----
