@@ -11,7 +11,8 @@ type P = PageProps<"/lai-xe/de-mau/[n]">;
 
 export async function generateMetadata({ params }: P): Promise<Metadata> {
   const { n } = await params;
-  return { title: `Đề mẫu ${n} hạng B · Lý thuyết lái xe`, description: `Đề mẫu chính thức số ${n} thi lý thuyết lái xe Đức hạng B, 30 câu kèm bản dịch và giải thích.` };
+  // Trang chứa trọn 30 câu + đáp án + giải thích → không cho index / lần theo (chống gom bộ đề; xem robots.ts, crawl-guard.ts)
+  return { title: `Đề mẫu ${n} hạng B · Lý thuyết lái xe`, robots: { index: false, follow: false } };
 }
 
 async function Sheet({ params, searchParams }: P) {

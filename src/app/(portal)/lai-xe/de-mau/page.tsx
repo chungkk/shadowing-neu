@@ -40,13 +40,13 @@ async function Sheets() {
                 ))}
               </span>
               <span className="flex gap-1 text-xs">
-                <Link href={`/lai-xe/de-mau/${n}?mode=lesen`} className="flex-1 rounded-lg border-2 border-ink/30 py-1 text-center font-bold hover:border-ink">
+                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}?mode=lesen`} className="flex-1 rounded-lg border-2 border-ink/30 py-1 text-center font-bold hover:border-ink">
                   Đọc
                 </Link>
-                <Link href={`/lai-xe/de-mau/${n}?mode=ueben`} className="flex-1 rounded-lg border-2 border-ink/30 py-1 text-center font-bold hover:border-ink">
+                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}?mode=ueben`} className="flex-1 rounded-lg border-2 border-ink/30 py-1 text-center font-bold hover:border-ink">
                   Luyện
                 </Link>
-                <Link href={`/lai-xe/de-mau/${n}`} className="flex-1 rounded-lg border-2 border-ink bg-red py-1 text-center font-extrabold text-white">
+                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="flex-1 rounded-lg border-2 border-ink bg-red py-1 text-center font-extrabold text-white">
                   Thi
                 </Link>
               </span>

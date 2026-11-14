@@ -20,6 +20,7 @@ export default function robots(): MetadataRoute.Robots {
           "/forgot-password",
           // Trang làm bài / cá nhân của Lái xe & LiD (đã noindex) — bot không cần vào
           "/lai-xe/thi-thu/",
+          "/lai-xe/de-mau/", // từng đề (trọn câu + đáp án); trang danh sách /lai-xe/de-mau vẫn index
           "/lai-xe/cau-sai",
           "/lai-xe/danh-dau",
           "/lai-xe/thong-ke",
