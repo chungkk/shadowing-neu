@@ -112,6 +112,13 @@ const LIMITS = [
 ];
 const CLIENT_NAV_FACTOR = 5;
 
+// Đề mẫu (/lai-xe/de-mau/<n>): mỗi trang là trọn 30 câu + đáp án → mỗi IP chỉ mở được SHEET_MAX đề khác nhau / giờ.
+// Đếm theo số đề, không theo request: đổi chế độ Đọc/Luyện/Thi, tải lại, nộp bài trong cùng đề không bị tính thêm.
+const SHEET_RE = /^\/lai-xe\/de-mau\/(\d+)\/?$/;
+const SHEET_MAX = 2;
+const SHEET_WINDOW_MS = 3_600_000;
+const sheets = new Map<string, { ids: Set<string>; resetAt: number }>();
+
 type Entry = { count: number; resetAt: number };
 const hits = new Map<string, Entry>();
 
@@ -141,10 +148,27 @@ export function crawlGuard(req: NextRequest): NextResponse | null {
   const ua = (req.headers.get("user-agent") ?? "").toLowerCase().trim();
   if (!ua || BLOCKED_UA.some((b) => ua.includes(b))) return page(403, "Không truy cập được", "Trang này không cho phép truy cập tự động.");
 
-  const clientNav = req.headers.has("next-url"); // chuyển trang / prefetch từ trong app
-  const bucket = clientNav ? "nav" : "doc";
   const ip = clientIp(req);
   const now = Date.now();
+
+  const sheet = SHEET_RE.exec(pathname)?.[1];
+  if (sheet) {
+    if (sheets.size > 20_000) for (const [k, e] of sheets) if (now > e.resetAt) sheets.delete(k);
+    let e = sheets.get(ip);
+    if (!e || now > e.resetAt) sheets.set(ip, (e = { ids: new Set(), resetAt: now + SHEET_WINDOW_MS }));
+    if (!e.ids.has(sheet)) {
+      if (e.ids.size >= SHEET_MAX) {
+        const wait = Math.max(1, Math.ceil((e.resetAt - now) / 1000));
+        return page(429, "Đã mở đủ đề mẫu", `Mỗi giờ chỉ mở được ${SHEET_MAX} đề mẫu (đề ${[...e.ids].join(", ")} vẫn mở lại được). Đề khác thử lại sau khoảng ${Math.ceil(wait / 60)} phút.`, {
+          "Retry-After": String(wait),
+        });
+      }
+      e.ids.add(sheet);
+    }
+  }
+
+  const clientNav = req.headers.has("next-url"); // chuyển trang / prefetch từ trong app
+  const bucket = clientNav ? "nav" : "doc";
   for (const l of LIMITS) {
     const e = hit(`${bucket}:${l.name}:${ip}`, l.windowMs, now);
     if (e.count > l.max * (clientNav ? CLIENT_NAV_FACTOR : 1)) {
