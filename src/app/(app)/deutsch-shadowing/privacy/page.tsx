@@ -1,12 +1,9 @@
-import type { Metadata } from "next";
-import LegalPage from "@/components/LegalPage";
+import { permanentRedirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Chính sách quyền riêng tư",
-  description: "HalloVN thu thập dữ liệu nào, dùng để làm gì và quyền của bạn đối với dữ liệu cá nhân.",
-  alternates: { canonical: "/deutsch-shadowing/privacy", languages: { vi: "/deutsch-shadowing/privacy", de: "/deutsch-shadowing/privacy/de" } },
-};
-
+/**
+ * URL cũ (app HalloVN bản đã phát hành mở trang này trong trình duyệt nhúng, link trong form đăng ký) → chuyển hẳn (308)
+ * tới trang pháp lý chung của HalloVN. Nội dung chỉ còn một nơi: /privacy?lang=vi
+ */
 export default function PrivacyPage() {
-  return <LegalPage doc="privacy" lang="vi" />;
+  permanentRedirect("/privacy?lang=vi");
 }

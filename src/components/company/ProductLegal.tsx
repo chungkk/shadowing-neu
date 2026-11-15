@@ -1,111 +1,154 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import LegalShell from '@/components/company/LegalShell';
 import type { LegalNavItem } from '@/components/company/LegalShell';
 import LegalText from '@/components/company/LegalText';
 import SupportForm from '@/components/company/SupportForm';
+import type { SupportTopic } from '@/components/company/SupportForm';
 import { LEGAL_PRODUCTS, legalProduct } from '@/lib/company/legal';
-import { websitePrivacy } from '@/lib/company/legal/website';
+import { hallovnPrivacy } from '@/lib/company/legal/website';
 import type { LegalProduct } from '@/lib/company/legal/types';
 import { SITE } from '@/lib/company/site';
-import { useT } from '@/components/company/LocaleContext';
 import type { Locale } from '@/components/company/LocaleContext';
-import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, PlusIcon, ReceiptIcon, TrashIcon } from '@/components/company/icons';
+import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, PlusIcon, ReceiptIcon } from '@/components/company/icons';
 
 const LOCALES: Locale[] = ['de', 'en', 'vi'];
+/** Slug kỹ thuật (giữ tên cũ) của sản phẩm chính HalloVN */
+const HALLOVN_SLUG = 'shadowing';
 
 const COPY = {
     de: {
         support: 'Support',
         privacy: 'Datenschutz',
-        supportIntro: (name: string) => `Häufige Fragen und Kontakt zu ${name}.`,
+        supportIntro: (name: string) => `Antworten auf häufige Fragen zu ${name} und der direkte Draht zu uns.`,
         privacyTitle: 'Datenschutzerklärung',
         privacyIntro: (name: string) => `Welche Daten ${name} verarbeitet und welche Rechte Sie haben.`,
         faq: 'Häufige Fragen',
         contact: 'Kontakt',
-        contactDesc: 'Keine Antwort gefunden? Schreiben Sie uns. Wir melden uns in der Regel innerhalb von 1–2 Werktagen.',
+        contactDesc: 'Keine Antwort gefunden, einen Fehler entdeckt oder eine Idee? Schreiben Sie uns über das Formular oder per E-Mail. Wir lesen jede Nachricht und antworten in der Regel innerhalb weniger Werktage.',
         refund: 'Käufe & Erstattung',
-        deletion: 'Datenlöschung',
         terms: 'Nutzungsbedingungen',
-        all: 'Alle Produkte',
-        allPrivacy: 'Alle Datenschutzerklärungen',
+        all: 'Support-Center',
         hubTitle: 'Support-Center',
-        hubIntro: 'Wählen Sie Ihr Produkt. Dort finden Sie Antworten, Kontakt und die Datenschutzerklärung.',
+        hubIntro: 'Hilfe zu HalloVN – Deutschlernen, Vokabeln, Führerscheintheorie und Leben in Deutschland – und zu unseren weiteren Apps.',
+        quick: 'Schnelle Hilfe',
+        quickLinks: [
+            { href: '/shadowing/support', label: 'Häufige Fragen zu HalloVN', desc: 'Konto, Gastzugang, Vokabelheft, Diamanten, Sprache und mehr' },
+            { href: '/forgot-password', label: 'Passwort vergessen', desc: 'Code per E-Mail anfordern und neues Passwort setzen' },
+            { href: '/settings', label: 'Kontoeinstellungen', desc: 'E-Mail, Passwort, Datenkopie und Konto löschen (nach Anmeldung)' },
+            { href: '/shadowing/privacy', label: 'Datenschutz bei HalloVN', desc: 'Welche Daten gespeichert werden und Ihre Rechte' },
+        ],
         products: 'Produkte',
-        hubFormTitle: 'Allgemeine Anfrage',
-        topics: ['Daten & Datenschutz', 'Feedback', 'Kooperation', 'Sonstiges'],
-        websitePrivacy: 'Datenschutzerklärung der Website',
-        websiteIntro: 'Diese Seite gilt für die Website hallovn.de. Für unsere Apps und Dienste gilt jeweils eine eigene Erklärung:',
-        websiteHeading: 'Website hallovn.de',
+        hubFormTitle: 'Nachricht an uns',
+        websitePrivacy: 'Datenschutzerklärung',
+        websiteIntro: 'Für die Website hallovn.de und die App HalloVN: welche Daten wir verarbeiten, wofür und welche Rechte Sie haben.',
+        otherApps: 'Weitere Apps',
+        otherAppsIntro: 'Für diese eigenständigen Apps gilt jeweils eine eigene Datenschutzerklärung:',
     },
     en: {
         support: 'Support',
         privacy: 'Privacy',
-        supportIntro: (name: string) => `Common questions and contact for ${name}.`,
+        supportIntro: (name: string) => `Answers to common questions about ${name} and a direct line to us.`,
         privacyTitle: 'Privacy policy',
         privacyIntro: (name: string) => `What data ${name} processes and what rights you have.`,
         faq: 'Common questions',
         contact: 'Contact',
-        contactDesc: 'Did not find an answer? Write to us. We usually reply within 1–2 working days.',
+        contactDesc: 'No answer found, spotted a bug or have an idea? Write to us using the form or by email. We read every message and usually reply within a few working days.',
         refund: 'Purchases & refunds',
-        deletion: 'Data deletion',
         terms: 'Terms of use',
-        all: 'All products',
-        allPrivacy: 'All privacy policies',
+        all: 'Support center',
         hubTitle: 'Support center',
-        hubIntro: 'Choose your product to find answers, contact details and its privacy policy.',
+        hubIntro: 'Help with HalloVN – learning German, vocabulary, driving theory and Leben in Deutschland – and with our other apps.',
+        quick: 'Quick help',
+        quickLinks: [
+            { href: '/shadowing/support', label: 'HalloVN FAQ', desc: 'Account, guest access, vocabulary book, diamonds, language and more' },
+            { href: '/forgot-password', label: 'Forgot password', desc: 'Get a code by email and set a new password' },
+            { href: '/settings', label: 'Account settings', desc: 'Email, password, data copy and account deletion (after signing in)' },
+            { href: '/shadowing/privacy', label: 'HalloVN privacy', desc: 'What data is stored and your rights' },
+        ],
         products: 'Products',
-        hubFormTitle: 'General enquiry',
-        topics: ['Data & privacy', 'Feedback', 'Partnership', 'Other'],
-        websitePrivacy: 'Website privacy policy',
-        websiteIntro: 'This page applies to the website hallovn.de. Each of our apps and services has its own policy:',
-        websiteHeading: 'Website hallovn.de',
+        hubFormTitle: 'Message us',
+        websitePrivacy: 'Privacy policy',
+        websiteIntro: 'For the website hallovn.de and the HalloVN app: what data we process, why, and what rights you have.',
+        otherApps: 'Other apps',
+        otherAppsIntro: 'Each of these separate apps has its own privacy policy:',
     },
     vi: {
         support: 'Hỗ trợ',
         privacy: 'Bảo mật',
-        supportIntro: (name: string) => `Câu hỏi thường gặp và liên hệ về ${name}.`,
+        supportIntro: (name: string) => `Giải đáp thắc mắc thường gặp về ${name} và cách liên hệ trực tiếp với chúng tôi.`,
         privacyTitle: 'Chính sách bảo mật',
         privacyIntro: (name: string) => `${name} xử lý dữ liệu gì và bạn có những quyền nào.`,
         faq: 'Câu hỏi thường gặp',
         contact: 'Liên hệ',
-        contactDesc: 'Chưa tìm thấy câu trả lời? Hãy viết cho chúng tôi. Chúng tôi thường trả lời trong 1–2 ngày làm việc.',
+        contactDesc: 'Chưa tìm thấy câu trả lời, gặp lỗi hay có ý tưởng? Hãy viết cho chúng tôi qua biểu mẫu hoặc email. Chúng tôi đọc mọi tin nhắn và thường trả lời trong vài ngày làm việc.',
         refund: 'Mua hàng & hoàn tiền',
-        deletion: 'Xoá dữ liệu',
         terms: 'Điều khoản sử dụng',
-        all: 'Tất cả sản phẩm',
-        allPrivacy: 'Tất cả chính sách bảo mật',
+        all: 'Trung tâm hỗ trợ',
         hubTitle: 'Trung tâm hỗ trợ',
-        hubIntro: 'Chọn sản phẩm của bạn để xem câu trả lời, liên hệ và chính sách bảo mật.',
+        hubIntro: 'Hỗ trợ cho HalloVN – học tiếng Đức, từ vựng, ôn lý thuyết lái xe và Leben in Deutschland – cùng các ứng dụng khác của chúng tôi.',
+        quick: 'Trợ giúp nhanh',
+        quickLinks: [
+            { href: '/shadowing/support', label: 'Câu hỏi thường gặp về HalloVN', desc: 'Tài khoản, học thử khi chưa đăng nhập, sổ từ, kim cương, ngôn ngữ…' },
+            { href: '/forgot-password', label: 'Quên mật khẩu', desc: 'Nhận mã qua email và đặt mật khẩu mới' },
+            { href: '/settings', label: 'Cài đặt tài khoản', desc: 'Email, mật khẩu, bản sao dữ liệu và xoá tài khoản (sau khi đăng nhập)' },
+            { href: '/shadowing/privacy', label: 'Bảo mật tại HalloVN', desc: 'Dữ liệu nào được lưu và quyền của bạn' },
+        ],
         products: 'Sản phẩm',
-        hubFormTitle: 'Yêu cầu chung',
-        topics: ['Dữ liệu & bảo mật', 'Góp ý', 'Hợp tác', 'Khác'],
-        websitePrivacy: 'Chính sách bảo mật của trang web',
-        websiteIntro: 'Trang này áp dụng cho trang web hallovn.de. Mỗi ứng dụng và dịch vụ của chúng tôi có chính sách riêng:',
-        websiteHeading: 'Trang web hallovn.de',
+        hubFormTitle: 'Nhắn cho chúng tôi',
+        websitePrivacy: 'Chính sách bảo mật',
+        websiteIntro: 'Áp dụng cho trang web hallovn.de và ứng dụng HalloVN: chúng tôi xử lý dữ liệu gì, để làm gì và bạn có những quyền nào.',
+        otherApps: 'Ứng dụng khác',
+        otherAppsIntro: 'Mỗi ứng dụng độc lập sau có chính sách bảo mật riêng:',
     },
 };
 
 function productNav(product: LegalProduct): LegalNavItem[] {
-    const label = (key: 'support' | 'privacy' | 'refund' | 'terms' | 'deletion' | 'all') =>
+    const label = (key: 'support' | 'privacy' | 'refund' | 'terms' | 'all') =>
         Object.fromEntries(LOCALES.map((l) => [l, COPY[l][key]])) as Record<Locale, string>;
+    // Không còn liên kết /delete-account: đường dẫn đó thuộc 2 app đã tách (proxy chuyển sang ckk.biz).
+    // Xoá tài khoản HalloVN nằm ở /settings (xem câu hỏi thường gặp).
     return [
         { href: `/${product.slug}/support`, icon: MailIcon, ...label('support') },
         { href: `/${product.slug}/privacy`, icon: LockIcon, ...label('privacy') },
-        ...(product.hasPurchases
-            ? [
-                  { href: '/refund', icon: ReceiptIcon, ...label('refund') },
-                  { href: '/terms', icon: DocumentIcon, ...label('terms') },
-              ]
-            : []),
-        ...(product.showDeletion ? [{ href: '/delete-account', icon: TrashIcon, ...label('deletion') }] : []),
+        ...(product.hasPurchases ? [{ href: '/refund', icon: ReceiptIcon, ...label('refund') }] : []),
+        ...(product.slug === HALLOVN_SLUG ? [{ href: '/terms', icon: DocumentIcon, ...label('terms') }] : []),
         { href: '/support', icon: BriefcaseIcon, ...label('all') },
     ];
 }
 
 const perLocaleOf = <T,>(build: (locale: Locale) => T) =>
     Object.fromEntries(LOCALES.map((l) => [l, build(l)])) as Record<Locale, T>;
+
+/** Câu trả lời FAQ hỗ trợ [liên kết](/đường-dẫn); liên kết nội bộ dùng <Link> */
+function faqInline(text: string): ReactNode[] {
+    return text.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+        const link = part.match(/^\[(.+)\]\((.+)\)$/);
+        if (!link) return part;
+        if (link[2].startsWith('/')) return <Link key={i} href={link[2]}>{link[1]}</Link>;
+        return <a key={i} href={link[2]} {...(/^https?:/.test(link[2]) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link[1]}</a>;
+    });
+}
+
+/** Chủ đề form: tài khoản và nội dung bài học chỉ có ở HalloVN (2 app nhỏ không có tài khoản) */
+const topicsFor = (product: LegalProduct): SupportTopic[] =>
+    product.slug === HALLOVN_SLUG ? ['account', 'bug', 'idea', 'content', 'privacy', 'other'] : ['bug', 'idea', 'privacy', 'other'];
+
+function ContactSection({ id, title, locale, product }: { id: string; title: string; locale: Locale; product?: LegalProduct }) {
+    const t = COPY[locale];
+    return (
+        <section>
+            <h2 id={id}>{title}</h2>
+            <p>{t.contactDesc}</p>
+            <p>
+                <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
+            </p>
+            <SupportForm product={product?.name} topics={product ? topicsFor(product) : undefined} />
+        </section>
+    );
+}
 
 function SupportBody({ product, locale }: { product: LegalProduct; locale: Locale }) {
     const t = COPY[locale];
@@ -120,17 +163,12 @@ function SupportBody({ product, locale }: { product: LegalProduct; locale: Local
                                 {item.q}
                                 <PlusIcon className="faq-icon h-5 w-5 shrink-0 transition-transform" />
                             </summary>
-                            <p className="pb-4">{item.a}</p>
+                            <p className="pb-4">{faqInline(item.a)}</p>
                         </details>
                     ))}
                 </div>
             </section>
-            <section>
-                <h2 id="contact">{t.contact}</h2>
-                <p>{t.contactDesc}</p>
-                <p><a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a></p>
-                <SupportForm subject={product.name} />
-            </section>
+            <ContactSection id="contact" title={t.contact} locale={locale} product={product} />
         </>
     );
 }
@@ -182,7 +220,6 @@ function ProductList({ locale }: { locale: Locale }) {
 }
 
 export function SupportHub() {
-    const t = useT(COPY);
     return (
         <LegalShell
             title={perLocaleOf((l) => COPY[l].hubTitle)}
@@ -190,15 +227,21 @@ export function SupportHub() {
             content={perLocaleOf((l) => (
                 <>
                     <section>
-                        <h2 id="products" className="!mt-0 !border-0 !pt-0">{COPY[l].products}</h2>
-                        <ProductList locale={l} />
+                        <h2 id="quick" className="!mt-0 !border-0 !pt-0">{COPY[l].quick}</h2>
+                        <ul className="!list-none !pl-0 border-t border-[var(--ink)]/20">
+                            {COPY[l].quickLinks.map((item) => (
+                                <li key={item.href} className="!mb-0 border-b border-[var(--ink)]/20 py-3">
+                                    <Link href={item.href} className="font-semibold">{item.label}</Link>
+                                    <span className="block text-[0.95rem]">{item.desc}</span>
+                                </li>
+                            ))}
+                        </ul>
                     </section>
                     <section>
-                        <h2 id="contact">{COPY[l].hubFormTitle}</h2>
-                        <p>{COPY[l].contactDesc}</p>
-                        <p><a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a></p>
-                        <SupportForm subjects={t.topics} />
+                        <h2 id="products">{COPY[l].products}</h2>
+                        <ProductList locale={l} />
                     </section>
+                    <ContactSection id="contact" title={COPY[l].hubFormTitle} locale={l} />
                 </>
             ))}
             showUpdated={false}
@@ -213,12 +256,18 @@ export function WebsitePrivacy() {
             intro={perLocaleOf((l) => COPY[l].websiteIntro)}
             content={perLocaleOf((l) => (
                 <>
-                    <section className="mb-10">
-                        <h2 id="products" className="!mt-0 !border-0 !pt-0">{COPY[l].allPrivacy}</h2>
-                        <ProductList locale={l} />
+                    <LegalText sections={hallovnPrivacy[l]} />
+                    <section>
+                        <h2 id="other-apps">{COPY[l].otherApps}</h2>
+                        <p>{COPY[l].otherAppsIntro}</p>
+                        <ul>
+                            {LEGAL_PRODUCTS.filter((p) => p.slug !== HALLOVN_SLUG).map((p) => (
+                                <li key={p.slug}>
+                                    <Link href={`/${p.slug}/privacy`}>{p.name}</Link>: {p.summary[l]}
+                                </li>
+                            ))}
+                        </ul>
                     </section>
-                    <h2 id="website" className="!mt-0 !border-0 !pt-0">{COPY[l].websiteHeading}</h2>
-                    <LegalText sections={websitePrivacy[l]} />
                 </>
             ))}
         />

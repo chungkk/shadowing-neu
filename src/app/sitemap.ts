@@ -54,7 +54,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...allChapterIds().map((id) => ({ url: `${SITE_URL}/lai-xe/hoc/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
     ...indexableSetIds().map((id) => ({ url: `${SITE_URL}/leben-in-deutschland/${id}`, lastModified: LID_UPDATED, changeFrequency: "monthly" as const, priority: 0.5 })),
     ...bizPages(),
-    ...["/deutsch-shadowing/privacy", "/deutsch-shadowing/privacy/de", "/deutsch-shadowing/terms", "/deutsch-shadowing/terms/de"].map((p) => ({ url: SITE_URL + p, changeFrequency: "yearly" as const, priority: 0.2 })),
     ...listLessons().map((l) => ({
       url: SITE_URL + lessonPath(l.slug),
       lastModified: new Date(l.createdAt.replace(" ", "T") + "Z"),

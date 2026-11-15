@@ -35,7 +35,7 @@ function BlockView({ block }: { block: Block }) {
     return (
         <div className="card">
             <p><strong>{COMPANY.legalName}</strong></p>
-            <p>{COMPANY.owner}</p>
+            {COMPANY.owner && <p>{COMPANY.owner}</p>}
             <p>{[COMPANY.street, COMPANY.postalCity, COMPANY.country].filter(Boolean).join(', ')}</p>
             <p><a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a></p>
         </div>

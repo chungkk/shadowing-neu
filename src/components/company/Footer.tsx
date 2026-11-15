@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import { COMPANY, SITE } from '@/lib/company/site';
-import { SERVICES, productPath } from '@/lib/company/services';
+import { LEARN_AREAS, PLATFORM, productPath } from '@/lib/company/services';
 import { BrandMark } from '@/components/company/icons';
-import { useT } from '@/components/company/LocaleContext';
+import { useLocale, useT } from '@/components/company/LocaleContext';
 import ConsentSettings from '@/components/company/ConsentSettings';
 
 // Năm hiện tại đọc trên trình duyệt (prerender không được dùng new Date() — cacheComponents)
@@ -16,8 +16,9 @@ function CurrentYear() {
 
 const COPY = {
     de: {
-        tagline: 'Software, Apps und Web-Anwendungen aus Halle (Saale).',
-        products: 'Produkte',
+        tagline: 'Deutsch, Führerschein und Leben in Deutschland – auf Vietnamesisch erklärt. Aus Halle (Saale).',
+        products: 'Lernen',
+        platform: 'Über die Lernplattform',
         company: 'Unternehmen',
         companyLinks: [
             { label: 'Auftragsarbeit', href: '/about#auftrag' },
@@ -33,11 +34,11 @@ const COPY = {
         ],
         consent: 'Datenschutz-Einstellungen',
         rights: 'Alle Rechte vorbehalten.',
-        trademark: 'App Store und Apple sind Marken der Apple Inc.',
     },
     en: {
-        tagline: 'Software, apps and web applications from Halle (Saale), Germany.',
-        products: 'Products',
+        tagline: 'German, the driving test and Leben in Deutschland – explained in Vietnamese. From Halle (Saale), Germany.',
+        products: 'Learn',
+        platform: 'About the platform',
         company: 'Company',
         companyLinks: [
             { label: 'Custom software', href: '/about#auftrag' },
@@ -53,11 +54,11 @@ const COPY = {
         ],
         consent: 'Privacy settings',
         rights: 'All rights reserved.',
-        trademark: 'App Store and Apple are trademarks of Apple Inc.',
     },
     vi: {
-        tagline: 'Phần mềm, app và ứng dụng web từ Halle (Saale), Đức.',
-        products: 'Sản phẩm',
+        tagline: 'Tiếng Đức, lái xe và Leben in Deutschland, giải thích bằng tiếng Việt. Từ Halle (Saale), Đức.',
+        products: 'Học',
+        platform: 'Về nền tảng học',
         company: 'Công ty',
         companyLinks: [
             { label: 'Làm theo yêu cầu', href: '/about#auftrag' },
@@ -73,7 +74,6 @@ const COPY = {
         ],
         consent: 'Cài đặt quyền riêng tư',
         rights: 'Bảo lưu mọi quyền.',
-        trademark: 'App Store và Apple là thương hiệu của Apple Inc.',
     },
 };
 
@@ -81,6 +81,7 @@ const linkClass = 'underline-offset-4 hover:underline';
 
 export default function Footer() {
     const t = useT(COPY);
+    const { locale } = useLocale();
     const columns = [
         { title: t.company, links: t.companyLinks },
         { title: t.legal, links: t.legalLinks },
@@ -88,8 +89,8 @@ export default function Footer() {
     return (
         <footer className="on-ink bg-[var(--ink)] text-white">
             <div aria-hidden="true" className="flex h-2">
-                {SERVICES.map((service) => (
-                    <span key={service.id} className="flex-1" style={{ background: service.ink }} />
+                {LEARN_AREAS.map((area) => (
+                    <span key={area.id} className="flex-1" style={{ background: area.ink }} />
                 ))}
                 <span className="flex-1 bg-[var(--ink-ultra)]" />
             </div>
@@ -105,13 +106,18 @@ export default function Footer() {
                     <nav aria-label={t.products} className="col-span-2 min-w-0 sm:col-span-1 md:col-span-3">
                         <h2 className="font-display font-bold">{t.products}</h2>
                         <ul className="mt-3 space-y-2 text-[0.95rem]">
-                            {SERVICES.map((service) => (
-                                <li key={service.id}>
-                                    <Link href={productPath(service)} className={linkClass}>
-                                        {service.name}
+                            {LEARN_AREAS.map((area) => (
+                                <li key={area.id}>
+                                    <Link href={area.href} className={linkClass}>
+                                        {area.copy[locale].title}
                                     </Link>
                                 </li>
                             ))}
+                            <li>
+                                <Link href={productPath(PLATFORM)} className={linkClass}>
+                                    {t.platform}
+                                </Link>
+                            </li>
                         </ul>
                     </nav>
                     {columns.map((col) => (
@@ -134,11 +140,10 @@ export default function Footer() {
                         </nav>
                     ))}
                 </div>
-                <div className="mt-12 flex flex-col justify-between gap-2 border-t border-white/25 pt-5 text-sm text-white/80 sm:flex-row">
+                <div className="mt-12 border-t border-white/25 pt-5 text-sm text-white/80">
                     <p>
                         © <CurrentYear /> {COMPANY.legalName} · {SITE.domain}. {t.rights}
                     </p>
-                    <p>{t.trademark}</p>
                 </div>
             </div>
         </footer>

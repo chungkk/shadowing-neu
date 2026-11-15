@@ -1,48 +1,67 @@
 import type { Metadata } from 'next';
-import { COMPANY, SITE } from '@/lib/company/site';
+import { SITE } from '@/lib/company/site';
 import { SERVICES, productPath } from '@/lib/company/services';
 import type { ServiceId } from '@/lib/company/services';
 import { PRODUCT_PAGES } from '@/lib/company/productPages';
 import { breadcrumbJsonLd, pageMetadata } from '@/lib/company/seo';
+import { ORGANIZATION_ID } from '@/lib/seo';
 
 const serviceOf = (id: ServiceId) => SERVICES.find((s) => s.id === id)!;
 
+/** @id của nền tảng học trong JSON-LD (trang /about tham chiếu tới cùng @id) */
+export const productJsonLdId = (id: ServiceId) => `${SITE.url}${productPath(serviceOf(id))}#app`;
+
+/**
+ * Trang có file opengraph-image.tsx riêng: trong route group Next gắn thêm mã vào URL ảnh
+ * (/shadowing/opengraph-image-<mã>) nên không ghi URL tay được. Bỏ trường images để Next tự chèn ảnh của file.
+ */
+export function withFileOgImage(meta: Metadata): Metadata {
+    const openGraph: NonNullable<Metadata['openGraph']> = { ...meta.openGraph };
+    const twitter: NonNullable<Metadata['twitter']> = { ...meta.twitter };
+    delete openGraph.images;
+    delete twitter.images;
+    return { ...meta, openGraph, twitter };
+}
+
 export function productMetadata(id: ServiceId): Metadata {
-    const { seo, screens, shape } = PRODUCT_PAGES[id];
+    const { seo } = PRODUCT_PAGES[id];
     const path = productPath(serviceOf(id));
-    // App iOS dùng ảnh OG sinh sẵn (src/app/<slug>/opengraph-image.tsx); trang web dùng ảnh chụp ngang.
-    const images =
-        shape === 'landscape'
-            ? [{ url: screens[0].src, width: screens[0].width, height: screens[0].height, alt: seo.title }]
-            : [{ url: `${path}/opengraph-image`, width: 1200, height: 630, alt: seo.title }];
-    return pageMetadata({ title: seo.title, description: seo.description, path, absolute: true, images });
+    return withFileOgImage(pageMetadata({ title: seo.title, description: seo.description, path, absolute: true }));
+}
+
+/** Nút WebApplication của nền tảng học, dùng chung cho /shadowing và /about */
+export function productAppNode(id: ServiceId) {
+    const service = serviceOf(id);
+    const page = PRODUCT_PAGES[id];
+    return {
+        '@type': 'WebApplication',
+        '@id': productJsonLdId(id),
+        name: service.name,
+        description: page.seo.description,
+        url: `${SITE.url}${productPath(service)}`,
+        // Nơi học thật (trang chủ hallovn.de)
+        installUrl: new URL(service.href, SITE.url).href,
+        applicationCategory: 'EducationalApplication',
+        operatingSystem: 'Web',
+        browserRequirements: 'Requires a modern web browser',
+        screenshot: page.screens.map((s) => `${SITE.url}${s.src}`),
+        // Miễn phí, không có mua trong app. Google cần offers để hiện rich result ứng dụng.
+        offers: { '@type': 'Offer', price: 0, priceCurrency: 'EUR' },
+        // Giao diện tiếng Việt, nội dung học tiếng Đức
+        inLanguage: ['vi', 'de'],
+        audience: { '@type': 'Audience', audienceType: 'Vietnamese speakers living in Germany' },
+        publisher: { '@id': ORGANIZATION_ID },
+    };
 }
 
 export function productJsonLd(id: ServiceId) {
     const service = serviceOf(id);
     const page = PRODUCT_PAGES[id];
-    const mobile = service.platform === 'iOS';
     const url = `${SITE.url}${productPath(service)}`;
     return {
         '@context': 'https://schema.org',
         '@graph': [
-            {
-                '@type': mobile ? 'MobileApplication' : 'WebApplication',
-                '@id': `${url}#app`,
-                name: service.name,
-                description: page.seo.description,
-                url,
-                applicationCategory: 'EducationalApplication',
-                ...(mobile
-                    ? { operatingSystem: service.android ? 'iOS, Android' : 'iOS', downloadUrl: service.href, installUrl: service.href }
-                    : { operatingSystem: 'Web', sameAs: service.href }),
-                screenshot: page.screens.map((s) => `${SITE.url}${s.src}`),
-                // Tải/dùng miễn phí (có Premium/In-App-Kauf). Google cần offers để hiện rich result ứng dụng.
-                // aggregateRating chỉ thêm khi có số đánh giá thật từ App Store.
-                offers: { '@type': 'Offer', price: 0, priceCurrency: 'EUR' },
-                inLanguage: ['de', 'en', 'vi'],
-                publisher: { '@type': 'Organization', '@id': `${SITE.url}/#organization`, name: COMPANY.legalName, url: SITE.url },
-            },
+            productAppNode(id),
             {
                 '@type': 'FAQPage',
                 '@id': `${url}#faq`,
@@ -54,8 +73,8 @@ export function productJsonLd(id: ServiceId) {
                 })),
             },
             breadcrumbJsonLd([
-                { name: 'HalloVN', path: '/' },
-                { name: service.name, path: productPath(service) },
+                { name: 'Über HalloVN', path: '/about' },
+                { name: 'Lernplattform', path: productPath(service) },
             ]),
         ],
     };

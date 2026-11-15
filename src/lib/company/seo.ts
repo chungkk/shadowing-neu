@@ -17,8 +17,8 @@ interface PageSeo {
     noindex?: boolean;
 }
 
-/** Ảnh chia sẻ chung tiếng Đức (src/app/(company)/about/opengraph-image.tsx). /opengraph-image là ảnh tiếng Việt của nhóm (app). */
-const DEFAULT_OG_IMAGES = [{ url: '/about/opengraph-image', width: 1200, height: 630, alt: 'HalloVN – Software, Apps und Web-Anwendungen' }];
+/** Ảnh chia sẻ chung tiếng Đức (src/app/og/hallovn.png/route.tsx — URL cố định, không bị gắn mã như opengraph-image trong route group) */
+const DEFAULT_OG_IMAGES = [{ url: '/og/hallovn.png', width: 1200, height: 630, alt: 'HalloVN – Lernplattform für Vietnamesen in Deutschland' }];
 
 export function pageMetadata({ title, description, path, absolute, images = DEFAULT_OG_IMAGES, noindex }: PageSeo): Metadata {
     const fullTitle = absolute ? title : `${title} | ${SITE.name}`;

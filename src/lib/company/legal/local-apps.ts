@@ -94,7 +94,7 @@ export const deutschRedewendung: LegalProduct = {
 export const workCalendar: LegalProduct = {
     slug: 'calendar',
     name: CALENDAR,
-    hasPurchases: false,
+    hasPurchases: true, // Premium „Werbung entfernen“ (Einmalkauf über Apple)
     showDeletion: false,
     summary: {
         de: 'Schichtplan und Arbeitskalender. iOS.',

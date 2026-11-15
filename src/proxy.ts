@@ -20,6 +20,9 @@ const OLD_HOSTS = new Set(["www.hallovn.de", "ckk.pro", "www.ckk.pro"]);
 const CKK_BIZ = "ckk.biz";
 const CKK_BIZ_HOSTS = new Set([CKK_BIZ, "www.ckk.biz"]);
 /** Trang của 2 app riêng (đã chuyển sang ckk.biz) */
+/** Trang pháp lý cũ của app HalloVN (/deutsch-shadowing/privacy|terms[/de]) → trang chung /privacy, /terms đúng ngôn ngữ.
+ *  Làm ở proxy để có 308 thật (redirect trong page chạy sau khi layout đã gửi 200). */
+const OLD_APP_LEGAL = /^\/deutsch-shadowing\/(privacy|terms)(\/de)?\/?$/;
 const MOVED_TO_CKK_BIZ = /^\/(?:(?:fuehrerschein|lid)(?:\/(?:privacy|support))?|delete-account)\/?$/;
 const OLD_LEGAL = /^\/(privacy|terms)(\/de)?\/?$/;
 
@@ -54,6 +57,9 @@ export async function proxy(request: NextRequest) {
     const path = host.endsWith("ckk.pro") && OLD_LEGAL.test(pathname) ? `/deutsch-shadowing${pathname.replace(/\/$/, "")}` : pathname;
     return NextResponse.redirect(`https://${MAIN_HOST}${path}${search}`, 308);
   }
+
+  const legal = OLD_APP_LEGAL.exec(pathname);
+  if (legal) return NextResponse.redirect(new URL(`/${legal[1]}?lang=${legal[2] ? "de" : "vi"}`, request.url), 308);
 
   // Chỉ chuyển khi không phải chính ckk.biz gọi tới (lúc DNS ckk.biz còn trỏ về đây) — tránh vòng lặp chuyển hướng
   if (MOVED_TO_CKK_BIZ.test(pathname) && !CKK_BIZ_HOSTS.has(host)) {

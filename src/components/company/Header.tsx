@@ -11,12 +11,12 @@ const COPY = {
     de: {
         nav: [
             { href: '/', label: 'Lernen & Anmelden' },
-            { href: '/shadowing', label: 'Deutsch lernen' },
+            { href: '/shadowing', label: 'Lernplattform' },
             { href: '/about#auftrag', label: 'Auftragsarbeit' },
             { href: '/support', label: 'Support' },
         ],
         cta: 'Projekt anfragen',
-        home: 'HalloVN – Startseite',
+        home: 'Über HalloVN',
         open: 'Menü öffnen',
         close: 'Menü schließen',
         lang: 'Sprache wählen',
@@ -24,12 +24,12 @@ const COPY = {
     en: {
         nav: [
             { href: '/', label: 'Learn & sign in' },
-            { href: '/shadowing', label: 'Learn German' },
+            { href: '/shadowing', label: 'Learning platform' },
             { href: '/about#auftrag', label: 'Custom software' },
             { href: '/support', label: 'Support' },
         ],
         cta: 'Start a project',
-        home: 'HalloVN – Home',
+        home: 'About HalloVN',
         open: 'Open menu',
         close: 'Close menu',
         lang: 'Choose language',
@@ -37,12 +37,12 @@ const COPY = {
     vi: {
         nav: [
             { href: '/', label: 'Học & đăng nhập' },
-            { href: '/shadowing', label: 'Học tiếng Đức' },
+            { href: '/shadowing', label: 'Nền tảng học' },
             { href: '/about#auftrag', label: 'Làm theo yêu cầu' },
             { href: '/support', label: 'Hỗ trợ' },
         ],
         cta: 'Gửi yêu cầu',
-        home: 'HalloVN – Trang chủ',
+        home: 'Về HalloVN',
         open: 'Mở menu',
         close: 'Đóng menu',
         lang: 'Chọn ngôn ngữ',

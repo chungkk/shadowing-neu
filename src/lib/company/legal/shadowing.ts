@@ -1,59 +1,7 @@
-import { APPLE_PRIVACY, GOOGLE_PRIVACY, HOSTING, changes, controller, emailContact, perLocale, rights, transferNote } from './common';
-import type { LegalProduct, LegalSection } from './types';
-import type { Locale } from '@/components/company/LocaleContext';
+import { hallovnPrivacy } from './website';
+import type { LegalProduct } from './types';
 
 const NAME = 'HalloVN';
-
-const body: Record<Locale, LegalSection[]> = {
-    de: [
-        { id: 'overview', title: 'Überblick', blocks: ['HalloVN besteht aus der Website hallovn.de und der App. Lektionen können Sie ohne Konto ansehen. Mit einem kostenlosen Konto werden Ihre Lerndaten auf unserem Server gespeichert. Es gibt keine Werbung und keine Analyse- oder Tracking-Dienste. Wir verkaufen keine Daten und nutzen sie nicht zur Profilbildung.'] },
-        { id: 'account', title: 'Benutzerkonto', blocks: ['Für Wortbedeutungen, Vokabelheft, Fortschritt, Aussprachebewertung und KI-Untertitel ist ein Konto nötig. Wir speichern E-Mail-Adresse, Name, Passwort (nur als sicheren Hash) und optional ein Profilbild. Bei „Mit Apple anmelden“ oder „Mit Google anmelden“ erhalten wir die Nutzerkennung und E-Mail-Adresse des Anbieters, bei Apple ggf. eine anonyme Weiterleitungsadresse. Für Bestätigungs- und Passwort-Codes senden wir E-Mails. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.'] },
-        { id: 'learning', title: 'Lerndaten', blocks: ['Gespeicherte Wörter und Notizen, Fortschritt je Lektion, Wiederholungsergebnisse und Statistiken liegen mit Ihrem Konto auf unserem Server, damit Sie geräteübergreifend weiterlernen können. Eingefügte YouTube-Links und die zugehörigen Untertitel werden zwischengespeichert. Ohne Konto bleiben Einstellungen wie die Sprache nur auf Ihrem Gerät.'] },
-        { id: 'microphone', title: 'Mikrofon und Spracherkennung', blocks: [`Das Mikrofon wird nur verwendet, wenn Sie eine Sprechübung starten. Die Live-Hervorhebung in der App nutzt die Spracherkennung von Apple, Apple kann die Audiodaten dafür verarbeiten ([Datenschutzrichtlinie von Apple](${APPLE_PRIVACY})). Bei der Aussprachebewertung wird die Aufnahme eines einzelnen Satzes an unseren Server und von dort an einen Transkriptionsdienst gesendet. Wir speichern Aufnahmen nicht dauerhaft.`] },
-        { id: 'recipients', title: 'Dienstleister', blocks: ['Wir geben nur die jeweils nötigen Daten weiter:', { list: [
-            `Hosting: ${HOSTING.de}`,
-            'KI-Dienste (z. B. OpenAI, Groq): Texte und Sprachaufnahmen für Übersetzung, Wortbedeutungen, Satzzeichen und Transkription, nicht Ihr Name oder Ihre E-Mail-Adresse',
-            'Sprachausgabe (z. B. OpenAI, Microsoft Azure, ElevenLabs): nur Sätze aus den Lektionen',
-            `Google: Anmeldung mit Google, E-Mail-Versand und der eingebettete YouTube-Player ([Datenschutzerklärung von Google](${GOOGLE_PRIVACY}))`,
-            'Apple: Anmeldung mit Apple und Spracherkennung',
-        ] }, transferNote('de')] },
-        { id: 'logs', title: 'Server-Logdaten', blocks: ['Zum Schutz vor Missbrauch werden IP-Adressen kurzzeitig verarbeitet (Art. 6 Abs. 1 lit. f DSGVO).'] },
-        { id: 'retention', title: 'Speicherdauer und Kontolöschung', blocks: [`Daten bleiben gespeichert, solange Ihr Konto besteht. Sie können es jederzeit in der App unter „Konto“ → „Konto löschen“ löschen. Dabei werden Profil, Profilbild, Vokabelheft und Fortschritt dauerhaft entfernt und eine Apple-Anmeldung widerrufen. Alternativ genügt eine E-Mail an [support@hallovn.de](mailto:support@hallovn.de).`] },
-        { id: 'children', title: 'Kinder', blocks: ['Der Dienst richtet sich nicht an Kinder unter 13 Jahren.'] },
-    ],
-    en: [
-        { id: 'overview', title: 'Overview', blocks: ['HalloVN consists of the website hallovn.de and the app. You can watch lessons without an account. With a free account, your learning data is stored on our server. There are no ads and no analytics or tracking services. We do not sell data or use it for profiling.'] },
-        { id: 'account', title: 'Account', blocks: ['An account is needed for word meanings, the vocabulary book, progress, pronunciation scoring and AI subtitles. We store your email address, name, password (only as a secure hash) and an optional profile picture. With Sign in with Apple or Google we receive the provider\'s user ID and email address, with Apple possibly an anonymous relay address. We send emails for verification and password codes. The legal basis is Art. 6(1)(b) GDPR.'] },
-        { id: 'learning', title: 'Learning data', blocks: ['Saved words and notes, progress per lesson, review results and statistics are stored with your account on our server so you can continue on any device. YouTube links you paste and their subtitles are cached. Without an account, settings such as language stay on your device only.'] },
-        { id: 'microphone', title: 'Microphone and speech recognition', blocks: [`The microphone is only used when you start a speaking exercise. Live highlighting in the app uses Apple's speech recognition, and Apple may process the audio for this ([Apple's privacy policy](${APPLE_PRIVACY})). For pronunciation scoring, the recording of a single sentence is sent to our server and from there to a transcription service. We do not store recordings permanently.`] },
-        { id: 'recipients', title: 'Service providers', blocks: ['We only share the data each service needs:', { list: [
-            `Hosting: ${HOSTING.en}`,
-            'AI services (e.g. OpenAI, Groq): text and voice recordings for translation, word meanings, punctuation and transcription, not your name or email address',
-            'Text-to-speech (e.g. OpenAI, Microsoft Azure, ElevenLabs): only sentences from lessons',
-            `Google: Sign in with Google, sending email and the embedded YouTube player ([Google's privacy policy](${GOOGLE_PRIVACY}))`,
-            'Apple: Sign in with Apple and speech recognition',
-        ] }, transferNote('en')] },
-        { id: 'logs', title: 'Server logs', blocks: ['To protect against abuse, IP addresses are processed briefly (Art. 6(1)(f) GDPR).'] },
-        { id: 'retention', title: 'Retention and account deletion', blocks: ['Data is kept as long as your account exists. You can delete it at any time in the app under “Account” → “Delete account”. This permanently removes your profile, profile picture, vocabulary book and progress and revokes any Apple sign-in. Alternatively, an email to [support@hallovn.de](mailto:support@hallovn.de) is enough.'] },
-        { id: 'children', title: 'Children', blocks: ['The service is not directed at children under 13.'] },
-    ],
-    vi: [
-        { id: 'overview', title: 'Tổng quan', blocks: ['HalloVN gồm trang web hallovn.de và ứng dụng. Bạn có thể xem bài học mà không cần tài khoản. Với tài khoản miễn phí, dữ liệu học được lưu trên máy chủ của chúng tôi. Không có quảng cáo và không có dịch vụ phân tích hay theo dõi. Chúng tôi không bán dữ liệu và không dùng để lập hồ sơ người dùng.'] },
-        { id: 'account', title: 'Tài khoản', blocks: ['Cần tài khoản để xem nghĩa từ, dùng sổ từ vựng, lưu tiến độ, chấm phát âm và tạo phụ đề bằng AI. Chúng tôi lưu email, tên, mật khẩu (chỉ dạng băm an toàn) và ảnh đại diện nếu có. Khi đăng nhập bằng Apple hoặc Google, chúng tôi nhận mã người dùng và email từ nhà cung cấp, với Apple có thể là địa chỉ chuyển tiếp ẩn danh. Chúng tôi gửi email cho mã xác nhận và mã đặt lại mật khẩu. Cơ sở pháp lý là Điều 6 khoản 1 điểm b GDPR.'] },
-        { id: 'learning', title: 'Dữ liệu học', blocks: ['Từ đã lưu, ghi chú, tiến độ từng bài, kết quả ôn tập và thống kê được lưu cùng tài khoản trên máy chủ để bạn học tiếp trên mọi thiết bị. Link YouTube bạn dán và phụ đề kèm theo được lưu đệm. Không có tài khoản thì cài đặt như ngôn ngữ chỉ nằm trên thiết bị của bạn.'] },
-        { id: 'microphone', title: 'Micro và nhận dạng giọng nói', blocks: [`Micro chỉ được dùng khi bạn bắt đầu bài luyện nói. Tính năng tô sáng trực tiếp trong app dùng nhận dạng giọng nói của Apple, và Apple có thể xử lý âm thanh cho việc này ([chính sách bảo mật của Apple](${APPLE_PRIVACY})). Khi chấm phát âm, bản ghi của một câu được gửi tới máy chủ của chúng tôi và từ đó tới dịch vụ chuyển giọng nói thành văn bản. Chúng tôi không lưu bản ghi lâu dài.`] },
-        { id: 'recipients', title: 'Nhà cung cấp dịch vụ', blocks: ['Chúng tôi chỉ chia sẻ dữ liệu mà từng dịch vụ cần:', { list: [
-            `Lưu trữ: ${HOSTING.vi}`,
-            'Dịch vụ AI (ví dụ OpenAI, Groq): văn bản và bản ghi âm để dịch, tra nghĩa từ, thêm dấu câu và chuyển giọng nói thành văn bản, không gồm tên hay email của bạn',
-            'Giọng đọc (ví dụ OpenAI, Microsoft Azure, ElevenLabs): chỉ các câu trong bài học',
-            `Google: đăng nhập bằng Google, gửi email và trình phát YouTube nhúng ([chính sách bảo mật của Google](${GOOGLE_PRIVACY}))`,
-            'Apple: đăng nhập bằng Apple và nhận dạng giọng nói',
-        ] }, transferNote('vi')] },
-        { id: 'logs', title: 'Nhật ký máy chủ', blocks: ['Để chống lạm dụng, địa chỉ IP được xử lý trong thời gian ngắn (Điều 6 khoản 1 điểm f GDPR).'] },
-        { id: 'retention', title: 'Thời gian lưu trữ và xoá tài khoản', blocks: ['Dữ liệu được lưu khi tài khoản còn tồn tại. Bạn có thể xoá bất cứ lúc nào trong app tại “Tài khoản” → “Xoá tài khoản”. Việc này xoá vĩnh viễn hồ sơ, ảnh đại diện, sổ từ vựng và tiến độ, đồng thời thu hồi đăng nhập Apple. Bạn cũng có thể gửi email tới [support@hallovn.de](mailto:support@hallovn.de).'] },
-        { id: 'children', title: 'Trẻ em', blocks: ['Dịch vụ không hướng tới trẻ em dưới 13 tuổi.'] },
-    ],
-};
 
 export const shadowing: LegalProduct = {
     slug: 'shadowing',
@@ -67,29 +15,51 @@ export const shadowing: LegalProduct = {
     },
     faq: {
         de: [
-            { q: 'Wie funktioniert Shadowing?', a: 'Hören Sie einen Satz, sprechen Sie ihn sofort nach und achten Sie auf Rhythmus und Betonung. Wiederholen Sie, bis es flüssig klingt.' },
-            { q: 'Wie lerne ich mit einem YouTube-Video?', a: 'Fügen Sie den Link ein. Die deutschen Untertitel werden automatisch geladen. Hat das Video keine, erstellt die KI sie für angemeldete Nutzer. Das kann bis zu einer Minute dauern.' },
-            { q: 'Wofür brauche ich ein Konto?', a: 'Lektionen können Sie ohne Konto ansehen. Wortbedeutungen, Vokabelheft, Aussprachebewertung, KI-Untertitel und die Synchronisierung des Fortschritts brauchen ein kostenloses Konto.' },
-            { q: 'Die Spracherkennung funktioniert nicht.', a: 'Erlauben Sie Mikrofon und Spracherkennung unter iOS-Einstellungen → HalloVN und sprechen Sie in einer ruhigen Umgebung.' },
-            { q: 'Ich habe mein Passwort vergessen.', a: 'Tippen Sie beim Anmelden auf „Passwort vergessen“. Sie erhalten einen Code per E-Mail. Prüfen Sie auch den Spam-Ordner.' },
-            { q: 'Wie lösche ich mein Konto?', a: 'In der App unter „Konto“ → „Konto löschen“. Profil, Vokabelheft und Fortschritt werden dauerhaft gelöscht.' },
+            { q: 'Kostet HalloVN etwas?', a: 'Nein. Deutschlernen mit Videos, Vokabeln, Führerscheintheorie und Leben in Deutschland sind kostenlos, das Konto auch. Es gibt keine Werbung.' },
+            { q: 'Was kann ich ohne Anmeldung nutzen?', a: 'Sie können Lektionen ansehen und jeden Tag kostenlos ausprobieren: 15 Sätze Hörtraining, 20 Wörter aus den Vokabelsets, 10 Führerscheinfragen und 10 Fragen zu Leben in Deutschland. Gezählt wird im Browser, jeden Tag beginnt es neu. Mit einem kostenlosen Konto entfällt diese Grenze, und Fortschritt, Vokabelheft und Diamanten werden gespeichert.' },
+            { q: 'Wie erstelle ich ein Konto?', a: 'Unter [Registrieren](/register) Name, E-Mail und Passwort eingeben und dann den 6-stelligen Code aus der E-Mail bestätigen. Oder „Mit Google“ bzw. „Mit Apple“ fortfahren: Gibt es noch kein Konto, wird es automatisch angelegt. Das Konto gilt für die Website und die App HalloVN.' },
+            { q: 'Ich habe mein Passwort vergessen.', a: 'Öffnen Sie [Passwort vergessen](/forgot-password), geben Sie Ihre E-Mail ein und dann den 6-stelligen Code aus der E-Mail zusammen mit einem neuen Passwort. Danach sind Sie direkt angemeldet. Wer sich mit Google oder Apple anmeldet, braucht kein Passwort, kann aber in den [Einstellungen](/settings) eines festlegen, um sich auch per E-Mail anzumelden.' },
+            { q: 'Ich bekomme keine E-Mail mit dem Code.', a: 'Prüfen Sie den Spam-Ordner und ob die E-Mail-Adresse richtig geschrieben ist. Warten Sie einen Moment und tippen Sie dann auf „Code erneut senden“ („Gửi lại mã“). Klappt es weiterhin nicht, schreiben Sie uns.' },
+            { q: 'Kann ich mit eigenen YouTube-Videos lernen?', a: 'Ja. Fügen Sie auf der Seite [Deutsch](/tieng-duc) den Link eines YouTube-Videos ein, die deutschen Untertitel werden automatisch geladen. Hat das Video keine, erstellt die KI sie für angemeldete Nutzer. Das kann etwa eine Minute dauern.' },
+            { q: 'Wie speichere und wiederhole ich Wörter?', a: 'Tippen Sie in einer Lektion auf ein Wort und wählen Sie „Lưu từ“ (Wort speichern), oder fügen Sie Wörter selbst im [Vokabelheft](/vocab/notebook) hinzu (Anmeldung nötig). Gespeicherte Wörter wiederholen Sie nach dem Prinzip der verteilten Wiederholung: Was Sie gut können, kommt später wieder, Vergessenes früher. Das Vokabelheft ist auf Website und App gleich.' },
+            { q: 'Was sind Diamanten und die Rangliste?', a: 'Beim Diktat in den Lektionen gibt es für jedes richtig geschriebene Wort +1 Diamant, für jedes aufgedeckte Wort −2. Die [Rangliste](/leaderboard) ordnet nach verdienten Diamanten und zeigt nur Namen und Punktzahl, keine E-Mail-Adressen. Diamanten bekommen Sie nur durchs Lernen, man kann sie nicht kaufen.' },
+            { q: 'Mikrofon oder Aussprachebewertung funktionieren nicht.', a: 'Erlauben Sie der Website den Zugriff auf das Mikrofon (Schloss-Symbol neben der Adressleiste). In der App erlauben Sie Mikrofon und auf dem iPhone auch Spracherkennung in den Einstellungen des Telefons. Sprechen Sie in ruhiger Umgebung. Die Aussprachebewertung braucht eine Anmeldung.' },
+            { q: 'Wie ändere ich die Sprache?', a: 'Der Lernbereich der Website ist auf Vietnamesisch. Informationsseiten wie diese gibt es auf Deutsch, Englisch und Vietnamesisch: Wählen Sie die Sprache oben auf der Seite. In der App wählen Sie unter Einstellungen → „Sprache“ Vietnamesisch oder Deutsch.' },
+            { q: 'Wie ändere ich E-Mail oder Passwort, oder bekomme eine Kopie meiner Daten?', a: 'Alles in den [Einstellungen](/settings): Name und Profilbild ändern, E-Mail ändern (mit Code an die neue Adresse), Passwort ändern oder festlegen, andere Geräte abmelden und eine Kopie Ihrer Daten (Konto, Vokabelheft, Fortschritt, Punkte) als JSON per E-Mail anfordern.' },
+            { q: 'Wie lösche ich mein Konto?', a: 'Auf der Website unter [Einstellungen](/settings) → „Xoá tài khoản“ (Konto löschen), in der App unter Einstellungen → „Konto löschen“. Hat Ihr Konto ein Passwort, geben Sie es zur Bestätigung ein. Konto, Vokabelheft und Lernfortschritt werden dauerhaft gelöscht und lassen sich nicht wiederherstellen. Kommen Sie nicht mehr in Ihr Konto, schreiben Sie uns von der registrierten E-Mail-Adresse.' },
+            { q: 'Wo melde ich Fehler oder schlage etwas vor?', a: 'Über das Formular unten oder in der App unter Einstellungen → „Fehler melden“ bzw. „Feedback senden“. Bei Fehlern helfen uns Seite oder Lektion, Gerät und Browser, um das Problem schnell zu finden.' },
         ],
         en: [
-            { q: 'How does shadowing work?', a: 'Listen to a sentence, repeat it right away and copy the rhythm and intonation. Repeat until it sounds fluent.' },
-            { q: 'How do I use a YouTube video?', a: 'Paste the link. The German subtitles load automatically. If there are none, AI creates them for signed-in users, which may take up to a minute.' },
-            { q: 'Why do I need an account?', a: 'You can watch lessons without one. Word meanings, the vocabulary book, pronunciation scoring, AI subtitles and progress sync need a free account.' },
-            { q: 'Speech recognition does not work.', a: 'Allow Microphone and Speech Recognition in iOS Settings → HalloVN, and speak in a quiet place.' },
-            { q: 'I forgot my password.', a: 'Tap “Forgot password” on the sign-in screen. You will receive a code by email. Check your spam folder too.' },
-            { q: 'How do I delete my account?', a: 'In the app under “Account” → “Delete account”. Your profile, vocabulary and progress are permanently deleted.' },
+            { q: 'Does HalloVN cost anything?', a: 'No. Learning German with videos, vocabulary, driving theory and Leben in Deutschland are free, and so is the account. There are no ads.' },
+            { q: 'What can I use without signing in?', a: 'You can watch lessons and try things out free every day: 15 listening sentences, 20 words from the vocabulary sets, 10 driving theory questions and 10 Leben in Deutschland questions. The count is kept in your browser and resets every day. A free account removes this limit and saves your progress, vocabulary book and diamonds.' },
+            { q: 'How do I create an account?', a: 'Go to [Register](/register), enter your name, email and password, then confirm with the 6-digit code sent to your email. Or continue with Google or Apple: if you have no account yet, one is created automatically. The same account works on the website and in the HalloVN app.' },
+            { q: 'I forgot my password.', a: 'Open [Forgot password](/forgot-password), enter your email, then enter the 6-digit code from the email together with a new password. You are signed in right after. If you sign in with Google or Apple you do not need a password, but you can set one in [Settings](/settings) to also sign in by email.' },
+            { q: 'I do not receive the email with the code.', a: 'Check your spam folder and make sure the email address is spelled correctly. Wait a moment, then tap “Resend code” (“Gửi lại mã”). If it still does not work, write to us.' },
+            { q: 'Can I learn with my own YouTube videos?', a: 'Yes. On the [German](/tieng-duc) page, paste the link of a YouTube video and the German subtitles load automatically. If the video has none, AI creates them for signed-in users, which can take about a minute.' },
+            { q: 'How do I save and review words?', a: 'In a lesson, tap a word and choose “Lưu từ” (save word), or add words yourself in the [vocabulary book](/vocab/notebook) (sign-in required). Saved words are reviewed with spaced repetition: words you know well come back later, forgotten ones sooner. Your vocabulary book is the same on the website and in the app.' },
+            { q: 'What are diamonds and the leaderboard?', a: 'In lesson dictation you get +1 diamond for every word written correctly and −2 for every word you reveal. The [leaderboard](/leaderboard) ranks by diamonds earned and shows only names and scores, no email addresses. Diamonds come only from learning; they cannot be bought.' },
+            { q: 'The microphone or pronunciation scoring does not work.', a: 'Allow the website to use the microphone (lock icon next to the address bar). In the app, allow Microphone and, on iPhone, Speech Recognition in your phone settings. Speak in a quiet place. Pronunciation scoring requires signing in.' },
+            { q: 'How do I change the language?', a: 'The learning area of the website is in Vietnamese. Information pages like this one are available in German, English and Vietnamese: choose the language at the top of the page. In the app, choose Vietnamese or German under Settings → “Ngôn ngữ” (language).' },
+            { q: 'How do I change my email or password, or get a copy of my data?', a: 'Everything is in [Settings](/settings): change your name and profile picture, change your email (confirmed with a code sent to the new address), change or set a password, sign out other devices and request a copy of your data (account, vocabulary book, progress, points) as JSON by email.' },
+            { q: 'How do I delete my account?', a: 'On the website under [Settings](/settings) → “Xoá tài khoản” (delete account), in the app under Settings → “Xoá tài khoản” (German app: “Konto löschen”). If your account has a password, enter it to confirm. Your account, vocabulary book and learning progress are permanently deleted and cannot be restored. If you can no longer access your account, email us from the registered address.' },
+            { q: 'Where can I report a bug or suggest something?', a: 'Use the form below, or in the app go to Settings → “Báo lỗi” (report a bug) / “Gửi góp ý” (send feedback). For bugs, tell us the page or lesson, your device and browser so we can find the problem quickly.' },
         ],
         vi: [
-            { q: 'Shadowing là gì?', a: 'Nghe một câu, nói lại ngay theo đúng nhịp và ngữ điệu. Lặp lại đến khi nói trôi chảy.' },
-            { q: 'Học với video YouTube thế nào?', a: 'Dán link vào, phụ đề tiếng Đức sẽ tự tải. Nếu video không có sẵn, AI sẽ tạo phụ đề cho người đã đăng nhập, có thể mất tới một phút.' },
-            { q: 'Vì sao cần tài khoản?', a: 'Không cần tài khoản vẫn xem được bài học. Xem nghĩa từ, sổ từ vựng, chấm phát âm, phụ đề AI và đồng bộ tiến độ cần tài khoản miễn phí.' },
-            { q: 'Không nhận được giọng nói?', a: 'Bật quyền Micro và Nhận dạng giọng nói trong Cài đặt iOS → HalloVN, và nói ở nơi yên tĩnh.' },
-            { q: 'Quên mật khẩu?', a: 'Chạm “Quên mật khẩu” ở màn hình đăng nhập, mã sẽ được gửi qua email. Hãy kiểm tra cả thư rác.' },
-            { q: 'Xoá tài khoản thế nào?', a: 'Trong app vào “Tài khoản” → “Xoá tài khoản”. Hồ sơ, sổ từ vựng và tiến độ sẽ bị xoá vĩnh viễn.' },
+            { q: 'HalloVN có mất phí không?', a: 'Không. Học tiếng Đức qua video, từ vựng, ôn lý thuyết lái xe và Leben in Deutschland đều miễn phí, tài khoản cũng miễn phí. Không có quảng cáo.' },
+            { q: 'Chưa đăng nhập thì dùng được những gì?', a: 'Bạn xem được bài học và mỗi ngày được học thử miễn phí: 15 câu luyện nghe, 20 từ trong bộ từ vựng, 10 câu lái xe và 10 câu Leben in Deutschland. Lượt được đếm trên trình duyệt và tính lại từ đầu mỗi ngày. Có tài khoản miễn phí thì không còn giới hạn này, đồng thời tiến độ, sổ từ và kim cương được lưu lại.' },
+            { q: 'Đăng ký tài khoản thế nào?', a: 'Vào [Đăng ký](/register), nhập tên, email và mật khẩu, rồi nhập mã 6 số được gửi tới email. Hoặc chọn “Tiếp tục với Google” / “Tiếp tục với Apple”: nếu chưa có tài khoản, tài khoản sẽ được tạo tự động. Một tài khoản dùng chung cho trang web và app HalloVN.' },
+            { q: 'Quên mật khẩu thì làm sao?', a: 'Vào [Quên mật khẩu](/forgot-password), nhập email đã đăng ký, rồi nhập mã 6 số nhận qua email cùng mật khẩu mới. Đặt xong là bạn được đăng nhập luôn. Nếu bạn đăng nhập bằng Google hoặc Apple thì không cần mật khẩu, nhưng có thể đặt mật khẩu trong [Cài đặt](/settings) để đăng nhập được cả bằng email.' },
+            { q: 'Không nhận được email có mã?', a: 'Kiểm tra thư mục Spam và xem email đã gõ đúng chưa. Đợi một lát rồi bấm “Gửi lại mã”. Vẫn không được thì hãy viết cho chúng tôi.' },
+            { q: 'Học bằng video YouTube của riêng mình được không?', a: 'Được. Ở trang [Tiếng Đức](/tieng-duc), dán link video YouTube, phụ đề tiếng Đức sẽ tự tải. Nếu video không có phụ đề, AI sẽ tạo cho người đã đăng nhập, có thể mất khoảng một phút.' },
+            { q: 'Lưu từ và ôn tập thế nào?', a: 'Khi luyện một bài, bấm vào từ trong câu rồi chọn “Lưu từ”, hoặc tự thêm từ trong [Sổ từ](/vocab/notebook) (cần đăng nhập). Từ đã lưu được ôn theo lịch lặp lại ngắt quãng: từ nhớ tốt sẽ lâu hơn mới ôn lại, từ hay quên thì ôn sớm hơn. Sổ từ trên web và app là một.' },
+            { q: 'Kim cương và bảng xếp hạng là gì?', a: 'Khi chép chính tả trong bài học, mỗi từ viết đúng được +1 kim cương, mỗi từ bấm xem đáp án bị −2. [Bảng xếp hạng](/leaderboard) xếp theo số kim cương kiếm được và chỉ hiện tên cùng số điểm, không hiện email. Kim cương chỉ có được nhờ học, không mua được.' },
+            { q: 'Micro hoặc chấm phát âm không hoạt động?', a: 'Cho phép trang web dùng micro (biểu tượng ổ khoá cạnh thanh địa chỉ). Trong app, bật quyền Micro, trên iPhone thêm cả Nhận dạng giọng nói, trong cài đặt của điện thoại. Hãy nói ở nơi yên tĩnh. Chấm phát âm cần đăng nhập.' },
+            { q: 'Đổi ngôn ngữ thế nào?', a: 'Phần học trên trang web dùng tiếng Việt. Các trang thông tin như trang này có tiếng Đức, tiếng Anh và tiếng Việt: chọn ngôn ngữ ở đầu trang. Trong app, vào Cài đặt → “Ngôn ngữ” để chọn Tiếng Việt hoặc Deutsch.' },
+            { q: 'Đổi email, mật khẩu hoặc lấy bản sao dữ liệu ở đâu?', a: 'Tất cả nằm trong [Cài đặt](/settings): đổi tên và ảnh đại diện, đổi email (xác nhận bằng mã gửi tới email mới), đổi hoặc đặt mật khẩu, đăng xuất các thiết bị khác, và nhận bản sao dữ liệu (tài khoản, sổ từ, tiến độ, điểm) dạng JSON qua email.' },
+            { q: 'Xoá tài khoản thế nào?', a: 'Trên web vào [Cài đặt](/settings) → “Xoá tài khoản”; trong app vào Cài đặt → “Xoá tài khoản”. Nếu tài khoản có mật khẩu, bạn cần nhập mật khẩu để xác nhận. Tài khoản, sổ từ và tiến độ học bị xoá vĩnh viễn, không khôi phục được. Không vào được tài khoản nữa? Hãy gửi email cho chúng tôi từ địa chỉ đã đăng ký.' },
+            { q: 'Báo lỗi hoặc góp ý ở đâu?', a: 'Dùng biểu mẫu bên dưới, hoặc trong app vào Cài đặt → “Báo lỗi” / “Gửi góp ý”. Khi báo lỗi, hãy ghi trang hoặc bài học, thiết bị và trình duyệt để chúng tôi tìm ra lỗi nhanh hơn.' },
         ],
     },
-    privacy: perLocale((l) => [controller(l, NAME), ...body[l], emailContact(l), rights(l), changes(l)]),
+    // Cùng nội dung với /privacy: một chính sách bảo mật duy nhất cho website + app HalloVN (src/lib/company/legal/website.ts)
+    privacy: hallovnPrivacy,
 };

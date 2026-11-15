@@ -4,7 +4,8 @@ import { WebsitePrivacy } from '@/components/company/ProductLegal';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Datenschutzerklärung',
-    description: 'Datenschutzerklärung der Website hallovn.de und Übersicht aller Produkte von HalloVN.',
+    description:
+        'Datenschutzerklärung von HalloVN für die Website hallovn.de und die App HalloVN: Konto, Lerndaten, Mikrofon, KI-Dienste, Google AdSense, Cookies, Speicherdauer und Ihre Rechte nach der DSGVO.',
     path: '/privacy',
 });
 

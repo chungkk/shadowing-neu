@@ -1,45 +1,69 @@
-import { useId } from 'react';
-import type { ServiceId } from '@/lib/company/services';
+import type { JSX } from 'react';
+import type { AreaArt } from '@/lib/company/services';
 
-/** Hình trên tem: mực phẳng, in chồng một màu trên nền mực của sản phẩm. */
+/** Hình trên tem: mực phẳng, in chồng một màu trên nền mực của từng phần học. */
 
 const WAVE = [14, 30, 52, 24, 66, 90, 44, 72, 34, 58, 86, 40, 22, 62, 36, 18];
 
-function Wave({ className }: { className?: string }) {
+/** Sóng âm: nghe và nói theo */
+function Wave() {
     return (
-        <svg viewBox="0 0 200 160" className={className} aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+        <>
             {WAVE.map((h, i) => (
                 <rect key={i} x={6 + i * 12} y={80 - h * 0.75} width="7" height={h * 0.75} fill="currentColor" />
             ))}
             {WAVE.map((h, i) => (
-                <rect key={i} x={12 + i * 12} y={84} width="7" height={h * 0.62} fill="currentColor" opacity=".42" />
+                <rect key={`r${i}`} x={12 + i * 12} y={84} width="7" height={h * 0.62} fill="currentColor" opacity=".42" />
             ))}
-        </svg>
+        </>
     );
 }
 
-export function StampArt({ className }: { id: ServiceId; className?: string }) {
-    return <Wave className={className} />;
+/** Chồng thẻ từ */
+function Cards() {
+    return (
+        <>
+            <rect x="58" y="22" width="96" height="62" fill="currentColor" opacity=".3" transform="rotate(-8 106 53)" />
+            <rect x="50" y="40" width="96" height="62" fill="currentColor" opacity=".55" transform="rotate(4 98 71)" />
+            <rect x="44" y="62" width="112" height="72" fill="currentColor" />
+        </>
+    );
 }
 
-/** Dấu bưu điện: cho biết con tem dẫn tới đâu */
-export function Postmark({ center, className }: { center: string; className?: string }) {
-    const pathId = useId();
+/** Biển báo và làn đường */
+function Road() {
     return (
-        <svg viewBox="0 0 120 120" className={className} aria-hidden="true">
-            <defs>
-                <path id={pathId} d="M60 60m-43 0a43 43 0 1 1 86 0a43 43 0 1 1-86 0" />
-            </defs>
-            <g fill="none" stroke="#141b2d">
-                <circle cx="60" cy="60" r="56" strokeWidth="3" />
-                <circle cx="60" cy="60" r="34" strokeWidth="1.5" />
-            </g>
-            <text fontSize="11.5" fontWeight="700" letterSpacing="1.6" fill="#141b2d">
-                <textPath href={`#${pathId}`}>HALLOVN.DE · HALLE (SAALE) ·</textPath>
-            </text>
-            <text x="60" y="66" textAnchor="middle" fontSize="17" fontWeight="800" fill="#141b2d">
-                {center}
-            </text>
+        <>
+            <path d="M100 14 150 100H50Z" fill="currentColor" />
+            <rect x="96" y="100" width="8" height="34" fill="currentColor" />
+            <rect x="20" y="140" width="160" height="6" fill="currentColor" opacity=".42" />
+            {[0, 1, 2, 3, 4].map((i) => (
+                <rect key={i} x={24 + i * 34} y="150" width="20" height="5" fill="currentColor" opacity=".42" />
+            ))}
+        </>
+    );
+}
+
+/** Mặt tiền có hàng cột */
+function Columns() {
+    return (
+        <>
+            <path d="M28 52 100 16l72 36Z" fill="currentColor" />
+            <rect x="28" y="58" width="144" height="8" fill="currentColor" />
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+                <rect key={i} x={36 + i * 24} y="72" width="12" height="56" fill="currentColor" opacity={i % 2 ? '.55' : '1'} />
+            ))}
+            <rect x="20" y="134" width="160" height="10" fill="currentColor" />
+        </>
+    );
+}
+
+const ART: Record<AreaArt, () => JSX.Element> = { wave: Wave, cards: Cards, road: Road, columns: Columns };
+
+export function StampArt({ art = 'wave', className }: { art?: AreaArt; className?: string }) {
+    return (
+        <svg viewBox="0 0 200 160" className={className} aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+            {ART[art]()}
         </svg>
     );
 }

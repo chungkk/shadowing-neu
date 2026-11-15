@@ -8,14 +8,14 @@ import type { ServiceId } from '@/lib/company/services';
 import { PRODUCT_PAGES } from '@/lib/company/productPages';
 import type { ProductPage } from '@/lib/company/productPages';
 import { useLocale, useT } from '@/components/company/LocaleContext';
-import { Shot, StoreButtons, inkText } from '@/components/company/ProductParts';
-import { StampArt } from '@/components/company/StampArt';
+import { Shot, StartButton, inkText } from '@/components/company/ProductParts';
 import { Lightbox } from '@/components/company/Lightbox';
 import { ArrowRightIcon, PlusIcon } from '@/components/company/icons';
 
 const UI = {
     de: {
-        products: 'Produkte',
+        about: 'Über HalloVN',
+        current: 'Lernplattform',
         support: 'Support',
         privacy: 'Datenschutz',
         facts: 'Auf einen Blick',
@@ -23,11 +23,13 @@ const UI = {
         faq: 'Häufige Fragen',
         moreFaq: 'Mehr Antworten im Support',
         closing: 'Bereit zum Lernen?',
-        more: 'Weitere Produkte von HalloVN',
-        no: 'Nr.',
+        moreTitle: 'Software nach Maß',
+        moreText: 'Was hinter HalloVN steckt, bauen wir auch für Sie: Web-Anwendungen und Apps nach Ihren Anforderungen.',
+        moreLink: 'Projekt anfragen',
     },
     en: {
-        products: 'Products',
+        about: 'About HalloVN',
+        current: 'Learning platform',
         support: 'Support',
         privacy: 'Privacy',
         facts: 'At a glance',
@@ -35,11 +37,13 @@ const UI = {
         faq: 'Frequently asked questions',
         moreFaq: 'More answers in support',
         closing: 'Ready to start?',
-        more: 'More products from HalloVN',
-        no: 'No.',
+        moreTitle: 'Custom software',
+        moreText: 'What powers HalloVN, we also build for you: web applications and apps to your requirements.',
+        moreLink: 'Start a project',
     },
     vi: {
-        products: 'Sản phẩm',
+        about: 'Về HalloVN',
+        current: 'Nền tảng học',
         support: 'Hỗ trợ',
         privacy: 'Bảo mật',
         facts: 'Tóm tắt',
@@ -47,8 +51,9 @@ const UI = {
         faq: 'Câu hỏi thường gặp',
         moreFaq: 'Xem thêm trong trang hỗ trợ',
         closing: 'Sẵn sàng học chưa?',
-        more: 'Sản phẩm khác của HalloVN',
-        no: 'Số',
+        moreTitle: 'Làm phần mềm theo yêu cầu',
+        moreText: 'Công nghệ đứng sau HalloVN, chúng tôi cũng làm cho bạn: ứng dụng web và app theo yêu cầu.',
+        moreLink: 'Gửi yêu cầu dự án',
     },
 };
 
@@ -77,7 +82,6 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
     const copy = page.copy[locale];
     const sc = service.copy[locale];
     const landscape = page.shape === 'landscape';
-    const others = SERVICES.filter((s) => s.id !== id);
     const [viewing, setViewing] = useState<number | null>(null);
     const inkStyle = { '--stamp-ink': service.ink, '--band': service.ink, background: service.ink, color: inkText(service) } as CSSProperties;
 
@@ -89,12 +93,10 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                     <div className={landscape ? 'lg:col-span-5' : 'lg:col-span-7'}>
                         <nav aria-label="Breadcrumb" className="text-sm font-semibold">
                             <Link href="/about" className="underline-offset-4 hover:underline">
-                                HalloVN
+                                {t.about}
                             </Link>
                             <span aria-hidden="true"> / </span>
-                            <Link href="/about#apps" className="underline-offset-4 hover:underline">
-                                {t.products}
-                            </Link>
+                            <span aria-current="page">{t.current}</span>
                         </nav>
                         <h1 id="product-title" className="mt-6 font-display text-5xl font-bold leading-[0.98] tracking-tight text-balance md:text-7xl">
                             {service.name}
@@ -102,7 +104,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                         <p className="mt-5 max-w-[34rem] text-xl leading-snug">{sc.tagline}</p>
                         <p className="mt-4 max-w-[36rem] leading-relaxed">{copy.intro}</p>
                         <div className="mt-8">
-                            <StoreButtons service={service} />
+                            <StartButton service={service} />
                         </div>
                         <div className="mt-5 flex gap-4 text-sm font-semibold">
                             <Link href={`${productPath(service)}/support`} className="underline underline-offset-4">
@@ -142,10 +144,50 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                 </div>
             </section>
 
-            {/* Từng tính năng, mỗi mục gắn với ảnh thật */}
+            {/* Từng phần học: mục có ảnh thật thì ảnh bên cạnh, mục chưa có ảnh thì chữ trải rộng */}
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
                 {copy.sections.map((section, i) => {
                     const flip = i % 2 === 1;
+                    const shots = page.sections[i] ?? [];
+                    const text = (
+                        <>
+                            <span aria-hidden="true" className="block h-3 w-6" style={{ background: service.ink }} />
+                            <h2 id={`feature-${i}`} className="mt-5 font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
+                                {section.title}
+                            </h2>
+                            <p className="mt-5 max-w-[34rem] text-lg leading-snug">{section.body}</p>
+                        </>
+                    );
+                    const points = (
+                        <ul className="mt-7 max-w-[36rem] border-t border-[var(--ink)]/20">
+                            {section.points.map((point) => (
+                                <li key={point} className="border-b border-[var(--ink)]/20 py-2.5">
+                                    {point}
+                                </li>
+                            ))}
+                        </ul>
+                    );
+                    const link = section.link && (
+                        <Link href={section.link.href} className="group mt-6 inline-flex items-center gap-2 font-semibold text-[var(--ink-ultra)] underline-offset-4 hover:underline">
+                            {section.link.label}
+                            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </Link>
+                    );
+                    if (!shots.length) {
+                        return (
+                            <section
+                                key={section.title}
+                                aria-labelledby={`feature-${i}`}
+                                className="grid gap-x-14 border-b border-[var(--ink)]/20 py-16 last:border-b-0 md:py-24 lg:grid-cols-12"
+                            >
+                                <div className="min-w-0 lg:col-span-6">
+                                    {text}
+                                    {link}
+                                </div>
+                                <div className="min-w-0 lg:col-span-6 lg:pt-8">{points}</div>
+                            </section>
+                        );
+                    }
                     return (
                         <section
                             key={section.title}
@@ -153,21 +195,12 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                             className="grid items-center gap-10 border-b border-[var(--ink)]/20 py-16 last:border-b-0 md:py-24 lg:grid-cols-12 lg:gap-14"
                         >
                             <div className={`min-w-0 ${landscape ? 'lg:col-span-5' : 'lg:col-span-6'} ${flip ? 'lg:order-2' : ''}`}>
-                                <span aria-hidden="true" className="block h-3 w-6" style={{ background: service.ink }} />
-                                <h2 id={`feature-${i}`} className="mt-5 font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
-                                    {section.title}
-                                </h2>
-                                <p className="mt-5 max-w-[34rem] text-lg leading-snug">{section.body}</p>
-                                <ul className="mt-7 max-w-[36rem] border-t border-[var(--ink)]/20">
-                                    {section.points.map((point) => (
-                                        <li key={point} className="border-b border-[var(--ink)]/20 py-2.5">
-                                            {point}
-                                        </li>
-                                    ))}
-                                </ul>
+                                {text}
+                                {points}
+                                {link}
                             </div>
                             <div className={`${landscape ? 'lg:col-span-7' : 'lg:col-span-6'} ${flip ? 'lg:order-1' : ''}`}>
-                                <SectionShots page={page} indexes={page.sections[i]} alts={copy.alts} />
+                                <SectionShots page={page} indexes={shots} alts={copy.alts} />
                             </div>
                         </section>
                     );
@@ -278,36 +311,28 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                         <p className="mt-4 max-w-[30rem] text-lg leading-snug">{sc.tagline}</p>
                     </div>
                     <div className="lg:col-span-6">
-                        <StoreButtons service={service} />
+                        <StartButton service={service} />
                     </div>
                 </div>
             </section>
 
-            {/* Sản phẩm khác */}
+            {/* HalloVN cũng nhận làm phần mềm theo yêu cầu */}
             <section aria-labelledby="more-title" className="perf-top" style={{ '--band': 'var(--paper)' } as CSSProperties}>
-                <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-20">
-                    <h2 id="more-title" className="font-display text-3xl font-bold tracking-tight md:text-4xl">
-                        {t.more}
-                    </h2>
-                    <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                        {others.map((other) => (
-                            <Link key={other.id} href={productPath(other)} className="perf group flex p-2.5">
-                                <span
-                                    className="flex w-full items-center gap-4 p-4"
-                                    style={{ '--stamp-ink': other.ink, background: other.ink, color: inkText(other) } as CSSProperties}
-                                >
-                                    <StampArt id={other.id} className="hidden h-16 w-20 shrink-0 min-[400px]:block" />
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block text-sm font-semibold tabular-nums">
-                                            HalloVN · {t.no} {other.no}
-                                        </span>
-                                        <span className="mt-1 block break-words font-display text-xl font-bold leading-tight tracking-tight sm:text-2xl">{other.name}</span>
-                                        <span className="mt-1 block text-sm leading-snug">{other.copy[locale].short}</span>
-                                    </span>
-                                    <ArrowRightIcon className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-1" />
-                                </span>
-                            </Link>
-                        ))}
+                <div className="mx-auto grid max-w-6xl items-end gap-6 px-4 py-14 sm:px-6 md:grid-cols-12 md:py-20">
+                    <div className="md:col-span-8">
+                        <h2 id="more-title" className="font-display text-3xl font-bold tracking-tight md:text-4xl">
+                            {t.moreTitle}
+                        </h2>
+                        <p className="mt-3 max-w-[36rem] text-lg leading-snug">{t.moreText}</p>
+                    </div>
+                    <div className="md:col-span-4 md:text-right">
+                        <Link
+                            href="/about#auftrag"
+                            className="group inline-flex min-h-12 items-center gap-2 bg-[var(--ink-ultra)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-[var(--ink)]"
+                        >
+                            {t.moreLink}
+                            <ArrowRightIcon className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                        </Link>
                     </div>
                 </div>
             </section>

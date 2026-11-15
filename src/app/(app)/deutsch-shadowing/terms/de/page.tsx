@@ -1,12 +1,9 @@
-import type { Metadata } from "next";
-import LegalPage from "@/components/LegalPage";
+import { permanentRedirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Nutzungsbedingungen",
-  description: "Nutzungsbedingungen für die App und Website HalloVN.",
-  alternates: { canonical: "/deutsch-shadowing/terms/de", languages: { vi: "/deutsch-shadowing/terms", de: "/deutsch-shadowing/terms/de" } },
-};
-
+/**
+ * URL cũ (app HalloVN bản đã phát hành mở trang này trong trình duyệt nhúng, link trong form đăng ký) → chuyển hẳn (308)
+ * tới trang pháp lý chung của HalloVN. Nội dung chỉ còn một nơi: /terms?lang=de
+ */
 export default function TermsDePage() {
-  return <LegalPage doc="terms" lang="de" />;
+  permanentRedirect("/terms?lang=de");
 }

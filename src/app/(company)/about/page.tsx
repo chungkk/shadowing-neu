@@ -1,34 +1,42 @@
 import type { Metadata } from 'next';
 import HomeContent from '@/components/company/HomeContent';
 import { SITE } from '@/lib/company/site';
-import { SERVICES, productPath } from '@/lib/company/services';
 import { pageMetadata } from '@/lib/company/seo';
-import { ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo';
+import { productAppNode, productJsonLdId, withFileOgImage } from '@/lib/company/productSeo';
+import { ORGANIZATION_ID, WEBSITE_ID, serializeJsonLd } from '@/lib/seo';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'HalloVN – Software, Apps und Web-Anwendungen',
-  description: SITE.description,
-  path: '/about',
-  absolute: true,
-});
+const TITLE = 'Über HalloVN – Lernplattform für Vietnamesen in Deutschland';
+const DESCRIPTION =
+  'HalloVN ist die kostenlose Lernplattform für Vietnamesen in Deutschland: Deutsch mit echten Videos, Goethe-Wortschatz, Führerscheintheorie und Leben in Deutschland auf Vietnamesisch. Dazu Software nach Maß.';
 
-export default function HomePage() {
-  // Organization + WebSite đã chèn ở layout (src/lib/seo.ts); ở đây chỉ liệt kê các app, tham chiếu publisher theo @id
+// Ảnh OG: src/app/(company)/about/opengraph-image.tsx
+export const metadata: Metadata = withFileOgImage(
+  pageMetadata({
+    title: TITLE,
+    description: DESCRIPTION,
+    path: '/about',
+    absolute: true,
+  }),
+);
+
+export default function AboutPage() {
+  // Organization + WebSite đã chèn ở layout (src/lib/seo.ts); ở đây là trang giới thiệu + nền tảng học, tham chiếu theo @id
+  const url = `${SITE.url}/about`;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
-      ...SERVICES.map((service) => ({
-        '@type': service.platform === 'iOS' ? 'MobileApplication' : 'WebApplication',
-        '@id': `${SITE.url}${productPath(service)}#app`,
-        name: service.name,
-        url: `${SITE.url}${productPath(service)}`,
-        ...(service.platform === 'iOS'
-          ? { operatingSystem: service.android ? 'iOS, Android' : 'iOS', downloadUrl: service.href }
-          : { operatingSystem: 'Web', sameAs: service.href }),
-        applicationCategory: 'EducationalApplication',
-        offers: { '@type': 'Offer', price: 0, priceCurrency: 'EUR' },
-        publisher: { '@id': ORGANIZATION_ID },
-      })),
+      {
+        '@type': 'AboutPage',
+        '@id': `${url}#webpage`,
+        url,
+        name: TITLE,
+        description: DESCRIPTION,
+        inLanguage: 'de',
+        isPartOf: { '@id': WEBSITE_ID },
+        about: { '@id': ORGANIZATION_ID },
+        mainEntity: { '@id': productJsonLdId('shadowing') },
+      },
+      productAppNode('shadowing'),
     ],
   };
 
