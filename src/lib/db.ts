@@ -1835,6 +1835,12 @@ const examFromRow = (r: ExamRow) => ({
 /** Lưu 1 bài thi (đã chấm ở server) + ghi kết quả từng câu đã làm vào tiến độ. Trả về id bài */
 export function recordQuizExam(userId: number, module: QuizModule, e: QuizExamInput, results: { qid: string; ok: boolean }[]): number {
   const db = conn();
+  const answersJson = JSON.stringify(e.answers);
+  // Gửi lại cùng một bài (app gửi lại sau lỗi mạng / 5xx, web bấm "Thử lại") → trả bài đã lưu, không tạo bản trùng
+  const dup = db
+    .prepare("SELECT id FROM quiz_exams WHERE user_id = ? AND module = ? AND answers = ? AND at > ? ORDER BY id DESC LIMIT 1")
+    .get(userId, module, answersJson, Date.now() - 6 * 3600_000) as { id: number } | undefined;
+  if (dup) return dup.id;
   let id: number;
   db.exec("BEGIN");
   try {
@@ -1844,7 +1850,7 @@ export function recordQuizExam(userId: number, module: QuizModule, e: QuizExamIn
           `INSERT INTO quiz_exams (user_id, module, kind, ref, license_class, correct, total, error_points, max_error_points, passed, fail_reason, duration_s, answers, at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(userId, module, e.kind, e.ref, e.cls, e.correct, e.total, e.errorPoints, e.maxErrorPoints, e.passed ? 1 : 0, e.failReason, e.durationS, JSON.stringify(e.answers), Date.now()).lastInsertRowid,
+        .run(userId, module, e.kind, e.ref, e.cls, e.correct, e.total, e.errorPoints, e.maxErrorPoints, e.passed ? 1 : 0, e.failReason, e.durationS, answersJson, Date.now()).lastInsertRowid,
     );
     db.prepare(
       `DELETE FROM quiz_exams WHERE user_id = ? AND module = ? AND id NOT IN (SELECT id FROM quiz_exams WHERE user_id = ? AND module = ? ORDER BY at DESC, id DESC LIMIT 100)`,
@@ -1854,6 +1860,7 @@ export function recordQuizExam(userId: number, module: QuizModule, e: QuizExamIn
     db.exec("ROLLBACK");
     throw err;
   }
+  // Bài thi đã lưu chắc chắn; tiến độ từng câu ghi sau (recordQuizAnswers tự mở transaction riêng)
   if (results.length) recordQuizAnswers(userId, module, results);
   return id;
 }

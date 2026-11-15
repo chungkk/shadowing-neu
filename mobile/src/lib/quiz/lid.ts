@@ -16,43 +16,60 @@ export const STATES: State[] = data.states;
 export const getState = (code: string) => STATES.find((s) => s.code === code) ?? null;
 export const DEFAULT_STATE = "be";
 
-type Raw = (typeof data.general)[number];
-const GENERAL = data.general;
-const STATE_QS = data.state as Record<string, Raw[]>;
-const ALL = new Map<string, { q: Raw; general: boolean; number: number }>([
-  ...GENERAL.map((q, i) => [q.id, { q, general: true, number: i + 1 }] as const),
-  ...Object.values(STATE_QS).flatMap((qs) => qs.map((q, i) => [q.id, { q, general: false, number: 301 + i }] as const)),
+type Topic = "politik" | "geschichte" | "gesellschaft";
+/** 1 câu trong questions.json (nr = số Aufgabe BAMF; topic chỉ có ở câu chung; explainVi = giải thích ngắn, không bắt buộc) */
+type Raw = {
+  id: string;
+  q: string;
+  qVi: string;
+  options: { key: string; text: string; textVi: string }[];
+  answer: string[];
+  image: string | null;
+  nr?: number;
+  topic?: Topic;
+  explainVi?: string;
+};
+// Sắp theo số Aufgabe chính thức (`nr`); ID giữ nguyên vì tiến độ lưu theo ID
+const byNr = (qs: Raw[]) => qs.map((q, i) => ({ q, nr: q.nr ?? i + 1 })).sort((a, b) => a.nr - b.nr);
+const GENERAL = byNr(data.general as unknown as Raw[]);
+const STATE_QS = Object.fromEntries(Object.entries(data.state as unknown as Record<string, Raw[]>).map(([k, qs]) => [k, byNr(qs)]));
+const ALL = new Map<string, { q: Raw; general: boolean; nr: number }>([
+  ...GENERAL.map(({ q, nr }) => [q.id, { q, general: true, nr }] as const),
+  ...Object.values(STATE_QS).flatMap((qs) => qs.map(({ q, nr }) => [q.id, { q, general: false, nr }] as const)),
 ]);
 
-/** 3 nhóm chủ đề của 300 câu chung */
-export const CATEGORIES = [
-  { key: "politik", de: "Politik in der Demokratie", vi: "Chính trị trong nền dân chủ", from: 1, to: 100 },
-  { key: "geschichte", de: "Geschichte und Verantwortung", vi: "Lịch sử và trách nhiệm", from: 101, to: 200 },
-  { key: "gesellschaft", de: "Mensch und Gesellschaft", vi: "Con người và xã hội", from: 201, to: 300 },
-] as const;
+/** 3 chủ đề của danh mục BAMF — theo trường `topic` của từng câu */
+export const CATEGORIES: { key: Topic; de: string; vi: string }[] = [
+  { key: "politik", de: "Politik in der Demokratie", vi: "Chính trị trong nền dân chủ" },
+  { key: "geschichte", de: "Geschichte und Verantwortung", vi: "Lịch sử và trách nhiệm" },
+  { key: "gesellschaft", de: "Mensch und Gesellschaft", vi: "Con người và xã hội" },
+];
 
-export const generalIds = () => GENERAL.map((q) => q.id);
-export const stateIds = (code: string) => (STATE_QS[code] ?? []).map((q) => q.id);
+export const generalIds = () => GENERAL.map((x) => x.q.id);
+export const stateIds = (code: string) => (STATE_QS[code] ?? []).map((x) => x.q.id);
 export const hasQuestion = (id: string) => ALL.has(id);
 export const isGeneral = (id: string) => ALL.get(id)?.general ?? false;
 
-/** Bộ luyện 30 câu: 1 → câu 1–30, 2 → 31–60, … */
+/** Bộ luyện 30 câu theo số câu chính thức: 1 → câu 1–30, 2 → 31–60, … */
 export function listSets() {
   return Array.from({ length: Math.ceil(GENERAL.length / SET_SIZE) }, (_, i) => {
     const qs = GENERAL.slice(i * SET_SIZE, (i + 1) * SET_SIZE);
-    return { id: String(i + 1), from: i * SET_SIZE + 1, to: i * SET_SIZE + qs.length, ids: qs.map((q) => q.id) };
+    return { id: String(i + 1), from: qs[0].nr, to: qs[qs.length - 1].nr, ids: qs.map((x) => x.q.id) };
   });
 }
 
-/** Phạm vi học: "hoc" (câu chung + câu của bang), "tat-ca" (300 câu chung), nhóm chủ đề, bộ 30 câu ("1".."10") hoặc "state" (câu của bang) */
+/** Phạm vi học: "hoc" (câu chung + câu của bang), "tat-ca" (300 câu chung), chủ đề, bộ 30 câu ("1".."10") hoặc "state" (câu của bang) */
 export function getSet(id: string, stateCode: string): { title: string; subtitle: string; ids: string[] } | null {
-  if (id === "hoc") return { title: "Tất cả", subtitle: `${GENERAL.length} câu chung + câu của bang`, ids: [...generalIds(), ...stateIds(stateCode)] };
-  if (id === "tat-ca") return { title: "Tất cả câu chung", subtitle: `${GENERAL.length} câu`, ids: generalIds() };
+  if (id === "hoc") return { title: "Học tất cả", subtitle: `${GENERAL.length} câu chung + 10 câu của bang`, ids: [...generalIds(), ...stateIds(stateCode)] };
+  if (id === "tat-ca") return { title: "300 câu chung", subtitle: `${GENERAL.length} câu`, ids: generalIds() };
   const cat = CATEGORIES.find((c) => c.key === id);
-  if (cat) return { title: cat.vi, subtitle: `${cat.de} · câu ${cat.from}–${cat.to}`, ids: GENERAL.slice(cat.from - 1, cat.to).map((q) => q.id) };
+  if (cat) {
+    const ids = GENERAL.filter((x) => x.q.topic === cat.key).map((x) => x.q.id);
+    return ids.length ? { title: cat.vi, subtitle: `${cat.de} · ${ids.length} câu`, ids } : null;
+  }
   if (id === "state") {
     const state = getState(stateCode);
-    return state ? { title: state.name, subtitle: `Thủ phủ: ${state.capital} · câu 301–310`, ids: stateIds(state.code) } : null;
+    return state ? { title: state.name, subtitle: `Thủ phủ: ${state.capital} · 10 câu`, ids: stateIds(state.code) } : null;
   }
   const set = listSets().find((s) => s.id === id);
   return set ? { title: `Câu ${set.from}–${set.to}`, subtitle: "300 câu chung", ids: set.ids } : null;
@@ -75,19 +92,19 @@ export function questions(ids: string[]): DrivingQ[] {
     return [
       {
         id: q.id,
-        chapter: x.general ? `Câu ${x.number}` : `${getState(q.id.replace(/\d+$/, ""))?.name ?? ""} · câu ${x.number}`,
+        chapter: x.general ? `Câu ${x.nr}` : `${getState(q.id.replace(/\d+$/, ""))?.name ?? ""} · câu ${x.nr}`,
         points: 1,
         grund: x.general,
         q: q.q,
         stem: null,
         options: q.options.map(({ key, text }) => ({ key, text })),
         answer: q.answer,
-        explain: "",
+        explain: q.explainVi ?? "",
         images: q.image ? [q.image] : [],
         optionImages: false,
         poster: null,
         video: null,
-        tr: vi ?? null,
+        tr: vi,
         order: q.options.map((_, i) => i),
       },
     ];

@@ -79,7 +79,7 @@ export function BigCard({ href, icon: Icon, title, text, primary }: { href: stri
         <Icon className="size-7 sm:size-9" />
       </span>
       <span className="text-lg font-extrabold sm:text-2xl">{title}</span>
-      <span className={`text-sm ${primary ? "text-white/85" : "text-muted"}`}>{text}</span>
+      <span className={`text-sm ${primary ? "font-bold text-white" : "text-muted"}`}>{text}</span>
     </Link>
   );
 }

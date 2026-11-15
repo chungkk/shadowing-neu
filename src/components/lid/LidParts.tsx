@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, BarChart3, Info, LogIn, Star } from "lucide-react";
+import { LoginLink } from "../LoginDialog";
 
 /**
  * Khung trang chung của phần Leben in Deutschland — cùng kiểu với tab Lái xe:
@@ -26,7 +27,28 @@ export function LidTopBar({ back, title, right }: { back: string; title: ReactNo
 /** Huy hiệu bang (ảnh từ app) */
 export function Wappen({ code, className = "h-10 w-8" }: { code: string; className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={`/lid/wappen/${code}.png`} alt="" className={`${className} rounded-sm object-contain`} loading="lazy" />;
+  return <img src={`/lid/wappen/${code}.png`} alt="" width={64} height={80} className={`${className} rounded-sm object-contain`} loading="lazy" />;
+}
+
+/** Khách mở trang làm bài thi: mời đăng nhập ngay (không phát đề, không chạy đồng hồ) */
+export function ExamLoginGate({ next }: { next: string }) {
+  return (
+    <section className="card flex flex-col gap-3">
+      <LidTopBar back={next} title="Thi thử cần tài khoản" />
+      <p className="text-sm text-muted">Đăng ký miễn phí để làm bài thi thử 33 câu như thật, xem điểm và ôn lại câu sai sau mỗi lần thi.</p>
+      <ul className="flex flex-col gap-1.5 text-sm">
+        <li className="flex items-start gap-2">
+          <BarChart3 className="mt-0.5 size-4 shrink-0 text-amber" /> Lưu lịch sử các lần thi và tiến độ học
+        </li>
+        <li className="flex items-start gap-2">
+          <Star className="mt-0.5 size-4 shrink-0 text-amber" /> Tự đánh dấu câu làm sai để ôn lại
+        </li>
+      </ul>
+      <LoginLink href={`/login?next=${encodeURIComponent(next)}`} className="btn btn-amber btn-lg self-start font-black">
+        <LogIn className="size-4" /> Đăng nhập / Đăng ký
+      </LoginLink>
+    </section>
+  );
 }
 
 /** Hộp nhắc nhỏ (điều kiện đậu…) */

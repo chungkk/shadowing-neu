@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
         { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
       ],
     },
+    // Ảnh câu hỏi LiD có mã nội dung trong tên (q26.48d9065a.jpg) → cache lâu dài; huy hiệu bang (bw.png) ít khi đổi → 1 tuần
+    { source: "/lid/:file(q[^/]+\\.[0-9a-f]{8}\\.jpg)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+    { source: "/lid/wappen/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
   ],
   // Đường dẫn cũ của các game (tên tiếng Việt) → tên tiếng Anh
   redirects: async () => [

@@ -1,17 +1,26 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { CheckCircle2, ChevronRight, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { CheckCircle2, ChevronRight, MapPin, X } from "lucide-react";
 import { setLidState } from "@/app/(portal)/lai-xe/actions";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { Wappen } from "./LidParts";
 
 type S = { code: string; name: string; capital: string };
 
-/** Thẻ "Bang của bạn" + bảng chọn bang trượt lên — màu theo giao diện sáng / tối của trang */
-export function StatePicker({ states, current }: { states: S[]; current: string }) {
+/**
+ * Thẻ "Bang của bạn" + bảng chọn bang trượt lên — màu theo giao diện sáng / tối của trang.
+ * chosen=false: người học chưa tự chọn (đang dùng bang mặc định) → thẻ nhắc chọn bang.
+ * variant="button": chỉ nút "Đổi bang" (màn bắt đầu thi thử).
+ */
+export function StatePicker({ states, current, chosen = true, variant = "card" }: { states: S[]; current: string; chosen?: boolean; variant?: "card" | "button" }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const panel = useRef<HTMLDivElement>(null);
   const cur = states.find((s) => s.code === current);
+  useDialogFocus(panel, open);
+  // Rời trang (Activity ẩn trang) → đóng bảng chọn, quay lại không thấy bảng đang mở và trang không bị khoá cuộn
+  useLayoutEffect(() => () => setOpen(false), []);
 
   useEffect(() => {
     if (!open) return;
@@ -27,29 +36,39 @@ export function StatePicker({ states, current }: { states: S[]; current: string 
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="card sticker-link flex w-full cursor-pointer items-center gap-3 text-left"
-      >
-        <span className="flex size-13 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-card-2">
-          <Wappen code={current} />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-xs font-extrabold tracking-wider text-muted uppercase">Bang của bạn</span>
-          <span className="truncate text-lg font-extrabold">{pending ? "Đang đổi…" : (cur?.name ?? current)}</span>
-        </span>
-        <ChevronRight className="size-5 shrink-0 text-muted" />
-      </button>
+      {variant === "button" ? (
+        <button type="button" onClick={() => setOpen(true)} className="btn btn-lg" aria-haspopup="dialog">
+          <MapPin className="size-4" /> {pending ? "Đang đổi…" : "Đổi bang"}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          className={`card sticker-link flex w-full cursor-pointer items-center gap-3 text-left ${chosen ? "" : "border-gold bg-gold/10"}`}
+        >
+          <span className="flex size-13 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-card-2">
+            <Wappen code={current} />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-xs font-extrabold tracking-wider text-muted uppercase">{chosen ? "Bang của bạn" : "Bạn sống ở bang nào?"}</span>
+            <span className={`text-lg font-extrabold ${chosen ? "truncate" : "leading-tight"}`}>{pending ? "Đang đổi…" : chosen ? (cur?.name ?? current) : "Chọn bang để học đúng câu hỏi"}</span>
+            {!chosen && <span className="text-sm text-muted">Bài thi có 3 câu riêng của bang · đang tạm dùng {cur?.name ?? current}</span>}
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-muted" />
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
           <div
+            ref={panel}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="Chọn bang"
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl border-2 border-b-0 border-ink bg-card text-foreground sm:max-w-3xl sm:rounded-3xl sm:border-b-2"
+            className="flex max-h-[85dvh] outline-none w-full flex-col overflow-hidden rounded-t-3xl border-2 border-b-0 border-ink bg-card text-foreground sm:max-w-3xl sm:rounded-3xl sm:border-b-2"
           >
             <div className="flex items-center justify-between border-b-2 border-ink/10 px-5 py-4">
               <h2 className="section-title">Chọn bang</h2>
@@ -64,6 +83,7 @@ export function StatePicker({ states, current }: { states: S[]; current: string 
                   <li key={s.code}>
                     <button
                       type="button"
+                      aria-current={on ? "true" : undefined}
                       disabled={pending}
                       onClick={() => {
                         setOpen(false);

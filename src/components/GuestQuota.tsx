@@ -115,9 +115,12 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
           <li className="flex items-start gap-2">
             <Star className="mt-0.5 size-4 shrink-0 text-amber" /> Đánh dấu câu khó, ôn lại câu sai
           </li>
-          <li className="flex items-start gap-2">
-            <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Nhận kim cương khi học, leo bảng xếp hạng
-          </li>
+          {/* Leben in Deutschland / Lái xe chưa tặng kim cương — không hứa điều chưa có */}
+          {area !== "lid" && area !== "fuehrerschein" && (
+            <li className="flex items-start gap-2">
+              <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Nhận kim cương khi học, leo bảng xếp hạng
+            </li>
+          )}
         </ul>
         <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-amber btn-lg font-black">
           <LogIn className="size-4" /> Đăng nhập / Đăng ký

@@ -17,8 +17,9 @@ async function Marked() {
   const ids = quizBookmarks(user.id, "lid");
   return (
     <LidRunner
+      key={ids.join()}
       mode="ueben"
-      title="Đã đánh dấu"
+      title="Câu đã đánh dấu"
       backHref="/leben-in-deutschland"
       questions={await forClient(ids)}
       loggedIn

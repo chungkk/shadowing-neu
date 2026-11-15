@@ -13,14 +13,15 @@ export const metadata: Metadata = { title: "Xem lại bài thi · Leben in Deuts
 async function Review({ params }: PageProps<"/leben-in-deutschland/thi-thu/[id]">) {
   const { id } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=/leben-in-deutschland/thi-thu/${id}`);
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/leben-in-deutschland/thi-thu/${id}`)}`);
   const exam = /^\d+$/.test(id) ? getQuizExam(user.id, "lid", Number(id)) : null;
   if (!exam) notFound();
   const { lang } = await prefs();
   return (
     <LidRunner
+      key={exam.id}
       mode="review"
-      title="Test"
+      title="Kết quả thi thử"
       backHref="/leben-in-deutschland/thong-ke"
       questions={await forClient(exam.answers.map((a) => a.qid))}
       loggedIn

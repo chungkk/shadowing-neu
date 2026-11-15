@@ -1,15 +1,22 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Clock, Play } from "lucide-react";
+import { Clock, LogIn, Play } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
-import { EXAM, EXAM_TOTAL, getState, prefs } from "@/lib/lid";
+import { EXAM, EXAM_TOTAL, STATES, getState, prefs } from "@/lib/lid";
 import { ExamHistory } from "@/components/lai-xe/ExamHistory";
 import { LidShell, LidTopBar, Wappen } from "@/components/lid/LidParts";
+import { StatePicker } from "@/components/lid/StatePicker";
+import { LoginLink } from "@/components/LoginDialog";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Thi thử Leben in Deutschland", description: "Thi thử Leben in Deutschland / Einbürgerungstest như thật: 33 câu, 60 phút, đúng 17 câu là đậu." };
+export const metadata: Metadata = {
+  title: "Thi thử Leben in Deutschland – Einbürgerungstest 33 câu",
+  description: "Thi thử Leben in Deutschland / Einbürgerungstest như thật: 33 câu (30 câu chung + 3 câu của bang), 60 phút, đúng 17 câu là đậu. Xem lại từng câu sai bằng tiếng Việt.",
+  alternates: { canonical: "/leben-in-deutschland/thi-thu" },
+  openGraph: { url: "/leben-in-deutschland/thi-thu" },
+};
 
 /** Màn bắt đầu thi như Lái xe: thẻ luật thi + nút đỏ "Bắt đầu thi" */
 async function Start() {
@@ -40,14 +47,19 @@ async function Start() {
             Đậu khi <b>đúng ít nhất {EXAM.pass}/{EXAM_TOTAL} câu</b>
           </li>
         </ul>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/leben-in-deutschland/thi-thu/lam-bai" className="btn btn-lg btn-red">
-            <Play className="size-4" /> Bắt đầu thi
-          </Link>
-          <Link href="/leben-in-deutschland/cai-dat" className="btn btn-lg">
-            Đổi bang
-          </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {user ? (
+            <Link href="/leben-in-deutschland/thi-thu/lam-bai" prefetch={false} className="btn btn-lg btn-red">
+              <Play className="size-4" /> Bắt đầu thi
+            </Link>
+          ) : (
+            <LoginLink href={`/login?next=${encodeURIComponent("/leben-in-deutschland/thi-thu")}`} className="btn btn-lg btn-amber font-black">
+              <LogIn className="size-4" /> Đăng nhập để thi thử
+            </LoginLink>
+          )}
+          <StatePicker states={STATES} current={state.code} variant="button" />
         </div>
+        {!user && <p className="text-sm text-muted">Thi thử cần tài khoản (miễn phí) để chấm điểm, lưu lịch sử và ôn lại câu sai.</p>}
       </section>
       {user && history.length > 0 && (
         <section className="flex flex-col gap-3">

@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { connection } from "next/server";
 import { listLessons } from "@/lib/db";
 import { allChapterIds } from "@/lib/fuehrerschein";
-import { setIds } from "@/lib/lid";
+import { LID_UPDATED, indexableSetIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { lessonPath } from "@/lib/slug";
 import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/biz/lib/legal";
@@ -40,11 +40,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/games/word-match`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/games/der-die-das`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/lai-xe`, changeFrequency: "monthly", priority: 0.9 },
-    { url: `${SITE_URL}/leben-in-deutschland`, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/leben-in-deutschland`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/leben-in-deutschland/thi-thu`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/thi-thu`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/de-mau`, changeFrequency: "monthly", priority: 0.7 },
     ...allChapterIds().map((id) => ({ url: `${SITE_URL}/lai-xe/hoc/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
-    ...setIds().map((id) => ({ url: `${SITE_URL}/leben-in-deutschland/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
+    ...indexableSetIds().map((id) => ({ url: `${SITE_URL}/leben-in-deutschland/${id}`, lastModified: LID_UPDATED, changeFrequency: "monthly" as const, priority: 0.5 })),
     ...bizPages(),
     ...["/deutsch-shadowing/privacy", "/deutsch-shadowing/privacy/de", "/deutsch-shadowing/terms", "/deutsch-shadowing/terms/de"].map((p) => ({ url: SITE_URL + p, changeFrequency: "yearly" as const, priority: 0.2 })),
     ...listLessons().map((l) => ({

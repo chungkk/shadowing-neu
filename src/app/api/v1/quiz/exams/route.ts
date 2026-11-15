@@ -37,7 +37,8 @@ function lidExam(userId: number, b: { cls: unknown; durationS: unknown; answers:
   const durationS = Math.max(0, Math.min(6 * 3600, Math.round(Number(b.durationS) || 0)));
   const results = qs.filter((q) => picked[q.id]?.length).map((q) => ({ qid: q.id, ok: isRight(q, picked[q.id]) }));
   const id = recordQuizExam(userId, "lid", { kind: "random", ref: state.code, cls: state.code, ...result, maxErrorPoints: lid.EXAM_MAX_WRONG, durationS, answers }, results);
-  return Response.json({ id, result });
+  // results: kết quả từng câu đã làm (web tự đánh dấu câu sai sau khi nộp — đáp án không gửi xuống trình duyệt lúc thi)
+  return Response.json({ id, result, results });
 }
 
 type Answer = { qid: unknown; picked: unknown; order: unknown };

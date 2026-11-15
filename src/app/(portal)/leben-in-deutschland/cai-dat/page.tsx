@@ -3,7 +3,7 @@ import { BookOpen, Database, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { STATES, prefs } from "@/lib/lid";
-import { AutoMarkToggle, ResetProgress } from "@/components/lai-xe/Settings";
+import { AutoMarkToggle, ResetProgress, VibrateToggle } from "@/components/lai-xe/Settings";
 import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
@@ -26,16 +26,18 @@ function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ cl
 }
 
 async function Settings() {
-  const { state } = await prefs();
+  const { state, chosen } = await prefs();
   const user = await getCurrentUser();
   // Form cài đặt: giới hạn bề ngang bên trong, khung ngoài vẫn .page để tiêu đề thẳng hàng subnav
   return (
     <div className="flex w-full max-w-3xl flex-col gap-5">
       <Group icon={MapPin} title="Bang" text="Câu hỏi riêng của bang dùng khi học và khi thi thử.">
-        <StatePicker states={STATES} current={state.code} />
+        <StatePicker states={STATES} current={state.code} chosen={chosen} />
       </Group>
       <Group icon={BookOpen} title="Học tập">
-        <AutoMarkToggle />
+        {/* Đánh dấu câu lưu trên tài khoản → chỉ có khi đã đăng nhập */}
+        {user && <AutoMarkToggle />}
+        <VibrateToggle />
       </Group>
       {user && (
         <Group icon={Database} title="Dữ liệu" text="Xoá câu đã làm, câu đánh dấu và lịch sử thi của phần Leben in Deutschland.">

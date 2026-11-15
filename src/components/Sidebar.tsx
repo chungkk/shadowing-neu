@@ -84,7 +84,7 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
         <Link
           key={it.href}
           href={reviewHref(it.href, due)}
-          aria-label={it.href === REVIEW.href && due ? `${it.label} — ${due} từ đến hạn ôn` : it.label}
+          aria-label={`${it.short && it.short !== it.label ? `${it.short} – ${it.label}` : it.label}${it.href === REVIEW.href && due ? ` — ${due} từ đến hạn ôn` : ""}`}
           aria-current={it.href === current ? "page" : undefined}
           className={`relative flex h-12 min-w-14 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 transition ${
             it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"

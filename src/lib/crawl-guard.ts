@@ -1,3 +1,4 @@
+import { lookup, reverse } from "node:dns/promises";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
@@ -8,7 +9,9 @@ import { NextResponse, type NextRequest } from "next/server";
  *    - Mở trang trực tiếp (HTML — cách scraper hay dùng): chặt
  *    - Request nội bộ khi bấm link trong trang (có header next-url, gồm cả prefetch): rộng gấp 5 lần.
  *      Next xoá header rsc / next-router-prefetch trước khi tới proxy nên không tách riêng prefetch được.
- * Bot tìm kiếm (Googlebot, Bingbot…) vẫn vào được để index; robots.txt cấm riêng bot AI.
+ * Bot tìm kiếm (Googlebot, Bingbot…) vẫn vào được để index và KHÔNG bị giới hạn tần suất — nhưng chỉ khi xác minh được bằng
+ * DNS (IP → tên miền của Google/Bing → lại đúng IP đó); ai giả User-Agent Googlebot vẫn bị giới hạn như người thường.
+ * robots.txt cấm riêng bot AI.
  */
 
 const GUARDED = ["/lai-xe", "/leben-in-deutschland"];
@@ -130,7 +133,47 @@ function hit(key: string, windowMs: number, now: number): Entry {
   return e;
 }
 
-const clientIp = (req: NextRequest) => req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+/**
+ * IP thật của người gửi — như lib/rate-limit.ts: proxy của Coolify (Traefik) thêm IP nó thấy vào CUỐI X-Forwarded-For,
+ * phần đầu do trình duyệt / scraper tự gửi (đổi mỗi request là vượt mọi giới hạn) → đếm từ cuối theo TRUSTED_PROXY_HOPS.
+ */
+export function clientIp(req: Request): string {
+  const ips = req.headers.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS) || 1;
+  return ips[Math.max(0, ips.length - hops)] || req.headers.get("x-real-ip") || "unknown";
+}
+
+// Bot tìm kiếm được miễn giới hạn tần suất: UA → tên miền mà reverse DNS của IP phải thuộc về
+const SEARCH_BOTS: { ua: RegExp; hosts: RegExp }[] = [
+  { ua: /googlebot|google-inspectiontool|storebot-google|adsbot-google|mediapartners-google/, hosts: /\.(googlebot|google)\.com$/ },
+  { ua: /bingbot|msnbot|adidxbot/, hosts: /\.search\.msn\.com$/ },
+  { ua: /duckduckbot/, hosts: /\.duckduckgo\.com$/ },
+  { ua: /applebot(?!-extended)/, hosts: /\.applebot\.apple\.com$/ },
+];
+const verified = new Map<string, { ok: boolean; exp: number }>();
+const VERIFY_TTL_MS = 24 * 3600_000;
+
+/** Bot tìm kiếm thật? (reverse DNS + forward DNS, nhớ kết quả 1 ngày; lỗi DNS / quá 1,5 giây → coi như không phải) */
+async function isVerifiedSearchBot(ua: string, ip: string): Promise<boolean> {
+  const bot = SEARCH_BOTS.find((b) => b.ua.test(ua));
+  if (!bot || ip === "unknown") return false;
+  const now = Date.now();
+  const hit = verified.get(ip);
+  if (hit && hit.exp > now) return hit.ok;
+  let ok = false;
+  try {
+    const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("dns timeout")), 1500));
+    const names = await Promise.race([reverse(ip), timeout]);
+    const host = names.find((n) => bot.hosts.test(n.toLowerCase()));
+    if (host) {
+      const addrs = await Promise.race([lookup(host, { all: true }), timeout]);
+      ok = addrs.some((a) => a.address === ip);
+    }
+  } catch {}
+  if (verified.size > 5000) verified.clear();
+  verified.set(ip, { ok, exp: now + VERIFY_TTL_MS });
+  return ok;
+}
 
 const page = (status: number, title: string, text: string, headers: Record<string, string> = {}) =>
   new NextResponse(
@@ -140,7 +183,7 @@ const page = (status: number, title: string, text: string, headers: Record<strin
   );
 
 /** null = cho qua; Response = chặn */
-export function crawlGuard(req: NextRequest): NextResponse | null {
+export async function crawlGuard(req: NextRequest): Promise<NextResponse | null> {
   const { pathname } = req.nextUrl;
   if (!GUARDED.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
   if (process.env.NODE_ENV === "development") return null;
@@ -150,6 +193,7 @@ export function crawlGuard(req: NextRequest): NextResponse | null {
 
   const ip = clientIp(req);
   const now = Date.now();
+  if (await isVerifiedSearchBot(ua, ip)) return null;
 
   const sheet = SHEET_RE.exec(pathname)?.[1];
   if (sheet) {

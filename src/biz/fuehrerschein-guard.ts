@@ -1,3 +1,4 @@
+import { clientIp } from '@/lib/crawl-guard';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -148,9 +149,8 @@ export function fuehrerscheinGuard(request: NextRequest): NextResponse {
   }
 
   // 4. Rate Limiting theo IP & Chế độ xác thực
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const ip = (forwardedFor ? forwardedFor.split(',')[0].trim() : realIp) || '127.0.0.1';
+  // IP do proxy (Traefik) thêm vào cuối X-Forwarded-For — phần đầu người gọi tự đặt được
+  const ip = clientIp(request);
 
   const windowMs = 60 * 1000;
   let limit: number;

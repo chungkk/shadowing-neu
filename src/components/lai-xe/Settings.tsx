@@ -162,6 +162,17 @@ export function AutoMarkToggle() {
   );
 }
 
+/** Rung khi trả lời sai (điện thoại) — Leben in Deutschland */
+export function VibrateToggle() {
+  const [on, setOn] = useLocalStorage<boolean>("lid:vibrate", true);
+  return (
+    <label className="flex items-center gap-2 text-sm font-bold">
+      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5 accent-[var(--accent)]" />
+      Rung khi trả lời sai (điện thoại)
+    </label>
+  );
+}
+
 /** Xoá toàn bộ tiến độ (câu đã làm, đánh dấu, lịch sử thi) của 1 phần */
 export function ResetProgress({ module = "fuehrerschein" }: { module?: "fuehrerschein" | "lid" }) {
   const router = useRouter();
@@ -179,6 +190,11 @@ export function ResetProgress({ module = "fuehrerschein" }: { module?: "fuehrers
           setError("");
           try {
             await clientApi("/quiz", { method: "DELETE", body: { module, all: true } });
+            // Vị trí học dở (localStorage "pos:lid:…") cũng là tiến độ → xoá theo
+            if (module === "lid")
+              try {
+                for (const k of Object.keys(localStorage)) if (k.startsWith("pos:lid:")) localStorage.removeItem(k);
+              } catch {}
             router.refresh();
           } catch (e) {
             setError((e as Error).message);

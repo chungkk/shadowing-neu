@@ -31,6 +31,7 @@ async function Wrong({ searchParams }: P) {
   }
   return (
     <LidRunner
+      key={ids.join()} // danh sách câu sai đổi → bắt đầu lại từ câu đầu
       mode="ueben"
       title={title}
       backHref="/leben-in-deutschland"
