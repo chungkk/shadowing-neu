@@ -34,7 +34,7 @@ export default async function UserMenu() {
         <ReviewPill due={dueCount(user.id)} />
         <PointsBadge initial={getPoints(user.id).total} />
       </DeutschOnly>
-      <ReminderBell />
+      <ReminderBell userId={user.id} />
       <UserDropdown user={{ id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />
     </div>
   );

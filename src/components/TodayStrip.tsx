@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, Layers, Play } from "lucide-react";
 import { dueCount } from "@/lib/db";
-import { percent, unfinished } from "./ContinueLearning";
+import { percent, unfinished } from "@/lib/progress";
 import TodayStreak from "./TodayStreak";
 
 const TILE = "tile sticker-link flex min-w-0 flex-col gap-0.5";

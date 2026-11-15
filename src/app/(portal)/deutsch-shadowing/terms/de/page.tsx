@@ -3,7 +3,7 @@ import LegalPage from "@/components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Nutzungsbedingungen",
-  description: "Nutzungsbedingungen für die App und Website Deutsch Shadowing.",
+  description: "Nutzungsbedingungen für die App und Website HalloVN.",
   alternates: { canonical: "/deutsch-shadowing/terms/de", languages: { vi: "/deutsch-shadowing/terms", de: "/deutsch-shadowing/terms/de" } },
 };
 

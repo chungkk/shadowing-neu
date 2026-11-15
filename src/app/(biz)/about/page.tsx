@@ -5,7 +5,7 @@ import { SERVICES, productPath } from '@/biz/lib/services';
 import { pageMetadata } from '@/biz/lib/seo';
 
 export const metadata: Metadata = pageMetadata({
-  title: 'CKK – Software, Apps und Web-Anwendungen',
+  title: 'HalloVN – Software, Apps und Web-Anwendungen',
   description: SITE.description,
   path: '/about',
   absolute: true,

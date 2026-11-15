@@ -1,14 +1,14 @@
 // Cấu hình thương hiệu & liên kết dùng chung cho toàn bộ website hallovn.de
 
 export const SITE = {
-  name: 'CKK',
-  fullName: 'CKK',
+  name: 'HalloVN',
+  fullName: 'HalloVN',
   domain: 'hallovn.de',
   url: 'https://hallovn.de',
   supportEmail: 'support@hallovn.de',
   contactEmail: 'support@hallovn.de',
   description:
-    'CKK entwickelt Software: eigene Apps wie Führerschein Theorie, Leben in Deutschland und Deutsch Shadowing – und Apps und Web-Anwendungen für Sie.',
+    'HalloVN entwickelt Software: eigene Apps wie Führerschein Theorie, Leben in Deutschland und HalloVN zum Deutschlernen – und Apps und Web-Anwendungen für Sie.',
 } as const;
 
 /**
@@ -17,7 +17,7 @@ export const SITE = {
  */
 export const COMPANY = {
   /** Firmenname oder Name des Einzelunternehmers */
-  legalName: 'CKK Apps',
+  legalName: 'HalloVN Apps',
   /** Vertretungsberechtigte Person / Inhaber */
   owner: 'Ckk',
   /** Optional – leer lassen, wenn nicht vorhanden */

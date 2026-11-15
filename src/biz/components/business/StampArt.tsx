@@ -67,7 +67,7 @@ export function Postmark({ center, className }: { center: string; className?: st
                 <circle cx="60" cy="60" r="34" strokeWidth="1.5" />
             </g>
             <text fontSize="11.5" fontWeight="700" letterSpacing="1.6" fill="#141b2d">
-                <textPath href={`#${pathId}`}>CKK · HALLE (SAALE) · CKK.BIZ ·</textPath>
+                <textPath href={`#${pathId}`}>HALLOVN.DE · HALLE (SAALE) ·</textPath>
             </text>
             <text x="60" y="66" textAnchor="middle" fontSize="17" fontWeight="800" fill="#141b2d">
                 {center}

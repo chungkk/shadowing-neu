@@ -2,7 +2,7 @@ import { APPLE_PRIVACY, GOOGLE_PRIVACY, changes, controller, emailContact, perLo
 import type { LegalProduct, LegalSection } from './types';
 import type { Locale } from '@/biz/contexts/LocaleContext';
 
-const NAME = 'Leben in Deutschland Ckk';
+const NAME = 'Leben in Deutschland HalloVN';
 
 const body: Record<Locale, LegalSection[]> = {
     de: [

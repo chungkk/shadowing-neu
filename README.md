@@ -1,10 +1,10 @@
-# CKK (hallovn.de)
+# HalloVN (hallovn.de)
 
 Tên miền chính thức là **hallovn.de**. ckk.biz và ckk.pro (tên cũ) không dùng nữa, chỉ còn chuyển hướng về hallovn.de
 (và phục vụ `/api/*` cho app di động bản cũ — xem `src/proxy.ts`).
 
 Một app Next.js cho cả hallovn.de: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
-cộng các trang doanh nghiệp / pháp lý của CKK (chuyển từ repo `ckk-biz`).
+cộng các trang doanh nghiệp / pháp lý của HalloVN (chuyển từ repo `ckk-biz`).
 
 ## Cấu trúc
 

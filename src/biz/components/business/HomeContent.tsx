@@ -16,7 +16,7 @@ const COPY = {
     de: {
         h1a: 'Wir bauen Software.',
         h1b: 'Und betreiben sie selbst.',
-        lead: 'CKK entwickelt eigene Apps und Web-Anwendungen. Und auf Anfrage auch Ihre.',
+        lead: 'HalloVN entwickelt eigene Apps und Web-Anwendungen. Und auf Anfrage auch Ihre.',
         cta: 'Projekt anfragen',
         no: 'Nr.',
         projectStamp: 'Ihr Projekt?',
@@ -25,8 +25,8 @@ const COPY = {
         projectTitle: 'Wir bauen auch Ihre Software.',
         projectDesc: 'Was wir für unsere eigenen Produkte gebaut haben und täglich betreiben, bauen wir auch für Sie.',
         proof: [
-            { title: 'Apps für iPhone und iPad', from: 'Führerschein Theorie Ckk, Leben in Deutschland Ckk' },
-            { title: 'Web-Anwendungen mit Nutzerkonten', from: 'Deutsch Shadowing' },
+            { title: 'Apps für iPhone und iPad', from: 'Führerschein Theorie HalloVN, Leben in Deutschland HalloVN' },
+            { title: 'Web-Anwendungen mit Nutzerkonten', from: 'HalloVN' },
             { title: 'Schnittstellen und Backend', from: 'Die Inhalte und Updates unserer Apps' },
             { title: 'Mehrsprachige Inhalte', from: 'Übersetzungen in bis zu 5 Sprachen' },
         ],
@@ -35,13 +35,13 @@ const COPY = {
         support: 'Support',
         privacy: 'Datenschutz',
         details: 'Alles über die App',
-        detailsWeb: 'Mehr über Deutsch Shadowing',
+        detailsWeb: 'Mehr über HalloVN',
         supportCenter: 'Zum Support-Center',
     },
     en: {
         h1a: 'We build software.',
         h1b: 'And run it ourselves.',
-        lead: 'CKK develops its own apps and web applications. And, on request, yours too.',
+        lead: 'HalloVN develops its own apps and web applications. And, on request, yours too.',
         cta: 'Start a project',
         no: 'No.',
         projectStamp: 'Your project?',
@@ -50,8 +50,8 @@ const COPY = {
         projectTitle: 'We build your software too.',
         projectDesc: 'What we built for our own products and run every day, we also build for you.',
         proof: [
-            { title: 'Apps for iPhone and iPad', from: 'Führerschein Theorie Ckk, Leben in Deutschland Ckk' },
-            { title: 'Web applications with user accounts', from: 'Deutsch Shadowing' },
+            { title: 'Apps for iPhone and iPad', from: 'Führerschein Theorie HalloVN, Leben in Deutschland HalloVN' },
+            { title: 'Web applications with user accounts', from: 'HalloVN' },
             { title: 'APIs and backend', from: 'The content and updates of our apps' },
             { title: 'Multilingual content', from: 'Translations into up to 5 languages' },
         ],
@@ -60,13 +60,13 @@ const COPY = {
         support: 'Support',
         privacy: 'Privacy',
         details: 'Everything about the app',
-        detailsWeb: 'More about Deutsch Shadowing',
+        detailsWeb: 'More about HalloVN',
         supportCenter: 'Go to the support center',
     },
     vi: {
         h1a: 'Chúng tôi làm phần mềm.',
         h1b: 'Và tự vận hành nó.',
-        lead: 'CKK phát triển các app và ứng dụng web của riêng mình, và nhận làm cho bạn theo yêu cầu.',
+        lead: 'HalloVN phát triển các app và ứng dụng web của riêng mình, và nhận làm cho bạn theo yêu cầu.',
         cta: 'Gửi yêu cầu dự án',
         no: 'Số',
         projectStamp: 'Dự án của bạn?',
@@ -75,8 +75,8 @@ const COPY = {
         projectTitle: 'Chúng tôi cũng làm phần mềm cho bạn.',
         projectDesc: 'Những gì chúng tôi đã xây và vận hành hằng ngày cho sản phẩm của mình, chúng tôi cũng làm được cho bạn.',
         proof: [
-            { title: 'App cho iPhone và iPad', from: 'Führerschein Theorie Ckk, Leben in Deutschland Ckk' },
-            { title: 'Ứng dụng web có tài khoản người dùng', from: 'Deutsch Shadowing' },
+            { title: 'App cho iPhone và iPad', from: 'Führerschein Theorie HalloVN, Leben in Deutschland HalloVN' },
+            { title: 'Ứng dụng web có tài khoản người dùng', from: 'HalloVN' },
             { title: 'API và backend', from: 'Nội dung và cập nhật của các app' },
             { title: 'Nội dung đa ngôn ngữ', from: 'Bản dịch tối đa 5 ngôn ngữ' },
         ],
@@ -85,7 +85,7 @@ const COPY = {
         support: 'Hỗ trợ',
         privacy: 'Bảo mật',
         details: 'Xem chi tiết về app',
-        detailsWeb: 'Xem chi tiết Deutsch Shadowing',
+        detailsWeb: 'Xem chi tiết HalloVN',
         supportCenter: 'Đến trung tâm hỗ trợ',
     },
 };
@@ -98,7 +98,7 @@ function Stamp({ service, index }: { service: Service; index: number }) {
         <Link href={productPath(service)} className="stamp perf flex min-h-[19rem] p-2.5 md:p-3 xl:min-h-[27rem]">
             <span className="stamp-face flex w-full flex-col p-3 md:p-4" style={{ '--stamp-ink': service.ink, '--i': index, background: service.ink, color: inkText(service) } as CSSProperties}>
                 <span className="flex items-baseline justify-between text-sm font-semibold">
-                    <span>CKK</span>
+                    <span>HalloVN</span>
                     <span className="tabular-nums">
                         {t.no} {service.no}
                     </span>
@@ -195,7 +195,7 @@ export default function HomeContent() {
                                 style={{ '--i': SERVICES.length } as CSSProperties}
                             >
                                 <span className="flex items-baseline justify-between text-sm font-semibold">
-                                    <span>CKK</span>
+                                    <span>HalloVN</span>
                                     <span>{t.no} …</span>
                                 </span>
                                 <span className="flex-1" />

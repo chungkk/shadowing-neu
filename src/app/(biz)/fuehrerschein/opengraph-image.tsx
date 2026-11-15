@@ -8,7 +8,7 @@ export const contentType = 'image/png';
 export default function Image() {
     return renderOgImage({
         eyebrow: 'iPhone · iPad · Android',
-        title: 'Führerschein Theorie Ckk',
+        title: 'Führerschein Theorie HalloVN',
         subtitle: 'Theorieprüfung für 13 Klassen – alle amtlichen Fragen, Prüfungssimulation, Übersetzung in 5 Sprachen.',
         accent: '#c92f16',
     });

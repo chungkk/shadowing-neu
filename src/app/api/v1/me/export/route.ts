@@ -7,13 +7,13 @@ const DAY = 24 * 60 * 60 * 1000;
 
 const MAIL = {
   vi: {
-    subject: "Bản sao dữ liệu Deutsch Shadowing của bạn",
-    body: "Theo yêu cầu của bạn, đính kèm là bản sao toàn bộ dữ liệu tài khoản Deutsch Shadowing (định dạng JSON): thông tin tài khoản, sổ từ vựng, tiến độ học, lịch sử ôn tập và điểm.",
+    subject: "Bản sao dữ liệu HalloVN của bạn",
+    body: "Theo yêu cầu của bạn, đính kèm là bản sao toàn bộ dữ liệu tài khoản HalloVN (định dạng JSON): thông tin tài khoản, sổ từ vựng, tiến độ học, lịch sử ôn tập và điểm.",
     note: "Nếu không phải bạn yêu cầu, hãy đổi mật khẩu trong app.",
   },
   de: {
-    subject: "Deine Daten von Deutsch Shadowing",
-    body: "wie angefordert findest du im Anhang eine Kopie aller Daten deines Deutsch-Shadowing-Kontos (JSON): Kontodaten, Vokabelheft, Lernfortschritt, Wiederholungsverlauf und Punkte.",
+    subject: "Deine Daten von HalloVN",
+    body: "wie angefordert findest du im Anhang eine Kopie aller Daten deines HalloVN-Kontos (JSON): Kontodaten, Vokabelheft, Lernfortschritt, Wiederholungsverlauf und Punkte.",
     note: "Wenn du das nicht angefordert hast, ändere bitte dein Passwort in der App.",
   },
 };
@@ -39,7 +39,7 @@ export async function POST() {
   <p>${esc(hi)}</p><p>${m.body}</p><p style="color:#555">${m.note}</p></div>`,
       attachments: [
         {
-          filename: `deutsch-shadowing-${new Date().toISOString().slice(0, 10)}.json`,
+          filename: `hallovn-${new Date().toISOString().slice(0, 10)}.json`,
           content: JSON.stringify(data, null, 2),
           contentType: "application/json",
         },

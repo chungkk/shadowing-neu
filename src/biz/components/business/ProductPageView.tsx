@@ -23,7 +23,7 @@ const UI = {
         faq: 'Häufige Fragen',
         moreFaq: 'Mehr Antworten im Support',
         closing: 'Bereit zum Lernen?',
-        more: 'Weitere Produkte von CKK',
+        more: 'Weitere Produkte von HalloVN',
         no: 'Nr.',
     },
     en: {
@@ -35,7 +35,7 @@ const UI = {
         faq: 'Frequently asked questions',
         moreFaq: 'More answers in support',
         closing: 'Ready to start?',
-        more: 'More products from CKK',
+        more: 'More products from HalloVN',
         no: 'No.',
     },
     vi: {
@@ -47,7 +47,7 @@ const UI = {
         faq: 'Câu hỏi thường gặp',
         moreFaq: 'Xem thêm trong trang hỗ trợ',
         closing: 'Sẵn sàng học chưa?',
-        more: 'Sản phẩm khác của CKK',
+        more: 'Sản phẩm khác của HalloVN',
         no: 'Số',
     },
 };
@@ -89,7 +89,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                     <div className={landscape ? 'lg:col-span-5' : 'lg:col-span-7'}>
                         <nav aria-label="Breadcrumb" className="text-sm font-semibold">
                             <Link href="/about" className="underline-offset-4 hover:underline">
-                                CKK
+                                HalloVN
                             </Link>
                             <span aria-hidden="true"> / </span>
                             <Link href="/about#apps" className="underline-offset-4 hover:underline">
@@ -299,7 +299,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                                     <StampArt id={other.id} className="hidden h-16 w-20 shrink-0 min-[400px]:block" />
                                     <span className="min-w-0 flex-1">
                                         <span className="block text-sm font-semibold tabular-nums">
-                                            CKK · {t.no} {other.no}
+                                            HalloVN · {t.no} {other.no}
                                         </span>
                                         <span className="mt-1 block break-words font-display text-xl font-bold leading-tight tracking-tight sm:text-2xl">{other.name}</span>
                                         <span className="mt-1 block text-sm leading-snug">{other.copy[locale].short}</span>

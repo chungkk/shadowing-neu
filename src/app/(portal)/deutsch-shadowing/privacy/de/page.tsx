@@ -3,7 +3,7 @@ import LegalPage from "@/components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Datenschutzerklärung",
-  description: "Welche Daten Deutsch Shadowing erhebt, wofür wir sie nutzen und welche Rechte du hast.",
+  description: "Welche Daten HalloVN erhebt, wofür wir sie nutzen und welche Rechte du hast.",
   alternates: { canonical: "/deutsch-shadowing/privacy/de", languages: { vi: "/deutsch-shadowing/privacy", de: "/deutsch-shadowing/privacy/de" } },
 };
 

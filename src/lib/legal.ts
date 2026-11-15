@@ -23,7 +23,7 @@ const privacy: Record<LegalLang, LegalContent> = {
     title: "Chính sách quyền riêng tư",
     updated: UPDATED.vi,
     intro:
-      "Deutsch Shadowing (“chúng tôi”) gồm ứng dụng di động và trang web hallovn.de, giúp bạn luyện nghe, nói và chép chính tả tiếng Đức. Chính sách này giải thích chúng tôi thu thập dữ liệu nào, dùng để làm gì và bạn có những quyền gì. Chúng tôi chỉ thu thập những gì cần để dịch vụ hoạt động và không bán dữ liệu. Ứng dụng di động không có quảng cáo; trang web hallovn.de hiển thị quảng cáo của Google AdSense (xem mục 4 và 8).",
+      "HalloVN (“chúng tôi”) gồm ứng dụng di động và trang web hallovn.de, giúp bạn luyện nghe, nói và chép chính tả tiếng Đức. Chính sách này giải thích chúng tôi thu thập dữ liệu nào, dùng để làm gì và bạn có những quyền gì. Chúng tôi chỉ thu thập những gì cần để dịch vụ hoạt động và không bán dữ liệu. Ứng dụng di động không có quảng cáo; trang web hallovn.de hiển thị quảng cáo của Google AdSense (xem mục 4 và 8).",
     sections: [
       {
         h: "1. Dữ liệu chúng tôi thu thập",
@@ -125,7 +125,7 @@ const privacy: Record<LegalLang, LegalContent> = {
     title: "Datenschutzerklärung",
     updated: UPDATED.de,
     intro:
-      "Deutsch Shadowing („wir“) besteht aus der App und der Website hallovn.de und hilft dir, Deutsch zu hören, zu sprechen und zu schreiben. Diese Erklärung beschreibt, welche Daten wir erheben, wofür wir sie nutzen und welche Rechte du hast. Wir erheben nur, was für den Dienst nötig ist, und verkaufen keine Daten. Die App enthält keine Werbung; die Website hallovn.de zeigt Werbung von Google AdSense (siehe Abschnitte 4 und 8).",
+      "HalloVN („wir“) besteht aus der App und der Website hallovn.de und hilft dir, Deutsch zu hören, zu sprechen und zu schreiben. Diese Erklärung beschreibt, welche Daten wir erheben, wofür wir sie nutzen und welche Rechte du hast. Wir erheben nur, was für den Dienst nötig ist, und verkaufen keine Daten. Die App enthält keine Werbung; die Website hallovn.de zeigt Werbung von Google AdSense (siehe Abschnitte 4 und 8).",
     sections: [
       {
         h: "1. Welche Daten wir erheben",
@@ -230,12 +230,12 @@ const terms: Record<LegalLang, LegalContent> = {
     title: "Điều khoản sử dụng",
     updated: UPDATED.vi,
     intro:
-      "Khi tạo tài khoản hoặc sử dụng Deutsch Shadowing (ứng dụng di động và trang web hallovn.de), bạn đồng ý với các điều khoản dưới đây. Vui lòng đọc kỹ trước khi sử dụng.",
+      "Khi tạo tài khoản hoặc sử dụng HalloVN (ứng dụng di động và trang web hallovn.de), bạn đồng ý với các điều khoản dưới đây. Vui lòng đọc kỹ trước khi sử dụng.",
     sections: [
       {
         h: "1. Dịch vụ",
         body: [
-          "Deutsch Shadowing là công cụ luyện nghe, nói và chép chính tả tiếng Đức qua video, kèm sổ từ vựng, ôn tập ngắt quãng và giải thích từ bằng AI. Chúng tôi có thể thêm, thay đổi hoặc ngừng một số tính năng để cải thiện dịch vụ.",
+          "HalloVN là công cụ luyện nghe, nói và chép chính tả tiếng Đức qua video, kèm sổ từ vựng, ôn tập ngắt quãng và giải thích từ bằng AI. Chúng tôi có thể thêm, thay đổi hoặc ngừng một số tính năng để cải thiện dịch vụ.",
         ],
       },
       {
@@ -273,7 +273,7 @@ const terms: Record<LegalLang, LegalContent> = {
           [
             "Video thuộc quyền sở hữu của tác giả trên YouTube, được phát qua trình phát nhúng và tuân theo Điều khoản dịch vụ của YouTube.",
             "Phụ đề, bản dịch và giải thích từ do AI tạo chỉ mang tính tham khảo và có thể chưa chính xác.",
-            "Giao diện, mã nguồn và bài học do chúng tôi biên soạn thuộc về Deutsch Shadowing.",
+            "Giao diện, mã nguồn và bài học do chúng tôi biên soạn thuộc về HalloVN.",
           ],
         ],
       },
@@ -314,12 +314,12 @@ const terms: Record<LegalLang, LegalContent> = {
     title: "Nutzungsbedingungen",
     updated: UPDATED.de,
     intro:
-      "Mit der Erstellung eines Kontos oder der Nutzung von Deutsch Shadowing (App und Website hallovn.de) stimmst du den folgenden Bedingungen zu. Bitte lies sie aufmerksam durch.",
+      "Mit der Erstellung eines Kontos oder der Nutzung von HalloVN (App und Website hallovn.de) stimmst du den folgenden Bedingungen zu. Bitte lies sie aufmerksam durch.",
     sections: [
       {
         h: "1. Der Dienst",
         body: [
-          "Deutsch Shadowing ist ein Werkzeug zum Hör-, Sprech- und Diktattraining mit Videos, inklusive Vokabelheft, verteilter Wiederholung und KI-Worterklärungen. Wir können Funktionen hinzufügen, ändern oder einstellen, um den Dienst zu verbessern.",
+          "HalloVN ist ein Werkzeug zum Hör-, Sprech- und Diktattraining mit Videos, inklusive Vokabelheft, verteilter Wiederholung und KI-Worterklärungen. Wir können Funktionen hinzufügen, ändern oder einstellen, um den Dienst zu verbessern.",
         ],
       },
       {
@@ -357,7 +357,7 @@ const terms: Record<LegalLang, LegalContent> = {
           [
             "Videos gehören ihren Urhebern auf YouTube, werden über den eingebetteten Player abgespielt und unterliegen den Nutzungsbedingungen von YouTube.",
             "Untertitel, Übersetzungen und Worterklärungen werden von KI erstellt, dienen nur als Hilfe und können Fehler enthalten.",
-            "Oberfläche, Quellcode und von uns erstellte Lektionen gehören Deutsch Shadowing.",
+            "Oberfläche, Quellcode und von uns erstellte Lektionen gehören HalloVN.",
           ],
         ],
       },

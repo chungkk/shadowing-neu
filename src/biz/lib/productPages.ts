@@ -1,5 +1,5 @@
 // Nội dung trang riêng của từng sản phẩm (/fuehrerschein, /lid, /shadowing).
-// Ảnh chụp nằm ở public/apps/<id>/: ảnh App Store của app iOS, ảnh chụp trang học (trước đây ckk.pro) cho Deutsch Shadowing.
+// Ảnh chụp nằm ở public/apps/<id>/: ảnh App Store của app iOS, ảnh chụp trang học (trước đây ckk.pro) cho HalloVN.
 // Mọi con số ở đây phải khớp với app thật (mô tả App Store, ảnh chụp); không tự đặt ra.
 import catalog from '@/../content/laixe/catalog_all/manifest.json';
 import type { Locale } from '@/biz/contexts/LocaleContext';
@@ -60,7 +60,7 @@ const fuehrerschein: ProductPage = {
     hero: [0, 1],
     sections: [[0], [1, 6], [2, 4], [8, 5], [7], [9]],
     seo: {
-        title: 'Führerschein Theorie Ckk – Theorieprüfung für 13 Klassen',
+        title: 'Führerschein Theorie HalloVN – Theorieprüfung für 13 Klassen',
         description: `Alle ${count('de-DE')} amtlichen Fragen der Führerschein-Theorieprüfung für 13 Klassen – mit Prüfungssimulation und Übersetzung in 5 Sprachen, auch Vietnamesisch.`,
     },
     copy: {
@@ -290,7 +290,7 @@ const lid: ProductPage = {
     hero: [5, 2],
     sections: [[5, 0], [2, 1], [4], [3, 6]],
     seo: {
-        title: 'Leben in Deutschland Ckk – Einbürgerungstest üben',
+        title: 'Leben in Deutschland HalloVN – Einbürgerungstest üben',
         description: 'Alle 310 Fragen des Einbürgerungstests „Leben in Deutschland“, die 10 Fragen deines Bundeslands, Testsimulation mit 33 Fragen und Übersetzung zu jeder Frage.',
     },
     copy: {
@@ -445,12 +445,12 @@ const shadowing: ProductPage = {
     hero: [1],
     sections: [[0], [1], [2], [3]],
     seo: {
-        title: 'Deutsch Shadowing – Deutsch lernen mit echten Videos',
+        title: 'HalloVN – Deutsch lernen mit echten Videos',
         description: 'Deutsch hören und nachsprechen, Satz für Satz, mit echten Videos von A1 bis C2, eigenen YouTube-Videos, Goethe-Wortlisten und Lernspielen. Auf hallovn.de.',
     },
     copy: {
         de: {
-            intro: 'Shadowing heißt: hören, sofort nachsprechen, vergleichen. Deutsch Shadowing macht das mit echten deutschen Videos, Satz für Satz, und ergänzt es um Wortlisten und Lernspiele.',
+            intro: 'Shadowing heißt: hören, sofort nachsprechen, vergleichen. HalloVN macht das mit echten deutschen Videos, Satz für Satz, und ergänzt es um Wortlisten und Lernspiele.',
             facts: [
                 { value: 'A1–C2', label: 'Video-Lektionen nach Niveau' },
                 { value: 'YouTube', label: 'jedes Video mit Untertiteln wird zur Übung' },
@@ -480,21 +480,21 @@ const shadowing: ProductPage = {
                 },
             ],
             alts: [
-                'Startseite von Deutsch Shadowing mit Feld für einen YouTube-Link und der Bibliothek der Lektionen',
+                'Startseite von HalloVN mit Feld für einen YouTube-Link und der Bibliothek der Lektionen',
                 'Eine Lektion mit Video, aktuellem Satz, Aufnahme-Knopf und Transkript',
                 'Die Wortlisten Goethe A1, A2 und B1',
                 'Die Lernspiele Wortregen, Goldgräber und Wortpaare',
             ],
             galleryTitle: 'Alle Screenshots',
             faq: [
-                { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche von Deutsch Shadowing und die Bedeutungen in Wortlisten und Spielen sind derzeit auf Vietnamesisch. Die Videos, Transkripte und Übungen sind auf Deutsch.' },
+                { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche von HalloVN und die Bedeutungen in Wortlisten und Spielen sind derzeit auf Vietnamesisch. Die Videos, Transkripte und Übungen sind auf Deutsch.' },
                 { q: 'Brauche ich ein Konto?', a: 'Nein. Die freien Lektionen und eigene YouTube-Videos funktionieren ohne Anmeldung. Mit Konto wählst du zwei weitere Lektionen und speicherst Wörter im Vokabelheft.' },
                 { q: 'Welche Videos kann ich nutzen?', a: 'Die Lektionen der Bibliothek oder jedes YouTube-Video mit Untertiteln, dessen Link du einfügst. Die Videos bleiben Eigentum ihrer Urheber auf YouTube.' },
-                { q: 'Wo finde ich Deutsch Shadowing?', a: 'Direkt hier auf hallovn.de (früher ckk.biz). Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
+                { q: 'Wo finde ich HalloVN?', a: 'Direkt hier auf hallovn.de (früher ckk.biz). Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
             ],
         },
         en: {
-            intro: 'Shadowing means: listen, repeat straight away, compare. Deutsch Shadowing does this with real German videos, sentence by sentence, and adds word lists and learning games.',
+            intro: 'Shadowing means: listen, repeat straight away, compare. HalloVN does this with real German videos, sentence by sentence, and adds word lists and learning games.',
             facts: [
                 { value: 'A1–C2', label: 'video lessons by level' },
                 { value: 'YouTube', label: 'any video with subtitles becomes an exercise' },
@@ -524,21 +524,21 @@ const shadowing: ProductPage = {
                 },
             ],
             alts: [
-                'Deutsch Shadowing home page with a field for a YouTube link and the lesson library',
+                'HalloVN home page with a field for a YouTube link and the lesson library',
                 'A lesson with video, current sentence, record button and transcript',
                 'The Goethe A1, A2 and B1 word lists',
                 'The games word rain, gold digger and word match',
             ],
             galleryTitle: 'All screenshots',
             faq: [
-                { q: 'What language is the interface in?', a: 'The Deutsch Shadowing interface and the meanings in word lists and games are currently in Vietnamese. Videos, transcripts and exercises are in German.' },
+                { q: 'What language is the interface in?', a: 'The HalloVN interface and the meanings in word lists and games are currently in Vietnamese. Videos, transcripts and exercises are in German.' },
                 { q: 'Do I need an account?', a: 'No. Free lessons and your own YouTube videos work without signing in. With an account you pick two more lessons and save words to your notebook.' },
                 { q: 'Which videos can I use?', a: 'The library lessons, or any YouTube video with subtitles whose link you paste in. The videos remain the property of their creators on YouTube.' },
-                { q: 'Where do I find Deutsch Shadowing?', a: 'Right here on hallovn.de (formerly ckk.biz). With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
+                { q: 'Where do I find HalloVN?', a: 'Right here on hallovn.de (formerly ckk.biz). With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
             ],
         },
         vi: {
-            intro: 'Shadowing là nghe, nói lại ngay, rồi so sánh. Deutsch Shadowing làm việc đó với video tiếng Đức thật, từng câu một, kèm bộ từ vựng và game học tập.',
+            intro: 'Shadowing là nghe, nói lại ngay, rồi so sánh. HalloVN làm việc đó với video tiếng Đức thật, từng câu một, kèm bộ từ vựng và game học tập.',
             facts: [
                 { value: 'A1–C2', label: 'bài học video theo trình độ' },
                 { value: 'YouTube', label: 'video nào có phụ đề cũng thành bài luyện' },
@@ -568,17 +568,17 @@ const shadowing: ProductPage = {
                 },
             ],
             alts: [
-                'Trang chủ Deutsch Shadowing với ô dán link YouTube và thư viện bài học',
+                'Trang chủ HalloVN với ô dán link YouTube và thư viện bài học',
                 'Một bài học với video, câu hiện tại, nút ghi âm và transcript',
                 'Các bộ từ vựng Goethe A1, A2 và B1',
                 'Các game Mưa từ vựng, Đào vàng và Nối từ',
             ],
             galleryTitle: 'Tất cả ảnh chụp màn hình',
             faq: [
-                { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện Deutsch Shadowing và phần nghĩa trong bộ từ, game hiện bằng tiếng Việt. Video, transcript và bài luyện là tiếng Đức.' },
+                { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện HalloVN và phần nghĩa trong bộ từ, game hiện bằng tiếng Việt. Video, transcript và bài luyện là tiếng Đức.' },
                 { q: 'Có cần tài khoản không?', a: 'Không. Bài học miễn phí và video YouTube tự dán đều dùng được mà không cần đăng nhập. Có tài khoản thì chọn thêm 2 bài và lưu từ vào sổ từ vựng.' },
                 { q: 'Luyện được với những video nào?', a: 'Các bài trong thư viện, hoặc bất kỳ video YouTube có phụ đề mà bạn dán link vào. Video vẫn thuộc quyền sở hữu của tác giả trên YouTube.' },
-                { q: 'Học Deutsch Shadowing ở đâu?', a: 'Ngay trên hallovn.de (trước đây là ckk.biz). Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
+                { q: 'Học HalloVN ở đâu?', a: 'Ngay trên hallovn.de (trước đây là ckk.biz). Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
             ],
         },
     },

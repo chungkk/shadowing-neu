@@ -34,9 +34,9 @@ const ADSENSE_CLIENT = "ca-pub-5590145594898560";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "CKK – Học tiếng Đức, lái xe, Leben in Deutschland", template: "%s · CKK" },
+  title: { default: "HalloVN – Học tiếng Đức, lái xe, Leben in Deutschland", template: "%s · HalloVN" },
   description: "Học tiếng Đức với video YouTube (shadowing), luyện thi lý thuyết lái xe và Leben in Deutschland, chơi game luyện từ — một tài khoản cho tất cả.",
-  openGraph: { siteName: "CKK", locale: "vi_VN" },
+  openGraph: { siteName: "HalloVN", locale: "vi_VN" },
   other: { "google-adsense-account": ADSENSE_CLIENT },
 };
 
@@ -67,7 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <div className="candy-stripe absolute inset-x-0 bottom-0 h-2.5" />
             <Link href="/" className="flex min-w-0 items-center gap-1.5 font-display text-lg font-extrabold sm:text-xl">
               <Mascot className="size-8 shrink-0 md:size-11" />
-              <span className="truncate">CKK</span>
+              <span className="truncate">HalloVN</span>
             </Link>
             <Suspense fallback={<HeaderNavFrame />}>
               <HeaderNavWithUser />

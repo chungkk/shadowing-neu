@@ -13,7 +13,7 @@ MAX_AGE_DAYS=3
 log() { echo "[$(date -u +%FT%TZ)] $*"; }
 alert() {
   log "LỖI: $1"
-  osascript -e "display notification \"$1\" with title \"Backup Deutsch Shadowing\" sound name \"Basso\"" >/dev/null 2>&1 || true
+  osascript -e "display notification \"$1\" with title \"Backup HalloVN\" sound name \"Basso\"" >/dev/null 2>&1 || true
 }
 
 mkdir -p "$DEST"

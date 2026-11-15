@@ -8,7 +8,7 @@ import { LID_BASE, LID_PAGES, LID_PRIVATE, LID_SET_IDS } from "@/lib/lid-routes"
 // - www.hallovn.de, ckk.biz, www.ckk.biz → hallovn.de, cùng đường dẫn
 // - ckk.pro → hallovn.de, cùng đường dẫn. Riêng /api/* KHÔNG chuyển (mọi tên miền cũ): app di động đã phát hành
 //   gọi thẳng ckk.pro/api/v1 hoặc ckk.biz/api/v1 kèm Bearer token — chuyển hướng sang tên miền khác thì iOS bỏ header Authorization.
-//   Link pháp lý cũ của app (ckk.pro/privacy, /terms, …/de) → trang chính sách của Deutsch Shadowing trên hallovn.de.
+//   Link pháp lý cũ của app (ckk.pro/privacy, /terms, …/de) → trang chính sách của HalloVN trên hallovn.de.
 // - /api/fuehrerschein/*: CORS, chặn bot, App Key, giới hạn tần suất (như ckk-biz trước đây)
 // - /lai-xe, /leben-in-deutschland: chống crawl bộ câu hỏi (lib/crawl-guard.ts)
 // - /leben-in-deutschland: đường dẫn lạ → 404 thật, trang cá nhân chưa đăng nhập → 307 sang /login. Làm ở đây vì trang

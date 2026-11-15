@@ -227,6 +227,12 @@ export function deckMarks(userId: number | null): DeckMarks {
   return { notes: vocabOverview(userId).notes, learned: listDeckLearned(userId) };
 }
 
+/** Chỉ tiến độ "đã học" của từng bộ (slug → khoá các từ đã học) — nhẹ hơn deckMarks (không đọc sổ từ) */
+export function deckLearned(userId: number): Map<string, Set<string>> {
+  backfillLearned();
+  return listDeckLearned(userId);
+}
+
 /** Từ của bộ kèm 2 cờ tiến độ */
 export const markWord = (deck: Deck, w: DeckWord, m: DeckMarks) => ({
   ...w,

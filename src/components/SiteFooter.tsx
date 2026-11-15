@@ -22,7 +22,7 @@ const COLUMNS = [
       { href: "/deutsch-shadowing/terms", label: "Điều khoản sử dụng" },
       { href: "/privacy", label: "Datenschutz (hallovn.de)" },
       { href: "/impressum", label: "Impressum" },
-      { href: "/about", label: "Về CKK · App & dịch vụ" },
+      { href: "/about", label: "Về HalloVN · App & dịch vụ" },
     ],
   },
 ];
@@ -57,7 +57,7 @@ export default function SiteFooter() {
           <div className="footer-cols grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
               <Link href="/" className="flex w-fit items-center gap-1.5 font-display text-xl font-extrabold">
-                <Mascot className="size-12" /> CKK
+                <Mascot className="size-12" /> HalloVN
               </Link>
               <p className="max-w-sm text-sm text-muted">Học tiếng Đức với video thật, ôn thi lái xe và Leben in Deutschland — một tài khoản cho tất cả.</p>
             </div>
@@ -83,7 +83,7 @@ export default function SiteFooter() {
               <Suspense>
                 <CurrentYear />
               </Suspense>{" "}
-              CKK ·{" "}
+              HalloVN ·{" "}
               <Link href="/about" className="underline underline-offset-2 hover:text-foreground">
                 hallovn.de
               </Link>

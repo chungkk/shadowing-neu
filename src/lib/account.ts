@@ -94,16 +94,16 @@ type CodeMail = { subject: string; hi: string; body: string; note: string };
 
 const MAILS = {
   signup: {
-    vi: { subject: "{code} là mã xác nhận của bạn", hi: "Xin chào,", body: "Mã xác nhận đăng ký Deutsch Shadowing của bạn là:", note: "Mã có hiệu lực trong 10 phút. Nếu bạn không đăng ký, hãy bỏ qua email này." },
-    de: { subject: "{code} ist dein Bestätigungscode", hi: "Hallo,", body: "dein Bestätigungscode für Deutsch Shadowing lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du dich nicht registriert hast, ignoriere diese E-Mail." },
+    vi: { subject: "{code} là mã xác nhận của bạn", hi: "Xin chào,", body: "Mã xác nhận đăng ký HalloVN của bạn là:", note: "Mã có hiệu lực trong 10 phút. Nếu bạn không đăng ký, hãy bỏ qua email này." },
+    de: { subject: "{code} ist dein Bestätigungscode", hi: "Hallo,", body: "dein Bestätigungscode für HalloVN lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du dich nicht registriert hast, ignoriere diese E-Mail." },
   },
   reset: {
-    vi: { subject: "{code} là mã đặt lại mật khẩu", hi: "Xin chào {name},", body: "Mã để đặt mật khẩu mới cho tài khoản Deutsch Shadowing của bạn là:", note: "Mã có hiệu lực trong 10 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này — mật khẩu của bạn vẫn giữ nguyên." },
-    de: { subject: "{code} ist dein Code zum Zurücksetzen", hi: "Hallo {name},", body: "dein Code zum Festlegen eines neuen Passworts für Deutsch Shadowing lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail – dein Passwort bleibt unverändert." },
+    vi: { subject: "{code} là mã đặt lại mật khẩu", hi: "Xin chào {name},", body: "Mã để đặt mật khẩu mới cho tài khoản HalloVN của bạn là:", note: "Mã có hiệu lực trong 10 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này — mật khẩu của bạn vẫn giữ nguyên." },
+    de: { subject: "{code} ist dein Code zum Zurücksetzen", hi: "Hallo {name},", body: "dein Code zum Festlegen eines neuen Passworts für HalloVN lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail – dein Passwort bleibt unverändert." },
   },
   change: {
-    vi: { subject: "{code} là mã xác nhận email mới", hi: "Xin chào {name},", body: "Mã để đổi email tài khoản Deutsch Shadowing sang địa chỉ này là:", note: "Mã có hiệu lực trong 10 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này." },
-    de: { subject: "{code} ist dein Code für die neue E-Mail", hi: "Hallo {name},", body: "dein Code, um die E-Mail deines Deutsch-Shadowing-Kontos auf diese Adresse zu ändern, lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail." },
+    vi: { subject: "{code} là mã xác nhận email mới", hi: "Xin chào {name},", body: "Mã để đổi email tài khoản HalloVN sang địa chỉ này là:", note: "Mã có hiệu lực trong 10 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này." },
+    de: { subject: "{code} ist dein Code für die neue E-Mail", hi: "Hallo {name},", body: "dein Code, um die E-Mail deines HalloVN-Kontos auf diese Adresse zu ändern, lautet:", note: "Der Code ist 10 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail." },
   },
 } satisfies Record<string, Record<"vi" | "de", CodeMail>>;
 
@@ -249,8 +249,8 @@ function notifyEmailChanged(user: User, email: string) {
   if (!mailConfigured()) return;
   const m =
     user.lang === "de"
-      ? { subject: "Deine E-Mail wurde geändert", text: `Hallo ${user.name},\n\ndie E-Mail deines Deutsch-Shadowing-Kontos wurde gerade auf ${email} geändert. Wenn du das nicht warst, antworte sofort auf diese E-Mail.` }
-      : { subject: "Email tài khoản của bạn đã được đổi", text: `Xin chào ${user.name},\n\nEmail tài khoản Deutsch Shadowing của bạn vừa được đổi thành ${email}. Nếu không phải bạn, hãy trả lời email này ngay.` };
+      ? { subject: "Deine E-Mail wurde geändert", text: `Hallo ${user.name},\n\ndie E-Mail deines HalloVN-Kontos wurde gerade auf ${email} geändert. Wenn du das nicht warst, antworte sofort auf diese E-Mail.` }
+      : { subject: "Email tài khoản của bạn đã được đổi", text: `Xin chào ${user.name},\n\nEmail tài khoản HalloVN của bạn vừa được đổi thành ${email}. Nếu không phải bạn, hãy trả lời email này ngay.` };
   const html = m.text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!).replace(/\n/g, "<br>");
   sendMail({ to: user.email, replyTo: contactEmail() || undefined, ...m, html }).catch((e) => console.error("[mail] báo đổi email thất bại:", e));
 }

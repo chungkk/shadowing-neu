@@ -68,6 +68,12 @@ export async function prefs(): Promise<{ cls: ClassId; lang: Lang }> {
   return { cls: isClassId(c) ? c : DEFAULT_CLASS, lang: isLang(l) ? l : "vi" };
 }
 
+/** Hạng đang học đã lưu trên tài khoản — chỉ đọc (không cookie, không ghi DB), cho API như chuông nhắc nhở */
+export function classFor(userId: number): ClassId {
+  const c = getQuizPref(userId, "fuehrerschein", "class");
+  return isClassId(c) ? c : DEFAULT_CLASS;
+}
+
 /** Danh sách hạng theo nhóm xe, kèm số câu và luật thi (cho trang chọn hạng / Cài đặt) */
 export function classGroups() {
   return CLASS_GROUPS.map((g) => ({
@@ -85,7 +91,11 @@ export type ChapterNode = { id: string; de: string; vi: string; ids: string[] };
 export type ThemeNode = { id: string; de: string; vi: string; ids: string[]; chapters: ChapterNode[] };
 export type PartNode = { key: "grund" | "zusatz"; title: string; subtitle: string; ids: string[]; themes: ThemeNode[] };
 
+const TREES = new Map<ClassId, PartNode[]>(); // dữ liệu tĩnh → dựng 1 lần mỗi hạng
+
 export function learnTree(cls: ClassId): PartNode[] {
+  const hit = TREES.get(cls);
+  if (hit) return hit;
   const qs = classQuestions(cls);
   const part = (key: PartNode["key"]): PartNode => {
     const themes = new Map<string, ThemeNode>();
@@ -107,7 +117,9 @@ export function learnTree(cls: ClassId): PartNode[] {
       themes: list,
     };
   };
-  return [part("grund"), part("zusatz")].filter((p) => p.ids.length);
+  const tree = [part("grund"), part("zusatz")].filter((p) => p.ids.length);
+  TREES.set(cls, tree);
+  return tree;
 }
 
 /** Phạm vi học: "grund" / "zusatz" / chủ đề "1.1" / chương "1.1.01" (chỉ các câu thuộc hạng đang học) */

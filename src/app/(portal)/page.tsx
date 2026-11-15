@@ -9,7 +9,7 @@ import Mascot from "@/components/Mascot";
 // Việc học hằng ngày (học tiếp, ôn từ…) ở trang của từng phần.
 
 export const metadata: Metadata = {
-  title: { absolute: "CKK – Học tiếng Đức, ôn thi bằng lái và quốc tịch bằng tiếng Việt" },
+  title: { absolute: "HalloVN – Học tiếng Đức, ôn thi bằng lái và quốc tịch bằng tiếng Việt" },
   description:
     "Học tiếng Đức với video thật, ôn lý thuyết lái xe hạng B và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ và đọc tin nước Đức mỗi ngày. Miễn phí.",
   alternates: { canonical: "/" },
@@ -112,7 +112,7 @@ export default function Home() {
       <section className="flex flex-col gap-4" aria-labelledby="co-gi">
         <div className="flex flex-col gap-1">
           <h2 id="co-gi" className="text-2xl font-extrabold sm:text-3xl">
-            CKK có gì?
+            HalloVN có gì?
           </h2>
           <p className="text-muted">Bốn phần, dùng thử được ngay không cần tài khoản.</p>
         </div>
@@ -171,9 +171,9 @@ export default function Home() {
         <Link href="/about" className="group sticker sticker-link flex flex-col gap-2 p-5">
           <Smartphone className="size-7 text-accent-text" />
           <h2 className="text-xl font-extrabold">Có cả app cho điện thoại</h2>
-          <p className="flex-1 text-muted">Các app học tiếng Đức, lý thuyết lái xe và Leben in Deutschland của CKK cho iOS và Android.</p>
+          <p className="flex-1 text-muted">Các app học tiếng Đức, lý thuyết lái xe và Leben in Deutschland của HalloVN cho iOS và Android.</p>
           <span className={moreLink}>
-            Xem các app của CKK <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+            Xem các app của HalloVN <ArrowRight className="size-4 transition group-hover:translate-x-1" />
           </span>
         </Link>
       </section>

@@ -17,13 +17,13 @@ const beVietnam = Be_Vietnam_Pro({
   weight: ["400", "500", "600", "700"],
 });
 
-const SITE_TITLE = "CKK – Software, Apps und Web-Anwendungen";
+const SITE_TITLE = "HalloVN – Software, Apps und Web-Anwendungen";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
     default: SITE_TITLE,
-    template: "%s | CKK",
+    template: "%s | HalloVN",
   },
   description: SITE.description,
   applicationName: SITE.name,
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
-  keywords: ["Softwareentwicklung", "App-Entwicklung", "Web-Anwendungen", "Führerschein Theorie", "Leben in Deutschland", "Deutsch Shadowing", "CKK"],
+  keywords: ["Softwareentwicklung", "App-Entwicklung", "Web-Anwendungen", "Führerschein Theorie", "Leben in Deutschland", "Deutsch lernen", "HalloVN"],
   openGraph: {
     type: "website",
     url: SITE.url,

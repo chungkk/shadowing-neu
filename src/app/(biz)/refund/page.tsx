@@ -6,7 +6,7 @@ import { COMPANY } from '@/biz/lib/site';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Käufe & Erstattung',
-    description: 'In-App-Käufe, Abonnements, Kündigung, Wiederherstellung und Erstattung für die Apps von CKK.',
+    description: 'In-App-Käufe, Abonnements, Kündigung, Wiederherstellung und Erstattung für die Apps von HalloVN.',
     path: '/refund',
 });
 

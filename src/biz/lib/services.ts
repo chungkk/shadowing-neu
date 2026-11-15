@@ -1,4 +1,4 @@
-// Danh mục dịch vụ của CKK. Trang chủ, footer, JSON-LD đều đọc từ đây:
+// Danh mục dịch vụ của HalloVN. Trang chủ, footer, JSON-LD đều đọc từ đây:
 // thêm dịch vụ mới = thêm một mục vào SERVICES, nội dung trang riêng vào productPages.ts,
 // ảnh vào public/apps/<id>/, route src/app/<legalSlug>/page.tsx (và một hình tem trong StampArt nếu cần).
 import catalog from '@/../content/laixe/catalog_all/manifest.json';
@@ -60,7 +60,7 @@ export const SERVICES: Service[] = [
     {
         id: 'fuehrerschein',
         no: 1,
-        name: 'Führerschein Theorie Ckk',
+        name: 'Führerschein Theorie HalloVN',
         legalSlug: 'fuehrerschein',
         ink: 'var(--ink-vermilion)',
         onInk: 'light',
@@ -112,7 +112,7 @@ export const SERVICES: Service[] = [
     {
         id: 'lid',
         no: 2,
-        name: 'Leben in Deutschland Ckk',
+        name: 'Leben in Deutschland HalloVN',
         legalSlug: 'lid',
         ink: 'var(--ink-petrol)',
         onInk: 'light',
@@ -164,7 +164,7 @@ export const SERVICES: Service[] = [
     {
         id: 'shadowing',
         no: 3,
-        name: 'Deutsch Shadowing',
+        name: 'HalloVN',
         legalSlug: 'shadowing',
         ink: 'var(--ink-saffron)',
         onInk: 'dark',

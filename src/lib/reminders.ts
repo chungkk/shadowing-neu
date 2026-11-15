@@ -1,61 +1,71 @@
 import "server-only";
-import { unfinished, percent } from "@/components/ContinueLearning";
-import { deckLearnedAt, dueCount, getStats, quizAnsweredAt, quizStats } from "./db";
-import { deckCounts, deckMarks, getDeck, listDecks } from "./decks";
-import { learnTree, prefs as laixePrefs } from "./fuehrerschein";
-import { generalIds, getSet, listSets, prefs as lidPrefs, stateIds } from "./lid";
+import { deckLearnedAt, dueCount, hasLearned, quizProgress, streakInfo } from "./db";
+import { deckLearned, getDeck, listDecks } from "./decks";
+import { classFor, learnTree } from "./fuehrerschein";
+import { generalIds, getSet, listSets, stateFor, stateIds } from "./lid";
+import { percent, unfinished } from "./progress";
 import { summarize, type QuizStat } from "./quiz-types";
 
 /**
- * Nhắc nhở học (chuông thông báo trên thanh đầu trang · GET /api/v1/reminders):
+ * Nhắc nhở học (chuông trên thanh đầu trang · GET /api/v1/reminders, app mobile dùng chung bằng Bearer):
  * đang học gì, tới đâu, phần nào chưa xong — gom từ cả 3 phần Tiếng Đức · Lái xe · Leben in Deutschland.
  */
 
 export type ReminderSection = "de" | "laixe" | "lid";
+export type ReminderKind = "streak" | "review" | "lesson" | "deck" | "chapter" | "wrong";
 export type Reminder = {
   id: string; // ổn định — client nhớ đã xem chưa
   section: ReminderSection;
-  kind: "streak" | "review" | "lesson" | "deck" | "chapter" | "wrong";
+  kind: ReminderKind;
+  ref?: string; // khoá của nội dung (source bài học, slug bộ từ, mã chương / bộ câu) — app mobile tự mở màn hình tương ứng thay vì dùng href web
   title: string;
   detail: string;
-  href: string;
+  href: string; // đường dẫn trên web
   percent?: number; // tiến độ 0–100 (nếu có)
   at: number; // lần học gần nhất (ms) — 0: không áp dụng
   daily?: boolean; // nhắc lại mỗi ngày (đã xem hôm qua thì hôm nay vẫn báo mới)
+  level?: number; // mức hiện tại (vd. số câu sai) — chỉ báo mới lại khi mức này TĂNG so với lần xem trước
+  quiet?: boolean; // có trong danh sách nhưng không tính vào số đỏ (đã có huy hiệu riêng ở nơi khác)
 };
+export type RemindersResponse = { reminders: Reminder[]; started: boolean }; // started: đã từng học gì chưa (trạng thái rỗng)
 
 const LESSONS = 3; // số bài video dở hiện tối đa
 const DECKS = 2;
 const CHAPTERS = 2;
+const STALE = 30 * 86_400_000; // việc dở lâu hơn 30 ngày không nhắc nữa (đã bỏ thật, nhắc mãi chỉ gây nhiễu)
 
 /** % làm tròn xuống, có làm ít nhất 1 thì tối thiểu 1% (giống thẻ "Tiếp tục học") */
 const pct = (n: number, total: number) => (n ? Math.max(1, Math.floor((n * 100) / total)) : 0);
 
 const lastAt = (ids: string[], at: Map<string, number>) => ids.reduce((m, id) => Math.max(m, at.get(id) ?? 0), 0);
 
-/** Nhóm câu đã làm một phần (hoặc làm hết nhưng còn câu sai) → chưa hoàn thành */
-const inProgress = (s: ReturnType<typeof summarize>) => s.done > 0 && s.ok < s.total;
+/**
+ * Nhóm câu đang học dở: đã làm ít nhất 3 câu VÀ 20% nhóm, nhưng chưa làm hết.
+ * - Ngưỡng: bài thi thử ghi kết quả rải rác vào rất nhiều chương (1–2 câu mỗi chương) — không phải người học chủ động học chương đó.
+ * - Đã làm hết mà còn câu sai → không nhắc ở đây, đã có mục "Còn N câu đang sai" (tránh nhắc 2 lần cùng câu).
+ */
+const inProgress = (s: ReturnType<typeof summarize>) => s.done < s.total && s.done >= Math.max(3, Math.ceil(s.total * 0.2));
 
 function quizGroups(
   section: "laixe" | "lid",
   groups: { key: string; title: string; ids: string[]; href: string }[],
-  stats: Record<string, QuizStat>,
-  at: Map<string, number>,
-  limit: number,
+  { stats, at }: { stats: Record<string, QuizStat>; at: Map<string, number> },
+  now: number,
 ): Reminder[] {
   return groups
     .map((g) => ({ g, s: summarize(g.ids, stats), at: lastAt(g.ids, at) }))
-    .filter((x) => inProgress(x.s))
+    .filter((x) => inProgress(x.s) && now - x.at < STALE)
     .sort((a, b) => b.at - a.at)
-    .slice(0, limit)
+    .slice(0, CHAPTERS)
     .map(({ g, s, at }) => ({
       id: `${section}:chapter:${g.key}`,
       section,
       kind: "chapter" as const,
+      ref: g.key,
       title: g.title,
-      detail: s.done < s.total ? `Đã làm ${s.done}/${s.total} câu${s.wrong ? ` · ${s.wrong} câu sai` : ""}` : `Còn ${s.wrong} câu sai cần làm lại`,
+      detail: `Đã làm ${s.done}/${s.total} câu${s.wrong ? ` · ${s.wrong} câu sai` : ""}`,
       href: g.href,
-      percent: pct(s.ok, s.total),
+      percent: pct(s.done, s.total), // cùng số với chữ "Đã làm"
       at,
     }));
 }
@@ -63,33 +73,39 @@ function quizGroups(
 function wrongReminder(section: "laixe" | "lid", ids: string[], stats: Record<string, QuizStat>, href: string): Reminder[] {
   const s = summarize(ids, stats);
   if (!s.wrong) return [];
-  return [{ id: `${section}:wrong`, section, kind: "wrong", title: `Ôn lại ${s.wrong} câu đang sai`, detail: `Đã làm ${s.done}/${s.total} câu của cả phần`, href, at: 0, daily: true }];
+  // Không nhắc hằng ngày: câu sai hầu như lúc nào cũng còn → chỉ báo mới khi số câu sai tăng (level)
+  return [{ id: `${section}:wrong`, section, kind: "wrong", title: `Còn ${s.wrong} câu đang sai`, detail: "Làm lại cho đúng trước khi thi thật", href, at: 0, level: s.wrong }];
 }
 
 /** Tiếng Đức: chuỗi ngày sắp đứt · từ đến hạn ôn · bài video đang dở · bộ từ đang học dở */
-function deutsch(userId: number, tz: number): Reminder[] {
+function deutsch(userId: number, tz: number, now: number): Reminder[] {
   const out: Reminder[] = [];
-  const stats = getStats(userId, tz);
-  const due = dueCount(userId);
-  if (stats.streak > 0 && !stats.studiedToday)
+  const { streak, studiedToday } = streakInfo(userId, tz, now);
+  const due = dueCount(userId, now);
+  if (streak > 0 && !studiedToday)
     out.push({
       id: "de:streak",
       section: "de",
       kind: "streak",
-      title: `Giữ chuỗi ${stats.streak} ngày học`,
-      detail: "Hôm nay bạn chưa học — ôn vài từ hoặc chép một câu chính tả là đủ",
+      title: `Giữ chuỗi ${streak} ngày học tiếng Đức`,
+      // Ngày có học = ôn từ, học bộ từ hoặc chép chính tả được điểm (câu mới) — xem streakInfo; làm Lái xe / LiD không tính
+      detail: "Hôm nay chưa học — ôn vài từ, học một bộ từ hoặc chép chính tả một câu mới",
       href: due ? "/vocab/notebook?review=1" : "/tieng-duc",
       at: 0,
       daily: true,
     });
-  if (due) out.push({ id: "de:review", section: "de", kind: "review", title: `${due} từ đến hạn ôn`, detail: "Ôn đúng hạn để nhớ lâu hơn", href: "/vocab/notebook?review=1", at: 0, daily: true });
+  // quiet: số từ đến hạn đã có huy hiệu đỏ riêng (nút "Ôn N", thanh dưới đáy) — không đếm thêm lần nữa ở chuông
+  if (due)
+    out.push({ id: "de:review", section: "de", kind: "review", title: `${due} từ đến hạn ôn`, detail: "Ôn đúng hạn để nhớ lâu hơn", href: "/vocab/notebook?review=1", at: 0, quiet: true });
 
   for (const { p, href, title } of unfinished(userId, LESSONS)) {
+    if (now - p.updatedAt >= STALE) break; // mới nhất trước → các bài sau còn cũ hơn
     const dict = Object.keys(p.dictDone).length;
     out.push({
       id: `de:lesson:${p.source}`,
       section: "de",
       kind: "lesson",
+      ref: p.source,
       title,
       detail: p.mode === "dictation" && dict ? `Đang chép chính tả · ${dict}/${p.total} câu` : `Đang ở câu ${p.idx + 1}/${p.total}`,
       href,
@@ -98,64 +114,59 @@ function deutsch(userId: number, tz: number): Reminder[] {
     });
   }
 
-  const marks = deckMarks(userId);
+  const learned = deckLearned(userId);
   const deckAt = deckLearnedAt(userId);
   out.push(
     ...listDecks()
-      .filter((d) => deckAt.has(d.slug))
+      .filter((d) => now - (deckAt.get(d.slug) ?? 0) < STALE)
       .flatMap((d) => {
         const deck = getDeck(d.slug);
-        if (!deck) return [];
-        const { learned } = deckCounts(deck, marks);
-        return learned > 0 && learned < deck.words.length ? [{ d, learned, total: deck.words.length }] : [];
+        const keys = learned.get(d.slug);
+        if (!deck || !keys) return [];
+        const n = deck.words.filter((w) => keys.has(w.key)).length; // đếm như deckCounts (từ trùng khoá tính cả 2)
+        return n > 0 && n < deck.words.length ? [{ d, n, total: deck.words.length, at: deckAt.get(d.slug)! }] : [];
       })
-      .sort((a, b) => (deckAt.get(b.d.slug) ?? 0) - (deckAt.get(a.d.slug) ?? 0))
+      .sort((a, b) => b.at - a.at)
       .slice(0, DECKS)
-      .map(({ d, learned, total }) => ({
+      .map(({ d, n, total, at }) => ({
         id: `de:deck:${d.slug}`,
         section: "de" as const,
         kind: "deck" as const,
+        ref: d.slug,
         title: d.title,
-        detail: `Đã học ${learned}/${total} từ · còn ${total - learned} từ`,
+        detail: `Đã học ${n}/${total} từ · còn ${total - n} từ`,
         href: `/vocab/decks/${d.slug}`,
-        percent: pct(learned, total),
-        at: deckAt.get(d.slug) ?? 0,
+        percent: pct(n, total),
+        at,
       })),
   );
   return out;
 }
 
 /** Lái xe: chương đang học dở (theo hạng đang học) · câu đang sai. Chưa làm câu nào → không nhắc */
-async function laixe(userId: number): Promise<Reminder[]> {
-  const stats = quizStats(userId, "fuehrerschein");
-  if (!Object.keys(stats).length) return [];
-  const { cls } = await laixePrefs();
-  const tree = learnTree(cls);
+function laixe(userId: number, now: number): Reminder[] {
+  const q = quizProgress(userId, "fuehrerschein");
+  if (!q.at.size) return [];
+  const tree = learnTree(classFor(userId));
   const chapters = tree.flatMap((p) => p.themes.flatMap((t) => t.chapters.map((c) => ({ key: c.id, title: `Chương ${c.id} · ${c.vi || c.de}`, ids: c.ids, href: `/lai-xe/hoc/${c.id}` }))));
-  return [
-    ...quizGroups("laixe", chapters, stats, quizAnsweredAt(userId, "fuehrerschein"), CHAPTERS),
-    ...wrongReminder("laixe", tree.flatMap((p) => p.ids), stats, "/lai-xe/cau-sai"),
-  ];
+  return [...quizGroups("laixe", chapters, q, now), ...wrongReminder("laixe", tree.flatMap((p) => p.ids), q.stats, "/lai-xe/cau-sai")];
 }
 
 /** Leben in Deutschland: bộ 30 câu / 10 câu của bang đang làm dở · câu đang sai */
-async function lid(userId: number): Promise<Reminder[]> {
-  const stats = quizStats(userId, "lid");
-  if (!Object.keys(stats).length) return [];
-  const { state } = await lidPrefs();
+function lid(userId: number, now: number): Reminder[] {
+  const q = quizProgress(userId, "lid");
+  if (!q.at.size) return [];
+  const state = stateFor(userId);
   const sets = [
-    ...listSets().map((s) => ({ key: s.id, title: `Câu ${s.from}–${s.to}`, ids: s.ids, href: `/leben-in-deutschland/${s.id}` })),
+    ...listSets().map((s) => ({ key: s.id, title: `Bộ câu ${s.from}–${s.to}`, ids: s.ids, href: `/leben-in-deutschland/${s.id}` })),
     { key: state.code, title: getSet(state.code, state.code)?.title ?? state.name, ids: stateIds(state.code), href: `/leben-in-deutschland/${state.code}` },
   ];
-  return [
-    ...quizGroups("lid", sets, stats, quizAnsweredAt(userId, "lid"), CHAPTERS),
-    ...wrongReminder("lid", [...generalIds(), ...stateIds(state.code)], stats, "/leben-in-deutschland/cau-sai"),
-  ];
+  return [...quizGroups("lid", sets, q, now), ...wrongReminder("lid", [...generalIds(), ...stateIds(state.code)], q.stats, "/leben-in-deutschland/cau-sai")];
 }
 
 /** Mọi nhắc nhở của 1 người: việc gấp (chuỗi ngày, đến hạn ôn) trước, rồi theo lần học gần nhất */
-export async function listReminders(userId: number, tz = 0): Promise<Reminder[]> {
-  const all = [...deutsch(userId, tz), ...(await laixe(userId)), ...(await lid(userId))];
+export function listReminders(userId: number, tz = 0, now = Date.now()): RemindersResponse {
+  const all = [...deutsch(userId, tz, now), ...laixe(userId, now), ...lid(userId, now)];
   const rank = (r: Reminder) => (r.kind === "streak" ? 0 : r.kind === "review" ? 1 : 2);
-  return all.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
+  return { reminders: all.sort((a, b) => rank(a) - rank(b) || b.at - a.at), started: all.length > 0 || hasLearned(userId) };
 }

@@ -54,7 +54,7 @@ export function productJsonLd(id: ServiceId) {
                 })),
             },
             breadcrumbJsonLd([
-                { name: 'CKK', path: '/' },
+                { name: 'HalloVN', path: '/' },
                 { name: service.name, path: productPath(service) },
             ]),
         ],

@@ -6,7 +6,7 @@ import { COMPANY } from '@/biz/lib/site';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Daten löschen',
-    description: 'So löschen Sie Ihre Daten in den Apps Führerschein Theorie Ckk und Leben in Deutschland Ckk.',
+    description: 'So löschen Sie Ihre Daten in den Apps Führerschein Theorie HalloVN und Leben in Deutschland HalloVN.',
     path: '/delete-account',
 });
 
@@ -18,7 +18,7 @@ const de = (
     <>
         <h2 id="no-account">1. Kein Nutzerkonto</h2>
         <p>
-            Die Apps Führerschein Theorie Ckk und Leben in Deutschland Ckk funktionieren ohne Registrierung. Es gibt kein Nutzerkonto, und wir
+            Die Apps Führerschein Theorie HalloVN und Leben in Deutschland HalloVN funktionieren ohne Registrierung. Es gibt kein Nutzerkonto, und wir
             speichern auf unseren Servern weder Name, E-Mail-Adresse noch Lernfortschritt.
         </p>
 
@@ -51,7 +51,7 @@ const en = (
     <>
         <h2 id="no-account">1. No user account</h2>
         <p>
-            The apps Führerschein Theorie Ckk and Leben in Deutschland Ckk work without registration. There is no user account, and we do not
+            The apps Führerschein Theorie HalloVN and Leben in Deutschland HalloVN work without registration. There is no user account, and we do not
             store your name, email address or learning progress on our servers.
         </p>
 
@@ -83,7 +83,7 @@ const vi = (
     <>
         <h2 id="no-account">1. Không có tài khoản người dùng</h2>
         <p>
-            Ứng dụng Führerschein Theorie Ckk và Leben in Deutschland Ckk hoạt động mà không cần đăng ký. Không có tài khoản người dùng, và chúng
+            Ứng dụng Führerschein Theorie HalloVN và Leben in Deutschland HalloVN hoạt động mà không cần đăng ký. Không có tài khoản người dùng, và chúng
             tôi không lưu tên, địa chỉ email hay tiến độ học của bạn trên máy chủ.
         </p>
 

@@ -30,7 +30,7 @@
 .biz-card { transition: border-color 0.2s; }
 .biz-card:hover { border-color: var(--ink); }
 
-/* ───────── Tờ tem CKK ───────── */
+/* ───────── Tờ tem HalloVN ───────── */
 html { scroll-behavior: smooth; }
 :focus-visible { outline: 2px solid var(--ink-ultra); outline-offset: 2px; }
 .on-ink :focus-visible { outline-color: currentColor; }

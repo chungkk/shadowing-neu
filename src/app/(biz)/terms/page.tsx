@@ -6,7 +6,7 @@ import { COMPANY, SITE } from '@/biz/lib/site';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Nutzungsbedingungen (EULA)',
-    description: 'Nutzungsbedingungen und Lizenzvereinbarung für die Apps Führerschein Theorie Ckk und Leben in Deutschland Ckk.',
+    description: 'Nutzungsbedingungen und Lizenzvereinbarung für die Apps Führerschein Theorie HalloVN und Leben in Deutschland HalloVN.',
     path: '/terms',
 });
 
@@ -15,7 +15,7 @@ const de = (
         <h2 id="scope">1. Geltungsbereich</h2>
         <p>
             Diese Nutzungsbedingungen (Endbenutzer-Lizenzvereinbarung, „EULA“) gelten für die Nutzung der Apps{' '}
-            <strong>Führerschein Theorie Ckk</strong> und <strong>Leben in Deutschland Ckk</strong> sowie der Website {SITE.domain}, bereitgestellt
+            <strong>Führerschein Theorie HalloVN</strong> und <strong>Leben in Deutschland HalloVN</strong> sowie der Website {SITE.domain}, bereitgestellt
             von {COMPANY.legalName} („wir“). Ergänzend gilt die{' '}
             <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer">
                 Standard-EULA von Apple
@@ -116,8 +116,8 @@ const en = (
     <>
         <h2 id="scope">1. Scope</h2>
         <p>
-            These terms of use (End User License Agreement, “EULA”) govern the use of the apps <strong>Führerschein Theorie Ckk</strong> and{' '}
-            <strong>Leben in Deutschland Ckk</strong> and the website {SITE.domain}, provided by {COMPANY.legalName} (“we”). Apple’s{' '}
+            These terms of use (End User License Agreement, “EULA”) govern the use of the apps <strong>Führerschein Theorie HalloVN</strong> and{' '}
+            <strong>Leben in Deutschland HalloVN</strong> and the website {SITE.domain}, provided by {COMPANY.legalName} (“we”). Apple’s{' '}
             <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer">
                 Standard EULA
             </a>{' '}
@@ -212,7 +212,7 @@ const vi = (
         <h2 id="scope">1. Phạm vi áp dụng</h2>
         <p>
             Điều khoản sử dụng này (Thoả thuận cấp phép người dùng cuối, „EULA“) điều chỉnh việc sử dụng ứng dụng{' '}
-            <strong>Führerschein Theorie Ckk</strong> và <strong>Leben in Deutschland Ckk</strong> cũng như trang web {SITE.domain}, do{' '}
+            <strong>Führerschein Theorie HalloVN</strong> và <strong>Leben in Deutschland HalloVN</strong> cũng như trang web {SITE.domain}, do{' '}
             {COMPANY.legalName} („chúng tôi“) cung cấp. Ngoài ra,{' '}
             <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer">
                 EULA tiêu chuẩn của Apple

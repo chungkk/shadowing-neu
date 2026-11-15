@@ -90,6 +90,9 @@ export async function prefs(): Promise<{ state: State; lang: Lang; chosen: boole
   return { state: picked ?? getState(DEFAULT_STATE)!, lang: isLang(l) ? l : "vi", chosen: !!picked };
 }
 
+/** Bang đang học đã lưu trên tài khoản — chỉ đọc (không cookie, không ghi DB), cho API như chuông nhắc nhở */
+export const stateFor = (userId: number): State => getState(getQuizPref(userId, "lid", "state") ?? "") ?? getState(DEFAULT_STATE)!;
+
 /** Bộ luyện 30 câu theo số câu chính thức: 1 → câu 1–30, 2 → 31–60, … */
 export function listSets() {
   return Array.from({ length: Math.ceil(GENERAL.length / SET_SIZE) }, (_, i) => {

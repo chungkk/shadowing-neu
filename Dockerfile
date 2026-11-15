@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Deutsch Shadowing — image cho Coolify / Docker
+# HalloVN — image cho Coolify / Docker
 # Cần Node ≥ 22.5 vì dùng node:sqlite có sẵn.
 
 # Phiên bản bgutil-ytdlp-pot-provider (server + plugin pip phải khớp nhau)

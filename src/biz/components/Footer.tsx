@@ -101,7 +101,7 @@ export default function Footer() {
                     <div className="col-span-2 md:col-span-4">
                         <Link href="/about" className="inline-flex items-center gap-2.5">
                             <BrandMark className="h-8 w-8" />
-                            <span className="font-display text-xl font-bold tracking-tight">CKK</span>
+                            <span className="font-display text-xl font-bold tracking-tight">HalloVN</span>
                         </Link>
                         <p className="mt-4 max-w-xs text-[0.95rem] leading-snug">{t.tagline}</p>
                     </div>

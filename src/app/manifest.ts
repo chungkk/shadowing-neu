@@ -3,7 +3,7 @@ import { SITE } from '@/biz/lib/site';
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'CKK – Software, Apps und Web-Anwendungen',
+        name: 'HalloVN – Software, Apps und Web-Anwendungen',
         short_name: SITE.name,
         description: SITE.description,
         start_url: '/',

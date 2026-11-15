@@ -6,7 +6,7 @@ import { SITE } from '@/biz/lib/site';
 export const OG_LOCALE = { locale: 'de_DE', alternateLocale: ['en_US', 'vi_VN'] };
 
 interface PageSeo {
-    /** Tiêu đề trang; layout tự thêm hậu tố " | CKK" trừ khi absolute = true */
+    /** Tiêu đề trang; layout tự thêm hậu tố " | HalloVN" trừ khi absolute = true */
     title: string;
     description: string;
     /** Đường dẫn bắt đầu bằng "/" */
@@ -18,7 +18,7 @@ interface PageSeo {
 }
 
 /** Ảnh chia sẻ chung (src/app/opengraph-image.tsx). Trang có opengraph-image riêng sẽ được Next ưu tiên. */
-const DEFAULT_OG_IMAGES = [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'CKK – Software, Apps und Web-Anwendungen' }];
+const DEFAULT_OG_IMAGES = [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'HalloVN – Software, Apps und Web-Anwendungen' }];
 
 export function pageMetadata({ title, description, path, absolute, images = DEFAULT_OG_IMAGES, noindex }: PageSeo): Metadata {
     const fullTitle = absolute ? title : `${title} | ${SITE.name}`;

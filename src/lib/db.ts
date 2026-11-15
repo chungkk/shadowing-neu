@@ -1693,6 +1693,31 @@ export type Stats = {
 
 const rate = (rows: { grade: string }[]): Rate => ({ n: rows.length, ok: rows.filter((r) => r.grade === "good" || r.grade === "easy").length });
 
+/**
+ * Chuỗi ngày học (tính tới hôm nay, hoặc hôm qua nếu hôm nay chưa học) + hôm nay đã học chưa.
+ * Ngày có học = ôn từ, học bộ từ hoặc chép chính tả được điểm — cùng nguồn với "+N kim cương" ở TodayStrip.
+ * Lấy mọi ngày có học (không giới hạn 90 ngày) để chuỗi dài không bị cắt. Nhẹ hơn getStats — dùng cho chuông nhắc nhở.
+ */
+export function streakInfo(userId: number, tzOffset: number, now = Date.now()): { streak: number; studiedToday: boolean } {
+  const dayOf = (ms: number) => new Date(ms - tzOffset * 60_000).toISOString().slice(0, 10);
+  const studied = new Set(
+    (
+      conn()
+        .prepare(
+          `SELECT DISTINCT date((at - ? * 60000) / 1000, 'unixepoch') AS day FROM (
+             SELECT at FROM review_events WHERE user_id = ?
+             UNION ALL SELECT at FROM deck_learned WHERE user_id = ?
+             UNION ALL SELECT at FROM dict_points WHERE user_id = ?
+           )`,
+        )
+        .all(tzOffset, userId, userId, userId) as { day: string }[]
+    ).map((r) => r.day),
+  );
+  let streak = 0;
+  for (let i = studied.has(dayOf(now)) ? 0 : 1; studied.has(dayOf(now - i * DAY)); i++) streak++;
+  return { streak, studiedToday: studied.has(dayOf(now)) };
+}
+
 /** tzOffset: phút, như Date.getTimezoneOffset() của máy người học (VN = -420) — để chia ngày đúng giờ địa phương */
 export function getStats(userId: number, tzOffset: number, now = Date.now()): Stats {
   const dayOf = (ms: number) => new Date(ms - tzOffset * 60_000).toISOString().slice(0, 10);
@@ -1712,21 +1737,7 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
   // Chuỗi ngày: hôm nay chưa ôn thì vẫn giữ chuỗi tới hôm qua.
   // Lấy mọi ngày có học (không chỉ 90 ngày như trên) để chuỗi dài hơn 90 ngày không bị cắt.
   // Ngày có học = ôn từ, học bộ từ hoặc chép chính tả được điểm — cùng nguồn với "+N kim cương" ở TodayStrip
-  const studied = new Set(
-    (
-      conn()
-        .prepare(
-          `SELECT DISTINCT date((at - ? * 60000) / 1000, 'unixepoch') AS day FROM (
-             SELECT at FROM review_events WHERE user_id = ?
-             UNION ALL SELECT at FROM deck_learned WHERE user_id = ?
-             UNION ALL SELECT at FROM dict_points WHERE user_id = ?
-           )`,
-        )
-        .all(tzOffset, userId, userId, userId) as { day: string }[]
-    ).map((r) => r.day),
-  );
-  let streak = 0;
-  for (let i = studied.has(dayOf(now)) ? 0 : 1; studied.has(dayOf(now - i * DAY)); i++) streak++;
+  const { streak, studiedToday } = streakInfo(userId, tzOffset, now);
 
   const words = listVocab(userId);
   const mastery: Record<Mastery, number> = { saved: 0, learning: 0, active: 0, mastered: 0 };
@@ -1738,7 +1749,7 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
   return {
     dueToday: words.filter((v) => isDue(v, now)).length,
     streak,
-    studiedToday: studied.has(dayOf(now)),
+    studiedToday,
     recall30: { ...rate(last30), duolingo: rate(last30.filter((e) => e.mode === "duolingo")), crazy: rate(last30.filter((e) => e.mode === "crazy")) },
     retention7: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 7)),
     retention30: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 30)),
@@ -1787,10 +1798,25 @@ export function quizStats(userId: number, module: QuizModule): Record<string, Qu
   return Object.fromEntries(rows.map((r) => [r.qid, { correct: r.correct, wrong: r.wrong, lastOk: !!r.last_ok }]));
 }
 
-/** Lần trả lời gần nhất của từng câu (ms): qid → at — để biết chương / bộ câu nào đang học gần đây nhất */
-export function quizAnsweredAt(userId: number, module: QuizModule): Map<string, number> {
-  const rows = conn().prepare("SELECT qid, at FROM quiz_answers WHERE user_id = ? AND module = ?").all(userId, module) as { qid: string; at: number }[];
-  return new Map(rows.map((r) => [r.qid, r.at]));
+/** Kết quả từng câu (như quizStats) + lần trả lời gần nhất (ms) — 1 truy vấn, để biết chương / bộ câu nào đang học gần đây nhất */
+export function quizProgress(userId: number, module: QuizModule): { stats: Record<string, QuizStat>; at: Map<string, number> } {
+  const rows = conn()
+    .prepare("SELECT qid, correct, wrong, last_ok, at FROM quiz_answers WHERE user_id = ? AND module = ?")
+    .all(userId, module) as { qid: string; correct: number; wrong: number; last_ok: number; at: number }[];
+  return {
+    stats: Object.fromEntries(rows.map((r) => [r.qid, { correct: r.correct, wrong: r.wrong, lastOk: !!r.last_ok }])),
+    at: new Map(rows.map((r) => [r.qid, r.at])),
+  };
+}
+
+/** Đã từng học gì chưa (bài video, sổ từ, bộ từ, Lái xe, LiD) — phân biệt "chưa bắt đầu" với "xong hết" */
+export function hasLearned(userId: number): boolean {
+  return !!conn()
+    .prepare(
+      `SELECT EXISTS (SELECT 1 FROM progress WHERE user_id = ?) OR EXISTS (SELECT 1 FROM vocab WHERE user_id = ?)
+          OR EXISTS (SELECT 1 FROM deck_learned WHERE user_id = ?) OR EXISTS (SELECT 1 FROM quiz_answers WHERE user_id = ?) AS v`,
+    )
+    .get(userId, userId, userId, userId)!.v;
 }
 
 /** Xoá tiến độ của 1 phần (bắt đầu lại từ đầu) · all: xoá cả câu đánh dấu và lịch sử thi */

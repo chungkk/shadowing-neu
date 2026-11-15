@@ -7,7 +7,7 @@ import { EXAM, EXAM_TOTAL, getSet, getState } from "@/lib/quiz/lid";
 import { syncQuiz, useModule, usePrefs } from "@/lib/quiz/store";
 import { useL } from "@/lib/quiz/strings";
 
-/** Tab Leben in Deutschland: 300 câu chung + câu của bang, thi thử 33 câu (như app LiD Ckk cũ) */
+/** Tab Leben in Deutschland: 300 câu chung + câu của bang, thi thử 33 câu (như app LiD HalloVN cũ) */
 export default function LidTab() {
   const L = useL();
   const { user } = useAuth();

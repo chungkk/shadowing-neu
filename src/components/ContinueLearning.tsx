@@ -1,40 +1,13 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
-import { lessonsFor } from "@/lib/access";
-import { listProgress, type Progress } from "@/lib/db";
+import { percent, unfinished } from "@/lib/progress";
 import { SectionHeader } from "./LessonGrid";
-import { lessonPath } from "@/lib/slug";
 
 const SHOWN = 4;
 
-/**
- * % đã học: số câu đã nghe hoặc đã làm chính tả, lấy cái nhiều hơn (giống app).
- * Làm tròn xuống (199/200 câu chưa là "xong"); đã học ít nhất 1 câu thì tối thiểu 1%
- */
-export const percent = (p: Progress) => {
-  if (!p.total) return 0;
-  const done = Math.min(p.total, Math.max(p.seen.length, Object.keys(p.dictDone).length));
-  return done ? Math.max(1, Math.floor((done * 100) / p.total)) : 0;
-};
-
-/** Bài / video đang học dở, mới nhất trước — dùng chung với dải "Hôm nay" */
-export function unfinished(userId: number, limit = SHOWN) {
-  const lessons = new Map(lessonsFor(userId).map((l) => [String(l.id), l]));
-  return listProgress(userId)
-    .filter((p) => percent(p) < 100)
-    .map((p) => {
-      const [, kind, id] = p.source.split("/");
-      const lesson = kind === "lesson" ? lessons.get(id) : undefined;
-      // Bài đã bị xoá / chuyển về nháp → bỏ qua
-      return { p, href: lesson ? lessonPath(lesson.slug) : p.source, title: lesson?.title ?? p.title, videoId: kind === "watch" ? id : lesson?.videoId };
-    })
-    .filter((x): x is typeof x & { videoId: string } => !!x.videoId)
-    .slice(0, limit);
-}
-
 /** Các bài / video đang học dở của người đang đăng nhập, mới nhất trước (tiến độ đồng bộ với app) */
 export default function ContinueLearning({ userId }: { userId: number }) {
-  const items = unfinished(userId);
+  const items = unfinished(userId, SHOWN);
   if (!items.length) return null;
 
   return (

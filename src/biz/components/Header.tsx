@@ -18,7 +18,7 @@ const COPY = {
             { href: '/support', label: 'Support' },
         ],
         cta: 'Projekt anfragen',
-        home: 'CKK – Startseite',
+        home: 'HalloVN – Startseite',
         open: 'Menü öffnen',
         close: 'Menü schließen',
         lang: 'Sprache wählen',
@@ -33,7 +33,7 @@ const COPY = {
             { href: '/support', label: 'Support' },
         ],
         cta: 'Start a project',
-        home: 'CKK – Home',
+        home: 'HalloVN – Home',
         open: 'Open menu',
         close: 'Close menu',
         lang: 'Choose language',
@@ -48,7 +48,7 @@ const COPY = {
             { href: '/support', label: 'Hỗ trợ' },
         ],
         cta: 'Gửi yêu cầu',
-        home: 'CKK – Trang chủ',
+        home: 'HalloVN – Trang chủ',
         open: 'Mở menu',
         close: 'Đóng menu',
         lang: 'Chọn ngôn ngữ',
@@ -90,7 +90,7 @@ export default function Header() {
                 <Link href="/about" id="header-logo" className="flex items-center gap-2.5 shrink-0" aria-label={t.home}>
                     <BrandMark className="w-8 h-8" />
                     <span className="font-display text-xl font-bold tracking-tight">
-                        CKK
+                        HalloVN
                     </span>
                 </Link>
 
