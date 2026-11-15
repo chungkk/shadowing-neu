@@ -16,13 +16,14 @@ const COLUMNS = [
     ],
   },
   {
-    title: "Pháp lý",
+    title: "Về HalloVN",
+    // Trang chung của website hallovn.de; ?lang=vi để mở sẵn bản tiếng Việt (mặc định tiếng Đức)
     links: [
-      { href: "/deutsch-shadowing/privacy", label: "Chính sách quyền riêng tư" },
-      { href: "/deutsch-shadowing/terms", label: "Điều khoản sử dụng" },
-      { href: "/privacy", label: "Datenschutz (hallovn.de)" },
-      { href: "/impressum", label: "Impressum" },
-      { href: "/about", label: "Về HalloVN · App & dịch vụ" },
+      { href: "/about?lang=vi", label: "Giới thiệu HalloVN" },
+      { href: "/support?lang=vi", label: "Hỗ trợ & câu hỏi thường gặp" },
+      { href: "/terms?lang=vi", label: "Điều khoản sử dụng" },
+      { href: "/privacy?lang=vi", label: "Chính sách bảo mật" },
+      { href: "/impressum?lang=vi", label: "Thông tin pháp lý (Impressum)" },
     ],
   },
 ];
@@ -66,7 +67,7 @@ export default function SiteFooter() {
                     {l.label}
                   </Link>
                 ))}
-                {c.title === "Pháp lý" && <Contact />}
+                {c.title === "Về HalloVN" && <Contact />}
               </nav>
             ))}
           </div>
