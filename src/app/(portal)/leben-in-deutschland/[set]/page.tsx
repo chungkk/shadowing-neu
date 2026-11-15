@@ -56,7 +56,7 @@ async function SetView({ params, searchParams }: P) {
       title={mode === "lesen" ? `${s.title} · Đọc lướt` : s.title}
       backHref="/leben-in-deutschland"
       questions={await forClient(s.ids)}
-      loggedIn={!!user}
+      userId={user?.id}
       lang={lang}
       stats={user ? quizStats(user.id, "lid") : undefined}
       bookmarks={user ? quizBookmarks(user.id, "lid") : undefined}

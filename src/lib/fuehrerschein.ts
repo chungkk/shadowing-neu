@@ -1,5 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { getCurrentUser } from "./auth";
+import { getQuizPref, setQuizPref } from "./db";
 import data from "@/content/fuehrerschein/questions.json";
 import { NUM_HINTS } from "./fuehrerschein-units";
 import { isLang, type DrivingQ, type ExamConfig, type Lang } from "./fuehrerschein-rules";
@@ -46,10 +48,23 @@ export const CLASS_COOKIE = "lx_class";
 export const LANG_COOKIE = "lx_lang";
 
 /** Hạng đang học + ngôn ngữ bản dịch. Gọi trong <Suspense> (đọc cookie) */
+/**
+ * Hạng bằng đang học: đã đăng nhập → lưu theo tài khoản; khách → cookie.
+ * Lần đầu đăng nhập mà tài khoản chưa có hạng thì nhận hạng khách đã chọn trên máy này.
+ */
 export async function prefs(): Promise<{ cls: ClassId; lang: Lang }> {
   const jar = await cookies();
-  const c = jar.get(CLASS_COOKIE)?.value;
+  const fromCookie = jar.get(CLASS_COOKIE)?.value;
   const l = jar.get(LANG_COOKIE)?.value;
+  let c: string | undefined | null = fromCookie;
+  const user = await getCurrentUser();
+  if (user) {
+    c = getQuizPref(user.id, "fuehrerschein", "class");
+    if (!isClassId(c) && isClassId(fromCookie)) {
+      setQuizPref(user.id, "fuehrerschein", "class", fromCookie);
+      c = fromCookie;
+    }
+  }
   return { cls: isClassId(c) ? c : DEFAULT_CLASS, lang: isLang(l) ? l : "vi" };
 }
 

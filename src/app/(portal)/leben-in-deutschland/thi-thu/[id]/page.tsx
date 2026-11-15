@@ -24,7 +24,7 @@ async function Review({ params }: PageProps<"/leben-in-deutschland/thi-thu/[id]"
       title="Kết quả thi thử"
       backHref="/leben-in-deutschland/thong-ke"
       questions={await forClient(exam.answers.map((a) => a.qid))}
-      loggedIn
+      userId={user.id}
       lang={lang}
       bookmarks={quizBookmarks(user.id, "lid")}
       exam={{ ref: exam.ref, cls: exam.cls, minutes: EXAM.minutes, maxWrong: exam.maxErrorPoints }}

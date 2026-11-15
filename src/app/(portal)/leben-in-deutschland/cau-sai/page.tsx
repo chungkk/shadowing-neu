@@ -36,7 +36,7 @@ async function Wrong({ searchParams }: P) {
       title={title}
       backHref="/leben-in-deutschland"
       questions={await forClient(ids)}
-      loggedIn
+      userId={user.id}
       lang={lang}
       stats={stats}
       bookmarks={quizBookmarks(user.id, "lid")}

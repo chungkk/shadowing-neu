@@ -41,7 +41,7 @@ async function Settings() {
       </Group>
       {user && (
         <Group icon={Database} title="Dữ liệu" text="Xoá câu đã làm, câu đánh dấu và lịch sử thi của phần Leben in Deutschland.">
-          <ResetProgress module="lid" />
+          <ResetProgress module="lid" userId={user.id} />
         </Group>
       )}
     </div>

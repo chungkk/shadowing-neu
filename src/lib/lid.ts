@@ -1,5 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { getCurrentUser } from "./auth";
+import { getQuizPref, setQuizPref } from "./db";
 import data from "@/content/lid/questions.json";
 import { isLang, type DrivingQ, type Lang, type Tr } from "./fuehrerschein-rules";
 import { LID_SET_COUNT, LID_SET_IDS, LID_STATE_CODES, LID_TOPIC_KEYS } from "./lid-routes";
@@ -68,10 +70,23 @@ export const isGeneral = (id: string) => ALL.get(id)?.general ?? false;
 export const STATE_COOKIE = "lid_state";
 
 /** chosen = người học đã tự chọn bang (chưa chọn thì đang dùng bang mặc định) */
+/**
+ * Bang đang học: đã đăng nhập → lưu theo tài khoản (đổi máy vẫn giữ, 2 người chung máy không lẫn);
+ * khách → cookie. Lần đầu đăng nhập mà tài khoản chưa có bang thì nhận bang khách đã chọn trên máy này.
+ */
 export async function prefs(): Promise<{ state: State; lang: Lang; chosen: boolean }> {
   const jar = await cookies();
   const l = jar.get("lx_lang")?.value;
-  const picked = getState(jar.get(STATE_COOKIE)?.value ?? "");
+  const fromCookie = getState(jar.get(STATE_COOKIE)?.value ?? "");
+  const user = await getCurrentUser();
+  let picked = fromCookie;
+  if (user) {
+    picked = getState(getQuizPref(user.id, "lid", "state") ?? "");
+    if (!picked && fromCookie) {
+      setQuizPref(user.id, "lid", "state", fromCookie.code);
+      picked = fromCookie;
+    }
+  }
   return { state: picked ?? getState(DEFAULT_STATE)!, lang: isLang(l) ? l : "vi", chosen: !!picked };
 }
 

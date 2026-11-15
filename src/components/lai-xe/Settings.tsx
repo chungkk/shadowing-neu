@@ -174,7 +174,7 @@ export function VibrateToggle() {
 }
 
 /** Xoá toàn bộ tiến độ (câu đã làm, đánh dấu, lịch sử thi) của 1 phần */
-export function ResetProgress({ module = "fuehrerschein" }: { module?: "fuehrerschein" | "lid" }) {
+export function ResetProgress({ module = "fuehrerschein", userId }: { module?: "fuehrerschein" | "lid"; userId?: number }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -190,10 +190,10 @@ export function ResetProgress({ module = "fuehrerschein" }: { module?: "fuehrers
           setError("");
           try {
             await clientApi("/quiz", { method: "DELETE", body: { module, all: true } });
-            // Vị trí học dở (localStorage "pos:lid:…") cũng là tiến độ → xoá theo
-            if (module === "lid")
+            // Vị trí học dở của tài khoản này (localStorage "pos:u<id>:lid:…") cũng là tiến độ → xoá theo
+            if (module === "lid" && userId !== undefined)
               try {
-                for (const k of Object.keys(localStorage)) if (k.startsWith("pos:lid:")) localStorage.removeItem(k);
+                for (const k of Object.keys(localStorage)) if (k.startsWith(`pos:u${userId}:lid:`)) localStorage.removeItem(k);
               } catch {}
             router.refresh();
           } catch (e) {

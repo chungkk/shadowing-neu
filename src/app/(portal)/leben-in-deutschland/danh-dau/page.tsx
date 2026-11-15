@@ -22,7 +22,7 @@ async function Marked() {
       title="Câu đã đánh dấu"
       backHref="/leben-in-deutschland"
       questions={await forClient(ids)}
-      loggedIn
+      userId={user.id}
       lang={lang}
       stats={quizStats(user.id, "lid")}
       bookmarks={ids}

@@ -184,6 +184,15 @@ function open() {
       at INTEGER NOT NULL -- ms
     );
     CREATE INDEX IF NOT EXISTS quiz_exams_user ON quiz_exams (user_id, module, at);
+    -- Lựa chọn học của từng người (hạng bằng lái, bang LiD): theo tài khoản, không theo trình duyệt
+    CREATE TABLE IF NOT EXISTS quiz_prefs (
+      user_id INTEGER NOT NULL,
+      module TEXT NOT NULL,
+      key TEXT NOT NULL, -- 'class' (Lái xe) | 'state' (LiD)
+      value TEXT NOT NULL,
+      at INTEGER NOT NULL, -- ms
+      PRIMARY KEY (user_id, module, key)
+    );
     CREATE TABLE IF NOT EXISTS vocab_examples (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       vocab_id INTEGER NOT NULL,
@@ -727,6 +736,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM quiz_answers WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM quiz_bookmarks WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM quiz_exams WHERE user_id = ?").run(id);
+  conn().prepare("DELETE FROM quiz_prefs WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM progress WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM crazy_reps WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM dict_points WHERE user_id = ?").run(id);
@@ -758,6 +768,7 @@ export function exportUserData(id: number): Record<string, unknown> | null {
     deckLearned: rows("SELECT deck, word_key, at FROM deck_learned WHERE user_id = ? ORDER BY at"),
     quizAnswers: rows("SELECT module, qid, correct, wrong, last_ok, at FROM quiz_answers WHERE user_id = ? ORDER BY at"),
     quizBookmarks: rows("SELECT module, qid, at FROM quiz_bookmarks WHERE user_id = ? ORDER BY at"),
+    quizPrefs: rows("SELECT module, key, value, at FROM quiz_prefs WHERE user_id = ? ORDER BY module, key"),
     quizExams: rows("SELECT module, kind, ref, license_class, correct, total, error_points, max_error_points, passed, fail_reason, duration_s, answers, at FROM quiz_exams WHERE user_id = ? ORDER BY at"),
     progress: rows("SELECT source, title, idx, total, mode, dict_level, dict_done, updated_at FROM progress WHERE user_id = ? ORDER BY updated_at DESC"),
     reviewHistory: rows("SELECT vocab_id, at, mode, exercise, grade, recall, speaking, auto_clear, stage_before, stage_after FROM review_events WHERE user_id = ? ORDER BY at"),
@@ -1774,6 +1785,18 @@ export function resetQuiz(userId: number, module: QuizModule, all = false) {
   if (!all) return;
   conn().prepare("DELETE FROM quiz_bookmarks WHERE user_id = ? AND module = ?").run(userId, module);
   conn().prepare("DELETE FROM quiz_exams WHERE user_id = ? AND module = ?").run(userId, module);
+}
+
+/** Lựa chọn học đã lưu trên tài khoản (hạng bằng / bang), chưa có → null */
+export function getQuizPref(userId: number, module: QuizModule, key: string): string | null {
+  const r = conn().prepare("SELECT value FROM quiz_prefs WHERE user_id = ? AND module = ? AND key = ?").get(userId, module, key) as { value: string } | undefined;
+  return r?.value ?? null;
+}
+
+export function setQuizPref(userId: number, module: QuizModule, key: string, value: string) {
+  conn()
+    .prepare("INSERT INTO quiz_prefs (user_id, module, key, value, at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (user_id, module, key) DO UPDATE SET value = excluded.value, at = excluded.at")
+    .run(userId, module, key, value, Date.now());
 }
 
 /** Câu đã đánh dấu (mới nhất trước) */

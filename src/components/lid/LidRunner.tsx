@@ -33,7 +33,8 @@ type Props = {
   title: string;
   backHref: string;
   questions: DrivingQ[];
-  loggedIn: boolean;
+  /** Người đang đăng nhập (undefined = khách): tiến độ gửi lên tài khoản này, dữ liệu trên máy tách theo người */
+  userId?: number;
   lang?: Lang;
   stats?: Record<string, QuizStat>;
   bookmarks?: string[];
@@ -48,7 +49,7 @@ const NO_STATS: Record<string, QuizStat> = {};
 const NO_MARKS: string[] = [];
 const LEAVE_EXAM = "Thoát bài thi?\nCác câu trả lời hiện tại sẽ bị mất.";
 
-export default function LidRunner({ mode, title, backHref, questions, loggedIn, stats = NO_STATS, bookmarks = NO_MARKS, exam, review, resumeKey }: Props) {
+export default function LidRunner({ mode, title, backHref, questions, userId, stats = NO_STATS, bookmarks = NO_MARKS, exam, review, resumeKey }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [rawIdx, setIdx] = useState(0);
@@ -72,6 +73,9 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
   }
   const [picker, setPicker] = useState(false);
   const [startedAt] = useState(() => Date.now());
+  const loggedIn = userId !== undefined;
+  // Vị trí học dở trên máy: mỗi tài khoản một khoá riêng (2 người dùng chung trình duyệt không lẫn chỗ học)
+  const posKey = resumeKey ? `pos:${loggedIn ? `u${userId}:` : ""}${resumeKey}` : null;
   const [ready, setReady] = useState(!resumeKey); // đã đọc xong vị trí học dở (khách: chỉ đếm lượt sau bước này)
   const [showTr, setShowTr] = useLocalStorage<boolean>("lid:tr", true);
   const [autoMark] = useLocalStorage<boolean>("lid:auto-mark", true);
@@ -103,23 +107,23 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
 
   // Mở lại đúng câu đang học dở
   useEffect(() => {
-    if (!resumeKey) return;
+    if (!posKey) return;
     try {
-      const id = localStorage.getItem(`pos:${resumeKey}`);
+      const id = localStorage.getItem(posKey);
       const i = id ? questions.findIndex((x) => x.id === id) : -1;
       if (i > 0) setIdx(i); // eslint-disable-line react-hooks/set-state-in-effect -- localStorage chỉ đọc được sau khi hydrate
     } catch {}
     setReady(true);
-  }, [resumeKey, questions]);
+  }, [posKey, questions]);
   useEffect(() => {
-    if (!resumeKey || !ready || !questions[idx]) return;
+    if (!posKey || !ready || !questions[idx]) return;
     try {
-      localStorage.setItem(`pos:${resumeKey}`, questions[idx].id);
+      localStorage.setItem(posKey, questions[idx].id);
     } catch {}
-  }, [resumeKey, ready, idx, questions]);
+  }, [posKey, ready, idx, questions]);
 
   // Gửi lại tiến độ còn chờ (lần trước mất mạng)
-  useEffect(() => (loggedIn ? watchOutbox() : undefined), [loggedIn]);
+  useEffect(() => (userId !== undefined ? watchOutbox(userId) : undefined), [userId]);
 
   // Trang bị <Activity> ẩn (chuyển sang trang khác): đóng bảng chọn câu. Hiện lại sau khi đã rời bài thi → bỏ bài đó, lấy đề mới
   // (không thì đồng hồ chạy tiếp ngầm và tự nộp bài người học đã bỏ). >1 giây: bỏ qua lần chạy kép của StrictMode lúc mount.
@@ -194,8 +198,8 @@ export default function LidRunner({ mode, title, backHref, questions, loggedIn, 
     setLocal((s) => ({ ...s, [q.id]: { correct: (s[q.id]?.correct ?? 0) + +ok, wrong: (s[q.id]?.wrong ?? 0) + +!ok, lastOk: ok } }));
     // Điện thoại: phản hồi + nút Tiếp nằm dưới thanh tab → cuộn lên cho thấy
     requestAnimationFrame(() => nav.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
-    if (!loggedIn) return;
-    sendAnswer("lid", { qid: q.id, picked: [key] });
+    if (userId === undefined) return;
+    sendAnswer(userId, "lid", { qid: q.id, picked: [key] });
     // Như app: sai tự đánh dấu, đúng tự bỏ đánh dấu
     if (autoMark && marked.has(q.id) === ok) setMark(q.id, !ok).catch(() => {});
   };

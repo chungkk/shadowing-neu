@@ -22,7 +22,7 @@ async function Exam() {
       title="Thi thử"
       backHref="/leben-in-deutschland/thi-thu"
       questions={await forClient(ids, { withAnswers: false })}
-      loggedIn
+      userId={user.id}
       lang={lang}
       bookmarks={quizBookmarks(user.id, "lid")}
       exam={{ ref: state.code, cls: state.code, minutes: EXAM.minutes, maxWrong: EXAM_MAX_WRONG }}
