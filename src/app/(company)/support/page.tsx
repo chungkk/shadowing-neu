@@ -4,7 +4,7 @@ import { SupportHub } from '@/components/company/ProductLegal';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Support-Center',
-    description: 'Hilfe und Kontakt zu allen Produkten von HalloVN: Führerschein Theorie HalloVN, Leben in Deutschland HalloVN und die HalloVN-App zum Deutschlernen.',
+    description: 'Hilfe und Kontakt zu den Produkten von HalloVN: die Lernplattform HalloVN zum Deutschlernen, für Führerscheintheorie und Leben in Deutschland.',
     path: '/support',
 });
 

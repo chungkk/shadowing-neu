@@ -22,7 +22,7 @@ const bizPages = (): MetadataRoute.Sitemap => [
     images: PRODUCT_PAGES[s.id].screens.map((screen) => SITE_URL + screen.src),
   })),
   { url: `${SITE_URL}/support`, changeFrequency: "monthly", priority: 0.6 },
-  ...["/privacy", "/terms", "/refund", "/delete-account"].map((p) => legal(p)),
+  ...["/privacy", "/terms", "/refund"].map((p) => legal(p)),
   legal("/impressum", 0.2),
   ...LEGAL_PRODUCTS.filter((p) => !NOINDEX_LEGAL_SLUGS.has(p.slug)).flatMap((p) => [
     { url: `${SITE_URL}/${p.slug}/support`, changeFrequency: "monthly" as const, priority: 0.5 },

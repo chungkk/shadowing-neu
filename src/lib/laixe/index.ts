@@ -180,6 +180,15 @@ const optionOrder = (q: Raw, shuffled: boolean) => {
   return shuffled && q.options.length > 1 && q.options.every((o) => o.text.trim()) ? shuffle(idx) : idx;
 };
 
+// Ảnh câu hỏi có sẵn trong public/ckk/images → hallovn.de tự phục vụ, không lấy từ ckk.biz (dự án riêng của 2 app).
+// Video (~400 MB) chưa có trên hallovn.de: vẫn lấy từ nginx ckk-downloads (ckk.biz/download/media) cho tới khi
+// Traefik định tuyến thêm hallovn.de/download/media — khi đó đổi VIDEO_BASE thành "/download/media/".
+const CKK_IMAGES = "https://ckk.biz/ckk/images/";
+const CKK_MEDIA = "https://ckk.biz/download/media/";
+const VIDEO_BASE = CKK_MEDIA;
+const localMedia = <T extends string | null>(url: T): T =>
+  (url?.startsWith(CKK_IMAGES) ? "/ckk/images/" + url.slice(CKK_IMAGES.length) : url?.startsWith(CKK_MEDIA) ? VIDEO_BASE + url.slice(CKK_MEDIA.length) : url) as T;
+
 /**
  * Câu theo thứ tự `ids` (bỏ id không có), kèm bản dịch tiếng Việt và thứ tự lựa chọn.
  * `orders`: thứ tự đã dùng khi làm bài (xem lại bài thi); không có thì xáo mới — khi đó gọi sau connection()/cookies().
@@ -202,10 +211,10 @@ export async function forClient(ids: string[], lang: Lang, orders?: Record<strin
         num: q.options.length ? null : (NUM_HINTS[q.id] ?? null),
         answer: q.answer,
         explain: q.explain,
-        images: q.images,
+        images: q.images.map((u) => localMedia(u)),
         optionImages: q.optionImages,
-        poster: q.poster,
-        video: q.video,
+        poster: localMedia(q.poster),
+        video: localMedia(q.video),
         tr: q.vi ?? null,
         order,
       },

@@ -6,7 +6,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { LEGAL_UPDATED } from '@/lib/company/site';
 import { useLocale } from '@/components/company/LocaleContext';
 import type { Locale } from '@/components/company/LocaleContext';
-import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, ReceiptIcon, TrashIcon } from '@/components/company/icons';
+import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, ReceiptIcon } from '@/components/company/icons';
 
 type Icon = ComponentType<{ className?: string }>;
 
@@ -18,7 +18,6 @@ const NAV: LegalNavItem[] = [
     { href: '/privacy', icon: LockIcon, de: 'Datenschutz', en: 'Privacy policy', vi: 'Chính sách bảo mật' },
     { href: '/terms', icon: DocumentIcon, de: 'Nutzungsbedingungen', en: 'Terms of use', vi: 'Điều khoản sử dụng' },
     { href: '/refund', icon: ReceiptIcon, de: 'Käufe & Erstattung', en: 'Purchases & refunds', vi: 'Mua hàng & hoàn tiền' },
-    { href: '/delete-account', icon: TrashIcon, de: 'Datenlöschung', en: 'Data deletion', vi: 'Xoá dữ liệu' },
 ];
 
 const LABELS = {

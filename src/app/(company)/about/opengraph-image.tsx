@@ -8,7 +8,7 @@ export default function Image() {
     return renderOgImage({
         eyebrow: 'Software · Apps · Web',
         title: 'HalloVN – Software, Apps und Web-Anwendungen',
-        subtitle: 'Führerschein Theorie, Leben in Deutschland, HalloVN – und Software nach Ihren Anforderungen.',
+        subtitle: 'Die Lernplattform HalloVN – und Software nach Ihren Anforderungen.',
         accent: '#2438c9',
     });
 }

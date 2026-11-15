@@ -11,8 +11,6 @@ const COPY = {
     de: {
         nav: [
             { href: '/', label: 'Lernen & Anmelden' },
-            { href: '/fuehrerschein', label: 'Führerschein' },
-            { href: '/lid', label: 'Leben in Deutschland' },
             { href: '/shadowing', label: 'Deutsch lernen' },
             { href: '/about#auftrag', label: 'Auftragsarbeit' },
             { href: '/support', label: 'Support' },
@@ -26,8 +24,6 @@ const COPY = {
     en: {
         nav: [
             { href: '/', label: 'Learn & sign in' },
-            { href: '/fuehrerschein', label: 'Driving test' },
-            { href: '/lid', label: 'Leben in Deutschland' },
             { href: '/shadowing', label: 'Learn German' },
             { href: '/about#auftrag', label: 'Custom software' },
             { href: '/support', label: 'Support' },
@@ -41,8 +37,6 @@ const COPY = {
     vi: {
         nav: [
             { href: '/', label: 'Học & đăng nhập' },
-            { href: '/fuehrerschein', label: 'Thi lái xe' },
-            { href: '/lid', label: 'Leben in Deutschland' },
             { href: '/shadowing', label: 'Học tiếng Đức' },
             { href: '/about#auftrag', label: 'Làm theo yêu cầu' },
             { href: '/support', label: 'Hỗ trợ' },

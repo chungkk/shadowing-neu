@@ -8,7 +8,7 @@ export const SITE = {
   supportEmail: 'support@hallovn.de',
   contactEmail: 'support@hallovn.de',
   description:
-    'HalloVN entwickelt Software: eigene Apps wie Führerschein Theorie, Leben in Deutschland und HalloVN zum Deutschlernen – und Apps und Web-Anwendungen für Sie.',
+    'HalloVN entwickelt Software: die Lernplattform HalloVN für Deutsch, Führerscheintheorie und Leben in Deutschland – und Apps und Web-Anwendungen für Sie.',
 } as const;
 
 /**
@@ -34,14 +34,5 @@ export const COMPANY = {
 // Fanpage Facebook (xem docs/fanpage-plan.md). Có thể override qua biến môi trường.
 export const FACEBOOK_PAGE_URL =
   process.env.NEXT_PUBLIC_FACEBOOK_PAGE_URL || 'https://www.facebook.com/ckk.biz';
-
-export const APP_LINKS = {
-  fuehrerschein: 'https://apps.apple.com/us/app/f%C3%BChrerschein-theorie-unlimited/id6758412382',
-  lid: 'https://apps.apple.com/us/app/leben-in-deutschland-unlimited/id6758165563',
-  // APK tải trực tiếp (không qua Google Play), do container nginx ckk-downloads trên VPS phục vụ
-  // (xem docs/downloads.md). Bản mới ghi đè lên đúng tên file này nên link không bao giờ đổi.
-  fuehrerscheinAndroid: 'https://hallovn.de/download/fuehrerschein-ckk.apk',
-  lidAndroid: 'https://hallovn.de/download/lid-ckk.apk',
-} as const;
 
 export const LEGAL_UPDATED = { de: 'November 2026', en: 'November 2026', vi: 'Tháng 11/2026' } as const;

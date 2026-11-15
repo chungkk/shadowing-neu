@@ -6,13 +6,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
 import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/laixe";
 import { JsonLd, breadcrumbLd, quizPageMeta } from "@/lib/laixe/seo";
-import AppOnlyCard from "@/components/laixe/AppOnlyCard";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = quizPageMeta({
   path: "/lai-xe/de-mau",
   title: "Đề mẫu thi lý thuyết lái xe hạng B (Musterbögen)",
-  description: `${BOGEN_COUNT} đề mẫu chính thức (Musterbögen) thi lý thuyết lái xe Đức hạng B, mỗi đề 30 câu, dịch tiếng Việt: làm thử ${WEB_BOGEN_LIMIT} đề trên web, trọn bộ trong app HalloVN.`,
+  description: `${BOGEN_COUNT} đề mẫu chính thức (Musterbögen) thi lý thuyết lái xe Đức hạng B, mỗi đề 30 câu, dịch tiếng Việt: làm thử ${WEB_BOGEN_LIMIT} đề trên web.`,
 });
 
 async function Sheets() {
@@ -57,12 +56,6 @@ async function Sheets() {
           );
         })}
       </ul>
-      {BOGEN_COUNT > WEB_BOGEN_LIMIT && (
-        <AppOnlyCard
-          title={`Còn ${BOGEN_COUNT - WEB_BOGEN_LIMIT} đề mẫu nữa trên app`}
-          text={`Web chỉ có ${WEB_BOGEN_LIMIT} đề làm thử. Tải app để luyện trọn ${BOGEN_COUNT} đề mẫu chính thức, đọc – luyện – thi như thật.`}
-        />
-      )}
     </>
   );
 }

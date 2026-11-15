@@ -1,12 +1,10 @@
 import { pageMetadata } from '@/lib/company/seo';
-import { fuehrerschein } from './fuehrerschein';
-import { lid } from './lid';
 import { deutschRedewendung, workCalendar } from './local-apps';
 import { shadowing } from './shadowing';
 import type { LegalProduct } from './types';
 
 /** Thêm sản phẩm mới: tạo nội dung, thêm vào đây, rồi tạo 2 route /<slug>/support và /<slug>/privacy. */
-export const LEGAL_PRODUCTS: LegalProduct[] = [fuehrerschein, lid, shadowing, deutschRedewendung, workCalendar];
+export const LEGAL_PRODUCTS: LegalProduct[] = [shadowing, deutschRedewendung, workCalendar];
 
 export function legalProduct(slug: string): LegalProduct {
     const product = LEGAL_PRODUCTS.find((p) => p.slug === slug);
