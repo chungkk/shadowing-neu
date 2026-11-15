@@ -180,12 +180,12 @@ const optionOrder = (q: Raw, shuffled: boolean) => {
   return shuffled && q.options.length > 1 && q.options.every((o) => o.text.trim()) ? shuffle(idx) : idx;
 };
 
-// Ảnh câu hỏi có sẵn trong public/ckk/images → hallovn.de tự phục vụ, không lấy từ ckk.biz (dự án riêng của 2 app).
-// Video (~400 MB) chưa có trên hallovn.de: vẫn lấy từ nginx ckk-downloads (ckk.biz/download/media) cho tới khi
-// Traefik định tuyến thêm hallovn.de/download/media — khi đó đổi VIDEO_BASE thành "/download/media/".
+// Media câu hỏi do chính hallovn.de phục vụ, không lấy từ ckk.biz (dự án riêng của 2 app):
+// - ảnh: public/ckk/images
+// - video (~400 MB): nginx ckk-downloads trên VPS, Traefik router hallovn-media = hallovn.de/download/media/ (docs/downloads.md)
 const CKK_IMAGES = "https://ckk.biz/ckk/images/";
 const CKK_MEDIA = "https://ckk.biz/download/media/";
-const VIDEO_BASE = CKK_MEDIA;
+const VIDEO_BASE = "/download/media/";
 const localMedia = <T extends string | null>(url: T): T =>
   (url?.startsWith(CKK_IMAGES) ? "/ckk/images/" + url.slice(CKK_IMAGES.length) : url?.startsWith(CKK_MEDIA) ? VIDEO_BASE + url.slice(CKK_MEDIA.length) : url) as T;
 

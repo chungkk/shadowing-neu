@@ -9,7 +9,7 @@ thay file không cần deploy lại site.
 | Thư mục file trên VPS | `~/ckk-downloads/files/` (user `ubuntu`) |
 | Cấu hình nginx | `~/ckk-downloads/nginx.conf` |
 | Container | `ckk-downloads` (`nginx:1.27-alpine`, network `coolify`) |
-| Định tuyến | Traefik `coolify-proxy`: `Host(ckk.biz) && PathPrefix(/download/)`, priority 1000 |
+| Định tuyến | Traefik `coolify-proxy`: router `ckk-downloads` = `Host(ckk.biz) && PathPrefix(/download/)`; router `hallovn-media` = `Host(hallovn.de) && PathPrefix(/download/media/)` (video câu hỏi lái xe cho web HalloVN, không mở APK). Cả hai priority 1000 |
 
 Mọi đường dẫn khác của `ckk.biz` đi vào app HalloVN (Next.js, repo này).
 Trong `/download/` không liệt kê được thư mục, file không tồn tại trả 404.
@@ -66,6 +66,12 @@ docker run -d --name ckk-downloads --restart unless-stopped --network coolify \
   -l traefik.http.routers.ckk-downloads.tls=true \
   -l traefik.http.routers.ckk-downloads.tls.certresolver=letsencrypt \
   -l traefik.http.routers.ckk-downloads.service=ckk-downloads \
+  -l "traefik.http.routers.hallovn-media.rule=Host(\`hallovn.de\`) && PathPrefix(\`/download/media/\`)" \
+  -l traefik.http.routers.hallovn-media.entrypoints=https \
+  -l traefik.http.routers.hallovn-media.priority=1000 \
+  -l traefik.http.routers.hallovn-media.tls=true \
+  -l traefik.http.routers.hallovn-media.tls.certresolver=letsencrypt \
+  -l traefik.http.routers.hallovn-media.service=ckk-downloads \
   -l traefik.http.services.ckk-downloads.loadbalancer.server.port=80 \
   nginx:1.27-alpine
 ```
