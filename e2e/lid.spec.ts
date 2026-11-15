@@ -20,7 +20,7 @@ test.describe("LiD — HTTP", () => {
   });
 
   test("các trang công khai → 200, có canonical", async ({ request }) => {
-    for (const path of ["/leben-in-deutschland", "/leben-in-deutschland/1", "/leben-in-deutschland/by", "/leben-in-deutschland/thi-thu"]) {
+    for (const path of ["/leben-in-deutschland", "/leben-in-deutschland/chu-de", "/leben-in-deutschland/1", "/leben-in-deutschland/by", "/leben-in-deutschland/thi-thu"]) {
       const res = await request.get(path, { maxRedirects: 0 });
       expect(res.status(), path).toBe(200);
       expect(await res.text(), path).toContain(`rel="canonical"`);
@@ -29,8 +29,8 @@ test.describe("LiD — HTTP", () => {
 });
 
 test.describe("LiD — giao diện", () => {
-  test("trang chủ có lối vào bộ 30 câu và câu của bang", async ({ page }) => {
-    await page.goto("/leben-in-deutschland");
+  test("trang Học theo chủ đề có lối vào bộ 30 câu và câu của bang", async ({ page }) => {
+    await page.goto("/leben-in-deutschland/chu-de");
     await expect(page.getByRole("link", { name: /Câu 1–30/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /10 câu riêng của/ })).toBeVisible();
   });

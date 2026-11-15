@@ -1,15 +1,13 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, BookOpen, Bookmark, Eye, Flag, RotateCcw, Settings } from "lucide-react";
+import { BarChart3, BookOpen, Flag, RotateCcw, Settings, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { CATEGORIES, EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, getSet, hasTopics, listSets, prefs, stateIds } from "@/lib/lid";
+import { EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { summarize } from "@/lib/quiz-types";
-import type { QuizStat } from "@/lib/quiz-types";
 import { ActionCard, BigCard, ProgressBar } from "@/components/QuizParts";
-import { LidInfo, Wappen } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -64,26 +62,6 @@ function jsonLd() {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />;
 }
 
-/** Ô của 1 bộ câu: tên + tiến độ đúng / đã làm */
-function SetTile({ href, title, sub, ids, stats, icon }: { href: string; title: string; sub?: string; ids: string[]; stats: Record<string, QuizStat>; icon?: ReactNode }) {
-  const s = summarize(ids, stats);
-  return (
-    <Link href={href} prefetch={false} className="card sticker-link flex flex-col gap-2 p-3">
-      <span className="flex items-center gap-2">
-        {icon}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-extrabold">{title}</span>
-          {sub && <span className="block truncate text-xs text-muted">{sub}</span>}
-        </span>
-        <span className="shrink-0 text-xs font-bold text-muted tabular-nums">
-          {s.done}/{s.total}
-        </span>
-      </span>
-      <ProgressBar {...s} />
-    </Link>
-  );
-}
-
 async function Home() {
   const { state, chosen } = await prefs();
   const user = await getCurrentUser();
@@ -92,16 +70,15 @@ async function Home() {
   const inScope = new Set(mine);
   const all = summarize(mine, stats);
   const marked = user ? quizBookmarks(user.id, "lid").filter((id) => inScope.has(id)).length : 0;
-  const own = getSet(state.code)!;
 
   return (
     <>
-      {/* Đầu trang: tiêu đề + nút cài đặt — như Lái xe */}
-      <section className="card">
+      {/* Đầu trang: tiêu đề + phụ đề + nút cài đặt — cùng khuôn với Lái xe */}
+      <section className="sticker p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <h1 className="page-title">Leben in Deutschland</h1>
-            <p className="text-sm text-muted">Ôn thi nhập tịch Đức (Einbürgerungstest) bằng tiếng Việt · danh mục BAMF 2025</p>
+            <p className="text-sm text-muted">Ôn thi nhập tịch bang {state.name} · Einbürgerungstest</p>
           </div>
           <Link href="/leben-in-deutschland/cai-dat" className="btn-icon" aria-label="Cài đặt Leben in Deutschland">
             <Settings className="size-5" />
@@ -109,15 +86,14 @@ async function Home() {
         </div>
       </section>
 
-      <StatePicker states={STATES} current={state.code} chosen={chosen} />
+      {/* Chưa tự chọn bang → nhắc chọn; đã chọn thì đổi bang trong Cài đặt (như đổi hạng ở Lái xe) */}
+      {!chosen && <StatePicker states={STATES} current={state.code} chosen={false} />}
 
       {/* Tiến trình */}
-      <section className="card flex flex-col gap-3">
+      <section className="sticker flex flex-col gap-3 p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-extrabold tracking-wider text-muted uppercase">Tiến trình</h2>
-          <span className="rounded-full bg-card-2 px-2.5 py-1 text-xs font-bold text-muted">
-            {generalCount()} câu chung + {stateIds(state.code).length} câu bang
-          </span>
+          <span className="rounded-full bg-card-2 px-2.5 py-1 text-xs font-bold text-muted">Danh mục BAMF 2025</span>
         </div>
         <ProgressBar {...all} />
         <div className="flex items-center gap-4 text-sm text-muted">
@@ -136,14 +112,14 @@ async function Home() {
             <Link href={`/login?next=${encodeURIComponent("/leben-in-deutschland")}`} className="font-bold underline underline-offset-2">
               Đăng nhập
             </Link>{" "}
-            để lưu tiến trình, câu đánh dấu và lịch sử thi.
+            để lưu tiến trình, câu sai và lịch sử thi.
           </p>
         )}
       </section>
 
-      {/* 2 thẻ lớn: Học / Thi thử (thẻ chính). Cài đặt nằm ở nút bánh răng trên đầu trang */}
+      {/* 2 thẻ lớn: Học / Thi thử (thẻ chính) */}
       <div className="grid grid-cols-2 gap-3">
-        <BigCard href="/leben-in-deutschland/hoc" icon={BookOpen} title="Học tất cả" text={`${mine.length} câu hỏi`} />
+        <BigCard href="/leben-in-deutschland/chu-de" icon={BookOpen} title="Học theo chủ đề" text={`${generalCount()} câu chung + ${stateIds(state.code).length} câu bang`} />
         <BigCard href="/leben-in-deutschland/thi-thu" icon={Flag} title="Thi thử" text={`${EXAM_TOTAL} câu · ${EXAM.minutes} phút`} primary />
       </div>
 
@@ -157,48 +133,18 @@ async function Home() {
           disabled={!!user && !all.wrong}
           text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
         />
-        <ActionCard href="/leben-in-deutschland/danh-dau" icon={Bookmark} title="Đánh dấu" locked={!user} text={user ? `${marked} câu` : "Đăng nhập để đánh dấu câu"} />
-        <ActionCard href="/leben-in-deutschland/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Tiến độ và lịch sử thi" : "Đăng nhập để xem thống kê"} />
+        <ActionCard
+          href="/leben-in-deutschland/danh-dau"
+          icon={Star}
+          title="Đánh dấu"
+          locked={!user}
+          disabled={!!user && !marked}
+          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ⭐ ở câu hỏi để đánh dấu"}
+        />
+        <ActionCard href="/leben-in-deutschland/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Kết quả và tiến trình" : "Đăng nhập để xem thống kê"} />
       </div>
 
-      {/* Học từng phần: câu của bang, bộ 30 câu, chủ đề, đọc lướt */}
-      <section className="flex flex-col gap-3" aria-labelledby="lid-parts">
-        <h2 id="lid-parts" className="section-title">
-          Học từng phần
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SetTile href={`/leben-in-deutschland/${state.code}`} title={own.title} sub={own.subtitle} ids={own.ids} stats={stats} icon={<Wappen code={state.code} className="h-8 w-6" />} />
-          <Link href="/leben-in-deutschland/tat-ca?mode=lesen" prefetch={false} className="card sticker-link flex items-center gap-3 p-3">
-            <Eye className="size-6 shrink-0 text-accent-text" />
-            <span className="min-w-0">
-              <span className="block font-extrabold">Đọc lướt đáp án</span>
-              <span className="block text-xs text-muted">300 câu chung, đáp án đúng tô sẵn — ôn nhanh trước khi thi</span>
-            </span>
-          </Link>
-        </div>
-        {hasTopics() && (
-          <>
-            <h3 className="text-xs font-extrabold tracking-wider text-muted uppercase">Theo chủ đề</h3>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {CATEGORIES.map((c) => {
-                const s = getSet(c.key)!;
-                return <SetTile key={c.key} href={`/leben-in-deutschland/${c.key}`} title={c.vi} sub={c.de} ids={s.ids} stats={stats} />;
-              })}
-            </div>
-          </>
-        )}
-        <h3 className="text-xs font-extrabold tracking-wider text-muted uppercase">Bộ 30 câu theo số câu BAMF</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {listSets().map((s) => (
-            <SetTile key={s.id} href={`/leben-in-deutschland/${s.id}`} title={`Câu ${s.from}–${s.to}`} ids={s.ids} stats={stats} />
-          ))}
-        </div>
-      </section>
-
-      <LidInfo>
-        Cần đạt ít nhất {EXAM.pass}/{EXAM_TOTAL} câu đúng để đậu bài thi.
-      </LidInfo>
-
+      {/* Câu hỏi thường gặp: nội dung cho SEO (FAQPage), xếp sau menu như phần phụ */}
       <section className="card flex flex-col gap-2" aria-labelledby="lid-faq">
         <h2 id="lid-faq" className="section-title">
           Câu hỏi thường gặp

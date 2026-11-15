@@ -41,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/games/der-die-das`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/lai-xe`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/leben-in-deutschland`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/leben-in-deutschland/chu-de`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/leben-in-deutschland/thi-thu`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/thi-thu`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/de-mau`, changeFrequency: "monthly", priority: 0.7 },

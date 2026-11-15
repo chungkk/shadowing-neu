@@ -16,7 +16,7 @@ export const LID_SET_IDS: readonly string[] = [
 ];
 
 /** Trang con cố định (không phải [set]) */
-export const LID_PAGES = ["thi-thu", "cau-sai", "danh-dau", "thong-ke", "cai-dat"] as const;
+export const LID_PAGES = ["chu-de", "thi-thu", "cau-sai", "danh-dau", "thong-ke", "cai-dat"] as const;
 
 /** Trang cần đăng nhập: chưa có cookie phiên thì proxy chuyển sang /login (HTTP 307 thật, thay vì chuyển hướng giữa luồng stream) */
 export const LID_PRIVATE = /^\/leben-in-deutschland\/(cau-sai|danh-dau|thong-ke|thi-thu\/\d+)\/?$/;
