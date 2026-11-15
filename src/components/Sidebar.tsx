@@ -31,8 +31,9 @@ const DEUTSCH: Item[] = [
 // Thanh dưới đáy (tối đa 6 ô): khách thấy đủ các phần; đã đăng nhập thì Ôn tập (có chấm đỏ số từ đến hạn) thay Trang chủ
 // — trang chủ chỉ là trang giới thiệu, logo ở thanh trên cùng vẫn dẫn về đó.
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
-const GUEST_BAR: Item[] = ITEMS;
-const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3], ITEMS[4]];
+// Tab Game đã ẩn khỏi thanh dưới đáy (và thanh trên cùng) — trang /games vẫn mở được, còn trong menu avatar
+const GUEST_BAR: Item[] = ITEMS.filter((it) => it.href !== "/games");
+const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
@@ -113,12 +114,13 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-// Máy tính: logo đã là nút về trang chủ → thanh trên cùng bắt đầu từ "Tin tức"
-const HEADER_ITEMS = ITEMS.slice(1);
+// Máy tính: logo đã là nút về trang chủ → thanh trên cùng bắt đầu từ "Tiếng Đức"; ẩn tab Game (vẫn còn ở thanh dưới đáy điện thoại)
+const HEADER_ITEMS = ITEMS.slice(1).filter((it) => it.href !== "/games");
 
 /** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy). Ôn tập là nút riêng ở góc phải (ReviewPill) */
 export function HeaderNav() {
-  return <HeaderNavFrame current={useCurrent([...HEADER_ITEMS, REVIEW, ...USER_ITEMS])} />;
+  // Truyền đủ ITEMS: ở /games khớp mục Game (không hiện trên thanh) → không sáng nhầm "Tiếng Đức"
+  return <HeaderNavFrame current={useCurrent([...ITEMS, REVIEW, ...USER_ITEMS])} />;
 }
 
 /** Máy tính: nút "Ôn N" ở góc phải thanh trên cùng — chỉ hiện khi có từ đến hạn, bấm là vào thẳng buổi ôn */
