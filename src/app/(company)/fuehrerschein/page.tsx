@@ -1,5 +1,5 @@
-import ProductPageView from '@/biz/components/business/ProductPageView';
-import { productJsonLd, productMetadata } from '@/biz/lib/productSeo';
+import ProductPageView from '@/components/company/ProductPageView';
+import { productJsonLd, productMetadata } from '@/lib/company/productSeo';
 
 export const metadata = productMetadata('fuehrerschein');
 

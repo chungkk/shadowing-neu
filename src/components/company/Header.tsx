@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { BrandMark, CloseIcon, MenuIcon } from '@/biz/components/icons';
-import { useLocale, useT } from '@/biz/contexts/LocaleContext';
-import { LOCALES } from '@/biz/contexts/LocaleContext';
+import { BrandMark, CloseIcon, MenuIcon } from '@/components/company/icons';
+import { useLocale, useT } from '@/components/company/LocaleContext';
+import { LOCALES } from '@/components/company/LocaleContext';
 
 const COPY = {
     de: {

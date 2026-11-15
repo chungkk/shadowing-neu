@@ -3,7 +3,7 @@ import { BookOpen, Database, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { STATES, prefs } from "@/lib/lid";
-import { AutoMarkToggle, ResetProgress, VibrateToggle } from "@/components/lai-xe/Settings";
+import { AutoMarkToggle, ResetProgress, VibrateToggle } from "@/components/laixe/Settings";
 import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";

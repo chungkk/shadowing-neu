@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { BookmarkPlus, Gem, LogIn, Pencil, Play, Trophy, UserRound } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { LoginLink } from "./LoginDialog";
-import Mascot from "./Mascot";
+import { LoginLink } from "../auth/LoginDialog";
+import Mascot from "../Mascot";
 
 /**
  * Chơi không cần tài khoản ở các game từ vựng (Mưa từ vựng, Đào vàng, Nối từ): khách nhập 1 tên tạm (lưu trong trình

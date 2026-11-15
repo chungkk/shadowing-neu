@@ -135,6 +135,13 @@
           "supportsBackgroundPlayback": false,
           "supportsPictureInPicture": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false,
+          "defaultChannel": "reminders"
+        }
       ]
     ],
     "experiments": {

@@ -1,10 +1,10 @@
 import data from "@content/fuehrerschein/questions.json";
-import { NUM_HINTS } from "@shared/fuehrerschein-units";
-import type { DrivingQ, ExamConfig } from "@shared/fuehrerschein-rules";
+import { NUM_HINTS } from "@shared/laixe/units";
+import type { DrivingQ, ExamConfig } from "@shared/laixe/rules";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi lý thuyết lái xe cho mọi hạng — cùng file dữ liệu với tab Lái xe của web (src/content/fuehrerschein),
-// đóng gói trong app nên học được khi không có mạng. Bản app của src/lib/fuehrerschein.ts (không đọc cookie / server).
+// đóng gói trong app nên học được khi không có mạng. Bản app của src/lib/laixe/index.ts (không đọc cookie / server).
 
 type Raw = (typeof data.questions)[number];
 

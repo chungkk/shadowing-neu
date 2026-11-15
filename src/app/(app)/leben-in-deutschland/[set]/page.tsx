@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { CATEGORIES, forClient, getSet, getState, prefs } from "@/lib/lid";
-import { LID_SET_IDS } from "@/lib/lid-routes";
+import { LID_SET_IDS } from "@/lib/lid/routes";
 import LidRunner from "@/components/lid/LidRunner";
 import { LidShell } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";

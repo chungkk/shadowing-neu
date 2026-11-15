@@ -5,13 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, Languages, Lightbulb, RotateCw, Star, X } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
-import { isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/fuehrerschein-rules";
-import type { QuizStat } from "@/lib/quiz-types";
-import { sendAnswer, watchOutbox } from "@/lib/quiz-outbox";
+import { isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/laixe/rules";
+import type { QuizStat } from "@/lib/quiz/types";
+import { sendAnswer, watchOutbox } from "@/lib/quiz/outbox";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../GuestQuota";
-import { ProgressBar } from "../QuizParts";
+import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
+import { ProgressBar } from "../quiz/QuizParts";
 
 /**
  * Màn câu hỏi Leben in Deutschland — cách chơi như app LiD, giao diện chung với tab Lái xe:

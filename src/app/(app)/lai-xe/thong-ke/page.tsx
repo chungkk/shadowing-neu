@@ -5,10 +5,10 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
-import { classQuestionIds, isGrund, prefs } from "@/lib/fuehrerschein";
-import { summarize } from "@/lib/quiz-types";
-import { ExamHistory } from "@/components/lai-xe/ExamHistory";
-import { ResetProgress } from "@/components/lai-xe/Settings";
+import { classQuestionIds, isGrund, prefs } from "@/lib/laixe";
+import { summarize } from "@/lib/quiz/types";
+import { ExamHistory } from "@/components/laixe/ExamHistory";
+import { ResetProgress } from "@/components/laixe/Settings";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Thống kê · Lý thuyết lái xe", robots: { index: false } };

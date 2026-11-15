@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { body, fail, str } from "@/lib/api";
-import { createPlay, playAction, playState, playView } from "@/lib/play-game";
-import { playActor } from "@/lib/play-guest";
+import { createPlay, playAction, playState, playView } from "@/lib/games/play-game";
+import { playActor } from "@/lib/games/play-guest";
 import { allow } from "@/lib/rate-limit";
 
 const CODE_RE = /^[A-Za-z0-9]{6}$/;

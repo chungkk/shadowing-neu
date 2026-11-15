@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { dueCount, getPoints } from "@/lib/db";
 import PointsBadge from "./PointsBadge";
 import ReminderBell from "./ReminderBell";
-import { LoginLink } from "./LoginDialog";
+import { LoginLink } from "./auth/LoginDialog";
 import Sidebar, { DeutschOnly, HeaderNav, ReviewPill, UserDropdown } from "./Sidebar";
 
 /** Thanh dưới đáy (điện thoại) có thông tin người dùng (đọc cookie lúc request → đặt trong <Suspense>) */

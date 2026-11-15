@@ -43,6 +43,18 @@ const vi = {
   "tabs.settings": "Cài đặt",
 
   // Bài học
+  // Nhắc học hằng ngày (thông báo)
+  "remind.section": "Nhắc học",
+  "remind.toggle": "Nhắc học mỗi ngày",
+  "remind.toggleSub": "Thông báo việc đang học dở",
+  "remind.time": "Giờ nhắc",
+  "remind.footer": "Mỗi ngày vào giờ đã chọn, app nhắc bạn bài đang học dở, từ đến hạn ôn hoặc câu đang sai. Không có việc dở thì không nhắc.",
+  "remind.deniedTitle": "Chưa được phép gửi thông báo",
+  "remind.deniedBody": "Bật thông báo cho HalloVN trong Cài đặt của điện thoại để nhận nhắc học.",
+  "remind.channel": "Nhắc học",
+  "remind.title": "Hôm nay học tiếp nhé 📚",
+  "remind.titleMore": "Hôm nay học tiếp nhé 📚 (+{n} việc)",
+  "remind.genericBody": "Bạn còn việc đang học dở — mở app để học tiếp.",
   "theme.title": "Giao diện",
   "theme.light": "Sáng",
   "theme.dark": "Tối",
@@ -684,6 +696,18 @@ const de: Dict = {
   "tabs.lid": "LiD",
   "tabs.settings": "Einstellungen",
 
+  // Tägliche Lernerinnerung (Mitteilung)
+  "remind.section": "Erinnerung",
+  "remind.toggle": "Tägliche Lernerinnerung",
+  "remind.toggleSub": "Mitteilung zu Angefangenem",
+  "remind.time": "Uhrzeit",
+  "remind.footer": "Jeden Tag zur gewählten Uhrzeit erinnert dich die App an angefangene Lektionen, fällige Wörter oder falsch beantwortete Fragen. Gibt es nichts Offenes, kommt keine Mitteilung.",
+  "remind.deniedTitle": "Mitteilungen nicht erlaubt",
+  "remind.deniedBody": "Erlaube Mitteilungen für HalloVN in den Einstellungen deines Telefons, um Erinnerungen zu bekommen.",
+  "remind.channel": "Lernerinnerung",
+  "remind.title": "Zeit zum Weiterlernen 📚",
+  "remind.titleMore": "Zeit zum Weiterlernen 📚 (+{n} weitere)",
+  "remind.genericBody": "Du hast noch etwas Angefangenes — öffne die App und lerne weiter.",
   "theme.title": "Design",
   "theme.light": "Hell",
   "theme.dark": "Dunkel",

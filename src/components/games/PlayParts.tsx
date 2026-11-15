@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Clock, Flag, Pause, Play } from "lucide-react";
-import type { PlayView } from "@/lib/play";
-import Mascot from "./Mascot";
+import type { PlayView } from "@/lib/games/play";
+import Mascot from "../Mascot";
 
 /** Phần dùng chung của màn chơi Sudoku / Caro */
 

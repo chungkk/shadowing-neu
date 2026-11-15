@@ -1,10 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { getCurrentUser } from "./auth";
-import { getQuizPref, setQuizPref } from "./db";
+import { getCurrentUser } from "../auth";
+import { getQuizPref, setQuizPref } from "../db";
 import data from "@/content/fuehrerschein/questions.json";
-import { NUM_HINTS } from "./fuehrerschein-units";
-import { isLang, type DrivingQ, type ExamConfig, type Lang } from "./fuehrerschein-rules";
+import { NUM_HINTS } from "./units";
+import { isLang, type DrivingQ, type ExamConfig, type Lang } from "./rules";
 
 // Bộ câu hỏi lý thuyết lái xe Đức cho mọi hạng bằng (nhập bằng scripts/import-portal-content.mjs, giống app iOS/Android)
 

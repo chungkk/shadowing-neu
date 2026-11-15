@@ -1,10 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { getCurrentUser } from "./auth";
-import { getQuizPref, setQuizPref } from "./db";
+import { getCurrentUser } from "../auth";
+import { getQuizPref, setQuizPref } from "../db";
 import data from "@/content/lid/questions.json";
-import { isLang, type DrivingQ, type Lang, type Tr } from "./fuehrerschein-rules";
-import { LID_SET_COUNT, LID_SET_IDS, LID_STATE_CODES, LID_TOPIC_KEYS } from "./lid-routes";
+import { isLang, type DrivingQ, type Lang, type Tr } from "../laixe/rules";
+import { LID_SET_COUNT, LID_SET_IDS, LID_STATE_CODES, LID_TOPIC_KEYS } from "./routes";
 
 // Bộ câu hỏi "Leben in Deutschland" (danh mục BAMF, Stand 07.05.2025):
 // 300 câu chung + 10 câu riêng mỗi bang. Thi thật: 33 câu (30 chung + 3 của bang), đúng ≥ 17 là đậu, 60 phút.
@@ -45,9 +45,9 @@ const ALL = new Map<string, { q: Raw; general: boolean; nr: number }>([
   ...Object.values(STATE_QS).flatMap((qs) => qs.map(({ q, nr }) => [q.id, { q, general: false, nr }] as const)),
 ]);
 
-// Hằng số đường dẫn (lid-routes.ts, dùng trong proxy) phải khớp dữ liệu
+// Hằng số đường dẫn (lid/routes.ts, dùng trong proxy) phải khớp dữ liệu
 if (STATES.map((s) => s.code).join() !== LID_STATE_CODES.join() || Math.ceil(GENERAL.length / SET_SIZE) !== LID_SET_COUNT)
-  throw new Error("lid-routes.ts không khớp src/content/lid/questions.json");
+  throw new Error("lib/lid/routes.ts không khớp src/content/lid/questions.json");
 
 /** 3 chủ đề của danh mục BAMF — theo trường `topic` của từng câu (không theo khoảng số câu) */
 export const CATEGORIES: { key: Topic; de: string; vi: string }[] = [

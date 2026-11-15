@@ -2,8 +2,8 @@
 
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { SITE } from '@/biz/lib/site';
-import { useT } from '@/biz/contexts/LocaleContext';
+import { SITE } from '@/lib/company/site';
+import { useT } from '@/components/company/LocaleContext';
 
 const COPY = {
     de: {

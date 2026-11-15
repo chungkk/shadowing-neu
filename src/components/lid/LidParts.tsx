@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft, BarChart3, Info, LogIn, Star } from "lucide-react";
-import { LoginLink } from "../LoginDialog";
+import { LoginLink } from "../auth/LoginDialog";
 
 /**
  * Khung trang chung của phần Leben in Deutschland — cùng kiểu với tab Lái xe:

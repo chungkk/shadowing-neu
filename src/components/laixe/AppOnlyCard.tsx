@@ -1,5 +1,5 @@
 import { Smartphone } from "lucide-react";
-import { APP_LINKS } from "@/biz/lib/site";
+import { APP_LINKS } from "@/lib/company/site";
 
 /** Thẻ mời học tiếp trên app (iOS + APK Android). */
 export default function AppOnlyCard({ title, text }: { title: string; text: string }) {

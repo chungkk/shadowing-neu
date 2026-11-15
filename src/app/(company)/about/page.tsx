@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import HomeContent from '@/biz/components/business/HomeContent';
-import { COMPANY, FACEBOOK_PAGE_URL, SITE } from '@/biz/lib/site';
-import { SERVICES, productPath } from '@/biz/lib/services';
-import { pageMetadata } from '@/biz/lib/seo';
+import HomeContent from '@/components/company/HomeContent';
+import { COMPANY, FACEBOOK_PAGE_URL, SITE } from '@/lib/company/site';
+import { SERVICES, productPath } from '@/lib/company/services';
+import { pageMetadata } from '@/lib/company/seo';
 
 export const metadata: Metadata = pageMetadata({
   title: 'HalloVN – Software, Apps und Web-Anwendungen',

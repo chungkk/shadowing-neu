@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import type { PlayGame } from "@/lib/play";
+import type { PlayGame } from "@/lib/games/play";
 import PlayLobby from "./PlayLobby";
 import PlayRoom from "./PlayRoom";
 

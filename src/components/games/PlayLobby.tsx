@@ -15,7 +15,7 @@ import {
   type PlayState,
   type PlayView,
   type SudokuLevel,
-} from "@/lib/play";
+} from "@/lib/games/play";
 import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GameHeader } from "./GameParts";

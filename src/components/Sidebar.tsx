@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { logout } from "@/app/(portal)/auth-actions";
+import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
 
 type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy

@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { SITE } from '@/biz/lib/site';
-import { useT } from '@/biz/contexts/LocaleContext';
-import { CheckIcon } from '@/biz/components/icons';
+import { SITE } from '@/lib/company/site';
+import { useT } from '@/components/company/LocaleContext';
+import { CheckIcon } from '@/components/company/icons';
 
 const COPY = {
     de: {

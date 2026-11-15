@@ -2,8 +2,8 @@
 // Ảnh chụp nằm ở public/apps/<id>/: ảnh App Store của app iOS, ảnh chụp trang học (trước đây ckk.pro) cho HalloVN.
 // Mọi con số ở đây phải khớp với app thật (mô tả App Store, ảnh chụp); không tự đặt ra.
 import catalog from '@/../content/laixe/catalog_all/manifest.json';
-import type { Locale } from '@/biz/contexts/LocaleContext';
-import type { ServiceId } from '@/biz/lib/services';
+import type { Locale } from '@/components/company/LocaleContext';
+import type { ServiceId } from '@/lib/company/services';
 
 export interface Screen {
     src: string;

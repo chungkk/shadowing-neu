@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { pageMetadata } from '@/biz/lib/seo';
-import LegalShell from '@/biz/components/business/LegalShell';
-import { COMPANY, SITE } from '@/biz/lib/site';
-import type { Locale } from '@/biz/contexts/LocaleContext';
+import { pageMetadata } from '@/lib/company/seo';
+import LegalShell from '@/components/company/LegalShell';
+import { COMPANY, SITE } from '@/lib/company/site';
+import type { Locale } from '@/components/company/LocaleContext';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Impressum',

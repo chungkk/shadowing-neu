@@ -1,10 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import type { Service } from '@/biz/lib/services';
-import type { Screen } from '@/biz/lib/productPages';
-import { useLocale } from '@/biz/contexts/LocaleContext';
-import { AndroidIcon, AppleIcon, ArrowRightIcon } from '@/biz/components/icons';
+import type { Service } from '@/lib/company/services';
+import type { Screen } from '@/lib/company/productPages';
+import { useLocale } from '@/components/company/LocaleContext';
+import { AndroidIcon, AppleIcon, ArrowRightIcon } from '@/components/company/icons';
 
 export const inkText = (service: Service) => (service.onInk === 'light' ? '#fff' : 'var(--ink)');
 

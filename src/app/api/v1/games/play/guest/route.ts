@@ -1,5 +1,5 @@
 import { body, fail } from "@/lib/api";
-import { cleanGuestName, saveGuest } from "@/lib/play-guest";
+import { cleanGuestName, saveGuest } from "@/lib/games/play-guest";
 import { allow, clientIp } from "@/lib/rate-limit";
 
 /**

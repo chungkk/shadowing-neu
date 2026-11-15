@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import { ArrowLeft, BookOpen, RotateCcw, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { classQuestionIds, learnTree, prefs } from "@/lib/fuehrerschein";
-import { summarize } from "@/lib/quiz-types";
-import { ActionCard, ProgressBar } from "@/components/QuizParts";
+import { classQuestionIds, learnTree, prefs } from "@/lib/laixe";
+import { summarize } from "@/lib/quiz/types";
+import { ActionCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {

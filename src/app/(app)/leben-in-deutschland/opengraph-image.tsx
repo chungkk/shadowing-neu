@@ -1,4 +1,4 @@
-import { OG_SIZE, renderOgImage } from "@/biz/lib/ogImage";
+import { OG_SIZE, renderOgImage } from "@/lib/company/ogImage";
 
 // Ảnh chia sẻ cho cả phần Leben in Deutschland trên web (các trang con dùng chung)
 export const alt = "Leben in Deutschland tiếng Việt – luyện thi Einbürgerungstest";

@@ -1,5 +1,5 @@
-import { ProductPrivacy } from '@/biz/components/business/ProductLegal';
-import { privacyMetadata } from '@/biz/lib/legal';
+import { ProductPrivacy } from '@/components/company/ProductLegal';
+import { privacyMetadata } from '@/lib/company/legal';
 
 export const metadata = privacyMetadata('calendar');
 

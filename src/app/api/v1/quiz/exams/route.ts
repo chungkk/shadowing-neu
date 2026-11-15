@@ -1,7 +1,7 @@
 import { apiUser, body, fail, str } from "@/lib/api";
 import { listQuizExams, recordQuizExam } from "@/lib/db";
-import { bogenIds, classInfo, classQuestionIds, gradable, isClassId } from "@/lib/fuehrerschein";
-import { grade, isRight } from "@/lib/fuehrerschein-rules";
+import { bogenIds, classInfo, classQuestionIds, gradable, isClassId } from "@/lib/laixe";
+import { grade, isRight } from "@/lib/laixe/rules";
 import * as lid from "@/lib/lid";
 
 // Bài thi thử của tab Lái xe / Leben in Deutschland: server chấm lại từ dữ liệu của mình rồi lưu vào lịch sử

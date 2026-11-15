@@ -3,15 +3,15 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { SERVICES, productPath } from '@/biz/lib/services';
-import type { ServiceId } from '@/biz/lib/services';
-import { PRODUCT_PAGES } from '@/biz/lib/productPages';
-import type { ProductPage } from '@/biz/lib/productPages';
-import { useLocale, useT } from '@/biz/contexts/LocaleContext';
-import { Shot, StoreButtons, inkText } from '@/biz/components/business/ProductParts';
-import { StampArt } from '@/biz/components/business/StampArt';
-import { Lightbox } from '@/biz/components/business/Lightbox';
-import { ArrowRightIcon, PlusIcon } from '@/biz/components/icons';
+import { SERVICES, productPath } from '@/lib/company/services';
+import type { ServiceId } from '@/lib/company/services';
+import { PRODUCT_PAGES } from '@/lib/company/productPages';
+import type { ProductPage } from '@/lib/company/productPages';
+import { useLocale, useT } from '@/components/company/LocaleContext';
+import { Shot, StoreButtons, inkText } from '@/components/company/ProductParts';
+import { StampArt } from '@/components/company/StampArt';
+import { Lightbox } from '@/components/company/Lightbox';
+import { ArrowRightIcon, PlusIcon } from '@/components/company/icons';
 
 const UI = {
     de: {

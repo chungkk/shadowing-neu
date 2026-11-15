@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import AuthForm from "@/components/AuthForm";
+import AuthForm from "@/components/auth/AuthForm";
 import { getCurrentUser } from "@/lib/auth";
 import { appleWebClientId, googleWebClientId } from "@/lib/oauth";
 import { safeNext } from "@/lib/safe-next";

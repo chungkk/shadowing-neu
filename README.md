@@ -4,24 +4,50 @@ Tên miền chính thức là **hallovn.de**. ckk.biz và ckk.pro (tên cũ) kh�
 (và phục vụ `/api/*` cho app di động bản cũ — xem `src/proxy.ts`).
 
 Một app Next.js cho cả hallovn.de: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
-cộng các trang doanh nghiệp / pháp lý của HalloVN (chuyển từ repo `ckk-biz`).
+cộng các trang doanh nghiệp / pháp lý của HalloVN (trước ở repo `ckk-biz`, nay đã gộp hẳn vào đây).
 
 ## Cấu trúc
 
-- `src/app/(portal)/` — app học (layout có thanh tab, đăng nhập). `/` = Tiếng Đức, `/lai-xe`, `/leben-in-deutschland`, `/games`…
-- `src/app/(biz)/` + `src/biz/` — trang doanh nghiệp, giao diện riêng (DE/EN/VI): `/about`, `/fuehrerschein`, `/lid`, `/shadowing`,
-  `/privacy`, `/terms`, `/impressum`, `/support`, `/refund`, `/delete-account`, `/<app>/privacy|support`…
-  Các URL này app iOS/Android đang dùng → **không đổi đường dẫn**.
-- `src/app/api/fuehrerschein/*` — API câu hỏi cho app lái xe, đọc `content/laixe/` (bảo vệ trong `src/proxy.ts`).
+```
+hallovn.de/                    # repo (GitHub: chungkk/shadowing-neu), máy Mac: ~/Code/hallovn/hallovn.de
+├── src/
+│   ├── app/
+│   │   ├── (app)/             # app học: thanh tab, đăng nhập. / = Tiếng Đức, /lai-xe, /leben-in-deutschland, /games…
+│   │   ├── (company)/         # trang doanh nghiệp + pháp lý (DE/EN/VI): /about, /fuehrerschein, /lid, /privacy, /impressum…
+│   │   ├── api/v1/            # API cho web + app mobile HalloVN
+│   │   └── api/fuehrerschein/ # API câu hỏi cho app lái xe riêng (iOS/Android), đọc content/laixe/
+│   ├── components/
+│   │   ├── auth/  games/  quiz/  laixe/  lid/
+│   │   ├── company/           # giao diện trang doanh nghiệp (Header, Footer, LocaleContext, ProductPageView…)
+│   │   └── *.tsx              # phần tiếng Đức (ShadowPlayer, VocabList, DeckStudy…) + dùng chung
+│   ├── lib/
+│   │   ├── laixe/             # câu hỏi + luật chấm thi lái xe, catalog cho API (catalog.mjs), guard
+│   │   ├── lid/  quiz/  games/
+│   │   ├── company/           # cấu hình site, SEO, trang sản phẩm, văn bản pháp lý
+│   │   └── *.ts               # lõi: db, auth, api, phần tiếng Đức (subtitles, srs, dictation…)
+│   ├── content/               # dữ liệu đóng gói: decks/, fuehrerschein/, lid/
+│   ├── hooks/
+│   └── proxy.ts
+├── mobile/                    # app React Native HalloVN (dùng chung ../src/lib qua @shared, ../src/content qua @content)
+├── content/laixe/             # catalog câu hỏi phục vụ /api/fuehrerschein/* (không sửa tay)
+├── tools/laixe-catalog/       # tạo / dịch / publish catalog lái xe (trước nằm ở repo ckk-biz) — xem README trong đó
+├── scripts/                   # nhập dữ liệu Lái xe/LiD, backup, tiện ích
+├── e2e/                       # Playwright
+└── public/                    # /ckk = media câu hỏi lái xe, /lid, /apps… (đường dẫn công khai, không đổi tên)
+```
+
+- Route group `(app)` / `(company)` không ảnh hưởng URL. Các URL app iOS/Android đang dùng → **không đổi đường dẫn**.
+- Hai root layout → đổi qua lại giữa app học và trang doanh nghiệp là tải lại cả trang (bình thường). 404 chung: `app/global-not-found.tsx`.
 - `src/proxy.ts` — `www.hallovn.de/*`, `ckk.biz/*`, `www.ckk.biz/*`, `ckk.pro/*` → 308 về `hallovn.de` (trừ `/api/*`: app di động
   đã phát hành gọi thẳng `ckk.pro/api/v1` hoặc `ckk.biz/api/v1` kèm Bearer token). Link pháp lý cũ `ckk.pro/privacy|terms` → `/deutsch-shadowing/privacy|terms`.
-- Hai root layout → đổi qua lại giữa app học và trang doanh nghiệp là tải lại cả trang (bình thường). 404 chung: `app/global-not-found.tsx`.
 
 ## Dữ liệu Lái xe / LiD
 
-`node scripts/import-portal-content.mjs` — chép từ `../ckk-biz/data/laixe` (catalog cho API + bộ câu hạng B cho tab Lái xe)
-và `../lid-app` (câu hỏi LiD + ảnh). Catalog vẫn tạo / publish bằng script của `ckk-biz` (`npm run catalog:publish`), sau đó chạy
-script này rồi deploy. Tiến độ trả lời lưu ở bảng `quiz_answers` (tự tạo).
+- **Catalog cho app lái xe** (`content/laixe/`): sửa bằng `npm run catalog:publish -- …` (xem `tools/laixe-catalog/README.md`),
+  kiểm tra `npm run test:catalog`, rồi deploy.
+- **Tab Lái xe / LiD của HalloVN**: `npm run import:content` — đọc `content/laixe/catalog_all` + dữ liệu hạng/đề mẫu của app lái xe
+  và câu hỏi/ảnh của app LiD. Hai app này là dự án độc lập ở `~/Code/fuehrerschein-app`, `~/Code/lid-app` (đổi bằng `APPS_DIR=…`).
+  Sau đó app mobile: `node mobile/scripts/import-quiz-media.mjs`. Tiến độ trả lời lưu ở bảng `quiz_answers` (tự tạo).
 
 ---
 
@@ -101,21 +127,3 @@ Phụ đề được cache trong SQLite: Whisper chỉ chạy **1 lần** cho m�
 | Tra từ | Bấm vào từ → mở dict.cc; "Dịch câu này" → Google Dịch (de → vi) |
 
 Phím tắt: `Space` phát/dừng · `←` `→` câu trước/sau · `R` ghi âm · `P` nghe lại · `H` ẩn chữ.
-
-## Cấu trúc
-
-```
-src/
-  app/page.tsx                 # trang chủ: danh sách bài + ô dán link YouTube
-  app/watch/[videoId]/         # luyện với video YouTube bất kỳ
-  app/lesson/[id]/             # luyện bài do admin đăng
-  app/admin/                   # danh sách, tạo/sửa bài, quản lý người dùng (server actions)
-  app/login, app/register      # đăng nhập / đăng ký (app/auth-actions.ts)
-  lib/db.ts                    # SQLite (bảng lessons)
-  lib/auth.ts                  # mật khẩu (scrypt), phiên đăng nhập cookie ký HMAC, phân quyền
-  components/ShadowPlayer.tsx  # màn hình luyện shadowing
-  components/YouTubePlayer.tsx # YouTube IFrame API
-  hooks/useRecorder.ts         # ghi âm bằng MediaRecorder
-  lib/subtitles.ts             # parse SRT/VTT/YouTube XML, gộp câu
-  lib/audio.ts                 # tách audio + chia đoạn ở trình duyệt
-```

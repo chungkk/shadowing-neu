@@ -3,9 +3,9 @@
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
-import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/(portal)/auth-actions";
+import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/(app)/auth-actions";
 import SocialLogin from "./SocialLogin";
-import Mascot from "./Mascot";
+import Mascot from "../Mascot";
 
 const ErrorBox = ({ children }: { children?: string }) =>
   children ? <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { File, Paths } from "expo-file-system";
-import { isLang, type ExamAnswer, type ExamRecord, type ExamResult, type Lang } from "@shared/fuehrerschein-rules";
-import type { QuizStat } from "@shared/quiz-types";
+import { isLang, type ExamAnswer, type ExamRecord, type ExamResult, type Lang } from "@shared/laixe/rules";
+import type { QuizStat } from "@shared/quiz/types";
 import { ApiError, api } from "../api";
 import { DEFAULT_CLASS, isClassId, type ClassId } from "./fuehrerschein";
 import { DEFAULT_STATE, getState } from "./lid";

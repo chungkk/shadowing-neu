@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { forClient, prefs } from "@/lib/fuehrerschein";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import { forClient, prefs } from "@/lib/laixe";
+import DrivingRunner from "@/components/laixe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Câu đánh dấu · Lý thuyết lái xe", robots: { index: false } };

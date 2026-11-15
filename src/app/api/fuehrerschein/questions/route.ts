@@ -1,6 +1,6 @@
 import { connection } from 'next/server';
 import { NextResponse } from 'next/server';
-import { readManifest, readQuestionPack } from '@/biz/lib/drivingCatalog.mjs';
+import { readManifest, readQuestionPack } from '@/lib/laixe/catalog.mjs';
 
 export async function GET(request: Request) {
     await connection(); // đọc catalog lúc request (manifest đổi khi publish)

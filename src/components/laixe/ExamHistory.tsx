@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { FAIL_TEXT, formatDuration, type ExamRecord } from "@/lib/fuehrerschein-rules";
+import { FAIL_TEXT, formatDuration, type ExamRecord } from "@/lib/laixe/rules";
 
 /** Danh sách bài thi đã làm (bấm để xem lại) */
 export function ExamHistory({ exams, module = "fuehrerschein", stateName }: { exams: ExamRecord[]; module?: "fuehrerschein" | "lid"; stateName?: (code: string) => string }) {

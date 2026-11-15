@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuizExam, quizBookmarks } from "@/lib/db";
-import { forClient, prefs } from "@/lib/fuehrerschein";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import { forClient, prefs } from "@/lib/laixe";
+import DrivingRunner from "@/components/laixe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Xem lại bài thi · Lý thuyết lái xe", robots: { index: false } };

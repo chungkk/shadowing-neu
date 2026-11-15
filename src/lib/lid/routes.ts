@@ -1,5 +1,5 @@
 // Đường dẫn của phần Leben in Deutschland — file nhẹ (không đọc bộ câu hỏi, không server-only) để proxy.ts dùng được.
-// lib/lid.ts kiểm lúc chạy rằng các hằng số này khớp dữ liệu.
+// lib/lid/index.ts kiểm lúc chạy rằng các hằng số này khớp dữ liệu.
 
 export const LID_BASE = "/leben-in-deutschland";
 export const LID_STATE_CODES = ["bw", "by", "be", "bb", "hb", "hh", "he", "mv", "ni", "nw", "rp", "sl", "sn", "st", "sh", "th"] as const;

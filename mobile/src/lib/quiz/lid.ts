@@ -1,5 +1,5 @@
 import data from "@content/lid/questions.json";
-import type { DrivingQ, Tr } from "@shared/fuehrerschein-rules";
+import type { DrivingQ, Tr } from "@shared/laixe/rules";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi "Leben in Deutschland" — cùng file dữ liệu với web (src/content/lid), đóng gói trong app.

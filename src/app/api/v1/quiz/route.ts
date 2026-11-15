@@ -1,7 +1,7 @@
 import { apiUser, body, fail, str } from "@/lib/api";
-import { isRight } from "@/lib/fuehrerschein-rules";
+import { isRight } from "@/lib/laixe/rules";
 import { QUIZ_MODULES, quizStats, recordQuizAnswers, resetQuiz, type QuizModule } from "@/lib/db";
-import * as fuehrerschein from "@/lib/fuehrerschein";
+import * as fuehrerschein from "@/lib/laixe";
 import * as lid from "@/lib/lid";
 
 // Tiến độ trả lời của tab Lái xe (module "fuehrerschein") và Leben in Deutschland ("lid")

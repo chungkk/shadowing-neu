@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { pageMetadata } from '@/biz/lib/seo';
-import { SupportHub } from '@/biz/components/business/ProductLegal';
+import { pageMetadata } from '@/lib/company/seo';
+import { SupportHub } from '@/components/company/ProductLegal';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Support-Center',

@@ -31,7 +31,7 @@ import {
   type Topic,
   type Variant,
   type View as Snap,
-} from "@shared/falling-words";
+} from "@shared/games/falling-words";
 import { ErrorText } from "@/components/ui";
 import { api, deckCover, type DeckSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

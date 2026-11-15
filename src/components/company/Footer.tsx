@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
-import { COMPANY, SITE } from '@/biz/lib/site';
-import { SERVICES, productPath } from '@/biz/lib/services';
-import { BrandMark } from '@/biz/components/icons';
-import { useT } from '@/biz/contexts/LocaleContext';
-import ConsentSettings from '@/biz/components/ConsentSettings';
+import { COMPANY, SITE } from '@/lib/company/site';
+import { SERVICES, productPath } from '@/lib/company/services';
+import { BrandMark } from '@/components/company/icons';
+import { useT } from '@/components/company/LocaleContext';
+import ConsentSettings from '@/components/company/ConsentSettings';
 
 // Năm hiện tại đọc trên trình duyệt (prerender không được dùng new Date() — cacheComponents)
 const noop = () => () => {};

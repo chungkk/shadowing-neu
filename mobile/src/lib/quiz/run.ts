@@ -1,4 +1,4 @@
-import { grade, type DrivingQ, type ExamResult } from "@shared/fuehrerschein-rules";
+import { grade, type DrivingQ, type ExamResult } from "@shared/laixe/rules";
 import * as fs from "./fuehrerschein";
 import * as lid from "./lid";
 import { getModule, getPrefs, type QuizModule } from "./store";

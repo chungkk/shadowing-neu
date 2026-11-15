@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Bot, Maximize2, Minus, Plus, X } from "lucide-react";
-import { CARO_SIZE } from "@/lib/play";
+import { CARO_SIZE } from "@/lib/games/play";
 import { GameClock, MascotSay, PausedCover, ResignButton, useCountdown, type MascotMood, type Send, type View } from "./PlayParts";
 
 /** Quân cờ X/O nét vẽ */

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { COMPANY, SITE } from '@/biz/lib/site';
-import { SERVICES, productPath } from '@/biz/lib/services';
-import type { ServiceId } from '@/biz/lib/services';
-import { PRODUCT_PAGES } from '@/biz/lib/productPages';
-import { breadcrumbJsonLd, pageMetadata } from '@/biz/lib/seo';
+import { COMPANY, SITE } from '@/lib/company/site';
+import { SERVICES, productPath } from '@/lib/company/services';
+import type { ServiceId } from '@/lib/company/services';
+import { PRODUCT_PAGES } from '@/lib/company/productPages';
+import { breadcrumbJsonLd, pageMetadata } from '@/lib/company/seo';
 
 const serviceOf = (id: ServiceId) => SERVICES.find((s) => s.id === id)!;
 

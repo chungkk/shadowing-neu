@@ -7,13 +7,14 @@
 // Kết quả: assets/quiz/{laixe,lid}/ + src/lib/quiz/media-map.ts (URL → require ảnh trong app).
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = path.resolve(here, "..");
 const web = path.resolve(app, "..");
-const srcWebp = path.resolve(process.argv[2] ?? path.join(web, "../fuehrerschein-app/DrivingTheoryApp/assets/images"));
+const srcWebp = path.resolve(process.argv[2] ?? path.join(process.env.APPS_DIR ?? path.join(os.homedir(), "Code"), "fuehrerschein-app/DrivingTheoryApp/assets/images"));
 
 const read = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
 const fresh = (dir) => {

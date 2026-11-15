@@ -21,7 +21,7 @@ import {
   type DrivingQ,
   type ExamAnswer,
   type ExamResult,
-} from "@shared/fuehrerschein-rules";
+} from "@shared/laixe/rules";
 import { Text, TextInput } from "@/components/Text";
 import { styles } from "@/components/ui";
 import { useAuth } from "@/lib/auth";

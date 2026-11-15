@@ -1,4 +1,4 @@
-import type { Locale } from '@/biz/contexts/LocaleContext';
+import type { Locale } from '@/components/company/LocaleContext';
 
 /** Đoạn văn hỗ trợ **đậm** và [liên kết](url). */
 export type Block = string | { list: string[] } | { note: string } | { controller: true };

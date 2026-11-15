@@ -4,8 +4,8 @@ import { accountStats } from "@/lib/account-stats";
 import AccountStats from "@/components/AccountStats";
 import SettingsForms from "@/components/SettingsForms";
 import { SettingsSkeleton } from "@/components/Skeleton";
-import { DrivingSettings } from "@/components/lai-xe/Settings";
-import { classGroups, prefs } from "@/lib/fuehrerschein";
+import { DrivingSettings } from "@/components/laixe/Settings";
+import { classGroups, prefs } from "@/lib/laixe";
 
 async function Settings() {
   const user = await requireUser("/settings");

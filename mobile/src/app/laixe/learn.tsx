@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { LayoutAnimation, Pressable, View } from "react-native";
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { summarize } from "@shared/quiz-types";
+import { summarize } from "@shared/quiz/types";
 import { Text } from "@/components/Text";
 import { Group, ProgressBar, QuizPage, SetRow, SmallBtn, openRun } from "@/components/quiz/QuizParts";
 import { C } from "@/lib/theme";

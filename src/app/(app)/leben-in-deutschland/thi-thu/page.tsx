@@ -5,10 +5,10 @@ import { Clock, LogIn, Play } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
 import { EXAM, EXAM_TOTAL, STATES, getState, prefs } from "@/lib/lid";
-import { ExamHistory } from "@/components/lai-xe/ExamHistory";
+import { ExamHistory } from "@/components/laixe/ExamHistory";
 import { LidShell, LidTopBar, Wappen } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
-import { LoginLink } from "@/components/LoginDialog";
+import { LoginLink } from "@/components/auth/LoginDialog";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {

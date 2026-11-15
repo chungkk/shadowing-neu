@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Check, Clock, Flame, Play, Trophy, Volume2, VolumeX, X } from "lucide-react";
-import { ARTIKEL_SECONDS, ARTIKELS, type Artikel, type ArtikelGameWord } from "@/lib/artikel";
+import { ARTIKEL_SECONDS, ARTIKELS, type Artikel, type ArtikelGameWord } from "@/lib/games/artikel";
 import { clientApi } from "@/lib/client-api";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";

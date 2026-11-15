@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { refresh } from "next/cache";
-import { CLASS_COOKIE, isClassId } from "@/lib/fuehrerschein";
+import { CLASS_COOKIE, isClassId } from "@/lib/laixe";
 import { STATE_COOKIE, getState } from "@/lib/lid";
 import { getCurrentUser } from "@/lib/auth";
 import { setQuizPref } from "@/lib/db";

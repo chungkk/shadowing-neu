@@ -4,12 +4,12 @@ import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "rea
 import { BookmarkPlus, Clock, Flag, Maximize2, Minimize2, Pause, Play, Puzzle, RotateCcw, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { fullWord } from "@/lib/deck-study";
-import type { GameWord, Topic } from "@/lib/falling-words";
+import type { GameWord, Topic } from "@/lib/games/falling-words";
 import { prefetchGerman, speakGerman, stopSpeaking } from "@/lib/speak";
-import { MILESTONE_PAIRS, TIME_BONUS, TIME_PENALTY, newGame, nextMilestone, pick, snapshot, step, type Game, type Phase, type View } from "@/lib/word-match";
+import { MILESTONE_PAIRS, TIME_BONUS, TIME_PENALTY, newGame, nextMilestone, pick, snapshot, step, type Game, type Phase, type View } from "@/lib/games/word-match";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestResult, useGuestGate } from "./GuestPlay";
-import Mascot from "./Mascot";
+import Mascot from "../Mascot";
 import { DeckMenu, GameHeader, type DeckOption } from "./GameParts";
 
 /**

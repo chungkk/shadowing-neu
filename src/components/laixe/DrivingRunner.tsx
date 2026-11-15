@@ -26,10 +26,10 @@ import {
   X,
 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
-import { FAIL_TEXT, grade, isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/fuehrerschein-rules";
-import type { QuizStat } from "@/lib/quiz-types";
+import { FAIL_TEXT, grade, isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/laixe/rules";
+import type { QuizStat } from "@/lib/quiz/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../GuestQuota";
+import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
 
 /**
  * Màn làm câu hỏi của tab Lái xe và Leben in Deutschland (giống app iOS/Android):

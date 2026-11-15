@@ -16,7 +16,7 @@ import {
   updatePlaySeat,
   type PlayRoomRow,
   type PlaySeatRow,
-} from "./db";
+} from "../db";
 import {
   CARO_BOT_TURN_SECONDS,
   CARO_SIZE,

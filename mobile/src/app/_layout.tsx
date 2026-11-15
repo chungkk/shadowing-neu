@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { ThemeRoot } from "@/components/ThemeRoot";
 import { C, isDark } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
+import { ReminderSync } from "@/components/ReminderSync";
 
 /** Dựng lại khi đổi giao diện (ThemeRoot), nên đọc màu trực tiếp ở đây */
 function AppStack() {
@@ -37,6 +38,7 @@ function AppStack() {
             <Stack.Screen name="laixe/bogen" options={{ title: "" }} />
             <Stack.Screen name="feedback" options={{ title: "", presentation: "modal" }} />
           </Stack>
+          <ReminderSync />
         </ThemeProvider>
   );
 }

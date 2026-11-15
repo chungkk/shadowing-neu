@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Car, Check, Trash2 } from "lucide-react";
-import { setLicenseClass, setLidState } from "@/app/(portal)/lai-xe/actions";
+import { setLicenseClass, setLidState } from "@/app/(app)/lai-xe/actions";
 import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 

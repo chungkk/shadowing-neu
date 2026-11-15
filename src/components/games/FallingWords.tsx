@@ -44,11 +44,11 @@ import {
   type Topic,
   type Variant,
   type View,
-} from "@/lib/falling-words";
+} from "@/lib/games/falling-words";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestResult, useGuestGate } from "./GuestPlay";
-import Mascot from "./Mascot";
+import Mascot from "../Mascot";
 import { DeckMenu, GameHeader, ScreenKeyboard, useCoarsePointer, type DeckOption, type Tone } from "./GameParts";
 
 /**

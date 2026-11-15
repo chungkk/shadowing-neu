@@ -1,5 +1,5 @@
-import { ProductSupport } from '@/biz/components/business/ProductLegal';
-import { supportMetadata } from '@/biz/lib/legal';
+import { ProductSupport } from '@/components/company/ProductLegal';
+import { supportMetadata } from '@/lib/company/legal';
 
 export const metadata = supportMetadata('calendar');
 

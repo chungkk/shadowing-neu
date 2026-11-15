@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { ArrowLeft, Clock, FileStack, Play } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
-import { classInfo, prefs } from "@/lib/fuehrerschein";
-import { ExamHistory } from "@/components/lai-xe/ExamHistory";
+import { classInfo, prefs } from "@/lib/laixe";
+import { ExamHistory } from "@/components/laixe/ExamHistory";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Thi thử lý thuyết lái xe", description: "Thi thử lý thuyết lái xe Đức như thật: đề ngẫu nhiên theo hạng, 45 phút, chấm theo điểm lỗi." };

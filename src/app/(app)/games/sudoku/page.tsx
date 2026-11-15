@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { PlayLobbyPage } from "@/components/PlayPage";
+import { PlayLobbyPage } from "@/components/games/PlayPage";
 import { VocabSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {

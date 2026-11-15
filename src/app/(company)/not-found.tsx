@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import NotFoundContent from '@/biz/components/business/NotFoundContent';
+import NotFoundContent from '@/components/company/NotFoundContent';
 
 // Next tự gắn thêm một thẻ noindex cho 404, nhưng layout lại khai báo "index, follow":
 // ghi đè robots ở đây để hai thẻ không mâu thuẫn nhau.

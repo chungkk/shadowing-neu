@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
-import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/fuehrerschein";
-import AppOnlyCard from "@/components/lai-xe/AppOnlyCard";
+import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/laixe";
+import AppOnlyCard from "@/components/laixe/AppOnlyCard";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {

@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { vocabOverview } from "@/lib/db";
 import { deckCounts, deckMarks, getDeck, listDecks, type DeckSummary } from "@/lib/decks";
 import DeckCover from "@/components/DeckCover";
-import { LoginLink } from "@/components/LoginDialog";
+import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
 import { DecksSkeleton } from "@/components/Skeleton";
 import { SoundMark } from "@/components/SoundBars";

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { PlayRoomPage } from "@/components/PlayPage";
+import { PlayRoomPage } from "@/components/games/PlayPage";
 import { VocabSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Phòng Caro", robots: { index: false, follow: false } };

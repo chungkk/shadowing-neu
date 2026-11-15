@@ -1,4 +1,4 @@
-import { OG_SIZE, renderOgImage } from '@/biz/lib/ogImage';
+import { OG_SIZE, renderOgImage } from '@/lib/company/ogImage';
 
 export const alt = 'HalloVN – Software, Apps und Web-Anwendungen';
 export const size = OG_SIZE;

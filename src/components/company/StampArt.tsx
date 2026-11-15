@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { ServiceId } from '@/biz/lib/services';
+import type { ServiceId } from '@/lib/company/services';
 
 /** Hình trên tem: mực phẳng, in chồng một màu trên nền mực của sản phẩm. */
 

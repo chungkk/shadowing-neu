@@ -1,4 +1,4 @@
-import { pageMetadata } from '@/biz/lib/seo';
+import { pageMetadata } from '@/lib/company/seo';
 import { fuehrerschein } from './fuehrerschein';
 import { lid } from './lid';
 import { deutschRedewendung, workCalendar } from './local-apps';

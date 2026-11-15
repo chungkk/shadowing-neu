@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// Nhập dữ liệu cho tab "Lái xe" và "Leben in Deutschland" từ các repo khác trong ~/Code/ckk.
-// Chạy lại khi bộ câu hỏi bên đó đổi:   node scripts/import-portal-content.mjs
-//   - Lái xe:  ../ckk-biz/data/laixe/catalog_all (mọi hạng) + bản dịch + dữ liệu hạng/đề mẫu từ ../fuehrerschein-app/DrivingTheoryApp
-//   - LiD:     ../lid-app/src/data/lebenInDeutschland.ts + ảnh ../lid-app/assets/images/lid → public/lid
+// Nhập dữ liệu cho tab "Lái xe" và "Leben in Deutschland" của HalloVN.   Chạy: npm run import:content
+//   - Lái xe:  content/laixe/catalog_all (mọi hạng, tạo bằng tools/laixe-catalog) + dữ liệu hạng/đề mẫu từ app lái xe <APPS_DIR>/fuehrerschein-app/DrivingTheoryApp
+//   - LiD:     <APPS_DIR>/lid-app/src/data/lebenInDeutschland.ts + ảnh <APPS_DIR>/lid-app/assets/images/lid → public/lid
+//   APPS_DIR mặc định ~/Code (nơi đặt các app lái xe / LiD chạy độc lập). Đổi bằng: APPS_DIR=/đường/dẫn npm run import:content
 // Kết quả: src/content/fuehrerschein/questions.json, src/content/lid/questions.json (gọn, chỉ giữ tiếng Đức + tiếng Việt)
 //   App HalloVN (web + mobile) chỉ dùng bản dịch tiếng Việt, có sửa thêm theo scripts/laixe-vi-fixes.json
-//   + content/laixe/{catalog,catalog_all}: bản sao nguyên catalog mà /api/fuehrerschein/* phục vụ cho app iOS/Android
-//     (vẫn tạo/publish bằng scripts của ckk-biz: npm run catalog:publish, rồi chạy script này và deploy) — giữ nguyên, không sửa
-import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+//   content/laixe/{catalog,catalog_all} là catalog mà /api/fuehrerschein/* phục vụ cho app lái xe iOS/Android:
+//     chỉ đổi bằng tools/laixe-catalog (npm run catalog:publish), script này không sửa
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
-const ckk = path.resolve(root, "..");
+const apps = path.resolve(process.env.APPS_DIR ?? path.join(os.homedir(), "Code"));
 const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
 const write = (p, data) => {
   mkdirSync(path.dirname(p), { recursive: true });
@@ -19,19 +20,12 @@ const write = (p, data) => {
   console.log(`✔ ${path.relative(root, p)} (${(JSON.stringify(data).length / 1024).toFixed(0)} KB)`);
 };
 
-// ---------- Catalog cho API của app lái xe ----------
-for (const dir of ["catalog", "catalog_all"]) {
-  const from = path.join(ckk, "ckk-biz/data/laixe", dir);
-  cpSync(from, path.join(root, "content/laixe", dir), { recursive: true, filter: (f) => !path.basename(f).startsWith(".") });
-  console.log(`✔ content/laixe/${dir}`);
-}
-
 // ---------- Lái xe (mọi hạng bằng, giống app iOS/Android) ----------
 // Nguồn: catalog_all (1746 câu + bản dịch vi) + từ app DrivingTheoryApp: classes.json (câu theo hạng),
 // answer_stems.json (phần đầu chung của đáp án), musterboegen.ts (99 đề mẫu hạng B). Tên chương: scripts/laixe-chapters.json
 {
-  const dir = path.join(ckk, "ckk-biz/data/laixe/catalog_all");
-  const app = path.join(ckk, "fuehrerschein-app/DrivingTheoryApp");
+  const dir = path.join(root, "content/laixe/catalog_all");
+  const app = path.join(apps, "fuehrerschein-app/DrivingTheoryApp");
   const names = readJson(path.join(root, "scripts/laixe-chapters.json"));
   const manifest = readJson(path.join(dir, "manifest.json"));
   const { questions } = readJson(path.join(dir, `${manifest.version}.json`));
@@ -146,7 +140,7 @@ for (const dir of ["catalog", "catalog_all"]) {
 
 // ---------- Leben in Deutschland ----------
 {
-  const src = readFileSync(path.join(ckk, "lid-app/src/data/lebenInDeutschland.ts"), "utf8");
+  const src = readFileSync(path.join(apps, "lid-app/src/data/lebenInDeutschland.ts"), "utf8");
   const between = (start, end, open) => {
     const a = src.indexOf(open, src.indexOf(start));
     return JSON.parse(src.slice(a, src.indexOf(end)).trim().replace(/;$/, ""));
@@ -156,7 +150,7 @@ for (const dir of ["catalog", "catalog_all"]) {
   const states = JSON.parse(statesSrc.trim().replace(/;$/, "").replace(/(\w+):/g, '"$1":'));
   const general = between("export const generalQuestions", "export const stateQuestions", "[");
   const byState = between("export const stateQuestions", "export const testConfig", "{");
-  const imgDir = path.join(ckk, "lid-app/assets/images/lid");
+  const imgDir = path.join(apps, "lid-app/assets/images/lid");
   const available = new Set(readdirSync(imgDir));
   const pub = path.join(root, "public/lid");
   mkdirSync(pub, { recursive: true });

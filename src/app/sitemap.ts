@@ -1,15 +1,15 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
 import { listLessons } from "@/lib/db";
-import { allChapterIds } from "@/lib/fuehrerschein";
+import { allChapterIds } from "@/lib/laixe";
 import { LID_UPDATED, indexableSetIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { lessonPath } from "@/lib/slug";
-import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/biz/lib/legal";
-import { PRODUCT_PAGES } from "@/biz/lib/productPages";
-import { SERVICES, productPath } from "@/biz/lib/services";
+import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/lib/company/legal";
+import { PRODUCT_PAGES } from "@/lib/company/productPages";
+import { SERVICES, productPath } from "@/lib/company/services";
 
-// Trang doanh nghiệp / pháp lý (chuyển từ ckk-biz). lastmod chỉ ghi khi biết ngày sửa thật — cập nhật cùng LEGAL_UPDATED (src/biz/lib/site.ts)
+// Trang doanh nghiệp / pháp lý (chuyển từ ckk-biz). lastmod chỉ ghi khi biết ngày sửa thật — cập nhật cùng LEGAL_UPDATED (src/lib/company/site.ts)
 const LEGAL_LASTMOD = new Date("2026-11-01");
 const legal = (path: string, priority = 0.3) => ({ url: SITE_URL + path, lastModified: LEGAL_LASTMOD, changeFrequency: "yearly" as const, priority });
 const bizPages = (): MetadataRoute.Sitemap => [

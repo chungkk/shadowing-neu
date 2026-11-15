@@ -3,8 +3,8 @@
  * Phần giao diện (màu, nền, đọc to, lưu kỷ lục) để bên mỗi nền tảng; ở đây chỉ có trạng thái ván và cách nó đổi theo thời gian / phím gõ.
  */
 
-import type { StudyWord } from "./deck-study";
-import { shuffle } from "./review";
+import type { StudyWord } from "../deck-study";
+import { shuffle } from "../review";
 
 export type Variant = "rain" | "gold";
 export type GameWord = StudyWord & { key: string /* khoá mục trong bộ — phân biệt từ đồng âm */; topic: string };

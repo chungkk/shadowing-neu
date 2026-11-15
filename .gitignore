@@ -46,3 +46,6 @@ data/
 /test-results/
 /playwright-report/
 /.ui-review/
+
+# bản dịch catalog lái xe (tools/laixe-catalog/translate-vi.mjs)
+/.translation-cache/

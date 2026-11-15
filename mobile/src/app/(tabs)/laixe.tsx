@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { summarize } from "@shared/quiz-types";
+import { summarize } from "@shared/quiz/types";
 import { BigTile, HeroCard, IconButton, IconRow, MenuRow, QuizTabScreen, TONES, openRun } from "@/components/quiz/QuizParts";
 import { useAuth } from "@/lib/auth";
 import { BOGEN_COUNT, classInfo, classQuestionIds } from "@/lib/quiz/fuehrerschein";

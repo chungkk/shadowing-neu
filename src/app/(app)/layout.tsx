@@ -4,7 +4,7 @@ import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Geist_Mono, Nunito } from "next/font/google";
 import { DeutschSubnav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
-import LoginDialogSlot from "@/components/LoginDialogSlot";
+import LoginDialogSlot from "@/components/auth/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
 import ShareBar from "@/components/ShareBar";
 import SiteFooter from "@/components/SiteFooter";

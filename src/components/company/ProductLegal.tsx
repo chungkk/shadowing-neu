@@ -1,17 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import LegalShell from '@/biz/components/business/LegalShell';
-import type { LegalNavItem } from '@/biz/components/business/LegalShell';
-import LegalText from '@/biz/components/business/LegalText';
-import SupportForm from '@/biz/components/business/SupportForm';
-import { LEGAL_PRODUCTS, legalProduct } from '@/biz/lib/legal';
-import { websitePrivacy } from '@/biz/lib/legal/website';
-import type { LegalProduct } from '@/biz/lib/legal/types';
-import { SITE } from '@/biz/lib/site';
-import { useT } from '@/biz/contexts/LocaleContext';
-import type { Locale } from '@/biz/contexts/LocaleContext';
-import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, PlusIcon, ReceiptIcon, TrashIcon } from '@/biz/components/icons';
+import LegalShell from '@/components/company/LegalShell';
+import type { LegalNavItem } from '@/components/company/LegalShell';
+import LegalText from '@/components/company/LegalText';
+import SupportForm from '@/components/company/SupportForm';
+import { LEGAL_PRODUCTS, legalProduct } from '@/lib/company/legal';
+import { websitePrivacy } from '@/lib/company/legal/website';
+import type { LegalProduct } from '@/lib/company/legal/types';
+import { SITE } from '@/lib/company/site';
+import { useT } from '@/components/company/LocaleContext';
+import type { Locale } from '@/components/company/LocaleContext';
+import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, PlusIcon, ReceiptIcon, TrashIcon } from '@/components/company/icons';
 
 const LOCALES: Locale[] = ['de', 'en', 'vi'];
 

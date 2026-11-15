@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { CheckCircle2, ChevronRight, MapPin, X } from "lucide-react";
-import { setLidState } from "@/app/(portal)/lai-xe/actions";
+import { setLidState } from "@/app/(app)/lai-xe/actions";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { Wappen } from "./LidParts";
 

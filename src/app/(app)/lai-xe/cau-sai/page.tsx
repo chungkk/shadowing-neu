@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuizExam, listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
-import { classQuestionIds, forClient, gradable, prefs } from "@/lib/fuehrerschein";
-import { isRight } from "@/lib/fuehrerschein-rules";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import { classQuestionIds, forClient, gradable, prefs } from "@/lib/laixe";
+import { isRight } from "@/lib/laixe/rules";
+import DrivingRunner from "@/components/laixe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Câu sai · Lý thuyết lái xe", robots: { index: false } };

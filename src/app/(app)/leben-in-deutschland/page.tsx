@@ -6,8 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
-import { summarize } from "@/lib/quiz-types";
-import { ActionCard, BigCard, ProgressBar } from "@/components/QuizParts";
+import { summarize } from "@/lib/quiz/types";
+import { ActionCard, BigCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
 

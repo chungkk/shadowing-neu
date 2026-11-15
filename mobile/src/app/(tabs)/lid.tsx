@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
-import { summarize } from "@shared/quiz-types";
+import { summarize } from "@shared/quiz/types";
 import { ActionGrid, ActionTile, HeroCard, QuizTabScreen, TONES, openRun } from "@/components/quiz/QuizParts";
 import { useAuth } from "@/lib/auth";
 import { EXAM, EXAM_TOTAL, getSet, getState } from "@/lib/quiz/lid";

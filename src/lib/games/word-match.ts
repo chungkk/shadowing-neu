@@ -6,7 +6,7 @@
  */
 
 import type { GameWord, Topic } from "./falling-words";
-import { shuffle } from "./review";
+import { shuffle } from "../review";
 
 export const BOARD_PAIRS = 6; // số cặp tối đa trên 1 sân
 export const MILESTONE_PAIRS = 12; // số cặp phải nối để qua 1 mốc (chủ đề ít từ hơn → bằng số từ của chủ đề)

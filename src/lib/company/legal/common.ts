@@ -1,4 +1,4 @@
-import type { Locale } from '@/biz/contexts/LocaleContext';
+import type { Locale } from '@/components/company/LocaleContext';
 import type { LegalSection } from './types';
 
 export const GOOGLE_PRIVACY = 'https://policies.google.com/privacy';

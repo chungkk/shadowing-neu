@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Delete, Pencil, Undo2 } from "lucide-react";
-import { SUDOKU_LEVEL_LABEL } from "@/lib/play";
+import { SUDOKU_LEVEL_LABEL } from "@/lib/games/play";
 import { clientApi } from "@/lib/client-api";
 import { GameClock, MascotSay, PausedCover, ResignButton, useCountdown, type MascotMood, type Send, type View } from "./PlayParts";
 

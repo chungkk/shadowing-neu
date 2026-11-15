@@ -1,5 +1,5 @@
-import { OG_SIZE, renderOgImage } from '@/biz/lib/ogImage';
-import { PRODUCT_PAGES } from '@/biz/lib/productPages';
+import { OG_SIZE, renderOgImage } from '@/lib/company/ogImage';
+import { PRODUCT_PAGES } from '@/lib/company/productPages';
 
 export const alt = PRODUCT_PAGES.fuehrerschein.seo.title;
 export const size = OG_SIZE;

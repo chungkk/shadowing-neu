@@ -2,8 +2,8 @@
 // thêm dịch vụ mới = thêm một mục vào SERVICES, nội dung trang riêng vào productPages.ts,
 // ảnh vào public/apps/<id>/, route src/app/<legalSlug>/page.tsx (và một hình tem trong StampArt nếu cần).
 import catalog from '@/../content/laixe/catalog_all/manifest.json';
-import { APP_LINKS } from '@/biz/lib/site';
-import type { Locale } from '@/biz/contexts/LocaleContext';
+import { APP_LINKS } from '@/lib/company/site';
+import type { Locale } from '@/components/company/LocaleContext';
 
 export type ServiceId = 'fuehrerschein' | 'lid' | 'shadowing';
 

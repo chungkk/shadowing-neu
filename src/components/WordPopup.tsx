@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
-import { LoginLink } from "@/components/LoginDialog";
+import { LoginLink } from "@/components/auth/LoginDialog";
 import { usePathname } from "next/navigation";
 import { Bookmark, BookmarkMinus, Loader2, Lock, Play, Volume2, X } from "lucide-react";
 import { locatePhrase } from "@/lib/phrase-match";

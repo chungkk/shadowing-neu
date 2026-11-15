@@ -1,8 +1,8 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { getCurrentUser, sign } from "./auth";
-import { createPlayGuest, playGuestById, renamePlayGuest } from "./db";
+import { getCurrentUser, sign } from "../auth";
+import { createPlayGuest, playGuestById, renamePlayGuest } from "../db";
 
 /**
  * Khách chơi Sudoku / Caro không cần tài khoản: nhập tên tạm → server cấp cookie "play_guest" = "<id>.<chữ ký>".

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import WordMatchPage from "@/components/WordMatchPage";
+import WordMatchPage from "@/components/games/WordMatchPage";
 import { VocabSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = {

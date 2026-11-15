@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
-import { LocaleProvider } from "@/biz/contexts/LocaleContext";
-import Header from "@/biz/components/Header";
-import Footer from "@/biz/components/Footer";
-import { SITE } from "@/biz/lib/site";
+import { LocaleProvider } from "@/components/company/LocaleContext";
+import Header from "@/components/company/Header";
+import Footer from "@/components/company/Footer";
+import { SITE } from "@/lib/company/site";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",

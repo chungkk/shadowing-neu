@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { fuehrerscheinGuard } from "@/biz/fuehrerschein-guard";
+import { fuehrerscheinGuard } from "@/lib/laixe/guard";
 import { crawlGuard } from "@/lib/crawl-guard";
-import { LID_BASE, LID_PAGES, LID_PRIVATE, LID_SET_IDS } from "@/lib/lid-routes";
+import { LID_BASE, LID_PAGES, LID_PRIVATE, LID_SET_IDS } from "@/lib/lid/routes";
 
 // Tên miền chính thức: hallovn.de. ckk.biz và ckk.pro (tên cũ) không dùng nữa — chỉ giữ trỏ về app này
 // để link cũ và app di động bản cũ không gãy; khi gần như mọi người đã cập nhật app (gọi hallovn.de) thì bỏ hẳn.

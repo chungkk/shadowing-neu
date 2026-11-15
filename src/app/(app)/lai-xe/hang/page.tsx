@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
-import { classGroups, prefs } from "@/lib/fuehrerschein";
-import { ClassPicker } from "@/components/lai-xe/Settings";
+import { classGroups, prefs } from "@/lib/laixe";
+import { ClassPicker } from "@/components/laixe/Settings";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Chọn hạng bằng · Lý thuyết lái xe", description: "Chọn hạng bằng lái xe Đức để luyện đúng bộ câu hỏi: B, A, A1, A2, AM, Mofa, C, CE, C1, D, D1, L, T." };

@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { SERVICES, productPath } from '@/biz/lib/services';
-import { useT } from '@/biz/contexts/LocaleContext';
+import { SERVICES, productPath } from '@/lib/company/services';
+import { useT } from '@/components/company/LocaleContext';
 
 const COPY = {
     de: {

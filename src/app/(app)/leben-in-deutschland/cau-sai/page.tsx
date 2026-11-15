@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuizExam, listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
-import { isRight } from "@/lib/fuehrerschein-rules";
+import { isRight } from "@/lib/laixe/rules";
 import { forClient, generalIds, gradable, prefs, stateIds } from "@/lib/lid";
 import LidRunner from "@/components/lid/LidRunner";
 import { LidShell } from "@/components/lid/LidParts";

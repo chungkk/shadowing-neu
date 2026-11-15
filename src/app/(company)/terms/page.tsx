@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { pageMetadata } from '@/biz/lib/seo';
+import { pageMetadata } from '@/lib/company/seo';
 import Link from 'next/link';
-import LegalShell from '@/biz/components/business/LegalShell';
-import { COMPANY, SITE } from '@/biz/lib/site';
+import LegalShell from '@/components/company/LegalShell';
+import { COMPANY, SITE } from '@/lib/company/site';
 
 export const metadata: Metadata = pageMetadata({
     title: 'Nutzungsbedingungen (EULA)',

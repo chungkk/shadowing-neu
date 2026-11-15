@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Car, Check, Gamepad2, Headphones, Landmark, Languages, Mic, PencilLine, Smartphone } from "lucide-react";
 import type { ComponentType } from "react";
-import { LoginLink } from "@/components/LoginDialog";
+import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
 
 // Trang chủ = trang giới thiệu TĨNH: không đọc DB / cookie → được dựng sẵn lúc build.

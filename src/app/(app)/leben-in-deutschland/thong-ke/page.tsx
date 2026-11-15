@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
 import { generalIds, getState, prefs, stateIds } from "@/lib/lid";
-import { summarize } from "@/lib/quiz-types";
-import { ExamHistory } from "@/components/lai-xe/ExamHistory";
+import { summarize } from "@/lib/quiz/types";
+import { ExamHistory } from "@/components/laixe/ExamHistory";
 import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 

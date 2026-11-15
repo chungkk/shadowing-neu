@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Image } from "expo-image";
@@ -11,10 +11,12 @@ import {
   Alert,
   KeyboardAvoidingView,
   LayoutAnimation,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
   Share,
+  Switch,
   View,
 } from "react-native";
 import { Text } from "@/components/Text";
@@ -40,6 +42,15 @@ import { C, STICKER, useScheme, alpha } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
 import { germanVoices, speakGerman, stopSpeaking } from "@/lib/speak";
+import {
+  DAILY_HOURS,
+  DEFAULT_DAILY,
+  ensurePermission,
+  loadDailyPrefs,
+  saveDailyPrefs,
+  syncDailyReminder,
+  type DailyPrefs,
+} from "@/lib/reminders";
 
 const initials = (name: string) =>
   name
@@ -438,6 +449,63 @@ function SettingsSection() {
             />
           }
           onPress={() => speakGerman(t("voice.sample")).catch(() => {})}
+        />
+      )}
+    </Section>
+  );
+}
+
+/** Nhắc học hằng ngày (thông báo cục bộ) — chỉ khi đã đăng nhập: nội dung lấy từ tiến độ trên tài khoản */
+function ReminderSettings() {
+  const { t } = useI18n();
+  const [p, setP] = useState<DailyPrefs | null>(null);
+  useEffect(() => {
+    loadDailyPrefs().then(setP);
+  }, []);
+
+  const apply = async (next: DailyPrefs) => {
+    setP(next);
+    await saveDailyPrefs(next);
+    await syncDailyReminder(true);
+  };
+  const toggle = async (on: boolean) => {
+    if (on && !(await ensurePermission())) {
+      Alert.alert(t("remind.deniedTitle"), t("remind.deniedBody"), [
+        { text: t("cancel"), style: "cancel" },
+        { text: t("dialog.openSettings"), onPress: () => Linking.openSettings().catch(() => {}) },
+      ]);
+      return;
+    }
+    await apply({ ...(p ?? DEFAULT_DAILY), on });
+  };
+
+  if (!p) return null;
+  const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
+  return (
+    <Section title={t("remind.section")} footer={t("remind.footer")}>
+      <Row
+        first
+        icon="bell.fill"
+        iconBg="#dc2626"
+        title={t("remind.toggle")}
+        subtitle={t("remind.toggleSub")}
+        chevron={false}
+        trailing={<Switch value={p.on} onValueChange={toggle} accessibilityLabel={t("remind.toggle")} />}
+      />
+      {p.on && (
+        <Row
+          icon="clock.fill"
+          iconBg="#7c3aed"
+          title={t("remind.time")}
+          chevron={false}
+          trailing={
+            <Segmented
+              shrink
+              options={DAILY_HOURS.map((h) => [String(h), hh(h)] as const)}
+              value={String(p.hour)}
+              onChange={(v) => apply({ ...p, hour: Number(v), minute: 0 })}
+            />
+          }
         />
       )}
     </Section>
@@ -856,6 +924,8 @@ function Signed({ user }: { user: User }) {
       </Section>
 
       <SettingsSection />
+
+      <ReminderSettings />
 
       <MoreSections />
 

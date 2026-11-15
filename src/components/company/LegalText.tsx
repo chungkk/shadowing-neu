@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { COMPANY } from '@/biz/lib/site';
-import type { Block, LegalSection } from '@/biz/lib/legal/types';
+import { COMPANY } from '@/lib/company/site';
+import type { Block, LegalSection } from '@/lib/company/legal/types';
 
 /** Hiển thị **đậm** và [liên kết](url) trong văn bản pháp lý. */
 function inline(text: string): ReactNode[] {

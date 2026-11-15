@@ -2,15 +2,15 @@
 
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
-import { COMPANY, SITE } from '@/biz/lib/site';
-import { SERVICES, productPath } from '@/biz/lib/services';
-import type { Service } from '@/biz/lib/services';
-import { PRODUCT_PAGES } from '@/biz/lib/productPages';
-import { useLocale, useT } from '@/biz/contexts/LocaleContext';
-import { Shot, StoreButtons, inkText } from '@/biz/components/business/ProductParts';
-import ProjectForm from '@/biz/components/business/ProjectForm';
-import { Postmark, StampArt } from '@/biz/components/business/StampArt';
-import { ArrowRightIcon } from '@/biz/components/icons';
+import { COMPANY, SITE } from '@/lib/company/site';
+import { SERVICES, productPath } from '@/lib/company/services';
+import type { Service } from '@/lib/company/services';
+import { PRODUCT_PAGES } from '@/lib/company/productPages';
+import { useLocale, useT } from '@/components/company/LocaleContext';
+import { Shot, StoreButtons, inkText } from '@/components/company/ProductParts';
+import ProjectForm from '@/components/company/ProjectForm';
+import { Postmark, StampArt } from '@/components/company/StampArt';
+import { ArrowRightIcon } from '@/components/company/icons';
 
 const COPY = {
     de: {

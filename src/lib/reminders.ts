@@ -1,10 +1,10 @@
 import "server-only";
 import { deckLearnedAt, dueCount, hasLearned, quizProgress, streakInfo } from "./db";
 import { deckLearned, getDeck, listDecks } from "./decks";
-import { classFor, learnTree } from "./fuehrerschein";
-import { generalIds, getSet, listSets, stateFor, stateIds } from "./lid";
+import { classFor, isClassId, learnTree, type ClassId } from "./laixe";
+import { generalIds, getSet, getState, listSets, stateFor, stateIds, type State } from "./lid";
 import { percent, unfinished } from "./progress";
-import { summarize, type QuizStat } from "./quiz-types";
+import { summarize, type QuizStat } from "./quiz/types";
 
 /**
  * Nhắc nhở học (chuông trên thanh đầu trang · GET /api/v1/reminders, app mobile dùng chung bằng Bearer):
@@ -144,19 +144,18 @@ function deutsch(userId: number, tz: number, now: number): Reminder[] {
 }
 
 /** Lái xe: chương đang học dở (theo hạng đang học) · câu đang sai. Chưa làm câu nào → không nhắc */
-function laixe(userId: number, now: number): Reminder[] {
+function laixe(userId: number, now: number, cls: ClassId): Reminder[] {
   const q = quizProgress(userId, "fuehrerschein");
   if (!q.at.size) return [];
-  const tree = learnTree(classFor(userId));
+  const tree = learnTree(cls);
   const chapters = tree.flatMap((p) => p.themes.flatMap((t) => t.chapters.map((c) => ({ key: c.id, title: `Chương ${c.id} · ${c.vi || c.de}`, ids: c.ids, href: `/lai-xe/hoc/${c.id}` }))));
   return [...quizGroups("laixe", chapters, q, now), ...wrongReminder("laixe", tree.flatMap((p) => p.ids), q.stats, "/lai-xe/cau-sai")];
 }
 
 /** Leben in Deutschland: bộ 30 câu / 10 câu của bang đang làm dở · câu đang sai */
-function lid(userId: number, now: number): Reminder[] {
+function lid(userId: number, now: number, state: State): Reminder[] {
   const q = quizProgress(userId, "lid");
   if (!q.at.size) return [];
-  const state = stateFor(userId);
   const sets = [
     ...listSets().map((s) => ({ key: s.id, title: `Bộ câu ${s.from}–${s.to}`, ids: s.ids, href: `/leben-in-deutschland/${s.id}` })),
     { key: state.code, title: getSet(state.code, state.code)?.title ?? state.name, ids: stateIds(state.code), href: `/leben-in-deutschland/${state.code}` },
@@ -164,9 +163,14 @@ function lid(userId: number, now: number): Reminder[] {
   return [...quizGroups("lid", sets, q, now), ...wrongReminder("lid", [...generalIds(), ...stateIds(state.code)], q.stats, "/leben-in-deutschland/cau-sai")];
 }
 
-/** Mọi nhắc nhở của 1 người: việc gấp (chuỗi ngày, đến hạn ôn) trước, rồi theo lần học gần nhất */
-export function listReminders(userId: number, tz = 0, now = Date.now()): RemindersResponse {
-  const all = [...deutsch(userId, tz, now), ...laixe(userId, now), ...lid(userId, now)];
+/**
+ * Mọi nhắc nhở của 1 người: việc gấp (chuỗi ngày, đến hạn ôn) trước, rồi theo lần học gần nhất.
+ * cls / state: hạng bằng / bang client đang chọn (app mobile lưu trên máy) — không hợp lệ / không gửi → lấy theo tài khoản (web)
+ */
+export function listReminders(userId: number, tz = 0, opts: { cls?: string | null; state?: string | null } = {}, now = Date.now()): RemindersResponse {
+  const cls = isClassId(opts.cls) ? opts.cls : classFor(userId);
+  const state = getState(opts.state ?? "") ?? stateFor(userId);
+  const all = [...deutsch(userId, tz, now), ...laixe(userId, now, cls), ...lid(userId, now, state)];
   const rank = (r: Reminder) => (r.kind === "streak" ? 0 : r.kind === "review" ? 1 : 2);
   return { reminders: all.sort((a, b) => rank(a) - rank(b) || b.at - a.at), started: all.length > 0 || hasLearned(userId) };
 }

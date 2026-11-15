@@ -1,6 +1,6 @@
 import { connection } from 'next/server';
 import { NextResponse } from 'next/server';
-import { LANGUAGES, readManifest, readTranslationPack } from '@/biz/lib/drivingCatalog.mjs';
+import { LANGUAGES, readManifest, readTranslationPack } from '@/lib/laixe/catalog.mjs';
 
 export async function GET(request: Request, { params }: { params: Promise<{ lang: string }> }) {
     await connection(); // đọc catalog lúc request (manifest đổi khi publish)

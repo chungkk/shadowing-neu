@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { WEB_BOGEN_LIMIT, bogenIds, classInfo, forClient, prefs } from "@/lib/fuehrerschein";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import { WEB_BOGEN_LIMIT, bogenIds, classInfo, forClient, prefs } from "@/lib/laixe";
+import DrivingRunner from "@/components/laixe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
 type P = PageProps<"/lai-xe/de-mau/[n]">;

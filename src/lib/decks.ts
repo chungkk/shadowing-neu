@@ -10,7 +10,7 @@ import {
   type ArtikelWord,
   type NounGender,
 } from "./db";
-import { ARTIKEL_GOAL } from "./artikel";
+import { ARTIKEL_GOAL } from "./games/artikel";
 import aspekteNeuB2 from "@/content/decks/aspekte-neu-b2.json";
 import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";

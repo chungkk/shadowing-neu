@@ -1,6 +1,6 @@
 import { apiUser, body, fail, str } from "@/lib/api";
 import { quizBookmarks, setQuizBookmark, type QuizModule } from "@/lib/db";
-import * as fuehrerschein from "@/lib/fuehrerschein";
+import * as fuehrerschein from "@/lib/laixe";
 import * as lid from "@/lib/lid";
 
 // Câu đánh dấu ⭐ của tab Lái xe (module "fuehrerschein", mặc định) và Leben in Deutschland ("lid")

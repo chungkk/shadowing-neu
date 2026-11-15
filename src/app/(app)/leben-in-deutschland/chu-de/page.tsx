@@ -5,9 +5,9 @@ import { BookOpen, RotateCcw, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { CATEGORIES, generalIds, getSet, hasTopics, listSets, prefs, stateIds } from "@/lib/lid";
-import { summarize } from "@/lib/quiz-types";
-import type { QuizStat } from "@/lib/quiz-types";
-import { ActionCard, ProgressBar } from "@/components/QuizParts";
+import { summarize } from "@/lib/quiz/types";
+import type { QuizStat } from "@/lib/quiz/types";
+import { ActionCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { LidShell, LidTopBar, Wappen } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 

@@ -1,6 +1,6 @@
 import { APPLE_PRIVACY, GOOGLE_PRIVACY, changes, controller, emailContact, perLocale, rights, transferNote } from './common';
 import type { LegalProduct, LegalSection } from './types';
-import type { Locale } from '@/biz/contexts/LocaleContext';
+import type { Locale } from '@/components/company/LocaleContext';
 
 // Hai app không có tài khoản; dữ liệu người dùng nằm trên thiết bị.
 

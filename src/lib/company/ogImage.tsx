@@ -14,7 +14,7 @@ interface OgProps {
 }
 
 export async function renderOgImage({ eyebrow, title, subtitle, accent }: OgProps) {
-    const mark = await readFile(path.join(process.cwd(), 'src/biz/icon.svg'));
+    const mark = await readFile(path.join(process.cwd(), 'src/components/company/icon.svg'));
     const markSrc = `data:image/svg+xml;base64,${mark.toString('base64')}`;
 
     return new ImageResponse(

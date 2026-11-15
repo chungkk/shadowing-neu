@@ -4,7 +4,7 @@ import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Delete, Play, RotateCcw } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-export { sameLetter, type GameWord, type Topic } from "@/lib/falling-words";
+export { sameLetter, type GameWord, type Topic } from "@/lib/games/falling-words";
 
 /** Phần dùng chung của các game từ vựng (/games): tiêu đề, màn chọn bộ từ, bàn phím trên màn hình */
 

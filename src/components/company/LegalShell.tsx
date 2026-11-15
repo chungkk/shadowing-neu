@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType, ReactNode } from 'react';
-import { LEGAL_UPDATED } from '@/biz/lib/site';
-import { useLocale } from '@/biz/contexts/LocaleContext';
-import type { Locale } from '@/biz/contexts/LocaleContext';
-import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, ReceiptIcon, TrashIcon } from '@/biz/components/icons';
+import { LEGAL_UPDATED } from '@/lib/company/site';
+import { useLocale } from '@/components/company/LocaleContext';
+import type { Locale } from '@/components/company/LocaleContext';
+import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, ReceiptIcon, TrashIcon } from '@/components/company/icons';
 
 type Icon = ComponentType<{ className?: string }>;
 

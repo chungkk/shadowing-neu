@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { classInfo, examQuestionIds, forClient, prefs } from "@/lib/fuehrerschein";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import { classInfo, examQuestionIds, forClient, prefs } from "@/lib/laixe";
+import DrivingRunner from "@/components/laixe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = { title: "Đang thi thử · Lý thuyết lái xe", robots: { index: false } };

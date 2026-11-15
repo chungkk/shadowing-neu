@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { DEFAULT_CLASS, forClient, prefs, scopeQuestions } from "@/lib/fuehrerschein";
-import DrivingRunner from "@/components/lai-xe/DrivingRunner";
+import { DEFAULT_CLASS, forClient, prefs, scopeQuestions } from "@/lib/laixe";
+import DrivingRunner from "@/components/laixe/DrivingRunner";
 import { ListSkeleton } from "@/components/Skeleton";
 
 type P = PageProps<"/lai-xe/hoc/[scope]">;

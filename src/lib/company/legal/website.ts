@@ -1,6 +1,6 @@
 import { GOOGLE_PRIVACY, HOSTING, changes, controller, emailContact, perLocale, rights, transferNote } from './common';
 import type { LegalSection, Localized } from './types';
-import type { Locale } from '@/biz/contexts/LocaleContext';
+import type { Locale } from '@/components/company/LocaleContext';
 
 const DOMAIN = 'hallovn.de';
 

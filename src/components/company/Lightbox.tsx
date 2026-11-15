@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
-import type { Screen } from '@/biz/lib/productPages';
-import { useT } from '@/biz/contexts/LocaleContext';
+import type { Screen } from '@/lib/company/productPages';
+import { useT } from '@/components/company/LocaleContext';
 
 const UI = {
     de: { close: 'Schließen', prev: 'Vorheriges Bild', next: 'Nächstes Bild', zoomIn: 'Vergrößern', zoomOut: 'Verkleinern', reset: 'Originalgröße', viewer: 'Bildbetrachter' },

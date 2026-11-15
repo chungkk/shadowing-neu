@@ -1,7 +1,7 @@
 // Metadata dùng chung cho mọi trang. Trang con khai báo openGraph sẽ thay toàn bộ openGraph của
 // layout (Next chỉ gộp nông), nên siteName/locale phải được đặt lại ở đây cho từng trang.
 import type { Metadata } from 'next';
-import { SITE } from '@/biz/lib/site';
+import { SITE } from '@/lib/company/site';
 
 export const OG_LOCALE = { locale: 'de_DE', alternateLocale: ['en_US', 'vi_VN'] };
 

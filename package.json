@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "test:catalog": "node --test tools/laixe-catalog/catalog.test.mjs tools/laixe-catalog/translate-vi.test.mjs",
+    "catalog:publish": "node tools/laixe-catalog/publish.mjs",
+    "import:content": "node scripts/import-portal-content.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.59.0",

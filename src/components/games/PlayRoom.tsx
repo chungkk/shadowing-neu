@@ -16,11 +16,11 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { SUDOKU_LEVEL_LABEL, type PlayResult } from "@/lib/play";
+import { SUDOKU_LEVEL_LABEL, type PlayResult } from "@/lib/games/play";
 import { clientApi } from "@/lib/client-api";
 import { GameHeader } from "./GameParts";
 import { usePlayGuest } from "./GuestPlay";
-import { LoginLink } from "./LoginDialog";
+import { LoginLink } from "../auth/LoginDialog";
 import { GAME_TITLE } from "./PlayLobby";
 import CaroPlay from "./CaroPlay";
 import {
