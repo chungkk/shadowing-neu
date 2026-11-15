@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
@@ -9,6 +10,13 @@ import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 import { clientIp } from "@/lib/rate-limit";
 import { lessonPath } from "@/lib/slug";
+
+// Video YouTube bất kỳ người dùng dán vào: không phải nội dung của site (và tạo phụ đề tốn API) → không cho index
+export const metadata: Metadata = {
+  title: "Luyện shadowing tiếng Đức với video YouTube",
+  description: "Dán link YouTube có phụ đề tiếng Đức để luyện nghe nói từng câu: shadowing, ghi âm, chép chính tả và lưu từ vựng.",
+  robots: { index: false, follow: true },
+};
 
 async function Watch({ params }: PageProps<"/watch/[videoId]">) {
   const { videoId: rawId } = await params;

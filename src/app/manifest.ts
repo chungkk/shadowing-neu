@@ -1,16 +1,22 @@
 import type { MetadataRoute } from 'next';
-import { SITE } from '@/lib/company/site';
 
+// Một manifest chung cho cả site. start_url "/" là trang học tiếng Việt (nhóm (app)) nên tên / mô tả / màu
+// theo nhóm này; các trang doanh nghiệp tiếng Đức (/about, /impressum…) cũng dùng chung icon HalloVN.
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'HalloVN – Software, Apps und Web-Anwendungen',
-        short_name: SITE.name,
-        description: SITE.description,
+        id: '/',
+        name: 'HalloVN – Học tiếng Đức, lái xe & Leben in Deutschland',
+        short_name: 'HalloVN',
+        description:
+            'Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ vựng. Miễn phí cho người Việt tại Đức.',
         start_url: '/',
+        scope: '/',
         display: 'browser',
-        background_color: '#e3e6e9',
-        theme_color: '#e3e6e9',
-        lang: 'de',
+        background_color: '#241a1c',
+        theme_color: '#241a1c',
+        lang: 'vi',
+        dir: 'ltr',
+        categories: ['education'],
         icons: [
             { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
             { src: '/apple-icon.png', sizes: '180x180', type: 'image/png' },

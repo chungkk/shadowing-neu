@@ -1,10 +1,14 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { listVocab } from "@/lib/db";
 import VocabList from "@/components/VocabList";
 import { VocabSkeleton } from "@/components/Skeleton";
+
+// Sổ từ cá nhân (phải đăng nhập) → không cho index
+export const metadata: Metadata = { title: "Sổ từ vựng", robots: { index: false, follow: false } };
 
 async function Vocab({ searchParams }: { searchParams: PageProps<"/vocab/notebook">["searchParams"] }) {
   const { review } = await searchParams;

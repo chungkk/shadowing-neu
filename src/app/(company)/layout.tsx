@@ -5,6 +5,7 @@ import { LocaleProvider } from "@/components/company/LocaleContext";
 import Header from "@/components/company/Header";
 import Footer from "@/components/company/Footer";
 import { SITE } from "@/lib/company/site";
+import { serializeJsonLd, siteJsonLd } from "@/lib/seo";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -66,6 +67,8 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5590145594898560"
           crossOrigin="anonymous"
         />
+        {/* JSON-LD Organization + WebSite của HalloVN (dùng chung với nhóm app, src/lib/seo.ts) */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd()) }} />
       </head>
       <body className={`${bricolage.variable} ${beVietnam.variable} antialiased`}>
         <LocaleProvider>

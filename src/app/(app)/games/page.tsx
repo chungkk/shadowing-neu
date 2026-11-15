@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/page-meta";
 import Link from "next/link";
 import { ArrowRight, CloudRain, Flame, Grid3x3, Pickaxe, Puzzle, Users, Volume2, X } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "@/components/Mascot";
 
-export const metadata: Metadata = {
-  title: "Game",
-  description: "Chơi game để luyện từ vựng tiếng Đức theo các bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng, hoặc chơi Sudoku và Caro với bạn bè — không cần tài khoản.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "Game học tiếng Đức miễn phí – Luyện từ vựng, der die das",
+  description:
+    "Chơi game học từ vựng tiếng Đức theo bộ từ Goethe A1–B1, Aspekte B2 và điều dưỡng: mưa từ vựng, nối từ, der die das; thêm Sudoku và Caro với bạn bè.",
+  path: "/games",
+});
 
 const Emoji = ({ code, className }: { code: string; className: string }) => (
   // eslint-disable-next-line @next/next/no-img-element

@@ -10,13 +10,13 @@ import type { QuizStat } from "@/lib/quiz/types";
 import { ActionCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { LidShell, LidTopBar, Wappen } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
+import { JsonLd, breadcrumbLd, quizPageMeta } from "@/lib/laixe/seo";
 
-export const metadata: Metadata = {
-  title: "Học theo chủ đề · Leben in Deutschland",
-  description: "Học Leben in Deutschland theo chủ đề, theo bộ 30 câu của danh mục BAMF và 10 câu riêng của bang — có bản dịch tiếng Việt, chế độ Đọc và Luyện.",
-  alternates: { canonical: "/leben-in-deutschland/chu-de" },
-  openGraph: { url: "/leben-in-deutschland/chu-de" },
-};
+export const metadata: Metadata = quizPageMeta({
+  path: "/leben-in-deutschland/chu-de",
+  title: "Học Leben in Deutschland theo chủ đề – 300 câu + câu của bang",
+  description: "Học Leben in Deutschland theo 3 chủ đề BAMF, theo bộ 30 câu và 10 câu riêng của từng bang — mỗi câu có bản dịch tiếng Việt, chế độ Đọc lướt và Luyện chấm ngay.",
+});
 
 /** Ô của 1 bộ câu — cùng kiểu thẻ chương ở Lái xe: tên, tiến độ, nút Đọc / Luyện */
 function SetCard({ id, title, sub, ids, stats, user, icon }: { id: string; title: string; sub?: string; ids: string[]; stats: Record<string, QuizStat>; user: boolean; icon?: ReactNode }) {
@@ -157,6 +157,7 @@ async function Topics() {
 export default function Page() {
   return (
     <LidShell>
+      <JsonLd data={breadcrumbLd([["Leben in Deutschland", "/leben-in-deutschland"], ["Học theo chủ đề", "/leben-in-deutschland/chu-de"]])} />
       <LidTopBar back="/leben-in-deutschland" title="Học theo chủ đề" />
       <Suspense fallback={<ListSkeleton rows={8} />}>
         <Topics />

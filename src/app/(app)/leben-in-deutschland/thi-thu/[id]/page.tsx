@@ -8,7 +8,7 @@ import LidRunner from "@/components/lid/LidRunner";
 import { LidShell } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Xem lại bài thi · Leben in Deutschland", robots: { index: false } };
+export const metadata: Metadata = { title: "Xem lại bài thi – Leben in Deutschland", robots: { index: false } };
 
 async function Review({ params }: PageProps<"/leben-in-deutschland/thi-thu/[id]">) {
   const { id } = await params;

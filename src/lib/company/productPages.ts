@@ -490,7 +490,7 @@ const shadowing: ProductPage = {
                 { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche von HalloVN und die Bedeutungen in Wortlisten und Spielen sind derzeit auf Vietnamesisch. Die Videos, Transkripte und Übungen sind auf Deutsch.' },
                 { q: 'Brauche ich ein Konto?', a: 'Nein. Die freien Lektionen und eigene YouTube-Videos funktionieren ohne Anmeldung. Mit Konto wählst du zwei weitere Lektionen und speicherst Wörter im Vokabelheft.' },
                 { q: 'Welche Videos kann ich nutzen?', a: 'Die Lektionen der Bibliothek oder jedes YouTube-Video mit Untertiteln, dessen Link du einfügst. Die Videos bleiben Eigentum ihrer Urheber auf YouTube.' },
-                { q: 'Wo finde ich HalloVN?', a: 'Direkt hier auf hallovn.de (früher ckk.biz). Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
+                { q: 'Wo finde ich HalloVN?', a: 'Direkt hier auf hallovn.de. Mit einem Konto lernst du Deutsch, übst die Führerschein-Theorie und Leben in Deutschland.' },
             ],
         },
         en: {
@@ -534,7 +534,7 @@ const shadowing: ProductPage = {
                 { q: 'What language is the interface in?', a: 'The HalloVN interface and the meanings in word lists and games are currently in Vietnamese. Videos, transcripts and exercises are in German.' },
                 { q: 'Do I need an account?', a: 'No. Free lessons and your own YouTube videos work without signing in. With an account you pick two more lessons and save words to your notebook.' },
                 { q: 'Which videos can I use?', a: 'The library lessons, or any YouTube video with subtitles whose link you paste in. The videos remain the property of their creators on YouTube.' },
-                { q: 'Where do I find HalloVN?', a: 'Right here on hallovn.de (formerly ckk.biz). With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
+                { q: 'Where do I find HalloVN?', a: 'Right here on hallovn.de. With one account you can learn German and practise the driving theory test and Leben in Deutschland.' },
             ],
         },
         vi: {
@@ -578,7 +578,7 @@ const shadowing: ProductPage = {
                 { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện HalloVN và phần nghĩa trong bộ từ, game hiện bằng tiếng Việt. Video, transcript và bài luyện là tiếng Đức.' },
                 { q: 'Có cần tài khoản không?', a: 'Không. Bài học miễn phí và video YouTube tự dán đều dùng được mà không cần đăng nhập. Có tài khoản thì chọn thêm 2 bài và lưu từ vào sổ từ vựng.' },
                 { q: 'Luyện được với những video nào?', a: 'Các bài trong thư viện, hoặc bất kỳ video YouTube có phụ đề mà bạn dán link vào. Video vẫn thuộc quyền sở hữu của tác giả trên YouTube.' },
-                { q: 'Học HalloVN ở đâu?', a: 'Ngay trên hallovn.de (trước đây là ckk.biz). Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
+                { q: 'Học HalloVN ở đâu?', a: 'Ngay trên hallovn.de. Một tài khoản để học tiếng Đức, ôn lý thuyết lái xe và Leben in Deutschland.' },
             ],
         },
     },

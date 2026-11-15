@@ -10,6 +10,7 @@ import ShareBar from "@/components/ShareBar";
 import SiteFooter from "@/components/SiteFooter";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu, { HeaderNavWithUser, SidebarWithUser } from "@/components/UserMenu";
+import { siteJsonLd, serializeJsonLd } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -32,11 +33,44 @@ const geistMono = Geist_Mono({
 
 const ADSENSE_CLIENT = "ca-pub-5590145594898560";
 
+const SITE_TITLE = "HalloVN – Học tiếng Đức, thi lái xe & Leben in Deutschland cho người Việt";
+const SITE_DESCRIPTION =
+  "Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ vựng. Miễn phí cho người Việt tại Đức.";
+
+// Chỉ đặt phần chung cho cả nhóm trang. KHÔNG đặt alternates.canonical / openGraph.url / openGraph.title ở đây:
+// trang con không tự khai báo sẽ thừa kế nguyên giá trị → mọi trang trỏ canonical / og:url về trang chủ.
+// og:title / og:description / twitter tự lấy theo title + description của từng trang; ảnh chia sẻ mặc định
+// là src/app/(app)/opengraph-image.tsx. Canonical "/" đặt ở page.tsx trang chủ.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "HalloVN – Học tiếng Đức, lái xe, Leben in Deutschland", template: "%s · HalloVN" },
-  description: "Học tiếng Đức với video YouTube (shadowing), luyện thi lý thuyết lái xe và Leben in Deutschland, chơi game luyện từ — một tài khoản cho tất cả.",
-  openGraph: { siteName: "HalloVN", locale: "vi_VN" },
+  title: { default: SITE_TITLE, template: "%s | HalloVN" },
+  description: SITE_DESCRIPTION,
+  applicationName: "HalloVN",
+  authors: [{ name: "HalloVN", url: SITE_URL }],
+  creator: "HalloVN",
+  publisher: "HalloVN",
+  keywords: [
+    "HalloVN",
+    "học tiếng Đức",
+    "học tiếng Đức qua video",
+    "tiếng Đức cho người Việt",
+    "lý thuyết lái xe Đức",
+    "thi bằng lái xe ở Đức",
+    "Führerschein tiếng Việt",
+    "Leben in Deutschland tiếng Việt",
+    "Einbürgerungstest",
+    "thi quốc tịch Đức",
+    "từ vựng tiếng Đức",
+    "Deutsch lernen",
+  ],
+  formatDetection: { telephone: false, address: false, email: false },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+  },
+  openGraph: { type: "website", siteName: "HalloVN", locale: "vi_VN", alternateLocale: ["de_DE"] },
+  twitter: { card: "summary_large_image" },
   other: { "google-adsense-account": ADSENSE_CLIENT },
 };
 
@@ -56,6 +90,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Tải sẵn linh vật của màn tải trang: mạng chậm mới hiện màn này, lúc đó không kịp tải hình nữa */}
         <link rel="prefetch" href="/mascot-loading.svg" as="image" />
+        {/* JSON-LD Organization + WebSite của HalloVN (một lần cho mọi trang) */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd()) }} />
       </head>
       <body className="flex min-h-full">
         <Suspense fallback={<SidebarSkeleton />}>

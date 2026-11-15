@@ -4,11 +4,19 @@ import type { Metadata } from "next";
 import { ArrowLeft, Clock, FileStack, Play } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
-import { classInfo, prefs } from "@/lib/laixe";
+import { DEFAULT_CLASS, classInfo, prefs } from "@/lib/laixe";
+import { JsonLd, breadcrumbLd, quizPageMeta } from "@/lib/laixe/seo";
 import { ExamHistory } from "@/components/laixe/ExamHistory";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Thi thử lý thuyết lái xe", description: "Thi thử lý thuyết lái xe Đức như thật: đề ngẫu nhiên theo hạng, 45 phút, chấm theo điểm lỗi." };
+const B = classInfo(DEFAULT_CLASS).exam;
+
+// Trang bắt đầu thi thử công khai → index; màn làm bài (/lam-bai) và kết quả từng bài (/[id]) thì noindex
+export const metadata: Metadata = quizPageMeta({
+  path: "/lai-xe/thi-thu",
+  title: `Thi thử lý thuyết lái xe Đức online – ${B.questions} câu như thật`,
+  description: `Thi thử lý thuyết bằng lái xe Đức miễn phí: đề ngẫu nhiên ${B.questions} câu theo hạng, ${B.minutes} phút, chấm theo điểm lỗi như thi thật, xem lại câu sai bằng tiếng Việt.`,
+});
 
 async function Start() {
   const { cls } = await prefs();
@@ -68,11 +76,12 @@ async function Start() {
 export default function Page() {
   return (
     <main className="page">
+      <JsonLd data={breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"], ["Thi thử", "/lai-xe/thi-thu"]])} />
       <div className="flex items-center gap-2">
         <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
           <ArrowLeft className="size-5" />
         </Link>
-        <h1 className="page-title">Thi thử</h1>
+        <h1 className="page-title">Thi thử lý thuyết lái xe</h1>
       </div>
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Start />

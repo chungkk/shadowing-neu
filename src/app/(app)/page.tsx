@@ -4,16 +4,18 @@ import { ArrowRight, Car, Check, Gamepad2, Headphones, Landmark, Languages, Mic,
 import type { ComponentType } from "react";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
+import { pageMeta } from "@/lib/page-meta";
 
 // Trang chủ = trang giới thiệu TĨNH: không đọc DB / cookie → được dựng sẵn lúc build.
 // Việc học hằng ngày (học tiếp, ôn từ…) ở trang của từng phần.
 
-export const metadata: Metadata = {
-  title: { absolute: "HalloVN – Học tiếng Đức, ôn thi bằng lái và quốc tịch bằng tiếng Việt" },
+export const metadata: Metadata = pageMeta({
+  // Trang chủ: tự ghi tên thương hiệu lên đầu (absolute → không qua template của layout)
+  title: { absolute: "HalloVN – Học tiếng Đức, ôn bằng lái và Leben in Deutschland" },
   description:
-    "Học tiếng Đức với video thật, ôn lý thuyết lái xe hạng B và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ và đọc tin nước Đức mỗi ngày. Miễn phí.",
-  alternates: { canonical: "/" },
-};
+    "Học tiếng Đức online cho người Việt: luyện nghe nói qua video YouTube, từ vựng Goethe A1–B1, game der die das; ôn lý thuyết lái xe, Leben in Deutschland. Miễn phí.",
+  path: "/",
+});
 
 type Icon = ComponentType<{ className?: string }>;
 

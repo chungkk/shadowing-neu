@@ -12,12 +12,18 @@ import Mascot from "@/components/Mascot";
 import ContinueLearning from "@/components/ContinueLearning";
 import { percent } from "@/lib/progress";
 import { RecentVideos } from "@/components/RecentVideos";
+import { pageMeta } from "@/lib/page-meta";
 import { LessonGridSkeleton } from "@/components/Skeleton";
 import TodayStrip from "@/components/TodayStrip";
 import { lessonPath } from "@/lib/slug";
 
 // Link đã lọc (/tieng-duc?level=B1) vẫn là trang học tiếng Đức với Google
-export const metadata: Metadata = { alternates: { canonical: "/tieng-duc" } };
+export const metadata: Metadata = pageMeta({
+  title: "Học tiếng Đức qua video YouTube – Luyện nghe nói A1–C2",
+  description:
+    "Luyện nghe nói tiếng Đức theo phương pháp shadowing với video YouTube thật: phụ đề từng câu, dịch tiếng Việt, ghi âm, chép chính tả. Bài theo trình độ A1–C2.",
+  path: "/tieng-duc",
+});
 
 const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
 

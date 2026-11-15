@@ -6,7 +6,7 @@ import Avatar from "@/components/Avatar";
 import { Gem } from "@/components/PointsBadge";
 import { LeaderboardSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Bảng xếp hạng" };
+export const metadata: Metadata = { title: "Bảng xếp hạng", robots: { index: false, follow: false } };
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 /** Màu số hạng của 3 người đầu */

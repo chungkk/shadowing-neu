@@ -5,13 +5,15 @@ import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
 import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/laixe";
+import { JsonLd, breadcrumbLd, quizPageMeta } from "@/lib/laixe/seo";
 import AppOnlyCard from "@/components/laixe/AppOnlyCard";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = {
-  title: "Đề mẫu chính thức hạng B · Lý thuyết lái xe",
-  description: `Đề mẫu chính thức (Musterbögen) thi lý thuyết lái xe Đức hạng B, mỗi đề 30 câu: làm thử ${WEB_BOGEN_LIMIT} đề trên web, trọn ${BOGEN_COUNT} đề trên app.`,
-};
+export const metadata: Metadata = quizPageMeta({
+  path: "/lai-xe/de-mau",
+  title: "Đề mẫu thi lý thuyết lái xe hạng B (Musterbögen)",
+  description: `${BOGEN_COUNT} đề mẫu chính thức (Musterbögen) thi lý thuyết lái xe Đức hạng B, mỗi đề 30 câu, dịch tiếng Việt: làm thử ${WEB_BOGEN_LIMIT} đề trên web, trọn bộ trong app HalloVN.`,
+});
 
 async function Sheets() {
   const user = await getCurrentUser();
@@ -68,6 +70,7 @@ async function Sheets() {
 export default function Page() {
   return (
     <main className="page">
+      <JsonLd data={breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"], ["Đề mẫu hạng B", "/lai-xe/de-mau"]])} />
       <div className="flex items-center gap-2">
         <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
           <ArrowLeft className="size-5" />

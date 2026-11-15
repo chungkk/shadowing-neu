@@ -9,7 +9,7 @@ import LidRunner from "@/components/lid/LidRunner";
 import { LidShell } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Câu sai · Leben in Deutschland", robots: { index: false } };
+export const metadata: Metadata = { title: "Câu sai – Leben in Deutschland", robots: { index: false } };
 
 type P = PageProps<"/leben-in-deutschland/cau-sai">;
 

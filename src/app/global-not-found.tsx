@@ -4,7 +4,7 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./(app)/globals.css";
 
 // 404 cho đường dẫn không thuộc trang nào (app có 2 root layout: (app) và (company) nên không dùng được not-found.tsx chung)
-export const metadata: Metadata = { title: "Không tìm thấy trang · HalloVN", robots: { index: false, follow: true } };
+export const metadata: Metadata = { title: "Không tìm thấy trang | HalloVN", robots: { index: false, follow: true } };
 
 export default function GlobalNotFound() {
   return (

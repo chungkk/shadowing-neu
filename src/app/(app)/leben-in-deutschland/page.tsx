@@ -5,19 +5,18 @@ import { BarChart3, BookOpen, Flag, RotateCcw, Settings, Star } from "lucide-rea
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
-import { SITE_URL } from "@/lib/site";
+import { JsonLd, breadcrumbLd, faqLd, quizPageMeta } from "@/lib/laixe/seo";
 import { summarize } from "@/lib/quiz/types";
 import { ActionCard, BigCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = {
-  title: "Leben in Deutschland tiếng Việt – Luyện thi Einbürgerungstest",
-  description:
-    "Ôn thi Leben in Deutschland / Einbürgerungstest bằng tiếng Việt: đủ 300 câu chung + 10 câu của 16 bang theo danh mục BAMF 2025, bản dịch từng câu, thi thử 33 câu 60 phút như thật.",
-  alternates: { canonical: "/leben-in-deutschland" },
-  openGraph: { url: "/leben-in-deutschland", type: "website" },
-};
+// 310 = 300 câu chung + 10 câu của bang mình (mỗi người chỉ học bộ của bang đang sống)
+export const metadata: Metadata = quizPageMeta({
+  path: "/leben-in-deutschland",
+  title: `Leben in Deutschland: ${generalCount() + stateIds(STATES[0].code).length} câu hỏi thi + dịch tiếng Việt`,
+  description: `Ôn thi Leben in Deutschland / Einbürgerungstest bằng tiếng Việt: ${generalCount()} câu chung + 10 câu riêng của ${STATES.length} bang (danh mục BAMF 2025), thi thử ${EXAM_TOTAL} câu ${EXAM.minutes} phút.`,
+});
 
 // Câu hỏi thường gặp: hiện trên trang + dữ liệu có cấu trúc FAQPage (nội dung hai nơi phải giống nhau)
 const FAQ = [
@@ -42,25 +41,6 @@ const FAQ = [
     a: "Tại các cơ sở được BAMF cho phép tổ chức thi, thường là trường dạy tiếng hoặc Volkshochschule gần nơi bạn ở. Lệ phí bài thi Einbürgerungstest là 25 €.",
   },
 ];
-
-function jsonLd() {
-  const data = [
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Trang chủ", item: SITE_URL },
-        { "@type": "ListItem", position: 2, name: "Leben in Deutschland", item: `${SITE_URL}/leben-in-deutschland` },
-      ],
-    },
-  ];
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />;
-}
 
 async function Home() {
   const { state, chosen } = await prefs();
@@ -163,7 +143,7 @@ async function Home() {
 export default function Page() {
   return (
     <main className="page">
-      {jsonLd()}
+      <JsonLd data={[faqLd(FAQ), breadcrumbLd([["Leben in Deutschland", "/leben-in-deutschland"]])]} />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />
       </Suspense>

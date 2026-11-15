@@ -4,15 +4,45 @@ import type { Metadata } from "next";
 import { BarChart3, BookOpen, Flag, RotateCcw, Settings, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { classInfo, classQuestionIds, prefs } from "@/lib/laixe";
+import { BOGEN_COUNT, CLASS_ORDER, DEFAULT_CLASS, WEB_BOGEN_LIMIT, classInfo, classQuestionIds, prefs, totalQuestions } from "@/lib/laixe";
+import { JsonLd, breadcrumbLd, faqLd, fmtNum, quizPageMeta } from "@/lib/laixe/seo";
 import { summarize } from "@/lib/quiz/types";
 import { ActionCard, BigCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = {
-  title: "Lý thuyết lái xe",
-  description: "Luyện thi lý thuyết bằng lái xe Đức mọi hạng (B, A, C, D…): câu hỏi chính thức kèm bản dịch tiếng Việt, giải thích, đề mẫu và thi thử như thật.",
-};
+const TOTAL = totalQuestions();
+const B = classInfo(DEFAULT_CLASS).exam;
+const B_COUNT = classQuestionIds(DEFAULT_CLASS).length;
+
+export const metadata: Metadata = quizPageMeta({
+  path: "/lai-xe",
+  title: `Thi lý thuyết lái xe Đức bằng tiếng Việt – ${fmtNum(Math.floor(TOTAL / 100) * 100)}+ câu hỏi`,
+  description: `Ôn thi lý thuyết bằng lái xe Đức (Führerschein) bằng tiếng Việt: ${fmtNum(TOTAL)} câu hỏi chính thức cho ${CLASS_ORDER.length} hạng B, A, C, D…, giải thích, đề mẫu, thi thử.`,
+});
+
+// Câu hỏi thường gặp: hiện trên trang + dữ liệu có cấu trúc FAQPage (nội dung hai nơi phải giống nhau)
+const FAQ = [
+  {
+    q: "Bài thi lý thuyết lái xe hạng B có bao nhiêu câu?",
+    a: `${B.questions} câu trắc nghiệm, làm trong ${B.minutes} phút: ${B.grundstoff} câu phần cơ bản (Grundstoff) chung cho mọi hạng và ${B.questions - B.grundstoff} câu phần riêng của hạng B (Zusatzstoff). Mỗi câu có thể có nhiều đáp án đúng.`,
+  },
+  {
+    q: "Sai bao nhiêu thì trượt?",
+    a: `Mỗi câu mang 2–5 điểm lỗi. Hạng B được sai tối đa ${B.maxErrorPoints} điểm lỗi; sai từ 2 câu 5 điểm là trượt dù tổng điểm lỗi chưa vượt mức. Chọn thiếu hoặc thừa một đáp án cũng tính là sai cả câu.`,
+  },
+  {
+    q: "Trên trang có bao nhiêu câu hỏi?",
+    a: `${fmtNum(TOTAL)} câu của bộ câu hỏi chính thức (amtlicher Fragenkatalog) cho ${CLASS_ORDER.length} hạng bằng; riêng hạng B có ${fmtNum(B_COUNT)} câu. Bạn chọn hạng đang học, trang chỉ hiện các câu của hạng đó.`,
+  },
+  {
+    q: "Có bản dịch tiếng Việt không?",
+    a: "Có — mọi câu hỏi và phương án đều có bản dịch tiếng Việt, phần lớn câu có thêm giải thích ngắn vì sao đáp án đúng. Câu gốc tiếng Đức luôn hiện; bản dịch bật / tắt bằng nút „Hiện bản dịch\", màn thi thử mặc định ẩn bản dịch.",
+  },
+  {
+    q: "Có đề mẫu chính thức để luyện không?",
+    a: `Có ${BOGEN_COUNT} đề mẫu chính thức hạng B (Musterbögen), mỗi đề ${B.questions} câu. Trên web làm thử được ${WEB_BOGEN_LIMIT} đề đầu, trọn bộ ${BOGEN_COUNT} đề có trong app HalloVN. Ngoài ra có thi thử với đề ngẫu nhiên cho mọi hạng.`,
+  },
+];
 
 async function Home() {
   const { cls } = await prefs();
@@ -93,6 +123,19 @@ async function Home() {
         />
         <ActionCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Kết quả và tiến trình" : "Đăng nhập để xem thống kê"} />
       </div>
+
+      {/* Câu hỏi thường gặp: nội dung cho SEO (FAQPage), xếp sau menu như phần phụ — cùng khuôn với LiD */}
+      <section className="card flex flex-col gap-2" aria-labelledby="lx-faq">
+        <h2 id="lx-faq" className="section-title">
+          Câu hỏi thường gặp
+        </h2>
+        {FAQ.map((f) => (
+          <details key={f.q} className="group rounded-2xl border-2 border-ink/15 px-3 py-2">
+            <summary className="cursor-pointer font-bold">{f.q}</summary>
+            <p className="mt-1 text-sm text-muted">{f.a}</p>
+          </details>
+        ))}
+      </section>
     </>
   );
 }
@@ -100,6 +143,7 @@ async function Home() {
 export default function Page() {
   return (
     <main className="page">
+      <JsonLd data={[faqLd(FAQ), breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"]])]} />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />
       </Suspense>

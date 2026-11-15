@@ -10,7 +10,7 @@ import { ExamHistory } from "@/components/laixe/ExamHistory";
 import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Thống kê · Leben in Deutschland", robots: { index: false } };
+export const metadata: Metadata = { title: "Thống kê – Leben in Deutschland", robots: { index: false } };
 
 /** Biểu đồ tròn đúng / sai / chưa làm (CSS conic-gradient) */
 function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: number; wrong: number }) {

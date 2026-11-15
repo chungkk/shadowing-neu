@@ -8,7 +8,7 @@ import { LidShell, LidTopBar } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Cài đặt · Leben in Deutschland", robots: { index: false } };
+export const metadata: Metadata = { title: "Cài đặt – Leben in Deutschland", robots: { index: false } };
 
 /** Một nhóm cài đặt: thẻ sticker có tiêu đề + mô tả — như mục Lái xe trong trang Cài đặt */
 function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ className?: string }>; title: string; text?: string; children: ReactNode }) {

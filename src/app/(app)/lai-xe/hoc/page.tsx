@@ -4,15 +4,19 @@ import type { Metadata } from "next";
 import { ArrowLeft, BookOpen, RotateCcw, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { classQuestionIds, learnTree, prefs } from "@/lib/laixe";
+import { DEFAULT_CLASS, classQuestionIds, learnTree, prefs } from "@/lib/laixe";
+import { JsonLd, breadcrumbLd, fmtNum, quizPageMeta } from "@/lib/laixe/seo";
 import { summarize } from "@/lib/quiz/types";
 import { ActionCard, ProgressBar } from "@/components/quiz/QuizParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = {
-  title: "Học theo chủ đề · Lý thuyết lái xe",
-  description: "Học lý thuyết lái xe Đức theo chủ đề và chương: phần cơ bản (Grundstoff) và phần riêng từng hạng (Zusatzstoff), chế độ Đọc và Luyện.",
-};
+const B_TREE = learnTree(DEFAULT_CLASS);
+
+export const metadata: Metadata = quizPageMeta({
+  path: "/lai-xe/hoc",
+  title: "Học lý thuyết lái xe Đức theo chủ đề – Grundstoff & Zusatzstoff",
+  description: `Học ${fmtNum(classQuestionIds(DEFAULT_CLASS).length)} câu lý thuyết lái xe Đức hạng B theo ${B_TREE.reduce((n, p) => n + p.themes.length, 0)} chủ đề và từng chương, dịch tiếng Việt, có giải thích, chế độ Đọc lướt và Luyện.`,
+});
 
 async function Topics() {
   const { cls } = await prefs();
@@ -151,6 +155,7 @@ async function Topics() {
 export default function Page() {
   return (
     <main className="page">
+      <JsonLd data={breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"], ["Học theo chủ đề", "/lai-xe/hoc"]])} />
       <div className="flex items-center gap-2">
         <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
           <ArrowLeft className="size-5" />

@@ -10,13 +10,14 @@ import { LidShell, LidTopBar, Wappen } from "@/components/lid/LidParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import { ListSkeleton } from "@/components/Skeleton";
+import { JsonLd, breadcrumbLd, quizPageMeta } from "@/lib/laixe/seo";
 
-export const metadata: Metadata = {
-  title: "Thi thử Leben in Deutschland – Einbürgerungstest 33 câu",
-  description: "Thi thử Leben in Deutschland / Einbürgerungstest như thật: 33 câu (30 câu chung + 3 câu của bang), 60 phút, đúng 17 câu là đậu. Xem lại từng câu sai bằng tiếng Việt.",
-  alternates: { canonical: "/leben-in-deutschland/thi-thu" },
-  openGraph: { url: "/leben-in-deutschland/thi-thu" },
-};
+// Trang bắt đầu thi thử công khai → index; màn làm bài (/lam-bai) và kết quả từng bài (/[id]) thì noindex
+export const metadata: Metadata = quizPageMeta({
+  path: "/leben-in-deutschland/thi-thu",
+  title: `Thi thử Leben in Deutschland – Einbürgerungstest ${EXAM_TOTAL} câu`,
+  description: `Thi thử Leben in Deutschland / Einbürgerungstest như thật: ${EXAM_TOTAL} câu (${EXAM.general} câu chung + ${EXAM.state} câu của bang), ${EXAM.minutes} phút, đúng ${EXAM.pass} câu là đậu, xem lại câu sai bằng tiếng Việt.`,
+});
 
 /** Màn bắt đầu thi như Lái xe: thẻ luật thi + nút đỏ "Bắt đầu thi" */
 async function Start() {
@@ -74,6 +75,7 @@ async function Start() {
 export default function Page() {
   return (
     <LidShell>
+      <JsonLd data={breadcrumbLd([["Leben in Deutschland", "/leben-in-deutschland"], ["Thi thử", "/leben-in-deutschland/thi-thu"]])} />
       <LidTopBar back="/leben-in-deutschland" title="Thi thử" />
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Start />

@@ -1,12 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/page-meta";
 import FallingWordsPage from "@/components/games/FallingWordsPage";
 import { VocabSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = {
-  title: "Đào vàng — game chính tả tiếng Đức",
-  description: "Mỗi cục vàng là một từ tiếng Đức kèm phát âm — nghe và gõ đúng chính tả để quăng móc kéo vàng lên trước khi nó chìm mất. Từ vựng Goethe A1–B1, Aspekte B2 và điều dưỡng.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "Đào vàng – Game luyện nghe và chính tả từ vựng tiếng Đức",
+  description:
+    "Nghe phát âm từng từ tiếng Đức rồi gõ đúng chính tả để kéo vàng lên trước khi nó chìm. Luyện nghe và viết từ vựng Goethe A1–B1, Aspekte B2 và điều dưỡng.",
+  path: "/games/spelling-bee",
+});
 
 export default function SpellingBeePage() {
   return (

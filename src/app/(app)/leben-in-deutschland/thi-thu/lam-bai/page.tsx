@@ -7,7 +7,7 @@ import LidRunner from "@/components/lid/LidRunner";
 import { ExamLoginGate, LidShell } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-export const metadata: Metadata = { title: "Đang thi thử · Leben in Deutschland", robots: { index: false } };
+export const metadata: Metadata = { title: "Đang thi thử – Leben in Deutschland", robots: { index: false } };
 
 async function Exam() {
   const { state, lang } = await prefs(); // đọc cookie → trang động, đề ngẫu nhiên mỗi lần mở

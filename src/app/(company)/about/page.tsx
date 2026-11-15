@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import HomeContent from '@/components/company/HomeContent';
-import { COMPANY, FACEBOOK_PAGE_URL, SITE } from '@/lib/company/site';
+import { SITE } from '@/lib/company/site';
 import { SERVICES, productPath } from '@/lib/company/services';
 import { pageMetadata } from '@/lib/company/seo';
+import { ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo';
 
 export const metadata: Metadata = pageMetadata({
   title: 'HalloVN – Software, Apps und Web-Anwendungen',
@@ -12,41 +13,10 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default function HomePage() {
+  // Organization + WebSite đã chèn ở layout (src/lib/seo.ts); ở đây chỉ liệt kê các app, tham chiếu publisher theo @id
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': `${SITE.url}/#organization`,
-        name: COMPANY.legalName,
-        alternateName: SITE.name,
-        url: SITE.url,
-        email: SITE.contactEmail,
-        logo: { '@type': 'ImageObject', url: `${SITE.url}/apple-icon.png`, width: 180, height: 180 },
-        address: {
-          '@type': 'PostalAddress',
-          postalCode: COMPANY.postalCity.split(' ')[0],
-          addressLocality: COMPANY.postalCity.split(' ').slice(1).join(' '),
-          addressCountry: 'DE',
-        },
-        contactPoint: {
-          '@type': 'ContactPoint',
-          contactType: 'customer support',
-          email: SITE.supportEmail,
-          url: `${SITE.url}/support`,
-          availableLanguage: ['de', 'en', 'vi'],
-        },
-        sameAs: [FACEBOOK_PAGE_URL],
-      },
-      {
-        '@type': 'WebSite',
-        '@id': `${SITE.url}/#website`,
-        url: SITE.url,
-        name: SITE.name,
-        description: SITE.description,
-        inLanguage: 'de',
-        publisher: { '@id': `${SITE.url}/#organization` },
-      },
       ...SERVICES.map((service) => ({
         '@type': service.platform === 'iOS' ? 'MobileApplication' : 'WebApplication',
         '@id': `${SITE.url}${productPath(service)}#app`,
@@ -57,14 +27,14 @@ export default function HomePage() {
           : { operatingSystem: 'Web', sameAs: service.href }),
         applicationCategory: 'EducationalApplication',
         offers: { '@type': 'Offer', price: 0, priceCurrency: 'EUR' },
-        publisher: { '@id': `${SITE.url}/#organization` },
+        publisher: { '@id': ORGANIZATION_ID },
       })),
     ],
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <HomeContent />
     </>
   );

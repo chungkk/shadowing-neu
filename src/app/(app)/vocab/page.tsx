@@ -10,8 +10,14 @@ import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
 import { DecksSkeleton } from "@/components/Skeleton";
 import { SoundMark } from "@/components/SoundBars";
+import { pageMeta } from "@/lib/page-meta";
 
-export const metadata: Metadata = { title: "Từ vựng" };
+export const metadata: Metadata = pageMeta({
+  title: "Từ vựng tiếng Đức Goethe A1, A2, B1 và B2 kèm nghĩa tiếng Việt",
+  description:
+    "Học từ vựng tiếng Đức theo bộ từ Goethe A1–B1, Aspekte neu B2, Nomen-Verb-Verbindungen và điều dưỡng: nghĩa tiếng Việt, phát âm, câu ví dụ, ôn ngắt quãng.",
+  path: "/vocab",
+});
 
 /** Nhóm theo category, giữ thứ tự listDecks (đã xếp theo order) */
 function byCategory(decks: DeckSummary[]) {

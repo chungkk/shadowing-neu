@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getDeck } from "@/lib/decks";
 import DeckStudyPage from "@/components/DeckStudyPage";
 import { VocabSkeleton } from "@/components/Skeleton";
+import { deckMeta } from "@/lib/page-meta";
 
 /** Màn học 1 bộ từ, mở sẵn 1 chủ đề: /vocab/decks/<slug>/<chủ đề> (đổi chủ đề trong màn học cũng đổi URL này) */
 async function TopicView({ params }: PageProps<"/vocab/decks/[slug]/[topic]">) {
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: PageProps<"/vocab/decks/[slug
   const deck = getDeck(slug);
   const topic = deck?.topics.find((t) => t.id === id);
   if (!deck || !topic) return { title: "Không tìm thấy chủ đề", robots: { index: false, follow: false } };
-  return { title: `${topic.title} — ${deck.title}` };
+  return deckMeta(deck, topic);
 }
 
 export default function Page(props: PageProps<"/vocab/decks/[slug]/[topic]">) {
