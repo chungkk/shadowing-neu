@@ -1226,6 +1226,12 @@ export function listDeckLearned(userId: number): Map<string, Set<string>> {
   return out;
 }
 
+/** Lần học gần nhất của từng bộ từ (ms): slug → at */
+export function deckLearnedAt(userId: number): Map<string, number> {
+  const rows = conn().prepare("SELECT deck, MAX(at) AS at FROM deck_learned WHERE user_id = ? GROUP BY deck").all(userId) as { deck: string; at: number }[];
+  return new Map(rows.map((r) => [r.deck, r.at]));
+}
+
 export function markDeckLearned(userId: number, deck: string, keys: string[], at = Date.now()) {
   const db = conn();
   const insert = db.prepare("INSERT OR IGNORE INTO deck_learned (user_id, deck, word_key, at) VALUES (?, ?, ?, ?)");
@@ -1674,6 +1680,7 @@ export type Rate = { n: number; ok: number }; // ok = nhớ được (good / eas
 export type Stats = {
   dueToday: number; // mục tới hạn ôn
   streak: number; // số ngày liên tiếp có ôn (tính tới hôm nay, hoặc hôm qua nếu hôm nay chưa ôn)
+  studiedToday: boolean; // hôm nay (giờ máy người học) đã có học chưa — chưa thì chuỗi ngày sắp đứt
   recall30: Rate & { duolingo: Rate; crazy: Rate }; // nhớ lại trong 30 ngày qua
   retention7: Rate; // lần ôn cách lần trước ≥ 7 ngày — còn nhớ không
   retention30: Rate; // … ≥ 30 ngày
@@ -1731,6 +1738,7 @@ export function getStats(userId: number, tzOffset: number, now = Date.now()): St
   return {
     dueToday: words.filter((v) => isDue(v, now)).length,
     streak,
+    studiedToday: studied.has(dayOf(now)),
     recall30: { ...rate(last30), duolingo: rate(last30.filter((e) => e.mode === "duolingo")), crazy: rate(last30.filter((e) => e.mode === "crazy")) },
     retention7: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 7)),
     retention30: rate(recalls.filter((e) => (e.gap_days ?? 0) >= 30)),
@@ -1777,6 +1785,12 @@ export function quizStats(userId: number, module: QuizModule): Record<string, Qu
     .prepare("SELECT qid, correct, wrong, last_ok FROM quiz_answers WHERE user_id = ? AND module = ?")
     .all(userId, module) as { qid: string; correct: number; wrong: number; last_ok: number }[];
   return Object.fromEntries(rows.map((r) => [r.qid, { correct: r.correct, wrong: r.wrong, lastOk: !!r.last_ok }]));
+}
+
+/** Lần trả lời gần nhất của từng câu (ms): qid → at — để biết chương / bộ câu nào đang học gần đây nhất */
+export function quizAnsweredAt(userId: number, module: QuizModule): Map<string, number> {
+  const rows = conn().prepare("SELECT qid, at FROM quiz_answers WHERE user_id = ? AND module = ?").all(userId, module) as { qid: string; at: number }[];
+  return new Map(rows.map((r) => [r.qid, r.at]));
 }
 
 /** Xoá tiến độ của 1 phần (bắt đầu lại từ đầu) · all: xoá cả câu đánh dấu và lịch sử thi */

@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { dueCount, getPoints } from "@/lib/db";
 import PointsBadge from "./PointsBadge";
+import ReminderBell from "./ReminderBell";
 import { LoginLink } from "./LoginDialog";
 import Sidebar, { DeutschOnly, HeaderNav, ReviewPill, UserDropdown } from "./Sidebar";
 
@@ -33,6 +34,7 @@ export default async function UserMenu() {
         <ReviewPill due={dueCount(user.id)} />
         <PointsBadge initial={getPoints(user.id).total} />
       </DeutschOnly>
+      <ReminderBell />
       <UserDropdown user={{ id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} />
     </div>
   );
