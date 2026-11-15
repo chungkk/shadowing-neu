@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
-import { contactEmail } from "@/lib/mail";
+import { SITE } from "@/lib/company/site";
 import Mascot from "./Mascot";
 
 const COLUMNS = [
@@ -29,14 +29,11 @@ const COLUMNS = [
 
 const linkClass = "text-sm text-foreground/85 transition hover:text-foreground hover:underline";
 
-/** Email liên hệ đọc lúc chạy (biến môi trường trên VPS, không phải lúc build); chưa cấu hình thì ẩn */
-async function Contact() {
-  await connection();
-  const email = contactEmail();
-  if (!email) return null;
+/** Email liên hệ công khai — cố định theo SITE.contactEmail (khớp trang doanh nghiệp), không đọc biến môi trường SMTP */
+function Contact() {
   return (
-    <a href={`mailto:${email}`} className={`${linkClass} break-all`}>
-      {email}
+    <a href={`mailto:${SITE.contactEmail}`} className={`${linkClass} break-all`}>
+      {SITE.contactEmail}
     </a>
   );
 }
@@ -69,11 +66,7 @@ export default function SiteFooter() {
                     {l.label}
                   </Link>
                 ))}
-                {c.title === "Pháp lý" && (
-                  <Suspense>
-                    <Contact />
-                  </Suspense>
-                )}
+                {c.title === "Pháp lý" && <Contact />}
               </nav>
             ))}
           </div>
