@@ -112,47 +112,6 @@ function Stat({ value, label, color = C.text }: { value: string; label: string; 
   );
 }
 
-/** Nút lớn 2 cột: Học · Thi thử · Câu sai · Đánh dấu… */
-export function ActionGrid({ children }: { children: ReactNode }) {
-  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>{children}</View>;
-}
-
-export function ActionTile({ icon, tone, title, subtitle, onPress, wide }: { icon: SFSymbol; tone: string; title: string; subtitle?: string; onPress: () => void; wide?: boolean }) {
-  const { tablet } = useLayout();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={[title, subtitle].filter(Boolean).join(", ")}
-      style={({ pressed }) => ({
-        flexBasis: wide ? "100%" : tablet ? "31%" : "47%",
-        flexGrow: 1,
-        minHeight: 96,
-        padding: 14,
-        gap: 8,
-        borderRadius: 20,
-        ...STICKER,
-        backgroundColor: pressed ? C.card2 : C.card,
-        transform: [{ translateY: pressed ? 2 : 0 }],
-      })}
-    >
-      <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: tone, alignItems: "center", justifyContent: "center" }}>
-        <SymbolView name={icon} size={19} tintColor="#fff" weight="semibold" />
-      </View>
-      <View style={{ gap: 2 }}>
-        <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }} numberOfLines={1}>
-          {title}
-        </Text>
-        {!!subtitle && (
-          <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={2}>
-            {subtitle}
-          </Text>
-        )}
-      </View>
-    </Pressable>
-  );
-}
-
 /** Thẻ lớn ở giữa (như app Führerschein cũ): 2 thẻ cạnh nhau cho Học · Thi thử */
 export function BigTile({ icon, tone, title, subtitle, onPress }: { icon: SFSymbol; tone: string; title: string; subtitle?: string; onPress: () => void }) {
   const { tablet } = useLayout();
