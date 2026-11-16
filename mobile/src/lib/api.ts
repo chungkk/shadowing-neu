@@ -182,12 +182,20 @@ export const getVocabVersion = () => vocabVersion;
 let lessonsVersion = 0;
 export const getLessonsVersion = () => lessonsVersion;
 
+const API_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 90_000;
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   let res: Response;
   // FormData (gửi file ghi âm) → fetch tự đặt Content-Type multipart
   const form = init.body instanceof FormData;
+  // Mạng yếu: không để màn hình chờ ~60 giây (mặc định của iOS) — quá hạn → báo mất kết nối như lỗi mạng.
+  // Gửi file (ghi âm / ảnh) cho lâu hơn. AbortSignal.timeout chưa chắc có trên Hermes → tự hẹn giờ.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), form ? UPLOAD_TIMEOUT_MS : API_TIMEOUT_MS);
   try {
     res = await fetch(API_URL + "/api/v1" + path, {
+      signal: abort.signal,
       method: init.method ?? "GET",
       headers: {
         ...(init.body !== undefined && !form ? { "Content-Type": "application/json" } : {}),
@@ -198,9 +206,13 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   } catch (e) {
     // Lỗi gốc chỉ in khi dev (vd. FormData sai kiểu cũng bị fetch ném ra như lỗi mạng)
     if (__DEV__) console.warn(`[api] không kết nối được ${API_URL}${path}`, e); // địa chỉ server chỉ hiện khi dev
+    clearTimeout(timer);
     throw new ApiError(t("api.noConnection"), 0);
   }
   const data = await res.json().catch(() => ({}));
+  clearTimeout(timer);
+  // Hết giờ giữa lúc đọc nội dung: không trả về {} như thể thành công
+  if (abort.signal.aborted) throw new ApiError(t("api.noConnection"), 0);
   if (!res.ok) throw new ApiError(data.error ? serverError(data.error) : t("api.serverError", { status: res.status }), res.status, data);
   if ((init.method ?? "GET") !== "GET" && /^\/vocab(\/|$)/.test(path)) vocabVersion++;
   if ((init.method ?? "GET") !== "GET" && /^\/lessons(\/|$)/.test(path)) lessonsVersion++;

@@ -102,9 +102,8 @@ export default function LessonScreen() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
 
-  const load = useCallback(
-    () =>
-      api<{ lesson: Lesson }>(`/lessons/${id}`).then(
+  const load = useCallback(() => {
+    return api<{ lesson: Lesson }>(`/lessons/${id}`).then(
         (r) => {
           setLocked(null);
           setLesson(r.lesson);
@@ -113,9 +112,8 @@ export default function LessonScreen() {
           if (e instanceof ApiError && e.data.locked) setLocked(e.data as unknown as Locked);
           else setError(e.message);
         },
-      ),
-    [id],
-  );
+      );
+  }, [id]);
 
   // Tải lại khi đổi tài khoản (vd. khách đăng nhập từ màn khoá rồi quay lại)
   useEffect(() => {
@@ -127,7 +125,20 @@ export default function LessonScreen() {
   if (!lesson) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        {error ? <Text style={{ color: C.redText, textAlign: "center" }}>{error}</Text> : <ActivityIndicator color={C.accentText} />}
+        {error ? (
+          <View style={{ alignItems: "center", gap: 12 }}>
+            <Text style={{ color: C.redText, textAlign: "center" }}>{error}</Text>
+            <Button
+              title={t("retry")}
+              onPress={() => {
+                setError("");
+                load();
+              }}
+            />
+          </View>
+        ) : (
+          <ActivityIndicator color={C.accentText} />
+        )}
       </View>
     );
   }

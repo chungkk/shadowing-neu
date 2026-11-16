@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Text } from "@/components/Text";
 import Player from "@/components/Player";
+import { Button } from "@/components/ui";
 import { api, ApiError, type Transcript } from "@/lib/api";
 import { C } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
@@ -31,7 +32,7 @@ export default function WatchScreen() {
   const [noSubs, setNoSubs] = useState(false);
   const { t } = useI18n();
 
-  useEffect(() => {
+  const load = useCallback(() => {
     loadTranscript(videoId)
       .then(setData)
       .catch((e: Error) => {
@@ -41,12 +42,24 @@ export default function WatchScreen() {
         setNoSubs(e instanceof NoSubtitles);
       });
   }, [videoId]);
+  useEffect(load, [load]);
 
   if (!data) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 }}>
         {error ? (
-          <Text style={{ color: C.redText, textAlign: "center" }}>{noSubs ? t("watch.noSubs") : error}</Text>
+          <>
+            <Text style={{ color: C.redText, textAlign: "center" }}>{noSubs ? t("watch.noSubs") : error}</Text>
+            {!noSubs && (
+              <Button
+                title={t("retry")}
+                onPress={() => {
+                  setError("");
+                  load();
+                }}
+              />
+            )}
+          </>
         ) : (
           <>
             <ActivityIndicator color={C.accentText} />

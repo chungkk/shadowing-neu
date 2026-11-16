@@ -203,7 +203,7 @@ export default function UsersScreen() {
             )}
           </Pressable>
         )}
-        ListEmptyComponent={users ? <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("admin.noUsers")}</Text> : <ActivityIndicator color={C.accentText} />}
+        ListEmptyComponent={users ? <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("admin.noUsers")}</Text> : error ? undefined : <ActivityIndicator color={C.accentText} />}
       />
     </View>
   );

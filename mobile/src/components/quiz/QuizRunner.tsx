@@ -1051,15 +1051,34 @@ function VideoGate({
     p.loop = false;
   });
   const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Chỉ tính 1 lượt xem khi video thật sự chạy — mất mạng / tải lỗi thì không mất lượt
+  const viewPending = useRef(false);
   useEventListener(player, "playToEnd", () => setPlaying(false));
+  useEventListener(player, "playingChange", ({ isPlaying }) => {
+    if (isPlaying && viewPending.current) {
+      viewPending.current = false;
+      onView();
+    }
+  });
+  useEventListener(player, "statusChange", ({ status }) => {
+    if (status !== "error") return;
+    viewPending.current = false;
+    setPlaying(false);
+    setFailed(true);
+  });
   const left = MAX_VIEWS - count;
   const h = tablet ? 340 : 220;
 
   const start = () => {
     if (left <= 0) return;
+    if (failed) {
+      setFailed(false);
+      player.replace({ uri: src, useCaching: true }); // tải lại sau lỗi
+    }
+    viewPending.current = true;
     player.replay();
     setPlaying(true);
-    onView();
   };
   const stop = () => {
     player.pause();
@@ -1138,6 +1157,11 @@ function VideoGate({
           </Pressable>
         )}
       </View>
+      {failed && (
+        <Text style={{ color: C.redText, textAlign: "center" }}>
+          {L("Không tải được video. Kiểm tra mạng rồi bấm xem lại.", "Video konnte nicht geladen werden. Prüfe dein Internet und starte es erneut.")}
+        </Text>
+      )}
       <BarBtn
         title={L(
           `Xem video (còn ${left} lần)`,

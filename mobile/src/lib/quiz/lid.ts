@@ -1,5 +1,6 @@
 import data from "@content/lid/questions.json";
 import type { DrivingQ, Tr } from "@shared/laixe/rules";
+import { STATE_CODES } from "./ids";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi "Leben in Deutschland" — cùng file dữ liệu với web (src/content/lid), đóng gói trong app.
@@ -14,7 +15,8 @@ export const SET_SIZE = 30;
 export type State = { code: string; name: string; capital: string };
 export const STATES: State[] = data.states;
 export const getState = (code: string) => STATES.find((s) => s.code === code) ?? null;
-export const DEFAULT_STATE = "be";
+export { DEFAULT_STATE } from "./ids";
+if (__DEV__ && STATES.map((s) => s.code).join() !== STATE_CODES.join()) console.warn("quiz/ids.ts: STATE_CODES lệch với questions.json");
 
 type Topic = "politik" | "geschichte" | "gesellschaft";
 /** 1 câu trong questions.json (nr = số Aufgabe BAMF; topic chỉ có ở câu chung; explainVi = giải thích ngắn, không bắt buộc) */

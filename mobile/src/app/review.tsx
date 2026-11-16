@@ -239,6 +239,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const badSound = useAudioPlayer(require("@/assets/sounds/wrong.wav"));
   const [sound, setSound] = useState(true);
   const [streak, setStreak] = useState(0); // chuỗi ngày ôn (server, cùng số với màn Thống kê) — lấy khi xong buổi
+  const sayTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // đọc từ sau tiếng đúng / sai
   const pending = useRef<Promise<unknown>[]>([]); // các lần chấm đang gửi → đợi xong rồi mới hỏi chuỗi ngày
   const [queue, setQueue] = useState(() => {
     const q = buildQueue(items);
@@ -302,7 +303,10 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     SecureStore.getItemAsync(SOUND_KEY)
       .then((s) => s === "0" && setSound(false))
       .catch(() => {});
-    return () => void stopSpeaking();
+    return () => {
+      if (sayTimer.current) clearTimeout(sayTimer.current); // đóng màn ngay sau khi trả lời → không đọc từ nữa
+      void stopSpeaking();
+    };
   }, []);
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
@@ -331,7 +335,10 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     if (ok) setXp((x) => x + (s.role === "graded" || s.role === "match" ? 10 : 5));
     if (sound) {
       playSfx(ok);
-      if (kind !== "match") setTimeout(() => say(spoken(v.word)), 450);
+      if (kind !== "match") {
+        if (sayTimer.current) clearTimeout(sayTimer.current);
+        sayTimer.current = setTimeout(() => say(spoken(v.word)), 450);
+      }
     }
     if (s.role === "graded") {
       const entry: Graded = { item: v, correct: ok };

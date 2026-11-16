@@ -75,11 +75,14 @@ window.addEventListener("message", function (e) {
 true;
 `;
 
-function IconButton({ icon, onPress, disabled }: { icon: SFSymbol; onPress: () => void; disabled?: boolean }) {
+function IconButton({ icon, onPress, disabled, label }: { icon: SFSymbol; onPress: () => void; disabled?: boolean; label: string }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       hitSlop={6}
       style={({ pressed }) => ({
         width: 44,
@@ -325,20 +328,40 @@ export default function Player({
   }, [playing, segments, markSeen]);
 
   // ---- Ghi âm (Shadowing) ----
+  const recIdx = useRef(0); // câu lúc bắt đầu ghi — bản ghi gắn vào câu này dù video đã chạy sang câu khác
   const toggleRecord = async () => {
-    if (recState.isRecording) {
-      await recorder.stop();
-      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }); // trả âm thanh về loa ngoài
-      if (recorder.uri) setRecordings((r) => ({ ...r, [idx]: recorder.uri! }));
-      return;
+    try {
+      if (recState.isRecording) {
+        await recorder.stop();
+        await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }); // trả âm thanh về loa ngoài
+        const i = recIdx.current;
+        if (recorder.uri) setRecordings((r) => ({ ...r, [i]: recorder.uri! }));
+        return;
+      }
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) return micDenied();
+      pause();
+      recIdx.current = idx;
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+    } catch {
+      // Micro đang bận (cuộc gọi, Siri…): trả chế độ âm thanh về bình thường để nút ghi không bị kẹt
+      setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
     }
-    const { granted } = await requestRecordingPermissionsAsync();
-    if (!granted) return micDenied();
-    pause();
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-    await recorder.prepareToRecordAsync();
-    recorder.record();
   };
+  // Rời màn hình khi đang ghi: dừng ghi + trả âm thanh về loa ngoài (không thì âm thanh sau đó phát nhỏ qua loa thoại)
+  useEffect(
+    () => () => {
+      try {
+        if (recorder.isRecording) recorder.stop().catch(() => {});
+      } catch {
+        // recorder đã được giải phóng
+      }
+      setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+    },
+    [recorder],
+  );
   const playRecording = (i: number) => {
     const uri = recordings[i];
     if (!uri) return;
@@ -515,7 +538,11 @@ export default function Player({
     let alive = true;
     api<{ progress: Progress | null }>(`/progress?source=${encodeURIComponent(sourceUrl)}`)
       .then(({ progress: p }) => {
-        if (!alive || !p) return;
+        if (!alive) return;
+        // Chỉ cho lưu sau khi đã đọc được bản trên server: tải lỗi (mạng yếu / server lỗi) mà vẫn lưu
+        // thì PUT dictDone {} / seen [] ghi đè tiến độ thật (vd. đã học trên web)
+        progressLoaded.current = true;
+        if (!p) return;
         const done = Object.fromEntries(Object.entries(p.dictDone).filter(([k]) => Number(k) < segments.length));
         const dict = allowDictation && p.mode === "dictation";
         // Lượt chính tả đã lưu (server cũ / lượt chưa chọn → chọn lượt mới nếu đang ở Chính tả)
@@ -535,10 +562,7 @@ export default function Player({
         setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
       })
-      .catch(() => {})
-      .finally(() => {
-        if (alive) progressLoaded.current = true;
-      });
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -1119,14 +1143,18 @@ export default function Player({
         <Pressable
           onPress={() => setRate(RATES[(RATES.indexOf(rate) + 1) % RATES.length])}
           hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={t("player.a11yRate", { rate })}
           style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
         >
           <Text style={{ color: rate === 1 ? C.muted : C.amber, fontWeight: "800", fontSize: 14 }}>{rate}×</Text>
         </Pressable>
-        <IconButton icon="arrow.counterclockwise" onPress={() => playSegment(idx)} />
-        <IconButton icon="backward.end.fill" onPress={prev} disabled={prevIdx === undefined} />
+        <IconButton icon="arrow.counterclockwise" label={t("player.a11yReplay")} onPress={() => playSegment(idx)} />
+        <IconButton icon="backward.end.fill" label={t("player.a11yPrev")} onPress={prev} disabled={prevIdx === undefined} />
         <Pressable
           onPress={togglePlay}
+          accessibilityRole="button"
+          accessibilityLabel={playing ? t("player.a11yPause") : t("player.a11yPlay")}
           style={({ pressed }) => ({
             width: tablet ? 56 : 48,
             height: tablet ? 56 : 48,
@@ -1139,11 +1167,13 @@ export default function Player({
         >
           <SymbolView name={playing ? "pause.fill" : "play.fill"} size={tablet ? 24 : 20} tintColor="#fff" />
         </Pressable>
-        <IconButton icon="forward.end.fill" onPress={next} disabled={nextIdx === undefined} />
+        <IconButton icon="forward.end.fill" label={t("player.a11yNext")} onPress={next} disabled={nextIdx === undefined} />
         {!dictation && (
           <>
             <Pressable
               onPress={toggleRecord}
+              accessibilityRole="button"
+              accessibilityLabel={recState.isRecording ? t("player.a11yStopRecord") : t("player.a11yRecord")}
               style={({ pressed }) => ({
                 width: 44,
                 height: 44,
@@ -1160,7 +1190,7 @@ export default function Player({
                 tintColor={recState.isRecording ? "#fff" : C.redText}
               />
             </Pressable>
-            <IconButton icon="speaker.wave.2.fill" onPress={() => playRecording(idx)} disabled={!recordings[idx]} />
+            <IconButton icon="speaker.wave.2.fill" label={t("player.a11yPlayRecording")} onPress={() => playRecording(idx)} disabled={!recordings[idx]} />
           </>
         )}
       </View>

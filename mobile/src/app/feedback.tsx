@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Stack, router, useLocalSearchParams, usePreventRemove } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import * as Device from "expo-device";
@@ -55,6 +55,12 @@ export default function FeedbackScreen() {
     }),
   );
 
+  // Đóng sau khi đã render lại với sent = true — gọi router.back() ngay trong send() thì usePreventRemove
+  // còn thấy dirty cũ → hỏi "bỏ nội dung?" dù đã gửi xong
+  useEffect(() => {
+    if (sent) router.back();
+  }, [sent]);
+
   const send = async () => {
     if (!text || sending) return;
     setSending(true);
@@ -62,7 +68,6 @@ export default function FeedbackScreen() {
       await api("/feedback", { method: "POST", body: { kind, message: text, email: user ? undefined : email.trim(), device } });
       setSent(true);
       notice(t("fb.sent"), t("fb.sentBody"));
-      router.back();
     } catch (e) {
       showError(e);
     } finally {

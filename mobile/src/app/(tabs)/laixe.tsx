@@ -37,7 +37,7 @@ export default function LaixeTab() {
         user
           ? () => {
               setRefreshing(true);
-              syncQuiz(user).finally(() => setRefreshing(false));
+              syncQuiz(user, { force: true }).finally(() => setRefreshing(false));
             }
           : undefined
       }

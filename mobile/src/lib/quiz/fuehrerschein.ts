@@ -1,6 +1,8 @@
 import data from "@content/fuehrerschein/questions.json";
 import { NUM_HINTS } from "@shared/laixe/units";
 import type { DrivingQ, ExamConfig } from "@shared/laixe/rules";
+import { CLASS_IDS as LIGHT_CLASS_IDS } from "./ids";
+import { hallovnMedia } from "./media";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi lý thuyết lái xe cho mọi hạng — cùng file dữ liệu với tab Lái xe của web (src/content/fuehrerschein),
@@ -10,8 +12,9 @@ type Raw = (typeof data.questions)[number];
 
 export type ClassId = (typeof data.classOrder)[number];
 export const CLASS_ORDER = data.classOrder as ClassId[];
-export const DEFAULT_CLASS: ClassId = "B";
+export { DEFAULT_CLASS } from "./ids";
 export const isClassId = (v: unknown): v is ClassId => (CLASS_ORDER as unknown[]).includes(v);
+if (__DEV__ && CLASS_ORDER.join() !== LIGHT_CLASS_IDS.join()) console.warn("quiz/ids.ts: CLASS_IDS lệch với questions.json");
 
 export const CLASS_GROUPS: { title: string; de: string; classes: ClassId[] }[] = [
   { title: "Ô tô", de: "Pkw", classes: ["B"] },
@@ -131,7 +134,7 @@ export function questions(ids: string[], orders?: Record<string, number[]>): Dri
         images: q.images,
         optionImages: q.optionImages,
         poster: q.poster,
-        video: q.video,
+        video: q.video ? hallovnMedia(q.video) : q.video,
         tr: q.vi ?? null,
         order,
       },

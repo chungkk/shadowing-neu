@@ -3,8 +3,8 @@ import { File, Paths } from "expo-file-system";
 import { isLang, type ExamAnswer, type ExamRecord, type ExamResult, type Lang } from "@shared/laixe/rules";
 import type { QuizStat } from "@shared/quiz/types";
 import { ApiError, api } from "../api";
-import { DEFAULT_CLASS, isClassId, type ClassId } from "./fuehrerschein";
-import { DEFAULT_STATE, getState } from "./lid";
+import type { ClassId } from "./fuehrerschein";
+import { DEFAULT_CLASS, DEFAULT_STATE, isClassId, isStateCode } from "./ids";
 
 /**
  * Tiến độ tab Lái xe + Leben in Deutschland, lưu trong file trên máy → khách học được, không cần mạng.
@@ -85,7 +85,7 @@ function load(): Data {
     return {
       v: 1,
       owner,
-      prefs: { ...p, cls: isClassId(p.cls) ? p.cls : DEFAULT_CLASS, state: getState(p.state) ? p.state : DEFAULT_STATE, lang: isLang(p.lang) ? p.lang : "vi" },
+      prefs: { ...p, cls: isClassId(p.cls) ? p.cls : DEFAULT_CLASS, state: isStateCode(p.state) ? p.state : DEFAULT_STATE, lang: isLang(p.lang) ? p.lang : "vi" },
       mods: { fuehrerschein: { ...emptyModule(), ...d.mods?.fuehrerschein }, lid: { ...emptyModule(), ...d.mods?.lid } },
       pos: d.pos ?? {},
       outbox: Array.isArray(d.outbox) ? d.outbox : legacy,
@@ -288,9 +288,16 @@ function adoptGuest(userId: number) {
 }
 
 /** Gửi hàng đợi rồi tải tiến độ trên server về (gọi khi mở tab Lái xe / LiD). Mất mạng thì giữ bản trên máy */
-export function syncQuiz(user: UserLike): Promise<void> {
+// Mở lại tab trong vòng 60 giây: chỉ gửi hàng đợi, không tải lại 6 API (kéo để làm mới = force)
+const PULL_EVERY_MS = 60_000;
+let lastPull: { user: number; at: number } | null = null;
+
+export function syncQuiz(user: UserLike, opts?: { force?: boolean }): Promise<void> {
   if (!user) return Promise.resolve();
   if (syncing) return syncing;
+  if (!opts?.force && lastPull?.user === user.id && Date.now() - lastPull.at < PULL_EVERY_MS && data.owner === user.id) {
+    return data.outbox.length ? flush(user).then(() => {}, () => {}) : Promise.resolve();
+  }
   syncing = (async () => {
     try {
       if (data.owner === null) adoptGuest(user.id);
@@ -313,6 +320,7 @@ export function syncQuiz(user: UserLike): Promise<void> {
           return { stats: s.stats, marked: b.ids, remote: e.exams.filter((x) => !mine.has(x.id)) };
         });
       }
+      lastPull = { user: user.id, at: Date.now() };
     } catch {
       // mất mạng / server lỗi: lần mở tab sau thử lại
     } finally {
