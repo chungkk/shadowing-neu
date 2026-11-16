@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Phụ đề SRT của video dài có thể vượt giới hạn mặc định 1MB
     serverActions: { bodySizeLimit: "5mb" },
-    // 2 root layout (app học + trang doanh nghiệp) → trang 404 chung ở app/global-not-found.tsx
+    // Root layout nằm trong route group (app) → trang 404 cho đường dẫn lạ ở app/global-not-found.tsx
     globalNotFound: true,
   },
   // Chưa có script-src: CSP theo nonce buộc mọi trang render động, không hợp với partialPrefetching

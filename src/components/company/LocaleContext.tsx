@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 export type Locale = 'de' | 'en' | 'vi';
 
@@ -52,8 +53,20 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         if (detected !== 'de') setLocaleState(detected);
     }, []);
 
+    // Chuyển trang trong cùng layout (vd. link "/privacy?lang=vi" ở SiteFooter) không gắn lại provider → đọc lại ?lang=
+    const pathname = usePathname();
+    useEffect(() => {
+        const param = new URLSearchParams(window.location.search).get('lang');
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Sprache aus der URL ist erst im Browser bekannt
+        if (param) setLocaleState(fromTag(param));
+    }, [pathname]);
+
     useEffect(() => {
         document.documentElement.lang = locale;
+        // Rời trang thông tin sang trang học (cùng root layout, không tải lại) → trả lại lang="vi" của app
+        return () => {
+            document.documentElement.lang = 'vi';
+        };
     }, [locale]);
 
     const setLocale = useCallback((next: Locale) => {

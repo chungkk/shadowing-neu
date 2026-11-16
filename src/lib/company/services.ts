@@ -20,10 +20,6 @@ export interface Service {
     name: string;
     /** Đường dẫn trang riêng, support và bảo mật: /<legalSlug>, /<legalSlug>/support */
     legalSlug: string;
-    /** Biến màu mực trong globals.css */
-    ink: string;
-    /** Chữ trên nền mực */
-    onInk: 'light' | 'dark';
     /** Nơi bắt đầu học (đường dẫn trong site) */
     href: string;
     copy: Record<Locale, ServiceCopy>;
@@ -34,8 +30,6 @@ export const SERVICES: Service[] = [
         id: 'shadowing',
         name: 'HalloVN',
         legalSlug: 'shadowing',
-        ink: 'var(--ink-saffron)',
-        onInk: 'dark',
         href: '/', // app học ngay trên hallovn.de
         copy: {
             de: {
@@ -84,15 +78,10 @@ export const PLATFORM = SERVICES[0];
 /** Trang riêng của sản phẩm; trang support và bảo mật nằm ngay dưới nó */
 export const productPath = (service: Service) => `/${service.legalSlug}`;
 
-/** Hình trên tem của từng phần học (StampArt) */
-export type AreaArt = 'wave' | 'cards' | 'road' | 'columns';
-
+/** Icon và màu ô icon của từng phần nằm ở HomeContent (AREA_LOOK), khớp các thẻ trên trang chủ app */
 export interface LearnArea {
-    id: string;
+    id: 'deutsch' | 'vocab' | 'fuehrerschein' | 'lid';
     href: string;
-    ink: string;
-    onInk: 'light' | 'dark';
-    art: AreaArt;
     copy: Record<Locale, { title: string; fact: string; text: string }>;
 }
 
@@ -105,9 +94,6 @@ export const LEARN_AREAS: LearnArea[] = [
     {
         id: 'deutsch',
         href: '/tieng-duc',
-        ink: 'var(--ink-saffron)',
-        onInk: 'dark',
-        art: 'wave',
         copy: {
             de: { title: 'Deutsch mit Videos', fact: 'Shadowing', text: 'Echte Videos Satz für Satz: hören, nachsprechen, mitschreiben' },
             en: { title: 'German with videos', fact: 'Shadowing', text: 'Real videos sentence by sentence: listen, repeat, write along' },
@@ -117,9 +103,6 @@ export const LEARN_AREAS: LearnArea[] = [
     {
         id: 'vocab',
         href: '/vocab',
-        ink: 'var(--ink-petrol)',
-        onInk: 'light',
-        art: 'cards',
         copy: {
             de: { title: 'Wortschatz', fact: '11.500+', text: 'Wörter und Wendungen in 6 Wortlisten, mit vietnamesischer Bedeutung' },
             en: { title: 'Vocabulary', fact: '11,500+', text: 'words and phrases in 6 word lists, with Vietnamese meanings' },
@@ -129,9 +112,6 @@ export const LEARN_AREAS: LearnArea[] = [
     {
         id: 'fuehrerschein',
         href: '/lai-xe',
-        ink: 'var(--ink-vermilion)',
-        onInk: 'light',
-        art: 'road',
         copy: {
             de: { title: 'Führerschein', fact: '1.700+', text: 'offizielle Theoriefragen für 13 Klassen, übersetzt' },
             en: { title: 'Driving test', fact: '1,700+', text: 'official theory questions for 13 licence classes, translated' },
@@ -141,9 +121,6 @@ export const LEARN_AREAS: LearnArea[] = [
     {
         id: 'lid',
         href: '/leben-in-deutschland',
-        ink: 'var(--ink)',
-        onInk: 'light',
-        art: 'columns',
         copy: {
             de: { title: 'Leben in Deutschland', fact: '460', text: 'Fragen: 300 allgemeine und 10 je Bundesland' },
             en: { title: 'Leben in Deutschland', fact: '460', text: 'questions: 300 general and 10 per federal state' },

@@ -13,7 +13,7 @@ import type { Locale } from '@/components/company/LocaleContext';
  * - KI: src/lib/translate.ts, word.ts, punctuate.ts, whisper.ts · Sprachausgabe: src/lib/tts.ts
  * - Sprechräume (WebRTC, STUN von Google, optional TURN): src/lib/sprechen.ts
  * - E-Mail (SMTP, Standard Gmail): src/lib/mail.ts · Feedback/Support-Formular: /api/v1/feedback
- * - Cookies: session, play_guest, lx_class, lx_lang, lid_state · AdSense: (app)/layout.tsx, (company)/layout.tsx
+ * - Cookies: session, play_guest, lx_class, lx_lang, lid_state · AdSense: (app)/layout.tsx
  * - Backups: scripts/backup (täglich, 7 Stände auf dem Server, bis zu 60 Stände als Kopie beim Betreiber)
  */
 

@@ -17,7 +17,7 @@ const RESPONSIBLE = COMPANY.owner || COMPANY.legalName;
 
 function Address() {
     return (
-        <div className="card">
+        <div className="legal-card">
             {ADDRESS_LINES.map((line, i) => (
                 <p key={line}>{i === 0 ? <strong>{line}</strong> : line}</p>
             ))}
@@ -34,7 +34,7 @@ const CONTACT_LABELS: Record<Locale, { email: string; phone: string }> = {
 function Contact({ locale }: { locale: Locale }) {
     const l = CONTACT_LABELS[locale];
     return (
-        <div className="card">
+        <div className="legal-card">
             <p>{l.email}: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a></p>
             {COMPANY.phone && <p>{l.phone}: {COMPANY.phone}</p>}
             <p>Website: <a href={SITE.url}>{SITE.domain}</a></p>
@@ -98,7 +98,7 @@ const de = (
 
 const en = (
     <>
-        <p className="note">The English version is for information only. The German version is legally binding.</p>
+        <p className="legal-note">The English version is for information only. The German version is legally binding.</p>
 
         <h2>Information pursuant to § 5 DDG (German Digital Services Act)</h2>
         <Address />
@@ -152,7 +152,7 @@ const en = (
 
 const vi = (
     <>
-        <p className="note">Bản tiếng Việt chỉ mang tính tham khảo. Bản tiếng Đức là bản có giá trị pháp lý.</p>
+        <p className="legal-note">Bản tiếng Việt chỉ mang tính tham khảo. Bản tiếng Đức là bản có giá trị pháp lý.</p>
 
         <h2>Thông tin theo § 5 DDG (Luật Dịch vụ số của Đức)</h2>
         <Address />

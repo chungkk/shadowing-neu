@@ -12,7 +12,8 @@ import { hallovnPrivacy } from '@/lib/company/legal/website';
 import type { LegalProduct } from '@/lib/company/legal/types';
 import { SITE } from '@/lib/company/site';
 import type { Locale } from '@/components/company/LocaleContext';
-import { BriefcaseIcon, DocumentIcon, LockIcon, MailIcon, PlusIcon, ReceiptIcon } from '@/components/company/icons';
+import { ArrowRight, BadgeEuro, ChevronDown, CircleHelp, Cookie, FileText, KeyRound, LifeBuoy, Mail, Settings, ShieldCheck } from 'lucide-react';
+import ConsentSettings from '@/components/company/ConsentSettings';
 
 const LOCALES: Locale[] = ['de', 'en', 'vi'];
 /** Slug kỹ thuật (giữ tên cũ) của sản phẩm chính HalloVN */
@@ -46,6 +47,7 @@ const COPY = {
         websiteIntro: 'Für die Website hallovn.de und die App HalloVN: welche Daten wir verarbeiten, wofür und welche Rechte Sie haben.',
         otherApps: 'Weitere Apps',
         otherAppsIntro: 'Für diese eigenständigen Apps gilt jeweils eine eigene Datenschutzerklärung:',
+        consent: 'Datenschutz-Einstellungen',
     },
     en: {
         support: 'Support',
@@ -74,6 +76,7 @@ const COPY = {
         websiteIntro: 'For the website hallovn.de and the HalloVN app: what data we process, why, and what rights you have.',
         otherApps: 'Other apps',
         otherAppsIntro: 'Each of these separate apps has its own privacy policy:',
+        consent: 'Privacy settings',
     },
     vi: {
         support: 'Hỗ trợ',
@@ -102,6 +105,7 @@ const COPY = {
         websiteIntro: 'Áp dụng cho trang web hallovn.de và ứng dụng HalloVN: chúng tôi xử lý dữ liệu gì, để làm gì và bạn có những quyền nào.',
         otherApps: 'Ứng dụng khác',
         otherAppsIntro: 'Mỗi ứng dụng độc lập sau có chính sách bảo mật riêng:',
+        consent: 'Cài đặt quyền riêng tư',
     },
 };
 
@@ -111,11 +115,11 @@ function productNav(product: LegalProduct): LegalNavItem[] {
     // Không còn liên kết /delete-account: đường dẫn đó thuộc 2 app đã tách (proxy chuyển sang ckk.biz).
     // Xoá tài khoản HalloVN nằm ở /settings (xem câu hỏi thường gặp).
     return [
-        { href: `/${product.slug}/support`, icon: MailIcon, ...label('support') },
-        { href: `/${product.slug}/privacy`, icon: LockIcon, ...label('privacy') },
-        ...(product.hasPurchases ? [{ href: '/refund', icon: ReceiptIcon, ...label('refund') }] : []),
-        ...(product.slug === HALLOVN_SLUG ? [{ href: '/terms', icon: DocumentIcon, ...label('terms') }] : []),
-        { href: '/support', icon: BriefcaseIcon, ...label('all') },
+        { href: `/${product.slug}/support`, icon: CircleHelp, ...label('support') },
+        { href: `/${product.slug}/privacy`, icon: ShieldCheck, ...label('privacy') },
+        ...(product.hasPurchases ? [{ href: '/refund', icon: BadgeEuro, ...label('refund') }] : []),
+        ...(product.slug === HALLOVN_SLUG ? [{ href: '/terms', icon: FileText, ...label('terms') }] : []),
+        { href: '/support', icon: LifeBuoy, ...label('all') },
     ];
 }
 
@@ -136,17 +140,45 @@ function faqInline(text: string): ReactNode[] {
 const topicsFor = (product: LegalProduct): SupportTopic[] =>
     product.slug === HALLOVN_SLUG ? ['account', 'bug', 'idea', 'content', 'privacy', 'other'] : ['bug', 'idea', 'privacy', 'other'];
 
+/** Tiêu đề của một thẻ: icon màu link + chữ Baloo như mục trong /settings */
+function CardTitle({ id, icon: Icon, children }: { id: string; icon: typeof Mail; children: ReactNode }) {
+    return (
+        <h2 id={id} className="section-title flex scroll-mt-24 items-center gap-2">
+            <Icon className="size-5 shrink-0 text-link" /> {children}
+        </h2>
+    );
+}
+
 function ContactSection({ id, title, locale, product }: { id: string; title: string; locale: Locale; product?: LegalProduct }) {
     const t = COPY[locale];
     return (
-        <section>
-            <h2 id={id}>{title}</h2>
-            <p>{t.contactDesc}</p>
-            <p>
-                <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
-            </p>
+        <section aria-labelledby={id} className="sticker flex flex-col gap-4 p-4 sm:p-6">
+            <div className="flex flex-col gap-2">
+                <CardTitle id={id} icon={Mail}>{title}</CardTitle>
+                <p className="max-w-[65ch] text-sm text-muted">{t.contactDesc}</p>
+                <a href={`mailto:${SITE.contactEmail}`} className="btn btn-sm self-start">
+                    <Mail className="size-4 text-link" /> {SITE.contactEmail}
+                </a>
+            </div>
             <SupportForm product={product?.name} topics={product ? topicsFor(product) : undefined} />
         </section>
+    );
+}
+
+/** Câu hỏi thường gặp: mỗi câu là một ô bo tròn, mở ra thì nổi viền đậm như thẻ app */
+function FaqList({ items }: { items: { q: string; a: string }[] }) {
+    return (
+        <div className="flex flex-col gap-2">
+            {items.map((item) => (
+                <details key={item.q} className="faq-item group rounded-2xl border-2 border-ink/15 bg-card transition open:border-ink open:shadow-[0_3px_0_var(--ink)]">
+                    <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 font-bold hover:bg-card-2/60">
+                        {item.q}
+                        <ChevronDown className="size-5 shrink-0 text-link transition-transform group-open:rotate-180" />
+                    </summary>
+                    <p className="legal-links max-w-[70ch] px-3.5 pb-3.5 text-[0.95rem] leading-relaxed text-muted">{faqInline(item.a)}</p>
+                </details>
+            ))}
+        </div>
     );
 }
 
@@ -154,19 +186,9 @@ function SupportBody({ product, locale }: { product: LegalProduct; locale: Local
     const t = COPY[locale];
     return (
         <>
-            <section>
-                <h2 id="faq" className="!mt-0 !border-0 !pt-0">{t.faq}</h2>
-                <div className="divide-y divide-[var(--ink)]/20 border-y border-[var(--ink)]/20">
-                    {product.faq[locale].map((item) => (
-                        <details key={item.q} className="faq-item group">
-                            <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-4 py-3 font-semibold">
-                                {item.q}
-                                <PlusIcon className="faq-icon h-5 w-5 shrink-0 transition-transform" />
-                            </summary>
-                            <p className="pb-4">{faqInline(item.a)}</p>
-                        </details>
-                    ))}
-                </div>
+            <section aria-labelledby="faq" className="card flex flex-col gap-3 sm:p-6">
+                <CardTitle id="faq" icon={CircleHelp}>{t.faq}</CardTitle>
+                <FaqList items={product.faq[locale]} />
             </section>
             <ContactSection id="contact" title={t.contact} locale={locale} product={product} />
         </>
@@ -182,9 +204,20 @@ export function ProductSupport({ slug }: { slug: string }) {
             content={perLocaleOf((l) => <SupportBody product={product} locale={l} />)}
             nav={productNav(product)}
             showUpdated={false}
+            badge={perLocaleOf((l) => COPY[l].support)}
+            variant="cards"
         />
     );
 }
+
+/** Nút mở lại hộp đồng ý của Google, đặt ngay dưới mục quảng cáo (AdSense) của chính sách HalloVN */
+const consentAfter = (locale: Locale) => ({
+    ads: (
+        <p>
+            <ConsentSettings label={COPY[locale].consent} className="btn" icon={<Cookie className="size-4 text-link" />} />
+        </p>
+    ),
+});
 
 export function ProductPrivacy({ slug }: { slug: string }) {
     const product = legalProduct(slug);
@@ -192,54 +225,64 @@ export function ProductPrivacy({ slug }: { slug: string }) {
         <LegalShell
             title={perLocaleOf((l) => `${COPY[l].privacyTitle}: ${product.name}`)}
             intro={perLocaleOf((l) => COPY[l].privacyIntro(product.name))}
-            content={perLocaleOf((l) => <LegalText sections={product.privacy[l]} />)}
+            content={perLocaleOf((l) => <LegalText sections={product.privacy[l]} after={slug === HALLOVN_SLUG ? consentAfter(l) : undefined} />)}
             nav={productNav(product)}
         />
     );
 }
 
-/** Danh sách sản phẩm kèm liên kết support và bảo mật. */
-function ProductList({ locale }: { locale: Locale }) {
-    const t = COPY[locale];
-    return (
-        <ul className="!list-none !pl-0 border-t border-[var(--ink)]/20">
-            {LEGAL_PRODUCTS.map((product) => (
-                <li key={product.slug} className="!mb-0 grid gap-x-6 gap-y-1 border-b border-[var(--ink)]/20 py-4 sm:grid-cols-[1fr_auto] sm:items-baseline">
-                    <div>
-                        <strong className="block font-display text-lg">{product.name}</strong>
-                        <span className="text-[0.95rem]">{product.summary[locale]}</span>
-                    </div>
-                    <div className="flex gap-4 text-[0.95rem]">
-                        <Link href={`/${product.slug}/support`}>{t.support}</Link>
-                        <Link href={`/${product.slug}/privacy`}>{t.privacy}</Link>
-                    </div>
-                </li>
-            ))}
-        </ul>
-    );
-}
+const QUICK_ICONS = [CircleHelp, KeyRound, Settings, ShieldCheck];
 
 export function SupportHub() {
     return (
         <LegalShell
             title={perLocaleOf((l) => COPY[l].hubTitle)}
             intro={perLocaleOf((l) => COPY[l].hubIntro)}
+            badge={perLocaleOf((l) => COPY[l].support)}
+            variant="cards"
             content={perLocaleOf((l) => (
                 <>
-                    <section>
-                        <h2 id="quick" className="!mt-0 !border-0 !pt-0">{COPY[l].quick}</h2>
-                        <ul className="!list-none !pl-0 border-t border-[var(--ink)]/20">
-                            {COPY[l].quickLinks.map((item) => (
-                                <li key={item.href} className="!mb-0 border-b border-[var(--ink)]/20 py-3">
-                                    <Link href={item.href} className="font-semibold">{item.label}</Link>
-                                    <span className="block text-[0.95rem]">{item.desc}</span>
+                    <section aria-labelledby="quick" className="flex flex-col gap-3">
+                        <CardTitle id="quick" icon={LifeBuoy}>{COPY[l].quick}</CardTitle>
+                        {/* Trợ giúp nhanh: thẻ bấm được như ActionCard của Lái xe / LiD */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {COPY[l].quickLinks.map((item, i) => {
+                                const Icon = QUICK_ICONS[i] ?? CircleHelp;
+                                return (
+                                    <Link key={item.href} href={item.href} className="group sticker sticker-link flex items-center gap-3 p-3">
+                                        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2">
+                                            <Icon className="size-5" />
+                                        </span>
+                                        <span className="flex min-w-0 flex-1 flex-col">
+                                            <span className="font-extrabold">{item.label}</span>
+                                            <span className="text-sm text-muted">{item.desc}</span>
+                                        </span>
+                                        <ArrowRight className="size-4 shrink-0 text-link transition group-hover:translate-x-1" />
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </section>
+                    <section aria-labelledby="products" className="card flex flex-col gap-3 sm:p-6">
+                        <CardTitle id="products" icon={FileText}>{COPY[l].products}</CardTitle>
+                        <ul className="grid gap-2.5">
+                            {LEGAL_PRODUCTS.map((product) => (
+                                <li key={product.slug} className="tile flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="min-w-0">
+                                        <strong className="block font-display text-lg leading-snug font-extrabold">{product.name}</strong>
+                                        <span className="text-sm text-muted">{product.summary[l]}</span>
+                                    </div>
+                                    <div className="flex shrink-0 gap-2">
+                                        <Link href={`/${product.slug}/support`} className="btn btn-sm">
+                                            <CircleHelp className="size-4 text-link" /> {COPY[l].support}
+                                        </Link>
+                                        <Link href={`/${product.slug}/privacy`} className="btn btn-sm">
+                                            <ShieldCheck className="size-4 text-link" /> {COPY[l].privacy}
+                                        </Link>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
-                    </section>
-                    <section>
-                        <h2 id="products">{COPY[l].products}</h2>
-                        <ProductList locale={l} />
                     </section>
                     <ContactSection id="contact" title={COPY[l].hubFormTitle} locale={l} />
                 </>
@@ -256,7 +299,7 @@ export function WebsitePrivacy() {
             intro={perLocaleOf((l) => COPY[l].websiteIntro)}
             content={perLocaleOf((l) => (
                 <>
-                    <LegalText sections={hallovnPrivacy[l]} />
+                    <LegalText sections={hallovnPrivacy[l]} after={consentAfter(l)} />
                     <section>
                         <h2 id="other-apps">{COPY[l].otherApps}</h2>
                         <p>{COPY[l].otherAppsIntro}</p>

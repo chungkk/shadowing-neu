@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { SITE } from '@/lib/company/site';
 import { useLocale, useT } from '@/components/company/LocaleContext';
-import { CheckIcon } from '@/components/company/icons';
+import { ChevronDown, CircleAlert, CircleCheck, Loader2, PenLine, Send } from 'lucide-react';
 
 /** Chủ đề của form; mỗi chủ đề ứng với một loại góp ý của POST /api/v1/feedback (idea | bug | content | other) */
 export type SupportTopic = 'account' | 'bug' | 'idea' | 'content' | 'privacy' | 'other';
@@ -98,8 +98,8 @@ const COPY = {
     },
 };
 
-const fieldClass =
-    'mt-1.5 w-full border border-[var(--ink)]/60 bg-white px-3 py-2.5 text-base font-normal text-[var(--ink)] hover:border-[var(--ink)] focus:outline-2 focus:outline-offset-0 focus:outline-[var(--ink-ultra)]';
+/** Ô nhập kiểu app (.input), chữ đen/trắng theo giao diện */
+const fieldClass = 'input w-full text-foreground';
 
 interface SupportFormProps {
     /** Tên sản phẩm (ghi kèm vào tin nhắn); bỏ trống ở trang hỗ trợ chung */
@@ -159,13 +159,15 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
 
     if (status.state === 'sent') {
         return (
-            <div className="grid gap-3 border border-[var(--ink)]/20 bg-white p-5 md:p-6" role="status">
-                <p className="!mb-0 flex items-start gap-2 font-semibold">
-                    <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
-                    <span>{t.sentTitle} {t.sentDesc}</span>
+            <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-ink bg-accent/15 p-4 shadow-[0_3px_0_var(--ink)] sm:p-5" role="status">
+                <p className="flex items-start gap-2.5 font-bold text-accent-text">
+                    <CircleCheck className="mt-0.5 size-5 shrink-0" />
+                    <span>
+                        {t.sentTitle} <span className="font-normal text-foreground">{t.sentDesc}</span>
+                    </span>
                 </p>
-                <button type="button" onClick={() => setStatus({ state: 'idle' })} className="justify-self-start font-semibold underline underline-offset-4">
-                    {t.another}
+                <button type="button" onClick={() => setStatus({ state: 'idle' })} className="btn btn-sm">
+                    <PenLine className="size-4 text-link" /> {t.another}
                 </button>
             </div>
         );
@@ -173,27 +175,36 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
 
     const sending = status.state === 'sending';
     return (
-        <form onSubmit={submit} className="grid gap-4 border border-[var(--ink)]/20 bg-white p-5 md:p-6">
+        <form onSubmit={submit} className="grid gap-4" aria-busy={sending}>
             <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-semibold">
+                <label className="field text-sm font-bold">
                     {t.name}
                     <input autoComplete="name" maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={fieldClass} />
                 </label>
-                <label className="block text-sm font-semibold">
+                <label className="field text-sm font-bold">
                     {t.email}
                     <input required type="email" autoComplete="email" maxLength={200} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={fieldClass} />
                 </label>
             </div>
-            <label className="block text-sm font-semibold">
+            {/* Không dùng .field ở đây: .field select của app là kiểu ô chọn nhỏ, còn ô này cần cỡ .input */}
+            <label className="flex flex-col gap-1 text-sm font-bold text-muted">
                 {t.subject}
-                <select required value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value as SupportTopic | '' })} className={fieldClass}>
-                    <option value="">{t.choose}</option>
-                    {topics.map((key) => (
-                        <option key={key} value={key}>{t.topics[key]}</option>
-                    ))}
-                </select>
+                <span className="relative">
+                    <select
+                        required
+                        value={form.topic}
+                        onChange={(e) => setForm({ ...form, topic: e.target.value as SupportTopic | '' })}
+                        className={`${fieldClass} cursor-pointer appearance-none pr-11`}
+                    >
+                        <option value="">{t.choose}</option>
+                        {topics.map((key) => (
+                            <option key={key} value={key}>{t.topics[key]}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute top-1/2 right-4 size-5 -translate-y-1/2 text-link" />
+                </span>
             </label>
-            <label className="block text-sm font-semibold">
+            <label className="field text-sm font-bold">
                 {t.message}
                 <textarea
                     required
@@ -203,26 +214,29 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     aria-describedby="support-hint"
-                    className={fieldClass}
+                    className={`${fieldClass} resize-y`}
                 />
-                <span id="support-hint" className="mt-1.5 block font-normal text-[var(--ink)]/80">{t.hint}</span>
+                <span id="support-hint" className="text-xs font-normal">{t.hint}</span>
             </label>
-            <button
-                type="submit"
-                disabled={sending}
-                className="min-h-12 bg-[var(--ink-ultra)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-[var(--ink)] disabled:opacity-60"
-            >
-                {sending ? t.sending : t.send}
-            </button>
-            <p className="!mb-0 text-sm text-[var(--ink)]/80" aria-live="polite">
-                {status.state === 'error' ? (
-                    <span className="font-semibold text-red-700">
-                        {status.message} {t.fallback} <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>.
+            {status.state === 'error' && (
+                <p role="alert" className="flex items-start gap-2 rounded-xl bg-red-500/10 p-3 text-sm text-red-400">
+                    <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                    <span>
+                        <b>{status.message}</b> {t.fallback}{' '}
+                        <a href={`mailto:${SITE.contactEmail}`} className="font-bold underline underline-offset-2">
+                            {SITE.contactEmail}
+                        </a>
+                        .
                     </span>
-                ) : (
-                    t.note
-                )}
-            </p>
+                </p>
+            )}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button type="submit" disabled={sending} className="btn btn-primary btn-lg max-sm:w-full">
+                    {sending ? <Loader2 className="size-5 animate-spin motion-reduce:animate-none" /> : <Send className="size-5" />}
+                    {sending ? t.sending : t.send}
+                </button>
+                <p className="text-xs text-muted">{t.note}</p>
+            </div>
         </form>
     );
 }

@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import type { CSSProperties } from 'react';
+import type { ComponentType } from 'react';
+import { ArrowRight, BookMarked, Car, Check, Database, Landmark, Languages, Mail, MapPin, MonitorSmartphone, UsersRound } from 'lucide-react';
 import { COMPANY, SITE } from '@/lib/company/site';
 import { LEARN_AREAS, PLATFORM, productPath } from '@/lib/company/services';
 import type { LearnArea } from '@/lib/company/services';
 import { PRODUCT_PAGES } from '@/lib/company/productPages';
 import { useLocale, useT } from '@/components/company/LocaleContext';
-import { Shot, StartButton, inkText } from '@/components/company/ProductParts';
+import { Shot, StartButton } from '@/components/company/ProductParts';
 import ProjectForm from '@/components/company/ProjectForm';
-import { StampArt } from '@/components/company/StampArt';
-import { ArrowRightIcon } from '@/components/company/icons';
+import Mascot from '@/components/Mascot';
+
+type Icon = ComponentType<{ className?: string }>;
 
 const COPY = {
     de: {
@@ -90,65 +92,83 @@ const COPY = {
     },
 };
 
-/** Một con tem trên tờ: dẫn tới một phần học của HalloVN */
-function Stamp({ area, index }: { area: LearnArea; index: number }) {
+/** Icon và màu ô icon của từng phần — cùng màu với các thẻ trên trang chủ app (src/app/(app)/page.tsx) */
+const AREA_LOOK: Record<LearnArea['id'], { icon: Icon; tone: string }> = {
+    deutsch: { icon: Languages, tone: 'bg-accent text-white' },
+    vocab: { icon: BookMarked, tone: 'bg-[var(--aqua)] text-black' },
+    fuehrerschein: { icon: Car, tone: 'bg-gold text-black' },
+    lid: { icon: Landmark, tone: 'bg-candy text-black' },
+};
+
+/** Icon cho 3 việc làm theo yêu cầu (t.proof, cùng thứ tự) */
+const PROOF_ICONS: Icon[] = [UsersRound, Database, MonitorSmartphone];
+
+/** Tiêu đề khối + câu dẫn, như "HalloVN có gì?" trên trang chủ */
+function SectionHead({ id, title, text }: { id: string; title: string; text?: string }) {
+    return (
+        <div className="flex flex-col gap-1">
+            <h2 id={id} className="text-2xl font-extrabold text-balance sm:text-3xl">
+                {title}
+            </h2>
+            {text && <p className="max-w-3xl text-muted">{text}</p>}
+        </div>
+    );
+}
+
+/** Thẻ một phần học: icon, tên, con số và mô tả — bấm vào là tới phần đó */
+function AreaCard({ area }: { area: LearnArea }) {
     const { locale } = useLocale();
     const copy = area.copy[locale];
+    const look = AREA_LOOK[area.id];
     return (
-        <Link href={area.href} className="stamp perf flex min-h-[19rem] p-2.5 md:p-3 xl:min-h-[27rem]">
-            <span className="stamp-face flex w-full flex-col p-3 md:p-4" style={{ '--stamp-ink': area.ink, '--i': index, background: area.ink, color: inkText(area) } as CSSProperties}>
-                <span className="flex items-baseline justify-between gap-2 text-sm font-semibold">
-                    <span>HalloVN</span>
-                    <ArrowRightIcon className="h-4 w-4 shrink-0" />
+        <Link href={area.href} className="group sticker sticker-link flex flex-col gap-2 p-3 sm:gap-3 sm:p-4 motion-reduce:hover:translate-y-0">
+            <span className="flex items-center justify-between gap-2">
+                <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl border-2 border-ink ${look.tone}`}>
+                    <look.icon className="size-6" />
                 </span>
-                <StampArt art={area.art} className="my-3 min-h-0 w-full flex-1 md:my-4" />
-                <span className="font-display text-xl font-bold leading-[1.05] tracking-tight text-balance md:text-[1.7rem]">{copy.title}</span>
-                <span className="mt-2 text-[0.82rem] leading-snug md:text-sm">
-                    <span className="font-bold tabular-nums">{copy.fact}</span> {copy.text}
-                </span>
+                <ArrowRight className="size-5 text-link transition group-hover:translate-x-1" />
             </span>
+            <span className="leading-snug font-extrabold sm:text-lg">{copy.title}</span>
+            <span className="font-display text-3xl leading-none font-extrabold text-accent-text tabular-nums">{copy.fact}</span>
+            <span className="text-sm text-muted">{copy.text}</span>
         </Link>
     );
 }
 
-/** Dải giới thiệu nền tảng học: cho ai, có gì, bắt đầu ở đâu */
-function PlatformBand() {
+/** Giới thiệu nền tảng học: cho ai, có gì, bắt đầu ở đâu */
+function PlatformSection() {
     const { locale } = useLocale();
     const t = useT(COPY);
     const service = PLATFORM;
     const page = PRODUCT_PAGES[service.id];
     const hero = page.hero[0];
     return (
-        <section id="lernen" aria-labelledby="lernen-title" className="on-ink perf-top scroll-mt-16" style={{ '--stamp-ink': service.ink, '--band': service.ink, color: inkText(service) } as CSSProperties}>
-            <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-12 lg:gap-14">
-                <div className="min-w-0 lg:col-span-7">
-                    <h2 id="lernen-title" className="font-display text-5xl font-bold leading-[0.98] tracking-tight text-balance md:text-7xl">
-                        {t.forTitle}
-                    </h2>
-                    <p className="mt-5 max-w-[34rem] text-xl leading-snug">{t.forDesc}</p>
-                    <ul className="mt-8 max-w-[38rem] border-t border-current/35">
+        <section id="lernen" aria-labelledby="lernen-title" className="flex scroll-mt-20 flex-col gap-4">
+            <SectionHead id="lernen-title" title={t.forTitle} text={t.forDesc} />
+            <div className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-4">
+                    <ul className="flex flex-col gap-2">
                         {service.copy[locale].features.map((feature) => (
-                            <li key={feature} className="border-b border-current/35 py-2.5">
-                                {feature}
+                            <li key={feature} className="flex gap-2">
+                                <Check className="mt-0.5 size-5 shrink-0 text-accent-text" /> {feature}
                             </li>
                         ))}
                     </ul>
-                    <div className="mt-8">
-                        <StartButton service={service} />
-                    </div>
-                    <p className="mt-4 max-w-[34rem] text-sm">{t.appNote}</p>
-                    <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-semibold">
-                        <Link href={productPath(service)} className="group inline-flex items-center gap-2 font-display text-lg font-bold underline underline-offset-4">
-                            {t.details}
-                            <ArrowRightIcon className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    <StartButton service={service} />
+                    <p className="text-sm text-muted">{t.appNote}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link href={productPath(service)} className="btn">
+                            {t.details} <ArrowRight className="size-4" />
                         </Link>
-                        <Link href={`${productPath(service)}/support`} className="underline underline-offset-4">{t.support}</Link>
-                        <Link href={`${productPath(service)}/privacy`} className="underline underline-offset-4">{t.privacy}</Link>
+                        <Link href={`${productPath(service)}/support`} className="btn btn-sm">
+                            {t.support}
+                        </Link>
+                        <Link href={`${productPath(service)}/privacy`} className="btn btn-sm">
+                            {t.privacy}
+                        </Link>
                     </div>
                 </div>
-                <div className="lg:col-span-5">
-                    <Shot screen={page.screens[hero]} alt={page.copy[locale].alts[hero]} sizes="(min-width: 1024px) 28rem, 100vw" />
-                </div>
+                <Shot screen={page.screens[hero]} alt={page.copy[locale].alts[hero]} sizes="(min-width: 1024px) 34rem, 100vw" />
             </div>
         </section>
     );
@@ -157,98 +177,84 @@ function PlatformBand() {
 export default function HomeContent() {
     const t = useT(COPY);
     return (
-        <>
-            <section id="start" aria-labelledby="home-title" className="scroll-mt-16 overflow-x-clip">
-                <div className="mx-auto max-w-[88rem] px-4 pb-6 pt-8 sm:px-6 md:pt-10">
-                    <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
-                        <h1 id="home-title" className="font-display text-[clamp(2.75rem,5.2vw,6rem)] font-bold leading-[0.96] tracking-[-0.035em] lg:col-span-8">
-                            <span className="block">{t.h1a}</span>
-                            <span className="block text-[var(--ink-ultra)]">{t.h1b}</span>
-                        </h1>
-                        <div className="lg:col-span-4 lg:pb-2">
-                            <p className="max-w-[26rem] text-lg leading-snug">{t.lead}</p>
-                            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-                                <Link
-                                    href={PLATFORM.href}
-                                    className="inline-flex min-h-12 items-center gap-2 bg-[var(--ink-ultra)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-[var(--ink)]"
-                                >
-                                    {t.cta}
-                                    <ArrowRightIcon className="h-5 w-5" />
-                                </Link>
-                                <a href="#auftrag" className="font-semibold underline underline-offset-4 hover:text-[var(--ink-ultra)]">
-                                    {t.ctaProject}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-7 grid grid-cols-2 lg:grid-cols-4">
-                        {LEARN_AREAS.map((area, i) => (
-                            <Stamp key={area.id} area={area} index={i} />
-                        ))}
-                    </div>
-
-                    {/* Lề tờ tem: dải màu kiểm tra in, mỗi ô là một màu mực đang dùng */}
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium">
-                        <span aria-hidden="true" className="flex">
-                            {LEARN_AREAS.map((area) => (
-                                <span key={area.id} className="h-3 w-6" style={{ background: area.ink }} />
-                            ))}
-                            <span className="h-3 w-6 bg-[var(--ink-ultra)]" />
-                        </span>
-                        <span>{t.sheetNote}</span>
-                    </div>
-                </div>
-            </section>
-
-            <div className="pt-8">
-                <PlatformBand />
-
-                <section id="auftrag" aria-labelledby="auftrag-title" className="on-ink perf-top scroll-mt-16 text-white" style={{ '--band': 'var(--ink-ultra)' } as CSSProperties}>
-                    <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-12">
-                        <div className="lg:col-span-7">
-                            <h2 id="auftrag-title" className="font-display text-5xl font-bold leading-[0.98] tracking-tight text-balance md:text-7xl">
-                                {t.projectTitle}
-                            </h2>
-                            <p className="mt-5 max-w-[34rem] text-xl leading-snug">{t.projectDesc}</p>
-                            <ul className="mt-8 max-w-[38rem] border-t border-white/40">
-                                {t.proof.map((item) => (
-                                    <li key={item.title} className="border-b border-white/40 py-3">
-                                        <span className="block font-display text-xl font-bold">{item.title}</span>
-                                        <span className="mt-0.5 block text-[0.95rem]">{item.from}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        <div className="lg:col-span-5">
-                            <div className="perf p-6 md:p-8">
-                                <ProjectForm />
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <section id="contact" aria-labelledby="contact-title" className="perf-top scroll-mt-16" style={{ '--band': 'var(--paper)' } as CSSProperties}>
-                <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 md:grid-cols-12 md:py-20">
-                    <div className="md:col-span-7">
-                        <h2 id="contact-title" className="font-display text-5xl font-bold tracking-tight md:text-7xl">
-                            {t.contactTitle}
-                        </h2>
-                        <p className="mt-4 max-w-[34rem] text-lg leading-snug">{t.contactDesc}</p>
-                    </div>
-                    <div className="self-end md:col-span-5">
-                        <a href={`mailto:${SITE.contactEmail}`} className="font-display text-2xl font-bold text-[var(--ink-ultra)] underline underline-offset-4 md:text-3xl">
-                            {SITE.contactEmail}
-                        </a>
-                        <Link href="/support" className="mt-3 flex items-center gap-2 font-semibold hover:text-[var(--ink-ultra)]">
-                            {t.supportCenter}
-                            <ArrowRightIcon className="h-4 w-4" />
+        <div className="page gap-10 md:gap-14">
+            {/* Mở đầu: linh vật + nhãn vàng nghiêng như trang Tiếng Đức */}
+            <section id="start" aria-labelledby="home-title" className="sticker flex scroll-mt-20 flex-col items-center gap-5 p-6 text-center sm:p-10 md:flex-row md:gap-10 md:text-left">
+                <Mascot animated className="bob size-32 md:order-last md:size-56" />
+                <div className="flex min-w-0 flex-col items-center gap-4 md:items-start">
+                    <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">{SITE.name}</span>
+                    <h1 id="home-title" className="text-3xl leading-tight font-extrabold text-balance sm:text-4xl md:text-5xl">
+                        <span className="block">{t.h1a}</span>
+                        <span className="block text-accent-text">{t.h1b}</span>
+                    </h1>
+                    <p className="max-w-xl text-lg text-muted">{t.lead}</p>
+                    <div className="flex flex-wrap justify-center gap-3 md:justify-start">
+                        <Link href={PLATFORM.href} className="btn btn-primary btn-lg">
+                            {t.cta} <ArrowRight className="size-5" />
                         </Link>
-                        <p className="mt-3 text-[0.95rem]">{COMPANY.postalCity}</p>
+                        <a href="#auftrag" className="btn btn-lg">
+                            {t.ctaProject}
+                        </a>
+                    </div>
+                    <span className="pill bg-accent/15 text-accent-text">{t.sheetNote}</span>
+                </div>
+            </section>
+
+            {/* Các phần học: thẻ số liệu bấm được */}
+            <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                {LEARN_AREAS.map((area) => (
+                    <li key={area.id} className="flex *:flex-1">
+                        <AreaCard area={area} />
+                    </li>
+                ))}
+            </ul>
+
+            <PlatformSection />
+
+            {/* Làm phần mềm theo yêu cầu */}
+            <section id="auftrag" aria-labelledby="auftrag-title" className="flex scroll-mt-20 flex-col gap-4">
+                <SectionHead id="auftrag-title" title={t.projectTitle} text={t.projectDesc} />
+                <div className="grid items-start gap-4 lg:grid-cols-2">
+                    <ul className="flex flex-col gap-3">
+                        {t.proof.map((item, i) => {
+                            const ProofIcon = PROOF_ICONS[i] ?? Check;
+                            return (
+                                <li key={item.title} className="sticker flex items-center gap-3 p-4">
+                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2">
+                                        <ProofIcon className="size-5 text-accent-text" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-col">
+                                        <span className="font-extrabold">{item.title}</span>
+                                        <span className="text-sm text-muted">{item.from}</span>
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                    <div className="card p-5 sm:p-6">
+                        <ProjectForm />
                     </div>
                 </div>
             </section>
-        </>
+
+            {/* Liên hệ: khối kêu gọi cuối trang như trang chủ */}
+            <section id="contact" aria-labelledby="contact-title" className="sticker flex scroll-mt-20 flex-col items-center gap-4 bg-accent/10 p-6 text-center sm:p-10">
+                <h2 id="contact-title" className="text-2xl font-extrabold text-balance sm:text-3xl">
+                    {t.contactTitle}
+                </h2>
+                <p className="max-w-xl text-muted">{t.contactDesc}</p>
+                <div className="flex max-w-full flex-wrap justify-center gap-3">
+                    <a href={`mailto:${SITE.contactEmail}`} className="btn btn-primary btn-lg max-w-full break-all">
+                        <Mail className="size-5 shrink-0" /> {SITE.contactEmail}
+                    </a>
+                    <Link href="/support" className="btn btn-lg">
+                        {t.supportCenter} <ArrowRight className="size-5" />
+                    </Link>
+                </div>
+                <p className="flex items-center gap-1.5 text-sm text-muted">
+                    <MapPin className="size-4" /> {COMPANY.postalCity}
+                </p>
+            </section>
+        </div>
     );
 }

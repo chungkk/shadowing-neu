@@ -50,9 +50,9 @@ const COPY = {
     },
 };
 
-const fieldOk = 'border-[var(--ink)]/60 hover:border-[var(--ink)]';
-const fieldClass =
-    'mt-2 w-full border bg-white px-3 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink)]/60 focus:outline-2 focus:outline-offset-0 focus:outline-[var(--ink-ultra)]';
+// Ô nhập dùng .input của app; lỗi thì viền đỏ (--red-400 là màu chữ lỗi của app)
+const fieldClass = 'input mt-1.5 w-full font-normal text-foreground';
+const fieldError = 'border-red-400 focus:border-red-400 dark:border-red-400';
 
 export default function ProjectForm() {
     const t = useT(COPY);
@@ -83,70 +83,63 @@ export default function ProjectForm() {
     };
 
     return (
-        <form onSubmit={submit} noValidate className="text-[var(--ink)]">
-            <fieldset>
-                <legend className="font-semibold">{t.kindLabel}</legend>
-                <div className="mt-2 grid grid-cols-2 gap-px border border-[var(--ink)]/60 bg-[var(--ink)]/60">
+        <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+            <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 font-bold">{t.kindLabel}</legend>
+                <div className="grid grid-cols-2 gap-2">
                     {t.kinds.map((label, i) => (
                         <label
                             key={i}
-                            className={`flex min-h-12 cursor-pointer items-center px-3 py-2 text-sm font-medium transition-colors has-focus-visible:outline-2 has-focus-visible:-outline-offset-4 has-focus-visible:outline-current ${kind === i ? 'bg-[var(--ink-ultra)] text-white' : 'bg-white hover:bg-[var(--paper)]'}`}
+                            className={`btn has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${kind === i ? 'btn-primary' : ''}`}
                         >
-                            <input
-                                type="radio"
-                                name="kind"
-                                className="sr-only"
-                                checked={kind === i}
-                                onChange={() => setKind(i)}
-                            />
+                            <input type="radio" name="kind" className="sr-only" checked={kind === i} onChange={() => setKind(i)} />
                             {label}
                         </label>
                     ))}
                 </div>
             </fieldset>
 
-            <label className="mt-5 block font-semibold">
+            <label className="block font-bold">
                 {t.nameLabel}
-                <input type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={`${fieldClass} ${fieldOk} font-normal`} />
+                <input type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} />
             </label>
 
-            <label className="mt-5 block font-semibold">
-                {t.messageLabel}
-                <textarea
-                    ref={messageRef}
-                    rows={4}
-                    required
-                    value={message}
-                    onChange={(e) => {
-                        setMessage(e.target.value);
-                        if (e.target.value.trim()) setError(false);
-                    }}
-                    aria-invalid={error}
-                    aria-describedby={error ? 'project-error' : 'project-hint'}
-                    className={`${fieldClass} font-normal ${error ? 'border-2 border-[var(--ink-vermilion)] focus:outline-[var(--ink-vermilion)]' : fieldOk}`}
-                />
-            </label>
-            {error ? (
-                <p id="project-error" role="alert" className="mt-2 text-sm font-semibold text-[var(--ink-vermilion)]">
-                    {t.messageError}
-                </p>
-            ) : (
-                <p id="project-hint" className="mt-2 text-sm text-[var(--ink)]/70">
-                    {t.messageHint}
-                </p>
-            )}
+            <div>
+                <label className="block font-bold">
+                    {t.messageLabel}
+                    <textarea
+                        ref={messageRef}
+                        rows={4}
+                        required
+                        value={message}
+                        onChange={(e) => {
+                            setMessage(e.target.value);
+                            if (e.target.value.trim()) setError(false);
+                        }}
+                        aria-invalid={error}
+                        aria-describedby={error ? 'project-error' : 'project-hint'}
+                        className={`${fieldClass} ${error ? fieldError : ''}`}
+                    />
+                </label>
+                {error ? (
+                    <p id="project-error" role="alert" className="mt-1.5 text-sm font-bold text-red-400">
+                        {t.messageError}
+                    </p>
+                ) : (
+                    <p id="project-hint" className="mt-1.5 text-sm text-muted">
+                        {t.messageHint}
+                    </p>
+                )}
+            </div>
 
-            <button
-                type="submit"
-                className="mt-6 min-h-12 w-full bg-[var(--ink-ultra)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-[var(--ink)]"
-            >
+            <button type="submit" className="btn btn-primary btn-lg w-full">
                 {t.submit}
             </button>
-            <p className="mt-3 text-sm text-[var(--ink)]/70" aria-live="polite">
+            <p className="text-sm text-muted" aria-live="polite">
                 {opened ? (
                     <>
                         {t.opened}{' '}
-                        <a href={`mailto:${SITE.contactEmail}`} className="font-semibold text-[var(--ink-ultra)] underline underline-offset-3">
+                        <a href={`mailto:${SITE.contactEmail}`} className="font-bold text-link underline underline-offset-2">
                             {SITE.contactEmail}
                         </a>
                         .

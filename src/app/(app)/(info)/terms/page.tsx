@@ -223,7 +223,7 @@ const en = (
 
 const vi = (
     <>
-        <p className="note">Bản tiếng Việt chỉ mang tính tham khảo. Bản tiếng Đức là bản có giá trị pháp lý.</p>
+        <p className="legal-note">Bản tiếng Việt chỉ mang tính tham khảo. Bản tiếng Đức là bản có giá trị pháp lý.</p>
 
         <h2 id="scope">1. Phạm vi áp dụng</h2>
         <p>

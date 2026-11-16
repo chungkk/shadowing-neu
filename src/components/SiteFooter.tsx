@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
+import ConsentSettings from "@/components/company/ConsentSettings";
 import { SITE } from "@/lib/company/site";
 import Mascot from "./Mascot";
 
@@ -23,6 +24,7 @@ const COLUMNS = [
       { href: "/support?lang=vi", label: "Hỗ trợ & câu hỏi thường gặp" },
       { href: "/terms?lang=vi", label: "Điều khoản sử dụng" },
       { href: "/privacy?lang=vi", label: "Chính sách bảo mật" },
+      { href: "/refund?lang=vi", label: "Mua hàng & hoàn tiền" },
       { href: "/impressum?lang=vi", label: "Thông tin pháp lý (Impressum)" },
     ],
   },
@@ -67,7 +69,13 @@ export default function SiteFooter() {
                     {l.label}
                   </Link>
                 ))}
-                {c.title === "Về HalloVN" && <Contact />}
+                {c.title === "Về HalloVN" && (
+                  <>
+                    {/* Mở lại hộp đồng ý quảng cáo của Google (rút lại đồng ý phải dễ như khi đồng ý — Art. 7 Abs. 3 DSGVO) */}
+                    <ConsentSettings label="Cài đặt quyền riêng tư (Datenschutz-Einstellungen)" className={linkClass} />
+                    <Contact />
+                  </>
+                )}
               </nav>
             ))}
           </div>

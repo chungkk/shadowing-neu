@@ -94,7 +94,7 @@ const de = (
 
 const en = (
     <>
-        <p className="note">The English version is for information only. The German version is legally binding.</p>
+        <p className="legal-note">The English version is for information only. The German version is legally binding.</p>
 
         <h2 id="free">1. HalloVN is free</h2>
         <p>
@@ -156,7 +156,7 @@ const en = (
 
 const vi = (
     <>
-        <p className="note">Bản tiếng Việt chỉ mang tính tham khảo. Bản tiếng Đức là bản có giá trị pháp lý.</p>
+        <p className="legal-note">Bản tiếng Việt chỉ mang tính tham khảo. Bản tiếng Đức là bản có giá trị pháp lý.</p>
 
         <h2 id="free">1. HalloVN miễn phí</h2>
         <p>

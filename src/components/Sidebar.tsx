@@ -46,7 +46,9 @@ const ADMIN_ITEMS: Item[] = [
 ];
 
 // Trang không thuộc phần Tiếng Đức (các trang khác không khớp mục nào thì coi là bài học → sáng "Tiếng Đức")
-const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing"]);
+// Trang thông tin chung (src/app/(app)/(info)): giới thiệu, hỗ trợ, pháp lý, trang sản phẩm
+const INFO_PAGES = ["about", "shadowing", "support", "privacy", "terms", "impressum", "refund", "calendar", "deutsch-redewendung"];
+const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing", ...INFO_PAGES]);
 
 /** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */
 function useCurrent(items: Item[]) {

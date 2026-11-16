@@ -9,7 +9,7 @@ const TITLE = 'Über HalloVN – Lernplattform für Vietnamesen in Deutschland';
 const DESCRIPTION =
   'HalloVN ist die kostenlose Lernplattform für Vietnamesen in Deutschland: Deutsch mit echten Videos, Goethe-Wortschatz, Führerscheintheorie und Leben in Deutschland auf Vietnamesisch. Dazu Software nach Maß.';
 
-// Ảnh OG: src/app/(company)/about/opengraph-image.tsx
+// Ảnh OG: src/app/(app)/(info)/about/opengraph-image.tsx
 export const metadata: Metadata = withFileOgImage(
   pageMetadata({
     title: TITLE,

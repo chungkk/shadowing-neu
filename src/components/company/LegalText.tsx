@@ -31,9 +31,9 @@ function BlockView({ block }: { block: Block }) {
             </ul>
         );
     }
-    if ('note' in block) return <div className="note">{inline(block.note)}</div>;
+    if ('note' in block) return <div className="legal-note">{inline(block.note)}</div>;
     return (
-        <div className="card">
+        <div className="legal-card">
             <p><strong>{COMPANY.legalName}</strong></p>
             {COMPANY.owner && <p>{COMPANY.owner}</p>}
             <p>{[COMPANY.street, COMPANY.postalCity, COMPANY.country].filter(Boolean).join(', ')}</p>
@@ -42,7 +42,8 @@ function BlockView({ block }: { block: Block }) {
     );
 }
 
-export default function LegalText({ sections }: { sections: LegalSection[] }) {
+/** after: nội dung thêm ngay cuối mục có id tương ứng (vd. nút "Cài đặt quyền riêng tư" dưới mục quảng cáo) */
+export default function LegalText({ sections, after }: { sections: LegalSection[]; after?: Record<string, ReactNode> }) {
     return (
         <>
             {sections.map((section, i) => (
@@ -51,6 +52,7 @@ export default function LegalText({ sections }: { sections: LegalSection[] }) {
                     {section.blocks.map((block, j) => (
                         <BlockView key={j} block={block} />
                     ))}
+                    {after?.[section.id]}
                 </section>
             ))}
         </>

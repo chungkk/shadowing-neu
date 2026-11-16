@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronRight } from 'lucide-react';
 import { SERVICES, productPath } from '@/lib/company/services';
 import type { ServiceId } from '@/lib/company/services';
 import { PRODUCT_PAGES } from '@/lib/company/productPages';
-import type { ProductPage } from '@/lib/company/productPages';
+import type { PageSection, ProductPage } from '@/lib/company/productPages';
 import { useLocale, useT } from '@/components/company/LocaleContext';
-import { Shot, StartButton, inkText } from '@/components/company/ProductParts';
+import { Shot, StartButton, moreLink } from '@/components/company/ProductParts';
 import { Lightbox } from '@/components/company/Lightbox';
-import { ArrowRightIcon, PlusIcon } from '@/components/company/icons';
+import Mascot from '@/components/Mascot';
 
 const UI = {
     de: {
@@ -60,7 +61,7 @@ const UI = {
 /** Ảnh của một mục: một ảnh, hoặc hai ảnh dọc so le nhau */
 function SectionShots({ page, indexes, alts }: { page: ProductPage; indexes: number[]; alts: string[] }) {
     if (page.shape === 'landscape') {
-        return <Shot screen={page.screens[indexes[0]]} alt={alts[indexes[0]]} sizes="(min-width: 1024px) 40rem, 100vw" />;
+        return <Shot screen={page.screens[indexes[0]]} alt={alts[indexes[0]]} sizes="(min-width: 1024px) 36rem, 100vw" />;
     }
     if (indexes.length === 1) {
         return <Shot screen={page.screens[indexes[0]]} alt={alts[indexes[0]]} sizes="16rem" className="mx-auto w-[15rem] md:w-[16rem]" />;
@@ -74,6 +75,45 @@ function SectionShots({ page, indexes, alts }: { page: ProductPage; indexes: num
     );
 }
 
+/** Tiêu đề khối, như "HalloVN có gì?" trên trang chủ app */
+function SectionHead({ id, title, children }: { id: string; title: string; children?: ReactNode }) {
+    return (
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+            <h2 id={id} className="text-2xl font-extrabold text-balance sm:text-3xl">
+                {title}
+            </h2>
+            {children}
+        </div>
+    );
+}
+
+/** Nội dung chữ của một mục tính năng: số thứ tự, tiêu đề, mô tả, các ý, link tới phần học */
+function FeatureText({ section, i }: { section: PageSection; i: number }) {
+    return (
+        <div className="flex min-w-0 flex-col gap-3">
+            <span className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-card-2 font-display text-lg font-extrabold">{i + 1}</span>
+                <h2 id={`feature-${i}`} className="text-xl leading-snug font-extrabold text-balance sm:text-2xl">
+                    {section.title}
+                </h2>
+            </span>
+            <p className="text-muted">{section.body}</p>
+            <ul className="flex flex-col gap-1.5 text-sm">
+                {section.points.map((point) => (
+                    <li key={point} className="flex gap-2">
+                        <Check className="mt-0.5 size-4 shrink-0 text-accent-text" /> {point}
+                    </li>
+                ))}
+            </ul>
+            {section.link && (
+                <Link href={section.link.href} className={`group ${moreLink}`}>
+                    {section.link.label} <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                </Link>
+            )}
+        </div>
+    );
+}
+
 export default function ProductPageView({ id }: { id: ServiceId }) {
     const { locale } = useLocale();
     const t = useT(UI);
@@ -83,176 +123,125 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
     const sc = service.copy[locale];
     const landscape = page.shape === 'landscape';
     const [viewing, setViewing] = useState<number | null>(null);
-    const inkStyle = { '--stamp-ink': service.ink, '--band': service.ink, background: service.ink, color: inkText(service) } as CSSProperties;
+    // Mục có ảnh: thẻ rộng, ảnh so le trái/phải. Mục chỉ có chữ: xếp thành lưới thẻ bên dưới.
+    const withShots = copy.sections.map((section, i) => ({ section, i, shots: page.sections[i] ?? [] }));
+    const shotSections = withShots.filter((s) => s.shots.length);
+    const textSections = withShots.filter((s) => !s.shots.length);
 
     return (
-        <>
-            {/* Dải đầu trang bằng màu mực của sản phẩm */}
-            <section aria-labelledby="product-title" className="on-ink overflow-x-clip" style={inkStyle}>
-                <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-8 sm:px-6 md:pb-24 md:pt-10 lg:grid-cols-12 lg:gap-14">
-                    <div className={landscape ? 'lg:col-span-5' : 'lg:col-span-7'}>
-                        <nav aria-label="Breadcrumb" className="text-sm font-semibold">
-                            <Link href="/about" className="underline-offset-4 hover:underline">
-                                {t.about}
-                            </Link>
-                            <span aria-hidden="true"> / </span>
-                            <span aria-current="page">{t.current}</span>
-                        </nav>
-                        <h1 id="product-title" className="mt-6 font-display text-5xl font-bold leading-[0.98] tracking-tight text-balance md:text-7xl">
-                            {service.name}
-                        </h1>
-                        <p className="mt-5 max-w-[34rem] text-xl leading-snug">{sc.tagline}</p>
-                        <p className="mt-4 max-w-[36rem] leading-relaxed">{copy.intro}</p>
-                        <div className="mt-8">
-                            <StartButton service={service} />
-                        </div>
-                        <div className="mt-5 flex gap-4 text-sm font-semibold">
-                            <Link href={`${productPath(service)}/support`} className="underline underline-offset-4">
-                                {t.support}
-                            </Link>
-                            <Link href={`${productPath(service)}/privacy`} className="underline underline-offset-4">
-                                {t.privacy}
-                            </Link>
-                        </div>
-                    </div>
-                    <div className={landscape ? 'lg:col-span-7' : 'lg:col-span-5'}>
-                        {landscape ? (
-                            <Shot screen={page.screens[page.hero[0]]} alt={copy.alts[page.hero[0]]} sizes="(min-width: 1024px) 40rem, 100vw" priority />
-                        ) : (
-                            <div className="mx-auto flex max-w-[28rem] items-start gap-3 sm:gap-4">
-                                {page.hero.map((n, i) => (
-                                    <Shot key={n} screen={page.screens[n]} alt={copy.alts[n]} sizes="14rem" priority className={`w-1/2 ${i === 1 ? 'mt-14' : ''}`} />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Số liệu */}
-            <section aria-label={t.facts} className="perf-top" style={{ '--band': 'var(--paper)' } as CSSProperties}>
-                <div className="mx-auto max-w-6xl px-4 pb-4 pt-14 sm:px-6 md:pt-20">
-                    <dl className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
-                        {copy.facts.map((fact) => (
-                            <div key={fact.label} className="min-w-0 border-t-4 pt-4" style={{ borderColor: service.ink }}>
-                                <dt className="sr-only">{fact.label}</dt>
-                                <dd className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums break-words sm:text-5xl md:text-6xl">{fact.value}</dd>
-                                <dd className="mt-3 max-w-[16rem] break-words text-[0.95rem] leading-snug text-[var(--ink)]/80 hyphens-auto">{fact.label}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
-            </section>
-
-            {/* Từng phần học: mục có ảnh thật thì ảnh bên cạnh, mục chưa có ảnh thì chữ trải rộng */}
-            <div className="mx-auto max-w-6xl px-4 sm:px-6">
-                {copy.sections.map((section, i) => {
-                    const flip = i % 2 === 1;
-                    const shots = page.sections[i] ?? [];
-                    const text = (
-                        <>
-                            <span aria-hidden="true" className="block h-3 w-6" style={{ background: service.ink }} />
-                            <h2 id={`feature-${i}`} className="mt-5 font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
-                                {section.title}
-                            </h2>
-                            <p className="mt-5 max-w-[34rem] text-lg leading-snug">{section.body}</p>
-                        </>
-                    );
-                    const points = (
-                        <ul className="mt-7 max-w-[36rem] border-t border-[var(--ink)]/20">
-                            {section.points.map((point) => (
-                                <li key={point} className="border-b border-[var(--ink)]/20 py-2.5">
-                                    {point}
-                                </li>
-                            ))}
-                        </ul>
-                    );
-                    const link = section.link && (
-                        <Link href={section.link.href} className="group mt-6 inline-flex items-center gap-2 font-semibold text-[var(--ink-ultra)] underline-offset-4 hover:underline">
-                            {section.link.label}
-                            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        <div className="page gap-10 md:gap-14">
+            {/* Đầu trang: linh vật + nhãn vàng nghiêng như trang Tiếng Đức, ảnh chụp bên cạnh */}
+            <section aria-labelledby="product-title" className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
+                <div className="flex min-w-0 flex-col gap-4">
+                    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm font-bold text-muted">
+                        <Link href="/about" className="hover:text-foreground hover:underline">
+                            {t.about}
                         </Link>
-                    );
-                    if (!shots.length) {
-                        return (
-                            <section
-                                key={section.title}
-                                aria-labelledby={`feature-${i}`}
-                                className="grid gap-x-14 border-b border-[var(--ink)]/20 py-16 last:border-b-0 md:py-24 lg:grid-cols-12"
-                            >
-                                <div className="min-w-0 lg:col-span-6">
-                                    {text}
-                                    {link}
-                                </div>
-                                <div className="min-w-0 lg:col-span-6 lg:pt-8">{points}</div>
-                            </section>
-                        );
-                    }
-                    return (
-                        <section
-                            key={section.title}
-                            aria-labelledby={`feature-${i}`}
-                            className="grid items-center gap-10 border-b border-[var(--ink)]/20 py-16 last:border-b-0 md:py-24 lg:grid-cols-12 lg:gap-14"
-                        >
-                            <div className={`min-w-0 ${landscape ? 'lg:col-span-5' : 'lg:col-span-6'} ${flip ? 'lg:order-2' : ''}`}>
-                                {text}
-                                {points}
-                                {link}
-                            </div>
-                            <div className={`${landscape ? 'lg:col-span-7' : 'lg:col-span-6'} ${flip ? 'lg:order-1' : ''}`}>
-                                <SectionShots page={page} indexes={shots} alts={copy.alts} />
-                            </div>
+                        <ChevronRight className="size-4" aria-hidden="true" />
+                        <span aria-current="page" className="text-foreground">
+                            {t.current}
+                        </span>
+                    </nav>
+                    <div className="flex items-center gap-3 sm:gap-5">
+                        <Mascot animated className="bob size-20 sm:size-28" />
+                        <div className="flex min-w-0 flex-col items-start gap-1.5">
+                            <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">{t.current}</span>
+                            <h1 id="product-title" className="text-3xl leading-tight font-extrabold sm:text-4xl md:text-5xl">
+                                {service.name}
+                            </h1>
+                        </div>
+                    </div>
+                    <p className="text-lg font-bold text-balance">{sc.tagline}</p>
+                    <p className="text-muted">{copy.intro}</p>
+                    <StartButton service={service} />
+                    <div className="flex flex-wrap gap-2">
+                        <Link href={`${productPath(service)}/support`} className="btn btn-sm">
+                            {t.support}
+                        </Link>
+                        <Link href={`${productPath(service)}/privacy`} className="btn btn-sm">
+                            {t.privacy}
+                        </Link>
+                    </div>
+                </div>
+                {landscape ? (
+                    <Shot screen={page.screens[page.hero[0]]} alt={copy.alts[page.hero[0]]} sizes="(min-width: 1024px) 34rem, 100vw" priority />
+                ) : (
+                    <div className="mx-auto flex max-w-[28rem] items-start gap-3 sm:gap-4">
+                        {page.hero.map((n, i) => (
+                            <Shot key={n} screen={page.screens[n]} alt={copy.alts[n]} sizes="14rem" priority className={`w-1/2 ${i === 1 ? 'mt-14' : ''}`} />
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {/* Số liệu: thẻ con số như trang chủ app */}
+            <section aria-label={t.facts}>
+                <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {copy.facts.map((fact) => (
+                        <div key={fact.label} className="sticker flex min-w-0 flex-col-reverse gap-1 p-4 text-center">
+                            <dt className="text-sm text-muted hyphens-auto">{fact.label}</dt>
+                            <dd className="font-display text-3xl leading-none font-extrabold text-accent-text tabular-nums">{fact.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </section>
+
+            {/* Từng phần học */}
+            {shotSections.map(({ section, i, shots }, k) => (
+                <section key={section.title} aria-labelledby={`feature-${i}`} className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
+                    <div className={k % 2 ? 'lg:order-2' : ''}>
+                        <FeatureText section={section} i={i} />
+                    </div>
+                    <div className={`min-w-0 ${k % 2 ? 'lg:order-1' : ''}`}>
+                        <SectionShots page={page} indexes={shots} alts={copy.alts} />
+                    </div>
+                </section>
+            ))}
+            {textSections.length > 0 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {textSections.map(({ section, i }) => (
+                        <section key={section.title} aria-labelledby={`feature-${i}`} className="sticker p-4 sm:p-6">
+                            <FeatureText section={section} i={i} />
                         </section>
-                    );
-                })}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Miễn phí và Premium: chỉ khi có thông tin đã xác nhận */}
             {copy.plans && (
-                <section aria-labelledby="plans-title" className="mx-auto max-w-6xl px-4 sm:px-6">
-                    <div className="border-t border-[var(--ink)]/20 py-16 md:py-24">
-                        <h2 id="plans-title" className="font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
+                <section aria-labelledby="plans-title" className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1">
+                        <h2 id="plans-title" className="text-2xl font-extrabold text-balance sm:text-3xl">
                             {copy.plans.title}
                         </h2>
-                        <p className="mt-5 max-w-[34rem] text-lg leading-snug">{copy.plans.intro}</p>
-                        <div className="mt-10 grid gap-px bg-[var(--ink)]/20 md:grid-cols-2">
-                            {copy.plans.columns.map((col, i) => (
-                                <div key={col.title} className="bg-white p-6 md:p-8">
-                                    <h3 className="flex items-center gap-3 font-display text-2xl font-bold">
-                                        <span aria-hidden="true" className="h-3 w-6" style={{ background: i === 0 ? 'var(--paper)' : service.ink }} />
-                                        {col.title}
-                                    </h3>
-                                    <ul className="mt-5 border-t border-[var(--ink)]/20">
-                                        {col.items.map((item) => (
-                                            <li key={item} className="border-b border-[var(--ink)]/20 py-2.5">
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
-                        <p className="mt-5 max-w-[46rem] text-sm leading-relaxed text-[var(--ink)]/80">{copy.plans.note}</p>
+                        <p className="max-w-3xl text-muted">{copy.plans.intro}</p>
                     </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {copy.plans.columns.map((col, i) => (
+                            <div key={col.title} className={`sticker flex flex-col gap-3 p-5 ${i ? 'bg-accent/10' : ''}`}>
+                                <h3 className="flex items-center gap-2 text-xl font-extrabold">
+                                    <BadgeCheck className="size-6 text-accent-text" /> {col.title}
+                                </h3>
+                                <ul className="flex flex-col gap-1.5 text-sm">
+                                    {col.items.map((item) => (
+                                        <li key={item} className="flex gap-2">
+                                            <Check className="mt-0.5 size-4 shrink-0 text-accent-text" /> {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-sm text-muted">{copy.plans.note}</p>
                 </section>
             )}
 
-            {/* Toàn bộ ảnh chụp */}
-            <section aria-labelledby="gallery-title">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6">
-                    <div className="flex border-t border-[var(--ink)]/20 pt-16 md:pt-24 flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-                        <h2 id="gallery-title" className="font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
-                            {copy.galleryTitle}
-                        </h2>
-                        <p className="text-sm text-[var(--ink)]/80">{t.galleryHint}</p>
-                    </div>
-                </div>
-                <div
-                    role="region"
-                    aria-labelledby="gallery-title"
-                    tabIndex={0}
-                    className="mx-auto mt-8 flex max-w-[88rem] snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 sm:px-6"
-                >
+            {/* Toàn bộ ảnh chụp: hàng cuộn ngang, bấm để xem lớn */}
+            <section aria-labelledby="gallery-title" className="flex min-w-0 flex-col gap-4">
+                <SectionHead id="gallery-title" title={copy.galleryTitle}>
+                    <p className="text-sm text-muted">{t.galleryHint}</p>
+                </SectionHead>
+                <div role="region" aria-labelledby="gallery-title" tabIndex={0} className="scroll-row -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 px-4 pt-2 pb-3 md:mx-0 md:scroll-px-0 md:px-0">
                     {page.screens.map((screen, n) => (
                         <a
                             key={screen.src}
@@ -261,9 +250,9 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                                 e.preventDefault();
                                 setViewing(n);
                             }}
-                            className={`shrink-0 snap-start cursor-zoom-in transition-transform hover:-translate-y-1 ${landscape ? 'w-[20rem] md:w-[30rem]' : 'w-[11rem] md:w-[13rem]'}`}
+                            className={`snap-start cursor-zoom-in rounded-2xl transition hover:-translate-y-1 hover:-rotate-1 motion-reduce:hover:rotate-0 ${landscape ? 'w-[18rem] md:w-[26rem]' : 'w-[11rem] md:w-[13rem]'}`}
                         >
-                            <Shot screen={screen} alt={copy.alts[n]} sizes={landscape ? '30rem' : '13rem'} />
+                            <Shot screen={screen} alt={copy.alts[n]} sizes={landscape ? '26rem' : '13rem'} />
                         </a>
                     ))}
                 </div>
@@ -272,70 +261,46 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                 )}
             </section>
 
-            {/* FAQ */}
-            <section aria-labelledby="faq-title">
-                <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-12">
-                    <div className="lg:col-span-4">
-                        <h2 id="faq-title" className="font-display text-4xl font-bold leading-[1.02] tracking-tight text-balance md:text-5xl">
-                            {t.faq}
-                        </h2>
-                        <Link
-                            href={`${productPath(service)}/support`}
-                            className="mt-5 inline-flex items-center gap-2 font-semibold text-[var(--ink-ultra)] underline-offset-4 hover:underline"
-                        >
-                            {t.moreFaq}
-                            <ArrowRightIcon className="h-4 w-4" />
-                        </Link>
-                    </div>
-                    <div className="border-t border-[var(--ink)]/20 lg:col-span-8">
-                        {copy.faq.map((item) => (
-                            <details key={item.q} className="faq-item border-b border-[var(--ink)]/20">
-                                <summary className="flex cursor-pointer items-start justify-between gap-6 py-4 font-display text-xl font-bold">
-                                    {item.q}
-                                    <PlusIcon className="faq-icon mt-1 h-5 w-5 shrink-0 transition-transform" />
-                                </summary>
-                                <p className="max-w-[44rem] pb-5 leading-relaxed">{item.a}</p>
-                            </details>
-                        ))}
-                    </div>
+            {/* Câu hỏi thường gặp: cùng khuôn với trang Lái xe / LiD */}
+            <section className="card flex flex-col gap-2" aria-labelledby="faq-title">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                    <h2 id="faq-title" className="section-title">
+                        {t.faq}
+                    </h2>
+                    <Link href={`${productPath(service)}/support`} className={`group ${moreLink}`}>
+                        {t.moreFaq} <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                    </Link>
                 </div>
+                {copy.faq.map((item) => (
+                    <details key={item.q} className="rounded-2xl border-2 border-ink/15 px-3 py-2">
+                        <summary className="cursor-pointer font-bold">{item.q}</summary>
+                        <p className="mt-1 text-sm text-muted">{item.a}</p>
+                    </details>
+                ))}
             </section>
 
             {/* Lời mời cuối trang */}
-            <section aria-labelledby="closing-title" className="on-ink perf-top" style={inkStyle}>
-                <div className="mx-auto grid max-w-6xl items-end gap-8 px-4 py-16 sm:px-6 md:py-20 lg:grid-cols-12">
-                    <div className="lg:col-span-6">
-                        <h2 id="closing-title" className="font-display text-5xl font-bold leading-[0.98] tracking-tight text-balance md:text-6xl">
-                            {t.closing}
-                        </h2>
-                        <p className="mt-4 max-w-[30rem] text-lg leading-snug">{sc.tagline}</p>
-                    </div>
-                    <div className="lg:col-span-6">
-                        <StartButton service={service} />
-                    </div>
-                </div>
+            <section aria-labelledby="closing-title" className="sticker flex flex-col items-center gap-4 bg-accent/10 p-6 text-center sm:p-10">
+                <h2 id="closing-title" className="text-2xl font-extrabold text-balance sm:text-3xl">
+                    {t.closing}
+                </h2>
+                <p className="max-w-xl text-muted">{sc.tagline}</p>
+                <StartButton service={service} center />
             </section>
 
             {/* HalloVN cũng nhận làm phần mềm theo yêu cầu */}
-            <section aria-labelledby="more-title" className="perf-top" style={{ '--band': 'var(--paper)' } as CSSProperties}>
-                <div className="mx-auto grid max-w-6xl items-end gap-6 px-4 py-14 sm:px-6 md:grid-cols-12 md:py-20">
-                    <div className="md:col-span-8">
-                        <h2 id="more-title" className="font-display text-3xl font-bold tracking-tight md:text-4xl">
-                            {t.moreTitle}
-                        </h2>
-                        <p className="mt-3 max-w-[36rem] text-lg leading-snug">{t.moreText}</p>
-                    </div>
-                    <div className="md:col-span-4 md:text-right">
-                        <Link
-                            href="/about#auftrag"
-                            className="group inline-flex min-h-12 items-center gap-2 bg-[var(--ink-ultra)] px-5 py-3 font-display text-lg font-bold text-white transition-colors hover:bg-[var(--ink)]"
-                        >
-                            {t.moreLink}
-                            <ArrowRightIcon className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                        </Link>
-                    </div>
-                </div>
+            <section aria-labelledby="more-title">
+                <Link href="/about#auftrag" className="group sticker sticker-link flex flex-col gap-2 p-5 motion-reduce:hover:translate-y-0">
+                    <BriefcaseBusiness className="size-7 text-accent-text" />
+                    <h2 id="more-title" className="text-xl font-extrabold">
+                        {t.moreTitle}
+                    </h2>
+                    <p className="text-muted">{t.moreText}</p>
+                    <span className={moreLink}>
+                        {t.moreLink} <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                    </span>
+                </Link>
             </section>
-        </>
+        </div>
     );
 }
