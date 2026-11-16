@@ -70,7 +70,7 @@ function useCurrent(items: Item[]) {
 function DueBadge({ due, className = "" }: { due: number; className?: string }) {
   if (!due) return null;
   return (
-    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-red px-1 text-[11px] leading-none font-extrabold text-white tabular-nums ${className}`}>
+    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 text-[11px] ring-2 ring-card leading-none font-extrabold text-white tabular-nums ${className}`}>
       {due > 99 ? "99+" : due}
     </span>
   );
@@ -89,13 +89,19 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
           href={reviewHref(it.href, due)}
           aria-label={`${it.short && it.short !== it.label ? `${it.short} – ${it.label}` : it.label}${it.href === REVIEW.href && due ? ` — ${due} từ đến hạn ôn` : ""}`}
           aria-current={it.href === current ? "page" : undefined}
-          className={`relative flex h-12 min-w-14 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 transition ${
-            it.href === current ? "bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]" : "text-foreground hover:bg-foreground/10"
+          className={`group relative flex h-14 min-w-15 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 transition-colors ${
+            it.href === current ? "text-accent-text" : "text-muted active:text-foreground"
           }`}
         >
-          <it.icon className="size-5" />
-          <span className="text-xs leading-none font-bold">{it.short ?? it.label}</span>
-          {it.href === REVIEW.href && <DueBadge due={due} className="absolute -top-1 right-1" />}
+          <span
+            className={`flex h-8 w-14 items-center justify-center rounded-full transition-all duration-200 ease-[var(--ease-spring)] motion-reduce:transition-none ${
+              it.href === current ? "bg-accent-soft scale-100" : "scale-90 group-active:scale-95 group-active:bg-foreground/5"
+            }`}
+          >
+            <it.icon className="size-[22px]" />
+          </span>
+          <span className={`text-[11px] leading-none ${it.href === current ? "font-extrabold" : "font-bold"}`}>{it.short ?? it.label}</span>
+          {it.href === REVIEW.href && <DueBadge due={due} className="absolute top-0 left-1/2 ml-2" />}
         </Link>
       ))}
     </SidebarFrame>
@@ -105,7 +111,7 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
     // bottom-nav: màn học (.lesson) ẩn thanh này, thay bằng thanh điều khiển của trình phát (globals.css)
-    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-1 overflow-x-auto border-t-2 border-ink bg-card px-2 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
+    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-card/90 px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-12px_rgb(var(--shadow-color)/0.18)] backdrop-blur-xl backdrop-saturate-150 *:shrink-0 md:hidden">
       {children}
     </nav>
   );
@@ -146,13 +152,14 @@ export function DeutschOnly({ children }: { children: ReactNode }) {
 /** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
 export function HeaderNavFrame({ current }: { current?: string }) {
   return (
-    <nav className="flex items-center gap-1 max-md:hidden">
+    <nav aria-label="Các phần chính" className="flex items-center gap-1 max-md:hidden">
       {HEADER_ITEMS.map((it) => (
         <Link
           key={it.href}
           href={it.href}
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
-            it.href === current ? "bg-accent/15 text-accent-text" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
+          aria-current={it.href === current ? "page" : undefined}
+          className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-colors lg:px-4 ${
+            it.href === current ? "bg-accent-soft text-accent-text" : "text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground"
           }`}
         >
           <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
@@ -236,9 +243,8 @@ export function UserDropdown({ user }: { user: NavUser }) {
       key={it.href}
       href={it.href}
       role="menuitem"
-      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold transition ${
-        it.href === current ? "bg-accent/15 text-accent-text" : "text-foreground/85 hover:bg-foreground/5 hover:text-foreground"
-      }`}
+      aria-current={it.href === current ? "page" : undefined}
+      className="menu-item"
     >
       <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
       {it.label}
@@ -247,12 +253,12 @@ export function UserDropdown({ user }: { user: NavUser }) {
 
   return (
     <>
-      <Link href="/stats" title="Thành tích & cài đặt" className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-foreground/5 md:hidden">
+      <Link href="/stats" title="Thành tích & cài đặt" className="flex items-center gap-3 rounded-full p-0.5 transition hover:bg-foreground/5 md:hidden">
         {trigger}
       </Link>
       <div ref={box} className="relative max-md:hidden" onPointerEnter={(e) => e.pointerType === "mouse" && show()} onPointerLeave={(e) => e.pointerType === "mouse" && hide()}>
         <button
-          className={`flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-foreground/5 ${open ? "bg-foreground/5" : ""}`}
+          className={`flex cursor-pointer items-center gap-2.5 rounded-full py-1 pr-2.5 pl-3 transition-colors hover:bg-foreground/[0.06] ${open ? "bg-foreground/[0.06]" : ""}`}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
@@ -263,26 +269,27 @@ export function UserDropdown({ user }: { user: NavUser }) {
         {open && (
           // pt-2: khe trong suốt vẫn thuộc vùng rê chuột
           <div className="absolute top-full right-0 z-50 w-64 pt-2">
-            <div role="menu" className="sheet-fade flex flex-col gap-0.5 rounded-2xl border-2 border-ink bg-card p-2 shadow-[0_4px_0_var(--ink)]">
-              <div className="mb-1 flex items-center gap-3 border-b border-border px-2 pt-1 pb-3">
-                <Avatar user={user} className="size-10 text-lg" />
+            <div role="menu" className="popover flex max-h-[calc(100dvh-6rem)] flex-col gap-0.5 overflow-y-auto">
+              <div className="hero mb-1 flex items-center gap-3 rounded-[14px] px-3 py-3">
+                <Avatar user={user} className="size-11 text-lg ring-2 ring-card" />
                 <div className="min-w-0">
-                  <p className="truncate font-bold">{user.name}</p>
-                  <p className="text-xs text-muted">{admin ? "Quản trị viên" : "Học viên"}</p>
+                  <p className="truncate font-display text-base leading-tight font-extrabold">{user.name}</p>
+                  <p className={`badge mt-1 ${admin ? "badge-gold" : "badge-accent"}`}>{admin ? "Quản trị viên" : "Học viên"}</p>
                 </div>
               </div>
               {[...ITEMS, REVIEW, ...USER_ITEMS].map(item)}
               {admin && (
                 <>
-                  <p className="px-3 pt-3 pb-1 text-[11px] font-extrabold tracking-wider text-muted uppercase">Quản trị</p>
+                  <div className="menu-sep" />
+                  <p className="menu-label">Quản trị</p>
                   {ADMIN_ITEMS.map(item)}
                 </>
               )}
-              <div className="my-1 h-px bg-border" />
+              <div className="menu-sep" />
               <form action={logout}>
                 <button
                   role="menuitem"
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-red-400 transition hover:bg-red/15"
+                  className="menu-item text-red-400 hover:bg-red-soft focus-visible:bg-red-soft"
                 >
                   <LogOut className="size-[18px]" /> Đăng xuất
                 </button>
@@ -306,17 +313,15 @@ export function DeutschSubnav() {
   )[0]?.href;
   if (!showDeutschSubnav(pathname)) return null;
   return (
-    <nav aria-label="Tiếng Đức" className="scroll-row mx-auto flex w-full max-w-6xl gap-1.5 px-4 pt-3 md:px-6">
+    <nav aria-label="Tiếng Đức" className="scroll-row mx-auto flex w-full max-w-6xl gap-2 px-4 pt-4 md:px-6 md:pt-5">
       {DEUTSCH.map((it) => (
         <Link
           key={it.href}
           href={it.href}
           aria-current={it.href === current ? "page" : undefined}
-          className={`flex shrink-0 items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-sm font-bold transition ${
-            it.href === current ? "border-ink bg-accent text-white" : "border-ink/25 hover:border-ink"
-          }`}
+          className="chip"
         >
-          <it.icon className="size-4" />
+          <it.icon className={`size-4 ${it.href === current ? "" : "text-muted"}`} />
           {it.label}
         </Link>
       ))}

@@ -68,8 +68,8 @@ export default function ThemeToggle() {
 
   const label = LABEL[next];
   return (
-    <button type="button" onClick={toggle} title={label} aria-label={label} className="btn size-10 shrink-0 rounded-full p-0">
-      {next === "light" ? <Sun className="size-5 text-amber" /> : <Moon className="size-5" />}
+    <button type="button" onClick={toggle} title={label} aria-label={label} className="btn btn-ghost size-10 shrink-0 rounded-full p-0">
+      {next === "light" ? <Sun className="size-5 text-amber" /> : <Moon className="size-5 text-muted" />}
     </button>
   );
 }

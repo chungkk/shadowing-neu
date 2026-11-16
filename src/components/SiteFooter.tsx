@@ -30,7 +30,7 @@ const COLUMNS = [
   },
 ];
 
-const linkClass = "text-sm text-foreground/85 transition hover:text-foreground hover:underline";
+const linkClass = "text-sm font-semibold text-foreground/75 transition-colors hover:text-accent-text";
 
 /** Email liên hệ công khai — cố định theo SITE.contactEmail (khớp trang doanh nghiệp), không đọc biến môi trường SMTP */
 function Contact() {
@@ -49,21 +49,21 @@ async function CurrentYear() {
 /** Chân trang toàn site — nền và dải cờ tràn hết chiều ngang, chỉ nội dung chừa lề khi thanh chia sẻ đang mở (share-gutter) */
 export default function SiteFooter() {
   return (
-    <footer className="bg-sidebar">
-      <div className="candy-stripe h-2.5" />
+    <footer className="relative mt-10 border-t border-line bg-sidebar">
+      <div className="candy-stripe absolute inset-x-0 top-0 h-1 opacity-90" aria-hidden />
       <div className="share-gutter">
         <div className="footer-inner mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
           {/* footer-cols: màn học ẩn phần cột link (globals.css) — chỉ còn dòng bản quyền */}
           <div className="footer-cols grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr]">
             <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
               <Link href="/" className="flex w-fit items-center gap-1.5 font-display text-xl font-extrabold">
-                <Mascot className="size-12" /> HalloVN
+                <Mascot className="size-11" /> HalloVN
               </Link>
-              <p className="max-w-sm text-sm text-muted">Học tiếng Đức với video thật, ôn thi lái xe và Leben in Deutschland — một tài khoản cho tất cả.</p>
+              <p className="max-w-sm text-sm leading-relaxed text-muted">Học tiếng Đức với video thật, ôn thi lái xe và Leben in Deutschland — một tài khoản cho tất cả.</p>
             </div>
             {COLUMNS.map((c) => (
               <nav key={c.title} aria-label={c.title} className="flex flex-col items-start gap-2.5">
-                <p className="text-xs font-extrabold tracking-wider text-muted uppercase">{c.title}</p>
+                <p className="eyebrow text-muted">{c.title}</p>
                 {c.links.map((l) => (
                   <Link key={l.href} href={l.href} className={linkClass}>
                     {l.label}
@@ -79,7 +79,7 @@ export default function SiteFooter() {
               </nav>
             ))}
           </div>
-          <div className="footer-legal flex flex-col gap-1 border-t border-border pt-5 text-xs text-muted sm:flex-row sm:justify-between sm:gap-4">
+          <div className="footer-legal flex flex-col gap-1 border-t border-line pt-5 text-xs text-muted sm:flex-row sm:justify-between sm:gap-4">
             <p>
               ©{" "}
               <Suspense>

@@ -99,11 +99,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
-          <header className="relative z-30 flex h-14 items-center gap-3 bg-card dark:bg-sidebar px-3 pb-2 sm:h-16 sm:gap-4 sm:px-4 md:px-6">
-            <div className="candy-stripe absolute inset-x-0 bottom-0 h-2.5" />
-            <Link href="/" className="flex min-w-0 items-center gap-1.5 font-display text-lg font-extrabold sm:text-xl">
-              <Mascot className="size-8 shrink-0 md:size-11" />
-              <span className="truncate">HalloVN</span>
+          <header className="relative z-30 flex h-14 items-center gap-3 border-b border-line bg-card/85 px-3 shadow-[0_1px_0_rgb(var(--shadow-color)/0.02),0_8px_24px_-18px_rgb(var(--shadow-color)/0.25)] backdrop-blur-xl backdrop-saturate-150 sm:h-16 sm:gap-4 sm:px-4 md:px-6 dark:bg-sidebar/90">
+            <div className="candy-stripe absolute inset-x-0 -bottom-px h-[3px] opacity-80" aria-hidden />
+            <Link href="/" className="group flex min-w-0 items-center gap-2 rounded-full pr-2 font-display text-lg leading-none font-extrabold tracking-tight sm:text-xl">
+              <Mascot className="size-9 shrink-0 transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-rotate-6 group-hover:scale-105 motion-reduce:transition-none md:size-11" />
+              <span className="truncate">
+                Hallo<span className="text-accent-text">VN</span>
+              </span>
             </Link>
             <Suspense fallback={<HeaderNavFrame />}>
               <HeaderNavWithUser />

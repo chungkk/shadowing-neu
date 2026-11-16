@@ -80,7 +80,7 @@ export default function ShareBar() {
     return (
       <button
         title="Hiện nút chia sẻ"
-        className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 cursor-pointer flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 text-muted shadow-lg transition hover:text-foreground max-md:hidden"
+        className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 cursor-pointer flex-col items-center gap-1.5 rounded-l-2xl border-2 border-r-0 border-ink bg-card px-1.5 py-3 text-muted shadow-pop transition-colors hover:text-accent-text max-md:hidden"
         onClick={() => setOpen(true)}
       >
         <ChevronLeft className="size-4" />
@@ -93,14 +93,14 @@ export default function ShareBar() {
     <aside
       data-share-open
       aria-label="Chia sẻ trang này"
-      className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-2.5 rounded-l-2xl border border-r-0 border-border bg-card/95 p-2.5 shadow-xl shadow-black/40 backdrop-blur max-md:hidden"
+      className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-2.5 rounded-l-[22px] border-2 border-r-0 border-ink bg-card/95 p-2 shadow-float backdrop-blur-xl max-md:hidden"
     >
-      <button title="Chia sẻ" className={`${round} border-2 border-border text-foreground hover:border-accent hover:text-accent-text`} onClick={shareNative}>
+      <button title="Chia sẻ" className={`${round} bg-accent-soft text-accent-text hover:bg-accent hover:text-white`} onClick={shareNative}>
         <Share2 className="size-[18px]" />
       </button>
-      <div className="h-px w-6 bg-border" />
+      <div className="h-px w-6 bg-line" />
       {NETWORKS.map((n) => (
-        <button key={n.name} title={`Chia sẻ lên ${n.name}`} className={`${round} ${n.color} text-white hover:scale-110`} onClick={() => openNetwork(n)}>
+        <button key={n.name} title={`Chia sẻ lên ${n.name}`} className={`${round} ${n.color} text-white shadow-xs hover:-translate-y-0.5 hover:shadow-soft motion-reduce:hover:translate-y-0`} onClick={() => openNetwork(n)}>
           <svg viewBox="0 0 24 24" className="size-[18px] fill-current" aria-hidden>
             <path d={n.path} />
           </svg>
@@ -113,8 +113,8 @@ export default function ShareBar() {
       >
         {copied ? <Check className="size-[18px]" /> : <Link2 className="size-[18px]" />}
       </button>
-      <div className="h-px w-6 bg-border" />
-      <button title="Thu gọn" className={`${round} border-2 border-border text-muted hover:text-foreground`} onClick={() => setOpen(false)}>
+      <div className="h-px w-6 bg-line" />
+      <button title="Thu gọn" className={`${round} text-muted hover:bg-foreground/[0.06] hover:text-foreground`} onClick={() => setOpen(false)}>
         <ChevronRight className="size-[18px]" />
       </button>
     </aside>
