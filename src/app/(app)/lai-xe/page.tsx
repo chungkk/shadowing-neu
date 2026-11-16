@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, BookOpen, Flag, RotateCcw, Settings, Star } from "lucide-react";
+import { BarChart3, BookOpen, Car, ChevronDown, Flag, RotateCcw, Settings, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { BOGEN_COUNT, CLASS_ORDER, DEFAULT_CLASS, WEB_BOGEN_LIMIT, classInfo, classQuestionIds, prefs, totalQuestions } from "@/lib/laixe";
@@ -57,42 +57,48 @@ async function Home() {
   return (
     <>
       {/* Đầu trang: tiêu đề + phụ đề + nút cài đặt (đổi hạng/ngôn ngữ trong Cài đặt) — cùng khuôn với LiD */}
-      <section className="sticker p-4 sm:p-6">
-        <div className="flex items-center gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <section className="sticker hero p-4 sm:p-6" style={{ ["--hero" as string]: "var(--gold)" }}>
+        <div className="flex items-center gap-3 sm:gap-5">
+          <span className="icon-bubble tint-gold relative size-14 rounded-3xl sm:size-20" aria-hidden>
+            <Car className="size-7 sm:size-10" />
+            <span className="badge badge-accent absolute -right-1.5 -bottom-1.5 border-2 border-card px-1.5 font-display text-sm">{cls}</span>
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             <h1 className="page-title">Bằng lái xe Đức</h1>
-            <p className="text-sm text-muted">Ôn thi lý thuyết hạng {cls} · Theorieprüfung</p>
+            <p className="text-sm text-muted sm:text-base">Ôn thi lý thuyết hạng {cls} · Theorieprüfung</p>
           </div>
-          <Link href={settingsHref} className="btn-icon" aria-label="Cài đặt lái xe">
+          <Link href={settingsHref} className="btn-icon self-start" aria-label="Cài đặt lái xe">
             <Settings className="size-5" />
           </Link>
         </div>
       </section>
 
       {/* Tiến trình */}
-      <section className="sticker flex flex-col gap-3 p-4">
+      <section className="card flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-extrabold tracking-wider text-muted uppercase">Tiến trình</span>
-          <span className="rounded-full bg-card-2 px-2.5 py-1 text-xs font-bold text-muted">Bộ đề từ 01.04.2025</span>
+          <h2 className="label text-muted">Tiến trình</h2>
+          <span className="badge badge-muted">Bộ đề từ 01.04.2025</span>
         </div>
         <ProgressBar {...all} />
-        <div className="flex items-center gap-4 text-sm text-muted">
+        <div className="flex items-center gap-4 text-sm font-semibold text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-accent" /> Đúng <b className="text-foreground tabular-nums">{all.ok}</b>
+            <span className="size-2.5 rounded-full bg-accent" /> Đúng <b className="text-foreground tabular-nums">{all.ok}</b>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-red" /> Sai <b className="text-foreground tabular-nums">{all.wrong}</b>
+            <span className="size-2.5 rounded-full bg-red" /> Sai <b className="text-foreground tabular-nums">{all.wrong}</b>
           </span>
           <span className="ml-auto tabular-nums">
             <b className="text-foreground">{all.done}</b> / {all.total}
           </span>
         </div>
         {!user && (
-          <p className="text-sm text-muted">
-            <Link href="/login?next=/lai-xe" className="font-bold underline underline-offset-2">
-              Đăng nhập
-            </Link>{" "}
-            để lưu tiến trình, câu sai và lịch sử thi.
+          <p className="alert alert-info">
+            <span>
+              <Link href="/login?next=/lai-xe" className="font-extrabold underline underline-offset-2">
+                Đăng nhập
+              </Link>{" "}
+              để lưu tiến trình, câu sai và lịch sử thi.
+            </span>
           </p>
         )}
       </section>
@@ -125,14 +131,17 @@ async function Home() {
       </div>
 
       {/* Câu hỏi thường gặp: nội dung cho SEO (FAQPage), xếp sau menu như phần phụ — cùng khuôn với LiD */}
-      <section className="card flex flex-col gap-2" aria-labelledby="lx-faq">
+      <section className="card flex flex-col gap-3 sm:p-6" aria-labelledby="lx-faq">
         <h2 id="lx-faq" className="section-title">
           Câu hỏi thường gặp
         </h2>
         {FAQ.map((f) => (
-          <details key={f.q} className="group rounded-2xl border-2 border-ink/15 px-3 py-2">
-            <summary className="cursor-pointer font-bold">{f.q}</summary>
-            <p className="mt-1 text-sm text-muted">{f.a}</p>
+          <details key={f.q} className="quiz-faq group">
+            <summary>
+              <span className="min-w-0 flex-1">{f.q}</span>
+              <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+            </summary>
+            <p className="mt-2 text-sm leading-relaxed text-muted">{f.a}</p>
           </details>
         ))}
       </section>

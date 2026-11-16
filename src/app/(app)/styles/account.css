@@ -1,1 +1,171 @@
-/* Area CSS: account — owned by the account worker. Plain CSS or @layer components; tokens from globals.css. */
+/* Area CSS: account — owned by the account worker. Plain CSS or @layer components; tokens from globals.css.
+   Đăng nhập / đăng ký / quên mật khẩu (AuthForm, PasswordForms, LoginDialog), Cài đặt, Thành tích. */
+
+@layer components {
+  /* ───── Đăng nhập / đăng ký ───── */
+  /* Nền mờ của popup đăng nhập: cùng màu với .dialog-backdrop, nhưng cuộn được (hộp 2 nửa cao hơn màn hình thấp) */
+  .auth-backdrop {
+    @apply fixed inset-0 z-50 flex overflow-y-auto overscroll-contain sm:p-4 md:p-8;
+    background: rgb(25 14 20 / 0.45);
+    backdrop-filter: blur(3px);
+    animation: sheet-fade 160ms ease-out;
+  }
+  .auth-backdrop .auth-card {
+    animation: sheet-pop 260ms var(--ease-spring);
+  }
+  @media (max-width: 39.99rem) {
+    .auth-backdrop .auth-card {
+      animation-name: sheet-up;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-backdrop,
+    .auth-backdrop .auth-card {
+      animation: none;
+    }
+  }
+  /* Hộp 2 nửa: form bên trái, minh hoạ bên phải */
+  .auth-card {
+    @apply relative grid w-full overflow-hidden;
+    background-color: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 3px 0 var(--ink), var(--shadow-lg);
+  }
+  /* Dải sọc kẹo mảnh trên đầu hộp — dấu hiệu thương hiệu */
+  .auth-card::before {
+    content: "";
+    @apply absolute inset-x-0 top-0 z-[1] h-1.5;
+    background: repeating-linear-gradient(-45deg, var(--red) 0 8px, var(--stripe) 8px 16px);
+  }
+  /* Biểu tượng tròn trên tiêu đề */
+  .auth-badge {
+    @apply mx-auto mb-3 inline-flex size-14 items-center justify-center rounded-2xl;
+    color: var(--accent-text);
+    background: var(--accent-soft);
+    box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .auth-subtitle {
+    @apply mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted sm:text-base;
+  }
+  /* Nửa minh hoạ: gradient nắng + lá, linh vật và 2 bong bóng thoại */
+  .auth-art {
+    @apply relative hidden items-center justify-center overflow-hidden md:flex;
+    background:
+      radial-gradient(22rem 18rem at 80% 10%, color-mix(in srgb, var(--sun) 55%, transparent), transparent 70%),
+      radial-gradient(22rem 18rem at 10% 95%, color-mix(in srgb, var(--leaf) 55%, transparent), transparent 70%),
+      var(--card-2);
+    border-left: 2px solid var(--line);
+  }
+  [data-theme="dark"] .auth-art {
+    background:
+      radial-gradient(22rem 18rem at 80% 10%, color-mix(in srgb, var(--sun) 16%, transparent), transparent 70%),
+      radial-gradient(22rem 18rem at 10% 95%, color-mix(in srgb, var(--leaf) 14%, transparent), transparent 70%),
+      var(--card-2);
+  }
+  .auth-art-ring {
+    @apply absolute size-72 rounded-full;
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    box-shadow: 0 0 0 18px color-mix(in srgb, var(--card) 35%, transparent);
+  }
+  .auth-bubble {
+    @apply absolute rounded-3xl px-5 py-2.5 font-display text-2xl leading-none font-extrabold;
+    box-shadow: var(--shadow-md);
+  }
+  .auth-bubble-gold {
+    @apply rotate-3 rounded-bl-md;
+    color: #3a2304;
+    background: var(--gold);
+    box-shadow: 0 4px 0 var(--gold-dark), var(--shadow-md);
+  }
+  .auth-bubble-green {
+    @apply -rotate-3 rounded-br-md text-lg text-white;
+    background: var(--accent);
+    box-shadow: 0 4px 0 var(--accent-dark), var(--shadow-md);
+  }
+  .auth-perks {
+    @apply absolute inset-x-6 bottom-6 flex flex-wrap justify-center gap-2;
+  }
+  .auth-perks .badge {
+    background: color-mix(in srgb, var(--card) 85%, transparent);
+    box-shadow: var(--shadow-xs);
+  }
+  /* Email đã nhập + nút "Đổi" */
+  .auth-email {
+    @apply flex items-center gap-2 py-1.5 pr-1.5 pl-3 text-sm;
+    border-radius: var(--radius);
+    background: var(--card-2);
+  }
+  /* Ô mã 6 số */
+  .auth-code {
+    @apply text-center font-display text-3xl font-extrabold tracking-[0.5em] md:text-3xl;
+    padding-left: calc(1rem + 0.25em);
+  }
+  /* Hàng link phụ dưới form (Sửa thông tin / Gửi lại mã) */
+  .auth-links {
+    @apply flex items-center justify-between gap-3 text-sm font-bold;
+  }
+  .auth-links button,
+  .auth-links a {
+    @apply rounded-lg px-1 py-1 text-link hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline;
+  }
+  .social-btn {
+    @apply font-extrabold;
+  }
+}
+
+@layer components {
+  /* ───── Cài đặt ───── */
+  .settings-profile {
+    --hero: var(--aqua);
+  }
+  .settings-foot {
+    @apply flex flex-wrap items-center justify-end gap-3 px-4 py-3 sm:px-6;
+    border-top: 1.5px solid var(--line);
+    background: color-mix(in srgb, var(--card-2) 45%, var(--card));
+  }
+  .settings-danger {
+    border-color: color-mix(in srgb, var(--red) 35%, var(--ink));
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--red) 35%, var(--ink)), var(--shadow-sm);
+  }
+  .settings-danger .settings-foot {
+    border-top-color: color-mix(in srgb, var(--red) 20%, var(--line));
+    background: color-mix(in srgb, var(--red-soft) 50%, var(--card));
+  }
+  .btn.settings-danger-btn {
+    @apply text-red-400;
+    border-color: color-mix(in srgb, var(--red) 45%, var(--ink));
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--red) 45%, var(--ink));
+  }
+  @media (hover: hover) {
+    .btn.settings-danger-btn:hover:not(:disabled) {
+      background-color: var(--red-soft);
+    }
+  }
+  .settings-confirm {
+    @apply flex flex-col gap-3 p-4;
+    border-radius: var(--radius);
+    border: 1.5px solid color-mix(in srgb, var(--red) 30%, transparent);
+    background: var(--red-soft);
+  }
+
+  /* ───── Thành tích ───── */
+  .stats-gem {
+    @apply flex items-center gap-4 p-4;
+    border-radius: var(--radius-lg);
+    border: 1.5px solid color-mix(in srgb, var(--gem) 25%, transparent);
+    background:
+      radial-gradient(18rem 10rem at 100% 0%, color-mix(in srgb, var(--aqua) 45%, transparent), transparent 70%),
+      var(--gem-soft);
+  }
+  [data-theme="dark"] .stats-gem {
+    background:
+      radial-gradient(18rem 10rem at 100% 0%, color-mix(in srgb, var(--aqua) 12%, transparent), transparent 70%),
+      var(--gem-soft);
+  }
+  .stats-gem-icon {
+    @apply inline-flex size-16 shrink-0 items-center justify-center rounded-2xl;
+    background: var(--card);
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--gem) 25%, var(--ink)), var(--shadow-sm);
+  }
+}

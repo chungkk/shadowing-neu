@@ -19,16 +19,16 @@ export const metadata: Metadata = quizPageMeta({
   description: `Thi thử Leben in Deutschland / Einbürgerungstest như thật: ${EXAM_TOTAL} câu (${EXAM.general} câu chung + ${EXAM.state} câu của bang), ${EXAM.minutes} phút, đúng ${EXAM.pass} câu là đậu, xem lại câu sai bằng tiếng Việt.`,
 });
 
-/** Màn bắt đầu thi như Lái xe: thẻ luật thi + nút đỏ "Bắt đầu thi" */
+/** Màn bắt đầu thi như Lái xe: thẻ luật thi + nút chính "Bắt đầu thi" */
 async function Start() {
   const { state } = await prefs();
   const user = await getCurrentUser();
   const history = user ? listQuizExams(user.id, "lid", 10) : [];
   return (
     <>
-      <section className="card flex flex-col gap-3">
+      <section className="card flex flex-col gap-4 sm:p-6">
         <div className="flex items-center gap-3">
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2">
+          <span className="icon-bubble tint-gold size-14 rounded-2xl" aria-hidden>
             <Wappen code={state.code} className="h-10 w-8" />
           </span>
           <div className="min-w-0">
@@ -37,30 +37,30 @@ async function Start() {
           </div>
         </div>
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          <li className="rounded-2xl border-2 border-ink/20 p-3">
+          <li className="surface">
             <b>{EXAM_TOTAL} câu</b>: {EXAM.general} câu chung + {EXAM.state} câu theo bang {state.name}
           </li>
-          <li className="rounded-2xl border-2 border-ink/20 p-3">
-            <Clock className="mr-1 inline size-4" />
+          <li className="surface">
+            <Clock className="mr-1 inline size-4 align-[-2px] text-muted" aria-hidden />
             <b>{EXAM.minutes} phút</b>, hết giờ tự nộp bài
           </li>
-          <li className="rounded-2xl border-2 border-ink/20 p-3 sm:col-span-2">
+          <li className="surface sm:col-span-2">
             Đậu khi <b>đúng ít nhất {EXAM.pass}/{EXAM_TOTAL} câu</b>
           </li>
         </ul>
         <div className="flex flex-wrap items-center gap-2">
           {user ? (
-            <Link href="/leben-in-deutschland/thi-thu/lam-bai" prefetch={false} className="btn btn-lg btn-red">
+            <Link href="/leben-in-deutschland/thi-thu/lam-bai" prefetch={false} className="btn btn-lg btn-primary">
               <Play className="size-4" /> Bắt đầu thi
             </Link>
           ) : (
-            <LoginLink href={`/login?next=${encodeURIComponent("/leben-in-deutschland/thi-thu")}`} className="btn btn-lg btn-amber font-black">
+            <LoginLink href={`/login?next=${encodeURIComponent("/leben-in-deutschland/thi-thu")}`} className="btn btn-lg btn-primary">
               <LogIn className="size-4" /> Đăng nhập để thi thử
             </LoginLink>
           )}
           <StatePicker states={STATES} current={state.code} variant="button" />
         </div>
-        {!user && <p className="text-sm text-muted">Thi thử cần tài khoản (miễn phí) để chấm điểm, lưu lịch sử và ôn lại câu sai.</p>}
+        {!user && <p className="field-hint">Thi thử cần tài khoản (miễn phí) để chấm điểm, lưu lịch sử và ôn lại câu sai.</p>}
       </section>
       {user && history.length > 0 && (
         <section className="flex flex-col gap-3">

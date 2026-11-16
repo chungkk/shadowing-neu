@@ -26,31 +26,33 @@ async function Start() {
   const zusatz = info.exam.questions - info.exam.grundstoff;
   return (
     <>
-      <section className="card flex flex-col gap-3">
+      <section className="card flex flex-col gap-4 sm:p-6">
         <div className="flex items-center gap-3">
-          <span className="flex h-14 min-w-14 items-center justify-center rounded-2xl border-2 border-ink bg-red px-2 text-xl font-extrabold text-white">{cls}</span>
-          <div>
+          <span className="icon-bubble tint-accent h-14 min-w-14 px-2 font-display text-2xl font-extrabold" aria-hidden>
+            {cls}
+          </span>
+          <div className="min-w-0">
             <h2 className="section-title">Prüfungssimulation · hạng {info.name}</h2>
             <p className="text-sm text-muted">{info.vi}</p>
           </div>
         </div>
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          <li className="rounded-2xl border-2 border-ink/20 p-3">
+          <li className="surface">
             <b>{info.exam.questions} câu</b>: {info.exam.grundstoff} câu phần cơ bản + {zusatz} câu phần riêng hạng {cls}
           </li>
-          <li className="rounded-2xl border-2 border-ink/20 p-3">
-            <Clock className="mr-1 inline size-4" />
+          <li className="surface">
+            <Clock className="mr-1 inline size-4 align-[-2px] text-muted" aria-hidden />
             <b>{info.exam.minutes} phút</b>, hết giờ tự nộp bài
           </li>
-          <li className="rounded-2xl border-2 border-ink/20 p-3">
+          <li className="surface">
             Đậu khi <b>≤ {info.exam.maxErrorPoints} điểm lỗi</b> (mỗi câu sai 2–5 điểm, câu bỏ trống tính là sai)
           </li>
-          <li className="rounded-2xl border-2 border-ink/20 p-3">
+          <li className="surface">
             Trượt nếu <b>sai từ 2 câu 5 điểm</b>, kể cả khi tổng chỉ 10 điểm
           </li>
         </ul>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/lai-xe/thi-thu/lam-bai" className="btn btn-lg btn-red">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link href="/lai-xe/thi-thu/lam-bai" className="btn btn-lg btn-primary">
             <Play className="size-4" /> Bắt đầu thi
           </Link>
           {cls === "B" && (

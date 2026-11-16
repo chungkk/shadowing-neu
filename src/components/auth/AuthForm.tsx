@@ -2,20 +2,25 @@
 
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { Mail, Sparkles, X } from "lucide-react";
 import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/(app)/auth-actions";
 import SocialLogin from "./SocialLogin";
 import Mascot from "../Mascot";
 
 const ErrorBox = ({ children }: { children?: string }) =>
-  children ? <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
+  children ? (
+    <p role="alert" className="alert alert-err">
+      {children}
+    </p>
+  ) : null;
 
 /** Email đã nhập ở bước đầu + nút "Đổi" để quay lại sửa */
 function EmailRow({ email, onChange }: { email: string; onChange: () => void }) {
   return (
-    <p className="flex items-center justify-center gap-2 text-sm">
-      <span className="truncate text-muted">{email}</span>
-      <button type="button" className="shrink-0 font-bold text-link" onClick={onChange}>
+    <p className="auth-email">
+      <Mail className="size-4 shrink-0 text-muted" aria-hidden />
+      <span className="min-w-0 flex-1 truncate font-bold">{email}</span>
+      <button type="button" className="btn btn-ghost btn-sm shrink-0 text-link" onClick={onChange}>
         Đổi
       </button>
     </p>
@@ -50,7 +55,7 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
         required
       />
       <ErrorBox>{error}</ErrorBox>
-      <button className="btn btn-lg btn-primary mt-1 uppercase" disabled={pending}>
+      <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending}>
         {pending ? "Đang kiểm tra…" : "Tiếp tục với email"}
       </button>
     </form>
@@ -72,11 +77,11 @@ function LoginForm({ email, next, close, back }: { email: string; next: string; 
       <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
       <EmailRow email={email} onChange={back} />
       <input name="password" type="password" placeholder="Mật khẩu" aria-label="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
-      <Link href="/forgot-password" onClick={close} className="-mt-1 self-end text-sm font-bold text-link">
+      <Link href="/forgot-password" onClick={close} className="-mt-1 self-end rounded-lg px-1 text-sm font-bold text-link hover:underline">
         Quên mật khẩu?
       </Link>
       <ErrorBox>{state.error}</ErrorBox>
-      <button className="btn btn-lg btn-primary mt-1" disabled={pending}>
+      <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending}>
         {pending ? "Đang xử lý…" : "Đăng nhập"}
       </button>
     </form>
@@ -139,7 +144,7 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
           required
         />
         <ErrorBox>{err}</ErrorBox>
-        <button className="btn btn-lg btn-primary mt-1" disabled={sending}>
+        <button className="btn btn-primary btn-lg btn-block mt-1" disabled={sending}>
           {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
         </button>
       </form>
@@ -165,19 +170,19 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
         autoComplete="one-time-code"
         placeholder="______"
               aria-label="Mã xác nhận 6 số"
-        className="input text-center text-2xl font-extrabold tracking-[0.5em]"
+        className="input auth-code"
         autoFocus
         required
       />
       <ErrorBox>{err}</ErrorBox>
-      <button className="btn btn-lg btn-primary mt-1" disabled={pending || code.length !== 6}>
+      <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending || code.length !== 6}>
         {pending ? "Đang xử lý…" : "Xác nhận & đăng ký"}
       </button>
-      <div className="flex justify-between text-sm font-bold">
-        <button type="button" className="text-link" onClick={() => setStep("info")}>
+      <div className="auth-links">
+        <button type="button" onClick={() => setStep("info")}>
           ← Sửa thông tin
         </button>
-        <button type="button" className="text-link disabled:opacity-40" disabled={cooldown > 0 || sending} onClick={send}>
+        <button type="button" disabled={cooldown > 0 || sending} onClick={send}>
           {cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : sending ? "Đang gửi…" : "Gửi lại mã"}
         </button>
       </div>
@@ -213,7 +218,7 @@ export default function AuthForm({
     <Frame onClose={onClose}>
       {/* Popup trên điện thoại: phủ kín màn hình (không viền / bo góc) thay cho hộp nhỏ giữa màn */}
       <div
-        className={`relative grid w-full max-w-4xl overflow-hidden sticker md:grid-cols-2 ${
+        className={`auth-card max-w-4xl md:grid-cols-2 ${
           onClose ? "max-sm:min-h-dvh max-sm:rounded-none max-sm:border-0" : ""
         }`}
       >
@@ -221,8 +226,13 @@ export default function AuthForm({
 
         <div className="flex flex-col gap-4 px-5 pt-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-8 md:p-10">
           <div className="text-center">
-            <h1 className="page-title">{title}</h1>
-            <p className="mt-2 text-link">{subtitle}</p>
+            <span className="auth-badge" aria-hidden>
+              <Sparkles className="size-7" />
+            </span>
+            <h1 id="auth-title" className="page-title">
+              {title}
+            </h1>
+            <p className="auth-subtitle">{subtitle}</p>
           </div>
 
           {step === "email" ? (
@@ -237,13 +247,13 @@ export default function AuthForm({
             <RegisterForm email={email.trim().toLowerCase()} next={next} close={onClose} back={back} />
           )}
 
-          <p className="text-center text-xs text-muted">
+          <p className="text-center text-xs leading-relaxed text-muted">
             Khi tiếp tục (kể cả đăng nhập bằng Google / Apple), bạn đồng ý với{" "}
-            <Link href="/deutsch-shadowing/terms" target="_blank" className="font-bold text-link underline">
+            <Link href="/deutsch-shadowing/terms" target="_blank" className="font-bold text-link underline underline-offset-2">
               Điều khoản sử dụng
             </Link>{" "}
             và{" "}
-            <Link href="/deutsch-shadowing/privacy" target="_blank" className="font-bold text-link underline">
+            <Link href="/deutsch-shadowing/privacy" target="_blank" className="font-bold text-link underline underline-offset-2">
               Chính sách quyền riêng tư
             </Link>{" "}
             của chúng tôi. Khách vẫn học được bài miễn phí.
@@ -251,15 +261,11 @@ export default function AuthForm({
         </div>
 
         {/* Hình minh hoạ */}
-        <div className="relative hidden items-center justify-center bg-card-2 md:flex">
-          <div className="absolute size-72 rounded-full bg-accent/15" />
+        <div className="auth-art" aria-hidden>
+          <div className="auth-art-ring" />
           <Mascot className="bob relative size-64" />
-          <div className="absolute top-[30%] right-[14%] rotate-6 rounded-3xl rounded-bl-md border-2 border-ink bg-gold px-5 py-3 text-2xl font-extrabold text-black">
-            Hallo!
-          </div>
-          <div className="absolute bottom-[24%] left-[14%] -rotate-6 rounded-3xl rounded-br-md border-2 border-ink bg-accent px-4 py-2 text-lg font-extrabold text-white">
-            Wie geht&apos;s?
-          </div>
+          <div className="auth-bubble auth-bubble-gold top-[24%] right-[12%]">Hallo!</div>
+          <div className="auth-bubble auth-bubble-green bottom-[30%] left-[12%]">Wie geht&apos;s?</div>
         </div>
       </div>
     </Frame>
@@ -285,7 +291,8 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
     <div
       role="dialog"
       aria-modal
-      className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain bg-black/70 backdrop-blur-sm sm:p-4 md:p-8"
+      aria-labelledby="auth-title"
+      className="auth-backdrop"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* m-auto thay cho căn giữa: hộp cao hơn màn hình vẫn cuộn được tới mép trên */}
@@ -295,16 +302,16 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
 }
 
 function CloseButton({ onClose }: { onClose?: () => void }) {
-  const className = "btn-icon absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-10 text-link";
+  const className = "btn-icon absolute top-[max(0.875rem,env(safe-area-inset-top))] right-3 z-10 text-muted hover:text-foreground";
   if (onClose) {
     return (
-      <button type="button" title="Đóng" className={className} onClick={onClose}>
+      <button type="button" title="Đóng" aria-label="Đóng" className={className} onClick={onClose}>
         <X className="size-6" />
       </button>
     );
   }
   return (
-    <Link href="/" title="Đóng" className={className}>
+    <Link href="/" title="Đóng" aria-label="Đóng" className={className}>
       <X className="size-6" />
     </Link>
   );

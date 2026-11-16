@@ -6,7 +6,11 @@ import { KeyRound } from "lucide-react";
 import { requestPasswordReset, resetPasswordAction, type ResetState } from "@/app/(app)/auth-actions";
 
 const ErrorBox = ({ children }: { children?: string }) =>
-  children ? <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{children}</p> : null;
+  children ? (
+    <p role="alert" className="alert alert-err">
+      {children}
+    </p>
+  ) : null;
 
 /** Trang "Quên mật khẩu": nhập email → nhận mã 6 số → nhập mã + mật khẩu mới (đặt xong là đăng nhập luôn) */
 export function ForgotForm() {
@@ -39,13 +43,13 @@ export function ForgotForm() {
 
   return (
     <main className="flex flex-1 items-center justify-center p-4 md:p-8">
-      <div className="flex w-full max-w-md flex-col gap-5 sticker p-5 sm:p-8 md:p-10">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-accent text-white">
+      <div className="auth-card max-w-md gap-5 p-5 pt-8 sm:p-8 sm:pt-10 md:p-10">
+        <div className="flex flex-col items-center text-center">
+          <span className="auth-badge" aria-hidden>
             <KeyRound className="size-7" />
-          </div>
+          </span>
           <h1 className="page-title">{step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}</h1>
-          <p className="text-link">
+          <p className="auth-subtitle">
             {step === "email" ? (
               "Nhập email đã đăng ký, chúng tôi sẽ gửi mã 6 số để đặt mật khẩu mới."
             ) : (
@@ -75,7 +79,7 @@ export function ForgotForm() {
               required
             />
             <ErrorBox>{err}</ErrorBox>
-            <button className="btn btn-lg btn-primary mt-1" disabled={sending}>
+            <button className="btn btn-primary btn-lg btn-block mt-1" disabled={sending}>
               {sending ? "Đang gửi…" : "Gửi mã"}
             </button>
           </form>
@@ -90,28 +94,28 @@ export function ForgotForm() {
               autoComplete="one-time-code"
               placeholder="______"
               aria-label="Mã xác nhận 6 số"
-              className="input text-center text-2xl font-extrabold tracking-[0.5em]"
+              className="input auth-code"
               autoFocus
               required
             />
             <input name="password" type="password" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" aria-label="Mật khẩu mới (ít nhất 8 ký tự)" className="input" autoComplete="new-password" minLength={8} required />
             <input name="confirm" type="password" placeholder="Nhập lại mật khẩu mới" aria-label="Nhập lại mật khẩu mới" className="input" autoComplete="new-password" minLength={8} required />
             <ErrorBox>{err}</ErrorBox>
-            <button className="btn btn-lg btn-primary mt-1" disabled={pending || code.length !== 6}>
+            <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending || code.length !== 6}>
               {pending ? "Đang lưu…" : "Lưu mật khẩu mới"}
             </button>
-            <div className="flex justify-between text-sm font-bold">
-              <button type="button" className="text-link" onClick={() => setStep("email")}>
+            <div className="auth-links">
+              <button type="button" onClick={() => setStep("email")}>
                 ← Đổi email
               </button>
-              <button type="button" className="text-link disabled:opacity-40" disabled={cooldown > 0 || sending} onClick={send}>
+              <button type="button" disabled={cooldown > 0 || sending} onClick={send}>
                 {cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : sending ? "Đang gửi…" : "Gửi lại mã"}
               </button>
             </div>
           </form>
         )}
 
-        <Link href="/login" className="text-center text-sm font-bold text-link">
+        <Link href="/login" className="mx-auto rounded-lg px-2 py-1 text-center text-sm font-bold text-link hover:underline">
           ← Quay lại đăng nhập
         </Link>
       </div>

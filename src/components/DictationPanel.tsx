@@ -8,16 +8,9 @@ import { useIsTouchPhone, useKeyboardInset } from "@/hooks/useKeyboardInset";
 import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
 
-/** Ô từ như sticker: ô trống viền đứt chờ dán, từ đúng là sticker đã dán (viền đậm, bóng cứng, hơi nghiêng) */
-const BOX: Record<WordState | "hint", string> = {
-  correct: "border-ink bg-accent/20 text-foreground shadow-[0_2px_0_var(--ink)]",
-  close: "border-amber bg-amber/10 text-amber",
-  wrong: "border-red bg-red/10 text-red-400",
-  missing: "border-dashed border-red/60 bg-card text-muted",
-  revealed: "border-amber/60 bg-amber/5 text-amber",
-  given: "border-ink/40 bg-card-2 text-foreground",
-  hint: "border-dashed border-ink/30 bg-card text-muted",
-};
+/** Ô từ như sticker (kiểu trong deutsch.css, theo data-state): ô trống viền đứt chờ dán, từ đúng là sticker xanh đã dán (gờ dưới, hơi nghiêng),
+ * sai = đỏ, gần đúng / đã xem = vàng, ô đang gõ = viền teal */
+type BoxState = WordState | "hint";
 const TILT = ["-1.5deg", "1deg", "-0.5deg", "1.5deg"];
 const PRAISE = ["Tuyệt vời!", "Chính xác!", "Giỏi lắm!", "Xuất sắc!", "Quá chuẩn!"];
 const SPARK_COLORS = ["var(--red)", "var(--gold)", "var(--accent)", "var(--gem)"];
@@ -217,7 +210,7 @@ export default function DictationPanel({
               </span>
             )}
           </span>
-          <p role="status" className="dict-bubble ml-1 min-w-0 rounded-2xl border-2 border-ink bg-card px-3 py-1.5 text-sm leading-snug font-extrabold text-foreground">
+          <p role="status" className="dict-bubble ml-1 min-w-0 px-3 py-1.5 text-sm leading-snug font-extrabold text-foreground">
             {say}
           </p>
           <button
@@ -233,8 +226,8 @@ export default function DictationPanel({
         </div>
 
         {/* Tiến độ câu: dải sọc kẹo như thân linh vật */}
-        <div className="h-3 overflow-hidden rounded-full border-2 border-ink bg-card-2" aria-hidden>
-          <div className="dict-progress h-full" style={{ width: `${result.total ? (scored / result.total) * 100 : 0}%` }} />
+        <div className="progress h-3" aria-hidden>
+          <div className="dict-progress h-full rounded-full" style={{ width: `${result.total ? (scored / result.total) * 100 : 0}%` }} />
         </div>
 
         {/* Ô từng từ: chưa gõ → gợi ý theo mức độ (đáp án ẩn), gõ tới đâu hiện trong ô tới đó; mắt phía trên ô để xem từ (tính là lỗi); xong → bấm để tra từ.
@@ -294,16 +287,19 @@ export default function DictationPanel({
           />
           {result.words.map((w, k) => {
             const shown = w.state === "correct" || w.state === "revealed" || w.state === "given";
-            const state = shown || checked ? w.state : "hint";
+            const state: BoxState = shown || checked ? w.state : "hint";
             const isActive = k === active && !result.done;
             const typedNow = !!slots[k] && state === "hint";
-            const box = `min-h-9 min-w-10 max-w-full break-all rounded-xl border-2 px-2 py-1 text-center font-mono text-base font-bold transition ${BOX[state]} ${typedNow ? "border-solid border-ink/60 text-foreground" : ""} ${won ? "dict-win" : k === stuck ? "dict-stick" : ""} ${checked && !result.done && (w.state === "wrong" || w.state === "close") ? "shake" : ""} ${isActive ? "-translate-y-0.5 border-solid border-link bg-card shadow-[0_3px_0_var(--link)]" : ""}`;
+            const box = `dict-box ${won ? "dict-win" : k === stuck ? "dict-stick" : ""} ${checked && !result.done && (w.state === "wrong" || w.state === "close") ? "shake" : ""}`;
+            const boxAttrs = { "data-state": state, "data-typed": typedNow || undefined, "data-active": isActive || undefined };
             const tilt = { rotate: w.state === "correct" ? TILT[k % TILT.length] : undefined };
             if (result.done && onWord)
               return (
                 <button
                   key={k}
-                  className={`${box} cursor-pointer transition hover:brightness-125`}
+                  {...boxAttrs}
+                  data-tap
+                  className={`${box} cursor-pointer`}
                   style={{ "--i": k, ...tilt } as CSSProperties}
                   title="Tra nghĩa từ này"
                   onClick={(e) => {
@@ -316,7 +312,7 @@ export default function DictationPanel({
               );
             if (w.state === "revealed" || w.state === "given" || result.done)
               return (
-                <span key={k} className={box} style={tilt}>
+                <span key={k} {...boxAttrs} className={box} style={tilt}>
                   {w.text}
                 </span>
               );
@@ -324,6 +320,7 @@ export default function DictationPanel({
             return (
               <span key={k} className="group relative max-w-full">
                 <button
+                  {...boxAttrs}
                   className={`${box} cursor-text`}
                   style={tilt}
                   title={`Bấm để gõ vào ô này${checked && typed ? ` · Bạn gõ: ${typed}` : ""}`}
@@ -331,11 +328,11 @@ export default function DictationPanel({
                   onClick={() => setActive(k)}
                 >
                   {w.state === "correct" ? w.text : typed || (isActive && focused ? "" : hintFor(w.text, level) || "\u00A0")}
-                  {isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-link" />}
+                  {isActive && focused && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse rounded-full bg-link motion-reduce:animate-none" />}
                 </button>
                 {w.state !== "correct" && (
                   <button
-                    className={`absolute -top-3.5 left-1/2 flex size-5 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-ink bg-card text-foreground transition after:absolute after:-inset-1 after:content-[''] hover:bg-gold hover:text-black pointer-coarse:hidden ${isActive ? "" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"}`}
+                    className={`dict-eye absolute -top-3.5 left-1/2 -translate-x-1/2 pointer-coarse:hidden ${isActive ? "" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"}`}
                     title={`Xem từ này (${hintCost})`}
                     aria-label={`Xem từ này (${hintCost})`}
                     onMouseDown={(e) => e.preventDefault()}
@@ -352,7 +349,7 @@ export default function DictationPanel({
       {result.done && translation && <p className="text-[15px] leading-relaxed text-muted">{translation}</p>}
       <p className="text-xs text-muted">
         {gained > 0 && (
-          <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-gem/15 px-2 py-0.5 font-extrabold text-gem">
+          <span className="badge badge-gem mr-1.5">
             <Gem className="size-3.5" /> +{gained} điểm
           </span>
         )}
@@ -369,7 +366,7 @@ export default function DictationPanel({
           — cùng một hàng để "Kiểm tra" không bị đẩy xuống dưới màn hình */}
       {typing && <div className="h-20" aria-hidden />}
       <div
-        className={`flex gap-2 sm:gap-3 ${typing ? "fixed inset-x-0 z-40 border-t-2 border-ink bg-card px-3 py-2.5" : ""}`}
+        className={`flex gap-2 sm:gap-3 ${typing ? "dict-dock fixed inset-x-0 z-40 px-3 py-2.5" : ""}`}
         style={typing ? { bottom: kbInset } : undefined}
       >
         <button className="btn btn-primary btn-lg flex-[2]" onMouseDown={keepFocus} onClick={submit} disabled={result.done && !hasNext}>

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getLesson } from "@/lib/db";
 import { toSrt } from "@/lib/subtitles";
 import LessonForm from "../LessonForm";
+import AdminNav from "../AdminNav";
 import { FormSkeleton } from "@/components/Skeleton";
 
 async function Edit({ params }: PageProps<"/admin/[id]">) {
@@ -33,6 +34,7 @@ async function Edit({ params }: PageProps<"/admin/[id]">) {
 export default function EditLessonPage(props: PageProps<"/admin/[id]">) {
   return (
     <main className="page page-narrow">
+      <AdminNav />
       <h1 className="page-title">Sửa bài học</h1>
       <Suspense fallback={<FormSkeleton />}>
         <Edit {...props} />

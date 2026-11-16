@@ -1,1 +1,552 @@
-/* Area CSS: games — owned by the games worker. Plain CSS or @layer components; tokens from globals.css. */
+/* Area CSS: games — owned by the games worker. Plain CSS or @layer components; tokens from globals.css.
+   Khu game: sảnh /games, game từ vựng (Mưa từ vựng, Đào vàng, Nối từ), Der Die Das, Sudoku / Caro, bảng xếp hạng.
+   Màu theo luật chung: vàng = chơi/thưởng (nút Bắt đầu, điểm) · xanh lá = đúng · đỏ = sai/hết giờ · teal = phụ. */
+
+@layer components {
+  /* ───── Màu chủ đạo của từng game (thay cho cyan/amber cứng) ─────
+     .g-tone-cyan  (teal, mát) · .g-tone-amber (vàng) → --tone / --tone-soft / --tone-text dùng trong các class bên dưới */
+  .g-tone-cyan {
+    --tone: var(--link);
+    --tone-soft: var(--link-soft);
+    --tone-text: var(--link);
+  }
+  .g-tone-amber {
+    --tone: var(--gold);
+    --tone-soft: var(--gold-soft);
+    --tone-text: var(--amber);
+  }
+
+  /* Ô biểu tượng của game (đầu trang / banner) */
+  .g-icon {
+    @apply inline-flex size-11 shrink-0 items-center justify-center rounded-2xl;
+    color: var(--tone-text);
+    background-color: var(--tone-soft);
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tone) 28%, transparent);
+  }
+
+  /* ───── Sảnh /games ───── */
+  .g-hub-hero {
+    --hero: var(--gold);
+  }
+  /* Tranh đầu thẻ game: khung đêm bo theo thẻ + viền dưới mềm */
+  .g-art {
+    @apply relative h-36 overflow-hidden sm:h-44;
+    border-bottom: 2px solid var(--ink);
+  }
+  .g-art::after {
+    /* bóng trong nhẹ phía dưới để tranh "chìm" vào thẻ */
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 bottom-0 h-10;
+    background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.25));
+  }
+  .g-art-tag {
+    @apply absolute top-3 right-3 z-[1] inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold text-white;
+    background: rgb(0 0 0 / 0.5);
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
+  }
+  .g-play-cta {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-extrabold;
+    color: #3a2304;
+    background-color: var(--gold);
+    box-shadow: 0 3px 0 var(--gold-dark);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .group:hover .g-play-cta {
+      transform: translateY(-1px);
+    }
+  }
+
+  /* ───── Màn chọn bộ từ ───── */
+  .g-deck {
+    @apply relative flex cursor-pointer flex-col gap-3 p-3.5 text-left;
+    border-radius: var(--radius-lg);
+    background-color: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink), var(--shadow-xs);
+    transition:
+      transform var(--dur) var(--ease-out),
+      box-shadow var(--dur) var(--ease-out),
+      border-color var(--dur-fast),
+      background-color var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .g-deck:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--tone) 45%, var(--ink));
+      box-shadow: 0 5px 0 color-mix(in srgb, var(--tone) 45%, var(--ink)), var(--shadow-sm);
+    }
+  }
+  .g-deck[aria-pressed="true"] {
+    border-color: var(--tone);
+    background-color: color-mix(in srgb, var(--tone-soft) 70%, var(--card));
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--tone) 70%, var(--ink)), var(--shadow-sm);
+  }
+  .g-deck:disabled {
+    @apply cursor-wait;
+  }
+  .g-check {
+    @apply absolute -top-2.5 -right-2.5 flex size-7 items-center justify-center rounded-full text-white;
+    background-color: var(--tone);
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--tone) 60%, black), 0 0 0 3px var(--background);
+  }
+  .g-tone-amber .g-check {
+    color: #3a2304;
+  }
+  .g-bar {
+    @apply h-2 flex-1 overflow-hidden rounded-full;
+    background-color: var(--card-2);
+  }
+  .g-bar > span {
+    @apply block h-full rounded-full;
+    background-color: var(--tone);
+    transition: width 500ms var(--ease-out);
+  }
+  /* Thanh "Bắt đầu" dính đáy */
+  .g-startbar {
+    @apply sticky mt-2 flex items-center gap-3 p-3;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--ink);
+    background-color: color-mix(in srgb, var(--card) 92%, transparent);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+  }
+  @media (min-width: 48rem) {
+    .g-startbar {
+      bottom: 1rem;
+    }
+  }
+
+  /* Ô trình độ của bộ từ (A xanh lá · B xanh lam · C tím) */
+  .g-level {
+    @apply flex size-11 shrink-0 items-center justify-center rounded-xl font-display text-lg leading-none font-extrabold;
+    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.12);
+  }
+  .g-level-a {
+    background-color: var(--accent-soft);
+    color: var(--accent-text);
+  }
+  .g-level-b {
+    background-color: var(--gem-soft);
+    color: var(--gem);
+  }
+  .g-level-c {
+    background-color: color-mix(in srgb, #8b5cf6 16%, var(--card));
+    color: #6d28d9;
+  }
+  [data-theme="dark"] .g-level-c {
+    color: #c4b5fd;
+  }
+
+  /* ───── Bàn phím trên màn hình ───── */
+  .g-key {
+    @apply flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-xl px-0 text-base font-extrabold text-foreground select-none;
+    background-color: var(--card);
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    transition:
+      transform 80ms var(--ease-out),
+      box-shadow 80ms var(--ease-out);
+  }
+  .g-key:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .g-key:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  /* ───── Màn chơi đêm (Mưa từ vựng, Đào vàng, Nối từ) ───── */
+  .g-stage {
+    border-radius: var(--radius-xl);
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.06),
+      0 18px 40px -18px rgb(0 0 0 / 0.55);
+  }
+  /* Viên HUD kính mờ */
+  .g-hud {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-extrabold text-white;
+    background: rgb(4 10 14 / 0.5);
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  }
+  .g-round {
+    @apply flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/90;
+    background: rgb(4 10 14 / 0.5);
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
+    transition:
+      background-color var(--dur-fast),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .g-round:hover {
+      background: rgb(4 10 14 / 0.72);
+    }
+  }
+  .g-round:active {
+    transform: scale(0.92);
+  }
+  .g-round-on {
+    color: var(--tone-text, var(--gold));
+    background: color-mix(in srgb, var(--tone, var(--gold)) 28%, rgb(4 10 14 / 0.6));
+    box-shadow: inset 0 0 0 1.5px var(--tone, var(--gold));
+  }
+  /* Lời báo nổi giữa sân (vượt mốc / lên cấp) */
+  .g-toast {
+    @apply pointer-events-none absolute inset-x-0 z-10 mx-auto w-fit max-w-[90%] rounded-2xl px-4 py-2 text-center text-sm font-extrabold whitespace-pre-line;
+    box-shadow: 0 10px 24px -8px rgb(0 0 0 / 0.6);
+    animation: g-toast 320ms var(--ease-spring);
+  }
+  @keyframes g-toast {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.94);
+    }
+  }
+  /* Lớp phủ tạm dừng / kết quả và khung kết quả bên trong */
+  .g-overlay {
+    @apply absolute inset-0 z-20 flex flex-col items-center overflow-y-auto p-4;
+    backdrop-filter: blur(6px);
+    animation: sheet-fade 200ms ease-out;
+  }
+  .g-panel {
+    @apply m-auto flex w-full max-w-md flex-col items-center gap-4 p-5 text-center sm:p-6;
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in srgb, var(--card) 94%, transparent);
+    box-shadow:
+      inset 0 0 0 1.5px var(--border),
+      0 24px 48px -16px rgb(0 0 0 / 0.65);
+    animation: sheet-pop 280ms var(--ease-spring);
+  }
+  .g-score {
+    @apply font-display text-6xl leading-none font-extrabold tabular-nums;
+    color: var(--gold);
+    text-shadow: 0 3px 0 color-mix(in srgb, var(--gold-dark) 70%, transparent);
+  }
+
+
+  /* ───── Sân chơi đêm: bảng màu tranh minh hoạ (cố ý giữ hex — vẽ riêng cho nền đêm) ─────
+     Đặt trên khung .theme-night của từng game → --tone dùng cho thanh mốc, nút bật, lời báo */
+  .g-field-rain {
+    --tone: #22d3ee;
+    --tone-text: #67e8f9;
+  }
+  .g-field-gold {
+    --tone: var(--gold);
+    --tone-text: var(--gold);
+  }
+  .g-field-match {
+    --tone: #22d3ee;
+    --tone-text: #67e8f9;
+    --m-word: #14b8a6;
+    --m-word-bg: #0e1b26;
+    --m-word-hover: #13283a;
+    --m-word-text: #cffafe;
+    --m-mean: #f97316;
+    --m-mean-bg: #33221a;
+    --m-mean-hover: #46301f;
+    --m-mean-text: #fef3c7;
+    background: linear-gradient(to bottom, #0a1f24, #0b2a2a);
+  }
+  /* Thanh tiến độ mảnh trong HUD */
+  .g-hud-bar {
+    @apply block h-1 w-full overflow-hidden rounded-full;
+    background: rgb(255 255 255 / 0.1);
+  }
+  .g-hud-bar > span {
+    @apply block h-full rounded-full;
+    background-color: var(--tone, var(--gold));
+    transition: width 300ms var(--ease-out);
+  }
+  /* Nút tròn vàng nổi bật (Nghe lại) */
+  .g-round-gold {
+    color: #3a2304;
+    background: var(--gold);
+    box-shadow:
+      0 0 14px color-mix(in srgb, var(--gold) 50%, transparent),
+      inset 0 0 0 1.5px color-mix(in srgb, white 30%, var(--gold));
+  }
+  @media (hover: hover) {
+    .g-round-gold:hover {
+      background: var(--gold);
+      filter: brightness(1.06);
+    }
+  }
+  /* Lời báo trong sân: ok theo màu game, warn vàng — chữ tối trên nền sáng */
+  .g-toast-ok {
+    color: #06121c;
+    background-color: var(--tone, var(--gold));
+  }
+  .g-toast-warn {
+    color: #3a2304;
+    background-color: var(--gold);
+  }
+  /* Lớp phủ trên sân đêm (nền đêm mờ) */
+  .g-overlay-night {
+    background-color: color-mix(in srgb, var(--background) 86%, transparent);
+  }
+
+  /* Thẻ của game Nối từ */
+  .g-mcard {
+    @apply relative flex min-h-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 px-2 text-center text-sm leading-snug font-bold [overflow-wrap:anywhere] sm:px-4 sm:text-base;
+    transition:
+      background-color var(--dur-fast),
+      border-color var(--dur-fast),
+      box-shadow var(--dur-fast);
+  }
+  .g-mcard:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
+  .g-mcard-word {
+    color: var(--m-word-text);
+    border-color: color-mix(in srgb, var(--m-word) 60%, transparent);
+    background-color: var(--m-word-bg);
+  }
+  .g-mcard-mean {
+    color: var(--m-mean-text);
+    border-color: color-mix(in srgb, var(--m-mean) 60%, transparent);
+    background-color: var(--m-mean-bg);
+  }
+  @media (hover: hover) {
+    .g-mcard-word:hover {
+      border-color: color-mix(in srgb, var(--m-word) 100%, white 25%);
+      background-color: var(--m-word-hover);
+    }
+    .g-mcard-mean:hover {
+      border-color: color-mix(in srgb, var(--m-mean) 100%, white 25%);
+      background-color: var(--m-mean-hover);
+    }
+  }
+  .g-mcard-tag {
+    @apply absolute top-1 left-2 text-[10px] font-extrabold;
+  }
+  .g-mcard-word .g-mcard-tag {
+    color: var(--m-word);
+  }
+  .g-mcard-mean .g-mcard-tag {
+    color: var(--m-mean);
+  }
+  .g-mcard[aria-pressed="true"] {
+    color: white;
+    border-color: var(--gold);
+    background-color: color-mix(in srgb, var(--gold) 25%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+  .g-mcard.g-mcard-wrong {
+    color: white;
+    border-color: var(--red);
+    background-color: color-mix(in srgb, var(--red) 25%, transparent);
+  }
+  .g-mcard.g-mcard-done {
+    @apply pointer-events-none;
+    color: white;
+    border-color: var(--accent);
+    background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  /* ───── Der Die Das ───── */
+  .g-artikel {
+    @apply flex min-h-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-3 font-display text-2xl leading-none font-extrabold text-white select-none;
+    background-color: var(--c);
+    box-shadow: 0 5px 0 var(--c-dark);
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      filter var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .g-artikel:hover:not(:disabled) {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+  }
+  .g-artikel:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 var(--c-dark);
+  }
+  .g-artikel:disabled {
+    @apply cursor-default opacity-60;
+  }
+  .g-der {
+    --c: #0284c7;
+    --c-dark: #075985;
+  }
+  .g-die {
+    --c: #e11d48;
+    --c-dark: #9f1239;
+  }
+  .g-das {
+    --c: #16a34a;
+    --c-dark: #166534;
+  }
+  .g-timer {
+    @apply h-3 overflow-hidden rounded-full;
+    background-color: var(--card-2);
+    box-shadow: inset 0 1px 2px rgb(var(--shadow-color) / 0.12);
+  }
+  .g-timer > span {
+    @apply block h-full rounded-full;
+    background: linear-gradient(90deg, var(--gold), color-mix(in srgb, var(--gold) 60%, var(--accent)));
+    transition: width 100ms linear;
+  }
+  .g-timer-low > span {
+    background: var(--red);
+  }
+  .g-word-stage {
+    @apply relative flex flex-col items-center gap-1 overflow-hidden px-4 py-8 text-center;
+    border-radius: var(--radius-lg);
+    background:
+      radial-gradient(20rem 10rem at 50% 0%, color-mix(in srgb, var(--sun) 30%, transparent), transparent 70%),
+      var(--card-2);
+  }
+  [data-theme="dark"] .g-word-stage {
+    background:
+      radial-gradient(20rem 10rem at 50% 0%, color-mix(in srgb, var(--sun) 10%, transparent), transparent 70%),
+      var(--card-2);
+  }
+
+  /* ───── Sudoku / Caro ───── */
+  /* Mã phòng như vé */
+  .g-ticket {
+    @apply relative flex flex-col items-center gap-1 px-4 py-4 text-center;
+    border-radius: var(--radius-lg);
+    border: 2px dashed color-mix(in srgb, var(--gold) 55%, var(--ink));
+    background:
+      radial-gradient(16rem 8rem at 50% 0%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 70%),
+      var(--gold-soft);
+  }
+  .g-code {
+    @apply font-mono text-4xl leading-none font-black tracking-[0.3em] sm:text-5xl;
+    padding-left: 0.3em; /* cân letter-spacing cuối dòng */
+  }
+  .g-seat {
+    @apply flex min-h-12 items-center gap-2.5 rounded-2xl px-3 py-2;
+    background-color: var(--card-2);
+  }
+  .g-seat-empty {
+    @apply text-sm text-muted;
+    background-color: transparent;
+    border: 2px dashed var(--line-strong);
+    opacity: 0.8;
+  }
+  .g-avatar {
+    @apply flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold;
+    background-color: var(--card);
+    box-shadow: inset 0 0 0 1.5px var(--ink);
+  }
+  /* Thanh trạng thái lượt đi */
+  .g-turn {
+    @apply flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-sm font-bold;
+    background-color: var(--card);
+    border: 2px solid var(--ink);
+    transition:
+      background-color var(--dur),
+      border-color var(--dur);
+  }
+  .g-turn-mine {
+    border-color: color-mix(in srgb, var(--gold) 70%, var(--ink));
+    background-color: var(--gold-soft);
+  }
+  .g-clock {
+    @apply inline-flex items-center gap-1 rounded-full py-0.5 pr-0.5 pl-2.5 font-extrabold tabular-nums;
+    background-color: var(--card);
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .g-clock-warn {
+    color: var(--red-400);
+    background-color: var(--red-soft);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--red) 40%, transparent);
+  }
+  /* Bàn Sudoku: đường khối 3×3 phải rõ (--ink giờ là viền mềm) */
+  .g-sudoku {
+    border: 3px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background-color: var(--card);
+    box-shadow: 0 4px 0 var(--ink), var(--shadow-md);
+  }
+  .g-sudoku .g-block-r {
+    border-right: 2px solid var(--line-strong);
+  }
+  .g-sudoku .g-block-b {
+    border-bottom: 2px solid var(--line-strong);
+  }
+  .g-sudoku .g-cell-r {
+    border-right: 1px solid var(--line);
+  }
+  .g-sudoku .g-cell-b {
+    border-bottom: 1px solid var(--line);
+  }
+  .g-num {
+    @apply relative flex cursor-pointer items-center justify-center rounded-2xl font-display text-2xl font-extrabold text-foreground select-none;
+    background-color: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast);
+  }
+  .g-num:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .g-num:disabled {
+    @apply cursor-not-allowed text-muted;
+    box-shadow: none;
+    background-color: var(--card-2);
+  }
+  .g-num[aria-current="true"] {
+    color: var(--gem);
+    border-color: var(--gem);
+    background-color: var(--gem-soft);
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--gem) 60%, var(--ink));
+  }
+  .g-caro-tray {
+    border: 3px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background-color: var(--board);
+    box-shadow: 0 4px 0 var(--ink), var(--shadow-md);
+  }
+  /* Lời thoại linh vật */
+  .g-say {
+    @apply relative min-w-0 flex-1 rounded-2xl px-3.5 py-2.5 text-sm leading-snug font-bold text-balance md:text-base;
+    background-color: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 0 3px 0 var(--ink), var(--shadow-xs);
+  }
+  .g-say::before {
+    content: "";
+    @apply absolute top-1/2 -left-[8px] size-3.5 -translate-y-1/2 rotate-45;
+    background-color: var(--card);
+    border-bottom: 2px solid var(--ink);
+    border-left: 2px solid var(--ink);
+  }
+
+  /* ───── Bảng xếp hạng ───── */
+  .g-rank {
+    @apply flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full px-1.5 font-display text-base font-extrabold tabular-nums;
+  }
+  .g-rank-1 {
+    color: #5a3a00;
+    background: linear-gradient(160deg, #ffe58a, #f5b82e);
+    box-shadow: 0 2px 0 #c98a0c;
+  }
+  .g-rank-2 {
+    color: #334155;
+    background: linear-gradient(160deg, #f1f5f9, #cbd5e1);
+    box-shadow: 0 2px 0 #94a3b8;
+  }
+  .g-rank-3 {
+    color: #5b2c0c;
+    background: linear-gradient(160deg, #fcd2a8, #e3965a);
+    box-shadow: 0 2px 0 #b9672c;
+  }
+  .g-rank-me {
+    background-color: var(--accent-soft);
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+}

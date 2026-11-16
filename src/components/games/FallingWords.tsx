@@ -89,7 +89,7 @@ const CONFIG = {
 const dropWidth = (variant: Variant, w: number) => (variant === "gold" ? Math.min(176, w * 0.6) : Math.min(240, w * 0.7));
 const DROP_H = 60;
 
-/** Màu của từng biến thể (giọt, ô chữ, HUD, lớp phủ) */
+/** Tranh minh hoạ của từng biến thể (nền sân, giọt, ô chữ) — cố ý giữ màu riêng cho nền đêm; HUD / lớp phủ dùng class .g-* */
 const THEME = {
   rain: {
     field: "bg-gradient-to-b from-[#0a1622] via-[#0c2033] to-[#0b2a40]",
@@ -98,11 +98,7 @@ const THEME = {
     gone: "rain-miss border-cyan-400/40 bg-[#0e2a3d]/90",
     cursor: "text-cyan-200",
     empty: "text-sky-300/50",
-    accent: "text-cyan-300",
-    bar: "bg-cyan-400",
-    on: "border-cyan-300 bg-cyan-400/25 text-cyan-100",
-    note: "bg-cyan-500 text-white",
-    overlay: "bg-[#06121c]/85",
+    tone: "g-field-rain", // --tone: thanh mốc, nút bật, lời báo (styles/games.css)
   },
   gold: {
     // trời chạng vạng ở trên, mặt đất ở 7rem, càng xuống sâu đất càng tối
@@ -112,11 +108,7 @@ const THEME = {
     gone: "rain-miss rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-400/40 bg-[#3a2a10]/90",
     cursor: "text-amber-200",
     empty: "text-amber-200/40",
-    accent: "text-amber",
-    bar: "bg-amber",
-    on: "border-amber bg-amber/25 text-amber-100",
-    note: "bg-amber text-black",
-    overlay: "bg-[#120b04]/85",
+    tone: "g-field-gold",
   },
 } satisfies Record<Variant, Record<string, string>>;
 type Theme = (typeof THEME)[Variant];
@@ -169,14 +161,8 @@ function Slots({ word, typed, hint, theme }: { word: string; typed: string | nul
   );
 }
 
-const RoundBtn = ({ title, onClick, children, on, theme }: { title: string; onClick: () => void; children: ReactNode; on?: boolean; theme: Theme }) => (
-  <button
-    title={title}
-    onClick={onClick}
-    className={`flex size-9 cursor-pointer items-center justify-center rounded-full border backdrop-blur transition ${
-      on ? theme.on : "border-white/10 bg-black/40 text-white/85 hover:bg-black/60"
-    }`}
-  >
+const RoundBtn = ({ title, onClick, children, on }: { title: string; onClick: () => void; children: ReactNode; on?: boolean }) => (
+  <button title={title} aria-label={title} aria-pressed={on} onClick={onClick} className={`g-round ${on ? "g-round-on" : ""}`}>
     {children}
   </button>
 );
@@ -587,8 +573,8 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
       <div ref={field} className={`flex flex-col ${full ? "gap-1.5 bg-background p-1.5" : "gap-3"}`}>
         <div
           onPointerDown={() => phase === "play" && nativeKeyboard && focusInput()}
-          className={`theme-night relative overflow-hidden select-none ${theme.field} ${
-            full ? "min-h-0 flex-1 rounded-xl" : `rounded-2xl border border-white/5 ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
+          className={`theme-night ${theme.tone} relative overflow-hidden select-none ${theme.field} ${
+            full ? "min-h-0 flex-1 rounded-xl" : `g-stage ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
           }`}
         >
           {variant === "gold" ? <GoldScenery label={label} reeling={!!reels.length} /> : <RainScenery label={label} />}
@@ -671,13 +657,13 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
           {/* HUD: điểm · mốc · mạng */}
           {/* pointer-events-none: khung HUD rộng cả sân, không được chặn cú bấm vào giọt bên dưới */}
           <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 *:pointer-events-auto">
-            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-sm font-extrabold text-white backdrop-blur">
+            <span className="g-hud">
               <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
               {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
             </span>
-            <span className="flex min-w-0 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-black/45 px-3 py-1 text-sm text-white backdrop-blur">
+            <span className="g-hud min-w-0 flex-col gap-1 rounded-2xl font-normal">
               <span className="flex min-w-0 items-center gap-1.5">
-                <Flag className={`size-4 shrink-0 ${theme.accent}`} />
+                <Flag className="size-4 shrink-0 text-[var(--tone-text)]" />
                 <b className="shrink-0">
                   Mốc {v.milestone + 1}/{v.topics.length}
                 </b>
@@ -686,37 +672,33 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                   · {topic.icon} {topic.title}
                 </span>
               </span>
-              <span className="h-1 w-full min-w-24 rounded-full bg-white/10">
-                <span className={`block h-full rounded-full transition-[width] ${theme.bar}`} style={{ width: `${Math.min(v.mHits / v.goal, 1) * 100}%` }} />
+              <span className="g-hud-bar min-w-24">
+                <span style={{ width: `${Math.min(v.mHits / v.goal, 1) * 100}%` }} />
               </span>
             </span>
             <div className="flex flex-col items-end gap-2">
-              <span className="flex gap-0.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur" aria-label={`${v.lives} mạng`}>
+              <span className="g-hud gap-0.5 px-2.5 py-1.5" aria-label={`${v.lives} mạng`}>
                 {Array.from({ length: cfg.lives }, (_, i) => (
-                  <Heart key={i} className={`size-4 ${i < v.lives ? "fill-red-500 text-red-500" : "text-white/20"}`} />
+                  <Heart key={i} className={`size-4 ${i < v.lives ? "fill-red text-red" : "text-white/20"}`} />
                 ))}
               </span>
               {playing && (
                 <div className="flex flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
                   {cfg.listen && (
-                    <button
-                      title="Nghe lại (Space)"
-                      onClick={listenAgain}
-                      className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-amber bg-gradient-to-b from-amber to-orange-500 text-amber-950 shadow-[0_0_14px_rgba(250,204,21,0.5)]"
-                    >
+                    <button title="Nghe lại (Space)" aria-label="Nghe lại (Space)" onClick={listenAgain} className="g-round g-round-gold">
                       <Ear className="size-4" />
                     </button>
                   )}
-                  <RoundBtn theme={theme} title="Thoát ván" onClick={quit}>
+                  <RoundBtn title="Thoát ván" onClick={quit}>
                     <X className="size-4" />
                   </RoundBtn>
-                  <RoundBtn theme={theme} title={phase === "play" ? "Tạm dừng (Esc)" : "Tiếp tục"} onClick={() => (phase === "play" ? setPhase("pause") : resume())}>
+                  <RoundBtn title={phase === "play" ? "Tạm dừng (Esc)" : "Tiếp tục"} onClick={() => (phase === "play" ? setPhase("pause") : resume())}>
                     {phase === "play" ? <Pause className="size-4" /> : <Play className="size-4" />}
                   </RoundBtn>
-                  <RoundBtn theme={theme} title="Bàn phím trên màn hình" on={keyboard} onClick={() => setOsk(!keyboard)}>
+                  <RoundBtn title="Bàn phím trên màn hình" on={keyboard} onClick={() => setOsk(!keyboard)}>
                     <Keyboard className="size-4" />
                   </RoundBtn>
-                  <RoundBtn theme={theme} title={sound ? "Tắt đọc từ khi bắn trúng" : "Bật đọc từ khi bắn trúng"} onClick={() => setSound(!sound)}>
+                  <RoundBtn title={sound ? "Tắt đọc từ khi bắn trúng" : "Bật đọc từ khi bắn trúng"} onClick={() => setSound(!sound)}>
                     {sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
                   </RoundBtn>
                 </div>
@@ -725,36 +707,32 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
           </div>
 
           {note && (
-            <p
-              className={`sheet-fade pointer-events-none absolute inset-x-0 top-20 z-10 mx-auto w-fit max-w-[90%] rounded-xl px-3 py-1.5 text-center text-sm font-bold whitespace-pre-line ${
-                note.tone === "ok" ? theme.note : "bg-amber text-black"
-              }`}
-            >
+            <p role="status" className={`g-toast top-20 ${note.tone === "ok" ? "g-toast-ok" : "g-toast-warn"}`}>
               {note.text}
             </p>
           )}
 
           {/* Lớp phủ: tạm dừng / thua / thắng */}
           {phase !== "play" && (
-            <div className={`absolute inset-0 z-20 flex flex-col items-center overflow-y-auto p-4 backdrop-blur-sm ${theme.overlay}`} onPointerDown={(e) => e.stopPropagation()}>
-              <div className="m-auto flex w-full max-w-md flex-col items-center gap-4 text-center">
+            <div className="g-overlay g-overlay-night" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="g-panel">
                 {phase === "pause" ? (
                   <>
-                    <p className="text-xl font-extrabold">Tạm dừng</p>
-                    <button className="btn btn-primary btn-lg w-full" onClick={resume}>
+                    <p className="font-display text-2xl font-extrabold">Tạm dừng</p>
+                    <button className="btn btn-amber btn-lg btn-block" onClick={resume}>
                       <Play className="size-5" /> Tiếp tục
                     </button>
-                    <button className="btn btn-lg w-full" onClick={quit}>
+                    <button className="btn btn-lg btn-block" onClick={quit}>
                       Thoát ván
                     </button>
                   </>
                 ) : (
                   <>
-                    <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
-                    <p className="text-5xl font-extrabold text-amber tabular-nums">{v.score}</p>
+                    <p className="font-display text-2xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
+                    <p className="g-score">{v.score}</p>
                     {v.score > v.best ? (
-                      <p className="flex items-center gap-1.5 font-bold text-amber">
-                        <Trophy className="size-5" /> Kỷ lục mới!
+                      <p className="badge badge-gold px-3 py-1 text-sm">
+                        <Trophy className="size-4" /> Kỷ lục mới!
                       </p>
                     ) : (
                       <p className="text-sm text-muted">Kỷ lục: {best}</p>
@@ -779,9 +757,11 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                           ))}
                         </ul>
                         {saved ? (
-                          <p className="mt-2 text-center text-sm font-bold text-accent-text">{saved}</p>
+                          <p role="status" className="alert alert-ok mt-2 justify-center">
+                          {saved}
+                        </p>
                         ) : loggedIn ? (
-                          <button className="btn btn-amber btn-lg mt-3 w-full" disabled={saving} onClick={saveMissed}>
+                          <button className="btn btn-soft btn-lg btn-block mt-3" disabled={saving} onClick={saveMissed}>
                             <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn
                           </button>
                         ) : null}
@@ -791,7 +771,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                       <button className="btn btn-lg flex-1" onClick={quit}>
                         Đổi bộ từ
                       </button>
-                      <button className="btn btn-primary btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
+                      <button className="btn btn-amber btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
                         <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
                       </button>
                     </div>

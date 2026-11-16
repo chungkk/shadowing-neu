@@ -19,7 +19,7 @@ export function LessonGridSkeleton({ count = 8 }: { count?: number }) {
       {/* Điện thoại: 1 hàng vuốt ngang như thẻ thật */}
       <div className="max-sm:-mx-4 max-sm:flex max-sm:gap-3 max-sm:overflow-hidden max-sm:px-4 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: count }, (_, i) => (
-          <div key={i} className="flex flex-col overflow-hidden rounded-[20px] border-2 border-ink bg-card shadow-[0_3px_0_var(--ink)] max-sm:w-[78vw] max-sm:shrink-0">
+          <div key={i} className="sticker flex flex-col overflow-hidden max-sm:w-[78vw] max-sm:shrink-0">
             <Bone className="aspect-video rounded-none" />
             <div className="flex flex-col gap-2 p-3 sm:p-4">
               <div className="flex min-h-[2.75em] flex-col gap-1.5">
@@ -200,7 +200,7 @@ export function DecksSkeleton() {
         <Bone className="h-7 w-44" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-3 rounded-[20px] border-2 border-ink bg-card p-2.5 shadow-[0_3px_0_var(--ink)] sm:p-3">
+            <div key={i} className="sticker flex flex-col gap-3 p-2.5 sm:p-3">
               <Bone className="aspect-[16/10] w-full rounded-xl" />
               <Bone className="h-5 w-3/4" />
               <Bone className="h-4 w-12" />

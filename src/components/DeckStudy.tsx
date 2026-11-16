@@ -24,7 +24,7 @@ const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400"
 /** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
 function Picture({ w, icon, className = "size-28" }: { w: DeckWord; icon: string; className?: string }) {
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-3xl bg-amber/80 ${className}`}>
+    <span className={`flex shrink-0 items-center justify-center rounded-sheet bg-gold-soft ${className}`}>
       {w.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={w.image} alt="" className="size-3/4 object-contain drop-shadow-lg" />
@@ -59,14 +59,20 @@ function SpeakButton({ w, big }: { w: DeckWord; big?: boolean }) {
 /** Đáp án đầy đủ hiện sau khi trả lời: từ · số nhiều · nghĩa · câu ví dụ */
 function Reveal({ w, tone, title }: { w: DeckWord; tone: "ok" | "bad"; title: string }) {
   return (
-    <div className={`flex w-full flex-col items-center gap-1.5 rounded-2xl border-2 p-4 text-center ${tone === "ok" ? "border-accent/60 bg-accent/10" : "border-red/60 bg-red/10"}`}>
-      <p className={`text-sm font-extrabold tracking-wide uppercase ${tone === "ok" ? "text-accent-text" : "text-red-400"}`}>{title}</p>
+    <div
+      role="status"
+      className={`rise-in flex w-full max-w-xl flex-col items-center gap-1.5 rounded-panel border-2 p-4 text-center ${tone === "ok" ? "border-accent/30 bg-accent-soft" : "border-red/30 bg-red-soft"}`}
+    >
+      <p className={`flex items-center gap-1.5 font-display text-base font-extrabold ${tone === "ok" ? "text-accent-text" : "text-red-400"}`}>
+        {tone === "ok" ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
+        {title}
+      </p>
       <div className="flex items-center gap-1">
         <German w={w} className="text-2xl font-extrabold" />
         <SpeakButton w={w} />
       </div>
       {!!w.plural && w.plural !== w.word && <p className="text-sm text-muted">số nhiều: die {w.plural}</p>}
-      <p className="text-foreground/85">{w.meaning}</p>
+      <p className="text-foreground">{w.meaning}</p>
       {w.example && <p className="text-sm text-muted italic">{w.example}</p>}
     </div>
   );
@@ -110,14 +116,14 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <button
           type="button"
           onClick={() => setFlipped((f) => !f)}
-          className="flex min-h-56 w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-border bg-card-2/60 p-6 text-center transition hover:border-accent"
+          className="flex min-h-56 w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border-2 border-line bg-card-2 p-6 text-center transition-colors hover:border-accent/50 motion-reduce:transition-none"
         >
           {!flipped ? (
             <>
               <Picture w={w} icon={icon} />
               <German w={w} className="text-3xl font-extrabold" />
               {!!w.plural && w.plural !== w.word && <span className="text-sm text-muted">die {w.plural}</span>}
-              <span className="text-xs font-bold text-muted">Bấm để lật thẻ</span>
+              <span className="badge badge-muted">Bấm để lật thẻ</span>
             </>
           ) : (
             <>
@@ -129,15 +135,15 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <SpeakButton w={w} big />
         {flipped ? (
           <div className="grid w-full max-w-lg grid-cols-2 gap-3">
-            <button className="btn btn-red h-12" onClick={() => onDone(false)}>
-              <X className="size-4" /> Chưa thuộc
+            <button className="btn h-12" onClick={() => onDone(false)}>
+              <X className="size-4 text-red-400" /> Chưa thuộc
             </button>
             <button autoFocus className="btn btn-primary h-12" onClick={() => onDone(true)}>
               <Check className="size-4" /> Đã thuộc
             </button>
           </div>
         ) : (
-          <button autoFocus className="btn btn-amber h-12 w-full max-w-lg" onClick={() => setFlipped(true)}>
+          <button autoFocus className="btn btn-primary h-12 w-full max-w-lg" onClick={() => setFlipped(true)}>
             <RotateCcw className="size-4" /> Lật thẻ
           </button>
         )}
@@ -161,7 +167,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <p className="text-sm font-bold text-muted">{mode === "quiz" ? "Chọn nghĩa đúng" : "Chọn từ tiếng Đức đúng"}</p>
         <div className="grid w-full max-w-xl gap-2.5 sm:grid-cols-2">
           {options.map((o) => {
-            const state = picked === null ? "" : o === right ? "border-accent bg-accent/15 text-accent-text" : o === picked ? "border-red bg-red/15 text-red-400" : "opacity-50";
+            const state = picked === null ? "" : o === right ? "border-accent bg-accent-soft text-accent-text" : o === picked ? "border-red bg-red-soft text-red-400" : "disabled:opacity-50";
             return (
               <button
                 key={o}
@@ -170,7 +176,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
                   setPicked(o);
                   if (mode === "reverse" || o === right) speak(fullWord(w));
                 }}
-                className={`btn min-h-12 justify-start text-left text-base normal-case ${state}`}
+                className={`btn min-h-12 justify-start text-left text-base whitespace-normal normal-case ${state.startsWith("border") ? "disabled:opacity-100" : ""} ${state}`}
               >
                 {o}
               </button>
@@ -198,15 +204,15 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
       {/* Nghe viết: ảnh lộ đáp án → chỉ hiện biểu tượng chủ đề */}
       <Picture w={mode === "listen" ? { ...w, image: null } : w} icon={icon} />
       {mode === "listen" ? (
-        <button type="button" className="btn btn-amber h-14 px-6 text-base" onClick={() => speak(fullWord(w), 0.85)}>
+        <button type="button" className="btn btn-soft h-14 px-6 text-base" onClick={() => speak(fullWord(w), 0.85)}>
           <Volume2 className="size-6" /> Nghe lại
         </button>
       ) : (
         <>
           <p className="text-center text-2xl font-extrabold text-link md:text-3xl">{w.meaning}</p>
           {blanked && (
-            <div className="flex flex-col items-center gap-0.5 text-center">
-              <p className="text-xs font-bold tracking-wider text-muted uppercase">Câu ví dụ</p>
+            <div className="surface flex w-full max-w-md flex-col items-center gap-0.5 text-center">
+              <p className="label text-muted">Câu ví dụ</p>
               <p className="font-semibold italic">{blanked}</p>
             </div>
           )}
@@ -221,8 +227,8 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
           }}
         >
           <div className="flex items-center justify-center gap-3">
-            <span className="min-w-24 rounded-xl border border-dashed border-border px-4 py-2 text-center font-mono tracking-widest text-muted">{hintOf(w, hint)}</span>
-            <button type="button" className="btn btn-amber h-10" onClick={() => setHint((h) => Math.min(h + 1, w.word.length))}>
+            <span className="min-w-24 rounded-ui border-2 border-dashed border-line-strong px-4 py-2 text-center font-mono tracking-widest text-muted">{hintOf(w, hint)}</span>
+            <button type="button" className="btn btn-soft h-10" onClick={() => setHint((h) => Math.min(h + 1, w.word.length))}>
               <Lightbulb className="size-4" /> Gợi ý
             </button>
           </div>
@@ -237,8 +243,8 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
             spellCheck={false}
           />
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" className="btn btn-red h-12" onClick={() => check(true)}>
-              <Eye className="size-4" /> Không biết
+            <button type="button" className="btn h-12" onClick={() => check(true)}>
+              <Eye className="size-4 text-muted" /> Không biết
             </button>
             <button className="btn btn-primary h-12" disabled={!input.trim()}>
               <Check className="size-4" /> Kiểm tra
@@ -305,16 +311,18 @@ function Session({
   }, [w, onShow]);
   if (!w)
     return (
-      <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <span className="text-6xl">🎉</span>
-        <p className="text-xl font-extrabold">{practice ? "Đã ôn xong chủ đề này" : "Bạn đã học hết chủ đề này"}</p>
-        <p className="max-w-md text-sm text-muted">Các từ đã nằm trong Sổ từ vựng và sẽ được nhắc ôn đúng lúc để nhớ lâu.</p>
+      <div className="empty rise-in gap-4 py-8">
+        <span className="icon-bubble tint-gold size-24 rounded-sheet text-5xl" aria-hidden>
+          🎉
+        </span>
+        <p className="font-display text-2xl font-extrabold text-foreground">{practice ? "Đã ôn xong chủ đề này" : "Bạn đã học hết chủ đề này"}</p>
+        <p className="max-w-md">Các từ đã nằm trong Sổ từ vựng và sẽ được nhắc ôn đúng lúc để nhớ lâu.</p>
         <div className="flex flex-wrap justify-center gap-3">
-          <button className="btn h-11" onClick={onPractice}>
+          <button className="btn btn-lg" onClick={onPractice}>
             <RotateCcw className="size-4" /> Ôn lại chủ đề
           </button>
           {nextTopic && (
-            <button className="btn btn-primary h-11" onClick={nextTopic}>
+            <button className="btn btn-primary btn-lg" onClick={nextTopic}>
               Chủ đề tiếp theo
             </button>
           )}
@@ -323,7 +331,7 @@ function Session({
     );
   return (
     <div className="flex flex-col gap-3">
-      {w.saved && !practice && <p className="self-center rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent-text">Đã có trong sổ</p>}
+      {w.saved && !practice && <p className="badge badge-accent self-center">Đã có trong sổ</p>}
       <StudyCard
         key={seq}
         w={w}
@@ -412,19 +420,20 @@ export default function DeckStudy({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/vocab" className="btn h-9 px-3" title="Từ vựng">
+        <Link href="/vocab" className="btn btn-ghost btn-sm" title="Từ vựng">
           <ChevronLeft className="size-4" /> Quay lại
         </Link>
-        <h1 className="flex-1 text-2xl font-extrabold md:text-3xl">{title}</h1>
+        <h1 className="page-title min-w-0 flex-1">{title}</h1>
         {/* Chế độ học */}
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-card-2 p-1">
+        <div role="tablist" aria-label="Chế độ học" className="tabs">
           {[...modes, { mode: "list" as const, label: "Danh sách" }].map((m) => (
             <button
               key={m.mode}
+              type="button"
+              role="tab"
+              aria-selected={study === m.mode}
               onClick={() => pickMode(m.mode)}
-              className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-bold transition pointer-coarse:py-2.5 ${
-                study === m.mode ? "bg-accent text-white" : "text-muted hover:text-foreground"
-              }`}
+              className="tab pointer-coarse:min-h-11"
             >
               {m.mode === "list" && <List className="size-4" />}
               {m.label}
@@ -432,7 +441,7 @@ export default function DeckStudy({
           ))}
         </div>
         {study === "flash" && learned > 0 && (
-          <button className="cursor-pointer text-sm font-bold text-link hover:underline" onClick={() => pickMode("quiz")}>
+          <button type="button" className="btn btn-ghost btn-sm text-link" onClick={() => pickMode("quiz")}>
             Tiếp theo: Trắc nghiệm →
           </button>
         )}
@@ -450,11 +459,12 @@ export default function DeckStudy({
                 <button
                   key={t.id}
                   onClick={() => pick(t.id)}
-                  className={`flex shrink-0 cursor-pointer items-center gap-3 rounded-xl border p-2 text-left transition max-lg:pr-3 ${
-                    on ? "border-accent bg-accent/20" : "border-border hover:border-accent/60 hover:bg-foreground/5"
+                  aria-current={on ? "true" : undefined}
+                  className={`flex shrink-0 cursor-pointer items-center gap-3 rounded-ui border-2 p-2 text-left transition-colors max-lg:pr-3 motion-reduce:transition-none ${
+                    on ? "border-accent/40 bg-accent-soft" : "border-transparent hover:bg-card-2"
                   }`}
                 >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-card-2 text-xl">{t.icon}</span>
+                  <span className={`icon-bubble text-xl ${on ? "bg-card" : ""}`}>{t.icon}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-extrabold">{t.title}</span>
                     <span className={`text-xs font-bold ${s >= n ? "text-accent-text" : "text-muted"}`}>
@@ -468,18 +478,18 @@ export default function DeckStudy({
         </aside>
 
         <section className="flex min-w-0 flex-col gap-3">
-          <div className="flex items-center justify-between gap-3 text-sm font-extrabold tracking-wide uppercase">
-            <span className="truncate text-link">
+          <div className="flex items-center justify-between gap-3 text-sm font-extrabold">
+            <span className="truncate text-foreground">
               {topic.icon} Tiến độ — {topic.title}
             </span>
-            <span className="shrink-0 text-muted">
+            <span className="badge badge-accent shrink-0">
               {learned} / {topicWords.length} từ
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-card-2">
-            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(learned * 100) / Math.max(1, topicWords.length)}%` }} />
+          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={topicWords.length} aria-valuenow={learned}>
+            <div className="progress-bar" style={{ width: `${(learned * 100) / Math.max(1, topicWords.length)}%` }} />
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p role="alert" className="alert alert-err">{error}</p>}
           {!loggedIn && <GuestTrialNote area="deck" quota={quota} extra="lưu tiến độ và ôn lại theo lịch" />}
           <GuestWall area="deck" quota={quota} backHref="/vocab" />
           <div className="card min-h-96 p-5 md:p-8">
@@ -500,7 +510,7 @@ export default function DeckStudy({
               />
             )}
           </div>
-          <p className="text-center text-xs font-bold text-muted">
+          <p className="text-center text-xs font-semibold text-muted">
             Chủ đề {i + 1}/{topics.length} · {words.length} từ trong bộ · đã thuộc {words.filter((w) => w.learned).length}
           </p>
         </section>

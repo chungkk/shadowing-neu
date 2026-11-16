@@ -54,7 +54,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
     <form action={formAction} className="flex flex-col gap-4">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
 
-      <div className="card flex flex-col gap-2">
+      <div className="card flex flex-col gap-3">
         <label className="field text-sm">
           Link YouTube
           <div className="flex gap-2">
@@ -72,11 +72,15 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
             </button>
           </div>
         </label>
-        {fetchError && <p className="text-sm text-red-400">{fetchError}</p>}
+        {fetchError && (
+          <p role="alert" className="alert alert-err">
+            {fetchError}
+          </p>
+        )}
         {info && (
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+          <div className="field-hint flex flex-wrap items-center gap-3">
             {info.tracks.length > 1 && (
-              <select className="input py-1" value={info.lang} onChange={(e) => load(e.target.value)}>
+              <select className="input py-1.5 text-foreground" value={info.lang} onChange={(e) => load(e.target.value)}>
                 {info.tracks.map((t) => (
                   <option key={t.languageCode + t.auto} value={t.languageCode}>
                     {t.name}
@@ -92,7 +96,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         )}
       </div>
 
-      <div className="card grid gap-3 sm:grid-cols-[1fr_120px]">
+      <div className="card grid gap-4 sm:grid-cols-[1fr_120px]">
         <label className="field text-sm">
           Tiêu đề
           <input
@@ -113,18 +117,18 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         </label>
         <label className="field text-sm sm:col-span-2">
           Đường dẫn (SEO)
-          <div className="input flex items-center p-0 focus-within:border-accent">
-            <span className="shrink-0 pl-4 text-muted">hallovn.de/tieng-duc/</span>
+          <div className="input-group gap-0">
+            <span className="shrink-0 font-semibold text-muted">hallovn.de/tieng-duc/</span>
             <input
               name="slug"
-              className="min-w-0 flex-1 bg-transparent py-3 pr-4 text-foreground outline-none placeholder:text-muted/60"
+              className="placeholder:text-muted/60"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               onBlur={() => setSlug(slugify(slug))}
               placeholder={slugify(title) || "tu-tao-tu-tieu-de"}
             />
           </div>
-          <span className="text-xs">
+          <span className="field-hint">
             {initial?.id
               ? "Đổi đường dẫn thì link cũ (đã chia sẻ / Google đã lưu) sẽ không mở được — chỉ đổi khi thật cần."
               : "Để trống sẽ tự tạo từ tiêu đề (bỏ dấu, nối bằng dấu gạch)."}
@@ -141,11 +145,11 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
             placeholder="Từ vựng chính, ngữ pháp, mẹo luyện…"
           />
         </label>
-        <label className="check text-sm">
+        <label className="check text-sm font-semibold text-foreground">
           <input type="checkbox" name="published" checked={published} onChange={(e) => setPublished(e.target.checked)} />
           Đăng công khai (bỏ chọn = bản nháp)
         </label>
-        <label className="check text-sm">
+        <label className="check text-sm font-semibold text-foreground">
           <input type="checkbox" name="dictation" checked={dictation} onChange={(e) => setDictation(e.target.checked)} />
           Cho luyện Dictation (bỏ chọn = chỉ Shadowing)
         </label>
@@ -162,19 +166,23 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
           spellCheck={false}
         />
         {counts && (
-          <span className="text-xs text-muted">
+          <span className="field-hint">
             {counts.lines} dòng → người học thấy {counts.sentences} câu (tự gộp theo dấu câu và chỗ ngừng)
           </span>
         )}
       </label>
 
-      {state.error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>}
+      {state.error && (
+        <p role="alert" className="alert alert-err">
+          {state.error}
+        </p>
+      )}
 
       <div className="flex gap-2 max-sm:*:flex-1">
         <button className="btn btn-lg btn-primary" disabled={saving || fetching}>
           {saving ? "Đang lưu…" : "Lưu bài học"}
         </button>
-        <Link href="/admin" className="btn">
+        <Link href="/admin" className="btn btn-lg">
           Huỷ
         </Link>
       </div>

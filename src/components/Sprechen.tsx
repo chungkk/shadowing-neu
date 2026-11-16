@@ -28,10 +28,7 @@ const PROMPTS: Record<string, string[]> = {
 };
 const DEFAULT_PROMPTS = ["Stell dich bitte kurz vor.", "Warum lernst du Deutsch?", "Was hast du heute gemacht?", "Was ist dein Ziel in diesem Jahr?"];
 
-const chip = (on: boolean) =>
-  `cursor-pointer rounded-xl border px-3 py-1.5 text-sm font-bold transition select-none ${
-    on ? "border-accent bg-accent text-white shadow-[0_3px_0_var(--accent-dark)]" : "border-border bg-card-2 hover:border-accent"
-  }`;
+const chip = (on: boolean) => `chip justify-center disabled:cursor-not-allowed disabled:opacity-50 ${on ? "chip-on" : ""}`;
 
 const userOf = (m: Member) => ({ id: m.userId, name: m.name, avatarAt: m.avatarAt });
 
@@ -75,8 +72,10 @@ export default function Sprechen({ me }: { me: { id: number; name: string } }) {
       {s.notice && <Notice text={s.notice} />}
       {error && <Notice text={error} tone="red" onClose={() => setError("")} />}
       {invite && (
-        <div className="card flex flex-wrap items-center gap-3 border-accent">
-          <PhoneCall className="size-6 text-accent-text" />
+        <div className="card hero flex flex-wrap items-center gap-3">
+          <span className="icon-bubble tint-accent">
+            <PhoneCall className="size-5" />
+          </span>
           <p className="flex-1 font-bold">Bạn được mời vào một phòng luyện nói riêng.</p>
           <button
             className="btn btn-primary"
@@ -101,7 +100,7 @@ export default function Sprechen({ me }: { me: { id: number; name: string } }) {
           <Matcher s={s} busy={busy} run={run} />
           <p className="flex items-center justify-center gap-2 text-sm text-muted">
             <Users className="size-4" />
-            <span className={`size-2 rounded-full ${s.connected ? "bg-accent" : "bg-red"}`} />
+            <span className={`size-2 rounded-full ${s.connected ? "bg-accent" : "bg-red"} ${s.connected ? "" : "animate-pulse motion-reduce:animate-none"}`} />
             {s.connected ? `${s.online} người đang online` : "Đang kết nối…"}
           </p>
         </div>
@@ -118,14 +117,10 @@ type Run = (fn: (c: SprechenCall) => Promise<unknown>) => Promise<void>;
 
 function Notice({ text, tone = "amber", onClose }: { text: string; tone?: "amber" | "red"; onClose?: () => void }) {
   return (
-    <div
-      className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold ${
-        tone === "red" ? "border-red/40 bg-red/10 text-red-300" : "border-amber/40 bg-amber/10 text-amber"
-      }`}
-    >
+    <div role={tone === "red" ? "alert" : "status"} className={`alert items-center ${tone === "red" ? "alert-err" : "alert-warn"}`}>
       <span className="flex-1">{text}</span>
       {onClose && (
-        <button className="cursor-pointer opacity-70 hover:opacity-100" onClick={onClose} title="Đóng">
+        <button className="btn-icon -my-2 -mr-2 size-8 text-current" onClick={onClose} title="Đóng" aria-label="Đóng">
           <X className="size-4" />
         </button>
       )}
@@ -143,7 +138,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
   return (
     <section className="card flex flex-col gap-5 p-5">
       <div className="flex flex-col gap-3">
-        <h2 className="label text-accent-text">Trình độ của bạn</h2>
+        <h2 className="eyebrow">Trình độ của bạn</h2>
         <div className="flex flex-wrap gap-2">
           {LEVELS.map((l) => (
             <button key={l} className={`${chip(l === level)} min-w-12`} onClick={() => setLevel(l)} disabled={s.waiting}>
@@ -153,7 +148,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <h2 className="label text-accent-text">
+        <h2 className="eyebrow">
           Chủ đề muốn nói <span className="font-bold tracking-normal text-muted normal-case">(không bắt buộc)</span>
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -168,13 +163,13 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
         </p>
       </div>
       {s.waiting ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 text-center">
+        <div role="status" className="alert alert-ok flex-col items-center gap-3 p-5 text-center">
           <span className="relative flex size-12 items-center justify-center">
             <span className="absolute inset-0 animate-ping rounded-full bg-accent/40 motion-reduce:animate-none" />
             <Mic className="relative size-6 text-accent-text" />
           </span>
           <p className="font-bold">Đang tìm bạn luyện nói trình độ {level}…</p>
-          <p className="text-xs text-muted">Giữ trang này mở. Khi có người, cuộc gọi tự bắt đầu.</p>
+          <p className="text-xs font-semibold text-muted">Giữ trang này mở. Khi có người, cuộc gọi tự bắt đầu.</p>
           <button className="btn" disabled={busy} onClick={() => run((c) => c.cancelMatch())}>
             Huỷ tìm
           </button>
@@ -206,9 +201,9 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
       <h2 className="section-title flex items-center gap-2">
         <Users className="size-5 text-accent-text" /> Tạo phòng
       </h2>
-      <label className="field text-sm font-bold">
+      <label className="field">
         Tên phòng
-        <input className="input text-foreground" value={name} maxLength={60} placeholder={`Deutsch üben mit ${me.name}`} onChange={(e) => setName(e.target.value)} />
+        <input className="input" value={name} maxLength={60} placeholder={`Deutsch üben mit ${me.name}`} onChange={(e) => setName(e.target.value)} />
       </label>
       <div className="flex flex-col gap-2 text-sm font-bold text-muted">
         Số người tối đa
@@ -229,8 +224,9 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
             type="button"
             key={o.label}
             onClick={() => setPriv(o.set)}
-            className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition ${
-              o.on ? "border-accent bg-accent/10" : "border-border hover:border-accent"
+            aria-pressed={o.on}
+            className={`flex cursor-pointer items-center gap-2.5 rounded-[var(--radius)] border-2 px-3 py-2.5 text-left transition-colors ${
+              o.on ? "border-accent bg-accent-soft" : "border-ink bg-card hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--ink))]"
             }`}
           >
             <o.icon className={`size-4 ${o.on ? "text-accent-text" : "text-muted"}`} />
@@ -257,18 +253,25 @@ function RoomList({ rooms, busy, run, me }: { rooms: RoomView[]; busy: boolean; 
     <section className="card flex flex-col gap-3 p-5">
       <h2 className="section-title flex items-center gap-2">
         <Users className="size-5 text-accent-text" /> Phòng đang mở
-        <span className="ml-auto text-xs font-bold text-muted">tự cập nhật</span>
+        <span className="badge badge-muted ml-auto">tự cập nhật</span>
       </h2>
-      {!rooms.length && <p className="py-6 text-center text-sm text-muted">Chưa có phòng nào. Tạo phòng đầu tiên nhé!</p>}
+      {!rooms.length && (
+        <div className="empty py-8">
+          <span className="icon-bubble size-12 tint-muted">
+            <Users className="size-6" />
+          </span>
+          Chưa có phòng nào. Tạo phòng đầu tiên nhé!
+        </div>
+      )}
       {rooms.map((r) => {
         const full = r.members.length >= r.max;
         const mine = r.members.some((m) => m.userId === me.id);
         return (
-          <div key={r.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3">
+          <div key={r.id} className="tile flex items-center gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <p className="flex flex-wrap items-center gap-2">
                 <span className="truncate font-bold">{r.name}</span>
-                <span className="pill bg-accent/15 text-accent-text">{r.level}</span>
+                <span className="badge badge-accent">{r.level}</span>
                 <span className={`text-xs font-bold ${full ? "text-red-400" : "text-muted"}`}>
                   {r.members.length}/{r.max}
                 </span>
@@ -325,10 +328,10 @@ function Room({
       {error && <Notice text={error} tone="red" onClose={() => onError("")} />}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="flex items-center gap-2 text-xl font-extrabold">
+          <h2 className="page-title flex items-center gap-2 text-2xl sm:text-2xl">
             {room.private ? <Lock className="size-5 text-muted" /> : <Globe className="size-5 text-muted" />}
             <span className="truncate">{room.name}</span>
-            <span className="pill bg-accent/15 text-accent-text">{room.level}</span>
+            <span className="badge badge-accent">{room.level}</span>
           </h2>
           <p className="text-sm text-muted">
             {room.members.length}/{room.max} người{room.topics.length ? ` · ${room.topics.join(" · ")}` : ""}
@@ -348,7 +351,7 @@ function Room({
           const state = isMe ? "connected" : s.peerStates[m.clientId];
           return (
             <div key={m.clientId} className="card relative flex flex-col items-center gap-2 p-4 text-center">
-              <span className={`rounded-full p-1 transition ${talking ? "bg-accent shadow-[0_0_24px_var(--accent)]" : "bg-transparent"}`}>
+              <span className={`rounded-full p-1 transition ${talking ? "bg-accent shadow-[0_0_0_6px_var(--accent-soft)]" : "bg-transparent"}`}>
                 <Avatar user={userOf(m)} className="size-16 text-2xl sm:size-20" />
               </span>
               <p className="flex max-w-full items-center gap-1 font-bold">
@@ -368,23 +371,23 @@ function Room({
           );
         })}
         {room.members.length < 2 && (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-2 border-dashed border-ink p-4 text-center text-sm font-bold text-muted">
             <Users className="size-6" />
             Đang chờ người vào…
           </div>
         )}
       </div>
 
-      <section className="card flex flex-col gap-2">
-        <h3 className="label text-accent-text">Gợi ý để bắt đầu</h3>
-        <p className="text-lg font-bold">{list[promptIdx % list.length]}</p>
+      <section className="card hero flex flex-col gap-2" style={{ "--hero": "var(--candy)" } as React.CSSProperties}>
+        <h3 className="eyebrow">Gợi ý để bắt đầu</h3>
+        <p className="font-display text-xl leading-snug font-bold">{list[promptIdx % list.length]}</p>
         <button className="btn self-start" onClick={() => setPromptIdx((i) => i + 1)}>
           Câu khác
         </button>
       </section>
 
       <div className="flex flex-wrap justify-center gap-3">
-        <button className={`btn btn-lg min-w-40 ${self?.muted ? "btn-red" : "btn-amber"}`} onClick={() => call.current?.setMuted(!self?.muted)}>
+        <button className={`btn btn-lg min-w-40 ${self?.muted ? "btn-record" : ""}`} onClick={() => call.current?.setMuted(!self?.muted)}>
           {self?.muted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           {self?.muted ? "Bật micro" : "Tắt micro"}
         </button>

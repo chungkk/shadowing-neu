@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import { ArrowRight, BookMarked, Car, Check, Database, Landmark, Languages, Mail, MapPin, MonitorSmartphone, UsersRound } from 'lucide-react';
 import { COMPANY, SITE } from '@/lib/company/site';
 import { LEARN_AREAS, PLATFORM, productPath } from '@/lib/company/services';
@@ -92,12 +92,12 @@ const COPY = {
     },
 };
 
-/** Icon và màu ô icon của từng phần — cùng màu với các thẻ trên trang chủ app (src/app/(app)/page.tsx) */
+/** Icon và màu ô icon (.icon-bubble + .tint-*) của từng phần — cùng tông màu với các thẻ trên trang chủ app */
 const AREA_LOOK: Record<LearnArea['id'], { icon: Icon; tone: string }> = {
-    deutsch: { icon: Languages, tone: 'bg-accent text-white' },
-    vocab: { icon: BookMarked, tone: 'bg-[var(--aqua)] text-black' },
-    fuehrerschein: { icon: Car, tone: 'bg-gold text-black' },
-    lid: { icon: Landmark, tone: 'bg-candy text-black' },
+    deutsch: { icon: Languages, tone: 'tint-accent' },
+    vocab: { icon: BookMarked, tone: 'tint-gem' },
+    fuehrerschein: { icon: Car, tone: 'tint-gold' },
+    lid: { icon: Landmark, tone: 'tint-candy' },
 };
 
 /** Icon cho 3 việc làm theo yêu cầu (t.proof, cùng thứ tự) */
@@ -107,7 +107,7 @@ const PROOF_ICONS: Icon[] = [UsersRound, Database, MonitorSmartphone];
 function SectionHead({ id, title, text }: { id: string; title: string; text?: string }) {
     return (
         <div className="flex flex-col gap-1">
-            <h2 id={id} className="text-2xl font-extrabold text-balance sm:text-3xl">
+            <h2 id={id} className="section-title text-2xl text-balance sm:text-3xl">
                 {title}
             </h2>
             {text && <p className="max-w-3xl text-muted">{text}</p>}
@@ -116,17 +116,21 @@ function SectionHead({ id, title, text }: { id: string; title: string; text?: st
 }
 
 /** Thẻ một phần học: icon, tên, con số và mô tả — bấm vào là tới phần đó */
-function AreaCard({ area }: { area: LearnArea }) {
+function AreaCard({ area, index }: { area: LearnArea; index: number }) {
     const { locale } = useLocale();
     const copy = area.copy[locale];
     const look = AREA_LOOK[area.id];
     return (
-        <Link href={area.href} className="group sticker sticker-link flex flex-col gap-2 p-3 sm:gap-3 sm:p-4 motion-reduce:hover:translate-y-0">
+        <Link
+            href={area.href}
+            style={{ '--i': index } as CSSProperties}
+            className="group sticker sticker-link rise-in flex flex-col gap-2 p-3 sm:gap-3 sm:p-4 motion-reduce:hover:translate-y-0"
+        >
             <span className="flex items-center justify-between gap-2">
-                <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl border-2 border-ink ${look.tone}`}>
-                    <look.icon className="size-6" />
+                <span className={`icon-bubble size-12 ${look.tone}`}>
+                    <look.icon className="size-6" aria-hidden="true" />
                 </span>
-                <ArrowRight className="size-5 text-link transition group-hover:translate-x-1" />
+                <ArrowRight className="size-5 text-link transition-transform duration-(--dur) group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
             </span>
             <span className="leading-snug font-extrabold sm:text-lg">{copy.title}</span>
             <span className="font-display text-3xl leading-none font-extrabold text-accent-text tabular-nums">{copy.fact}</span>
@@ -178,16 +182,16 @@ export default function HomeContent() {
     const t = useT(COPY);
     return (
         <div className="page gap-10 md:gap-14">
-            {/* Mở đầu: linh vật + nhãn vàng nghiêng như trang Tiếng Đức */}
-            <section id="start" aria-labelledby="home-title" className="sticker flex scroll-mt-20 flex-col items-center gap-5 p-6 text-center sm:p-10 md:flex-row md:gap-10 md:text-left">
+            {/* Mở đầu: thẻ .hero (nền gradient nhạt) + linh vật + nhãn vàng */}
+            <section id="start" aria-labelledby="home-title" className="sticker hero rise-in flex scroll-mt-20 flex-col items-center gap-5 p-6 text-center sm:p-10 md:flex-row md:gap-10 md:text-left">
                 <Mascot animated className="bob size-32 md:order-last md:size-56" />
                 <div className="flex min-w-0 flex-col items-center gap-4 md:items-start">
-                    <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">{SITE.name}</span>
-                    <h1 id="home-title" className="text-3xl leading-tight font-extrabold text-balance sm:text-4xl md:text-5xl">
+                    <span className="badge badge-gold text-sm">{SITE.name}</span>
+                    <h1 id="home-title" className="display text-balance">
                         <span className="block">{t.h1a}</span>
                         <span className="block text-accent-text">{t.h1b}</span>
                     </h1>
-                    <p className="max-w-xl text-lg text-muted">{t.lead}</p>
+                    <p className="lead max-w-xl">{t.lead}</p>
                     <div className="flex flex-wrap justify-center gap-3 md:justify-start">
                         <Link href={PLATFORM.href} className="btn btn-primary btn-lg">
                             {t.cta} <ArrowRight className="size-5" />
@@ -196,15 +200,15 @@ export default function HomeContent() {
                             {t.ctaProject}
                         </a>
                     </div>
-                    <span className="pill bg-accent/15 text-accent-text">{t.sheetNote}</span>
+                    <span className="badge badge-accent">{t.sheetNote}</span>
                 </div>
             </section>
 
             {/* Các phần học: thẻ số liệu bấm được */}
             <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                {LEARN_AREAS.map((area) => (
+                {LEARN_AREAS.map((area, i) => (
                     <li key={area.id} className="flex *:flex-1">
-                        <AreaCard area={area} />
+                        <AreaCard area={area} index={i + 1} />
                     </li>
                 ))}
             </ul>
@@ -220,8 +224,8 @@ export default function HomeContent() {
                             const ProofIcon = PROOF_ICONS[i] ?? Check;
                             return (
                                 <li key={item.title} className="sticker flex items-center gap-3 p-4">
-                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2">
-                                        <ProofIcon className="size-5 text-accent-text" />
+                                    <span className="icon-bubble tint-accent size-11">
+                                        <ProofIcon className="size-5" aria-hidden="true" />
                                     </span>
                                     <span className="flex min-w-0 flex-col">
                                         <span className="font-extrabold">{item.title}</span>
@@ -238,13 +242,15 @@ export default function HomeContent() {
             </section>
 
             {/* Liên hệ: khối kêu gọi cuối trang như trang chủ */}
-            <section id="contact" aria-labelledby="contact-title" className="sticker flex scroll-mt-20 flex-col items-center gap-4 bg-accent/10 p-6 text-center sm:p-10">
-                <h2 id="contact-title" className="text-2xl font-extrabold text-balance sm:text-3xl">
+            <section id="contact" aria-labelledby="contact-title" style={{ '--hero': 'var(--aqua)' } as CSSProperties}
+                className="sticker hero flex scroll-mt-20 flex-col items-center gap-4 p-6 text-center sm:p-10"
+            >
+                <h2 id="contact-title" className="section-title text-2xl text-balance sm:text-3xl">
                     {t.contactTitle}
                 </h2>
-                <p className="max-w-xl text-muted">{t.contactDesc}</p>
+                <p className="lead max-w-xl">{t.contactDesc}</p>
                 <div className="flex max-w-full flex-wrap justify-center gap-3">
-                    <a href={`mailto:${SITE.contactEmail}`} className="btn btn-primary btn-lg max-w-full break-all">
+                    <a href={`mailto:${SITE.contactEmail}`} className="btn btn-soft btn-lg max-w-full break-all">
                         <Mail className="size-5 shrink-0" /> {SITE.contactEmail}
                     </a>
                     <Link href="/support" className="btn btn-lg">

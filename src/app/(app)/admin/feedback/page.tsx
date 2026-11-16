@@ -1,16 +1,17 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { listFeedback, type FeedbackKind } from "@/lib/db";
 import { removeFeedback } from "../actions";
 import DeleteButton from "../DeleteButton";
 import { ListSkeleton } from "@/components/Skeleton";
+import { MessageSquare } from "lucide-react";
+import AdminNav from "../AdminNav";
 
 const KIND: Record<FeedbackKind, { label: string; className: string }> = {
-  idea: { label: "Góp ý", className: "text-accent-text" },
-  bug: { label: "Báo lỗi", className: "text-red-400" },
-  content: { label: "Nội dung", className: "text-amber" },
-  other: { label: "Khác", className: "text-muted" },
+  idea: { label: "Góp ý", className: "badge-accent" },
+  bug: { label: "Báo lỗi", className: "badge-red" },
+  content: { label: "Nội dung", className: "badge-gold" },
+  other: { label: "Khác", className: "badge-muted" },
 };
 
 /** Góp ý / báo lỗi người dùng gửi từ app (mới nhất trước) */
@@ -20,27 +21,36 @@ async function FeedbackList() {
   return (
     <>
       <h1 className="page-title">Góp ý ({items.length})</h1>
-      <div className="card divide-y divide-border p-0">
+      <div className="card overflow-hidden p-0">
+        <ul className="divide-y divide-line">
         {items.map((f) => (
-          <div key={f.id} className="flex flex-col gap-2 p-4">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-              <span className={`font-bold ${KIND[f.kind]?.className ?? ""}`}>{KIND[f.kind]?.label ?? f.kind}</span>
+          <li key={f.id} className="flex flex-col gap-2 p-4">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
+              <span className={`badge ${KIND[f.kind]?.className ?? "badge-muted"}`}>{KIND[f.kind]?.label ?? f.kind}</span>
               <span>{f.userName ?? (f.userId ? "—" : "Khách")}</span>
               {f.email && (
-                <a href={`mailto:${f.email}`} className="text-link hover:underline">
+                <a href={`mailto:${f.email}`} className="font-semibold text-link hover:underline">
                   {f.email}
                 </a>
               )}
-              <span>{f.createdAt.slice(0, 16)} UTC</span>
+              <span className="tabular-nums">{f.createdAt.slice(0, 16)} UTC</span>
               <span className="ml-auto">
                 <DeleteButton action={removeFeedback.bind(null, f.id)} confirmText="Xoá góp ý này?" />
               </span>
             </div>
-            <p className="whitespace-pre-line text-sm leading-relaxed">{f.message}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-line">{f.message}</p>
             {f.device && <p className="text-xs text-muted">{f.device}</p>}
-          </div>
+          </li>
         ))}
-        {!items.length && <p className="p-6 text-center text-sm text-muted">Chưa có góp ý nào.</p>}
+        </ul>
+        {!items.length && (
+          <div className="empty">
+            <span className="icon-bubble tint-accent">
+              <MessageSquare className="size-5" aria-hidden />
+            </span>
+            <p>Chưa có góp ý nào.</p>
+          </div>
+        )}
       </div>
     </>
   );
@@ -49,9 +59,7 @@ async function FeedbackList() {
 export default function FeedbackPage() {
   return (
     <main className="page page-narrow">
-      <Link href="/admin" className="text-sm text-muted hover:underline">
-        ← Quản trị
-      </Link>
+      <AdminNav />
       <Suspense fallback={<ListSkeleton />}>
         <FeedbackList />
       </Suspense>

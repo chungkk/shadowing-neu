@@ -15,9 +15,9 @@ const MAX = 3;
 
 const PlainMark = ({ p, className = "" }: { p: "X" | "O"; className?: string }) =>
   p === "X" ? (
-    <X className={`text-red-500 ${className}`} strokeWidth={3.5} />
+    <X className={`text-red ${className}`} strokeWidth={3.5} />
   ) : (
-    <span className={`block aspect-square rounded-full border-[3px] border-sky-500 ${className}`} />
+    <span className={`block aspect-square rounded-full border-[3px] border-gem ${className}`} />
   );
 
 function ZoomBoard({ v, myTurn, send }: { v: View; myTurn: boolean; send: Send }) {
@@ -102,7 +102,7 @@ function ZoomBoard({ v, myTurn, send }: { v: View; myTurn: boolean; send: Send }
           </button>
         )}
       </div>
-      <div className="caro-tray overflow-hidden rounded-2xl border-[3px] border-ink bg-board p-1 shadow-[0_4px_0_var(--ink)]">
+      <div className="g-caro-tray overflow-hidden p-1">
         <div ref={box} className="relative aspect-square w-full touch-none overflow-hidden" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <div
             className="grid aspect-square w-full transition-transform duration-150 ease-out"
@@ -165,7 +165,7 @@ export default function CaroPlay({ v, send }: { v: View; send: Send }) {
     <div className="mx-auto flex w-full max-w-[36rem] flex-col gap-3">
       {playing && c.mySymbol && <MascotSay mood={mood}>{say}</MascotSay>}
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
-        <span className="flex items-center gap-2">
+        <span className="badge badge-muted gap-2 px-3 py-1 text-sm text-foreground">
           {c.mySymbol && <Mark p={c.mySymbol} className="size-4" />} Bạn
           <span className="text-muted">vs</span>
           {v.mode === "solo" ? <Bot className="size-4" /> : c.mySymbol && <Mark p={c.mySymbol === "X" ? "O" : "X"} className="size-4" />}
@@ -173,7 +173,7 @@ export default function CaroPlay({ v, send }: { v: View; send: Send }) {
         </span>
       </div>
       {playing && (
-        <div className={`flex items-center justify-between gap-2 rounded-2xl border-2 px-3 py-1.5 text-sm font-bold ${myTurn ? "border-ink bg-gem/15" : "border-border"}`}>
+        <div className={`g-turn ${myTurn ? "g-turn-mine" : ""}`}>
           <span className="flex items-center gap-2">
             <Mark p={c.turn} className="size-4" /> {myTurn ? "Tới lượt bạn" : `Lượt của ${turnName}`}
           </span>

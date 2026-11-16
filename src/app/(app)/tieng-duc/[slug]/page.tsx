@@ -84,8 +84,8 @@ async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
         allowDictation={lesson.dictation}
       >
         {(draft || lesson.description) && (
-          <div className="flex flex-col gap-1 rounded-xl bg-card-2/60 p-3 text-sm">
-            {draft && <span className="font-bold text-amber">Bản nháp — chỉ admin xem được</span>}
+          <div className="surface flex flex-col gap-1.5 text-sm">
+            {draft && <span className="badge badge-gold self-start">Bản nháp — chỉ admin xem được</span>}
             {lesson.description && <p className="whitespace-pre-line text-muted">{lesson.description}</p>}
           </div>
         )}

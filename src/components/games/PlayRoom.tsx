@@ -128,48 +128,28 @@ function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; logged
     );
   }
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <button
-        className="sheet-fade absolute inset-0 cursor-default bg-black/55"
-        onClick={() => setOpen(false)}
-        aria-label="Đóng"
-      />
-      <div className="sticker sheet-up relative flex w-full max-w-sm flex-col items-center gap-2 bg-card p-5 pt-6 text-center">
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="absolute top-2 right-2 grid size-8 place-items-center rounded-full text-muted hover:bg-black/5 hover:text-ink dark:hover:bg-white/10"
-          aria-label="Đóng"
-        >
+    <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="dialog max-w-sm items-center gap-2 text-center">
+        <button type="button" onClick={() => setOpen(false)} className="btn-icon absolute top-3 right-3" aria-label="Đóng">
           <X className="size-5" />
         </button>
-        <MascotSay mood={mood} className="mb-1 w-full text-left">
+        <MascotSay mood={mood} className="mb-1 w-full pr-8 text-left">
           {say}
         </MascotSay>
-        <p
-          className={`text-2xl font-black ${won ? "text-emerald-600 dark:text-emerald-300" : ""}`}
-        >
+        <p className={`dialog-title text-2xl ${won ? "text-amber" : ""}`}>
+          {won && <Trophy className="mr-1.5 inline size-6 align-[-0.15em]" />}
           {title}
         </p>
         <p className="text-sm text-muted">{line}</p>
         <div className="mt-2 flex w-full flex-col gap-2">
-          <Link href={onAgain} className="btn btn-amber btn-lg w-full">
+          <Link href={onAgain} className="btn btn-amber btn-lg btn-block">
             <Play className="size-4 fill-current" /> Chơi ván mới
           </Link>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="btn btn-lg w-full"
-          >
+          <button type="button" onClick={() => setOpen(false)} className="btn btn-lg btn-block">
             <Eye className="size-4" /> Xem lại bàn chơi
           </button>
           {!loggedIn && (
-            <LoginLink href={`/login?next=/games/${v.game}`} className="text-sm font-bold text-link hover:underline">
+            <LoginLink href={`/login?next=/games/${v.game}`} className="mt-1 text-sm font-bold text-link hover:underline">
               Đăng ký miễn phí để học tiếng Đức và nhận kim cương
             </LoginLink>
           )}
@@ -220,12 +200,10 @@ function Waiting({
       <MascotSay mood={everyoneReady || me?.ready ? "cheer" : "happy"}>
         {say}
       </MascotSay>
-      <div className="text-center">
-        <p className="text-sm font-bold text-muted">Mã phòng</p>
-        <p className="font-mono text-4xl font-black tracking-[0.3em]">
-          {v.code}
-        </p>
-        <p className="mt-1 text-sm text-muted">
+      <div className="g-ticket">
+        <p className="label text-muted">Mã phòng</p>
+        <p className="g-code select-all">{v.code}</p>
+        <p className="mt-1 text-sm font-semibold text-muted">
           {GAME_TITLE[v.game]}
           {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · {v.capacity} người
         </p>
@@ -246,29 +224,22 @@ function Waiting({
         {Array.from({ length: v.capacity }, (_, k) => {
           const p = v.players[k];
           return (
-            <li
-              key={k}
-              className={`flex items-center gap-2 rounded-2xl border-2 px-3 py-2 ${p ? "border-ink bg-card-2" : "border-dashed border-border text-muted"}`}
-            >
+            <li key={k} className={`g-seat ${p ? "" : "g-seat-empty"}`}>
               {p ? (
                 <>
-                  {p.id === v.hostId ? (
-                    <Crown className="size-4 text-amber" />
-                  ) : (
-                    <Users className="size-4" />
-                  )}
+                  <span className="g-avatar">{p.id === v.hostId ? <Crown className="size-4 text-amber" /> : <Users className="size-4 text-muted" />}</span>
                   <span className="flex-1 truncate font-bold">
                     {p.name}
                     {p.me && " (bạn)"}
                     {p.guest && <span className="ml-1 text-xs font-bold text-muted">· khách</span>}
                   </span>
                   {p.ready ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
+                    <span className="badge badge-accent">
                       <Check className="size-3.5" strokeWidth={3} />{" "}
                       {p.id === v.hostId ? "Chủ phòng" : "Sẵn sàng"}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-xs font-bold text-muted">
+                    <span className="badge bg-card">
                       <Hourglass className="size-3.5" /> Chưa sẵn sàng
                     </span>
                   )}
@@ -284,7 +255,7 @@ function Waiting({
         <div className="flex flex-col gap-2">
           {host ? (
             <button
-              className="btn btn-primary btn-lg"
+              className="btn btn-amber btn-lg"
               disabled={!everyoneReady}
               onClick={() => send({ action: "start" })}
             >
@@ -312,7 +283,7 @@ function Waiting({
             Phòng tự huỷ sau {clock(left)} nếu chưa bắt đầu.
           </p>
           <button
-            className="btn mx-auto"
+            className={`btn btn-ghost mx-auto ${host ? "text-red-400" : ""}`}
             onClick={() => send({ action: "leave" })}
           >
             <LogOut className="size-4" />{" "}
@@ -413,8 +384,6 @@ export default function PlayRoom({
   }, [v]);
 
   const header = (
-    <>
-      <div className="contents">
     <GameHeader
       icon={game === "sudoku" ? Grid3x3 : Users}
       tone="cyan"
@@ -434,11 +403,9 @@ export default function PlayRoom({
         </Link>
       }
     />
-      </div>
-    </>
   );
   const errorLine = error && (
-    <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">
+    <p role="alert" className="alert alert-err">
       {error}
     </p>
   );
@@ -448,7 +415,7 @@ export default function PlayRoom({
       <>
         {header}
         <div className="card flex flex-col gap-3 text-center">
-          <p className="text-lg font-black">Vào phòng {code}</p>
+          <p className="section-title">Vào phòng <span className="font-mono tracking-[0.15em]">{code}</span></p>
           <p className="text-sm text-muted">Không cần tài khoản — nhập tên tạm là vào chơi được.</p>
           {guest.name ? (
             <p className="text-sm text-muted">{guest.error || "Đang vào phòng…"}</p>
@@ -467,7 +434,12 @@ export default function PlayRoom({
       <>
         {header}
         {errorLine || (
-          <p className="text-center text-sm text-muted">Đang tải…</p>
+          <div className="card flex flex-col gap-3" aria-busy="true">
+            <span className="sr-only">Đang tải…</span>
+            <div className="skeleton h-14 w-2/3" />
+            <div className="skeleton h-24 w-full" />
+            <div className="skeleton h-12 w-full" />
+          </div>
         )}
         {error && (
           <Link href={lobby} className="btn mx-auto">

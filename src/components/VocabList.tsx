@@ -44,7 +44,7 @@ function Highlight({ text, word }: { text: string; word: string }) {
   return (
     <>
       {text.slice(0, i)}
-      <mark className="rounded bg-amber/20 px-0.5 text-amber">{text.slice(i, i + word.length)}</mark>
+      <mark className="rounded bg-gold-soft px-0.5 text-amber">{text.slice(i, i + word.length)}</mark>
       {text.slice(i + word.length)}
     </>
   );
@@ -109,7 +109,7 @@ function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
   return (
     <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 px-4 py-3 lg:grid-cols-[13rem_15rem_minmax(0,1fr)_auto] lg:items-start">
       <div className="min-w-0">
-        <h3 className="text-lg leading-tight font-extrabold wrap-anywhere">{v.word}</h3>
+        <h3 className="font-display text-lg leading-tight font-extrabold wrap-anywhere">{v.word}</h3>
         <Stage v={v} now={now} />
       </div>
       <div className="col-start-2 row-start-1 flex items-center text-muted lg:col-start-4">
@@ -125,7 +125,7 @@ function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
       <div className="col-span-2 min-w-0 lg:col-span-1">
         {/* Ô nhập không viền — trông như chữ thường, rê chuột / bấm vào mới hiện khung */}
         <input
-          className="-mx-2 w-[calc(100%+1rem)] rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-bold text-amber outline-none placeholder:font-normal placeholder:text-muted hover:border-border focus:border-accent focus:bg-background md:text-sm"
+          className="-mx-2 w-[calc(100%+1rem)] rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-bold text-amber outline-none placeholder:font-normal placeholder:text-muted hover:border-line-strong focus:border-accent focus:bg-card md:text-sm"
           placeholder="+ Ghi nghĩa tiếng Việt…"
           value={meaning}
           onChange={(e) => setMeaning(e.target.value)}
@@ -134,7 +134,7 @@ function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
           maxLength={500}
         />
         {(pending || aiPending) && <p className="text-xs text-muted">{aiPending ? "AI đang dịch…" : "Đang lưu…"}</p>}
-        {aiError && <p className="text-xs text-red-400">{aiError}</p>}
+        {aiError && <p role="alert" className="field-error">{aiError}</p>}
       </div>
       <div className="col-span-2 min-w-0 text-sm lg:col-span-1">
         {v.context && (
@@ -174,13 +174,14 @@ function AddWordDialog({ onClose }: { onClose: () => void }) {
       if ("error" in res) return setError(res.error);
       setMeaning(res.meaning);
     });
-  const field =
-    "w-full rounded-xl border-2 border-border bg-background px-3 py-2.5 text-base outline-none focus:border-accent md:text-sm";
+  const field = "input w-full text-base md:text-sm";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Thêm từ mới">
-      <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={onClose} aria-label="Đóng" />
+    <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <form
-        className="card sheet-up relative flex w-full max-w-md flex-col gap-3 p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-word-title"
+        className="dialog"
         onSubmit={(e) => {
           e.preventDefault();
           if (!word.trim() || saving) return;
@@ -192,17 +193,20 @@ function AddWordDialog({ onClose }: { onClose: () => void }) {
           });
         }}
       >
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-extrabold">Thêm từ mới</p>
-          <button type="button" className="btn-icon size-8 text-muted" onClick={onClose} aria-label="Đóng">
-            <X className="size-4" />
+        <div className="dialog-head">
+          <h2 id="add-word-title" className="dialog-title">
+            Thêm từ mới
+          </h2>
+          <button type="button" className="btn-icon -mt-1 -mr-1 text-muted" onClick={onClose} aria-label="Đóng">
+            <X className="size-5" />
           </button>
         </div>
-        <label className="flex flex-col gap-1 text-sm font-bold">
+        <div className="dialog-body">
+        <label className="field">
           Từ / cụm từ
           <input autoFocus className={`${field} font-bold`} value={word} onChange={(e) => setWord(e.target.value)} maxLength={500} placeholder="vd. die Aussprache" />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-bold">
+        <label className="field">
           Nghĩa
           <div className="flex gap-2">
             <input
@@ -212,21 +216,31 @@ function AddWordDialog({ onClose }: { onClose: () => void }) {
               maxLength={500}
               placeholder={aiPending ? "AI đang dịch…" : "Tự ghi nghĩa hoặc bấm AI"}
             />
-            <button type="button" className="btn shrink-0" onClick={ai} disabled={!word.trim() || aiPending} title="Tạo nghĩa bằng AI">
-              <Sparkles className={`size-4 text-amber ${aiPending ? "animate-pulse" : ""}`} /> AI
+            <button type="button" className="btn btn-soft shrink-0" onClick={ai} disabled={!word.trim() || aiPending} title="Tạo nghĩa bằng AI">
+              <Sparkles className={`size-4 ${aiPending ? "animate-pulse" : ""}`} /> AI
             </button>
           </div>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-bold">
+        <label className="field">
           <span>
-            Câu ví dụ <span className="font-normal text-muted">(tuỳ chọn — giúp AI dịch đúng nghĩa)</span>
+            Câu ví dụ <span className="field-hint">(tuỳ chọn — giúp AI dịch đúng nghĩa)</span>
           </span>
           <textarea className={`${field} resize-none`} rows={2} value={context} onChange={(e) => setContext(e.target.value)} maxLength={500} />
         </label>
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button type="submit" className="btn btn-primary h-11" disabled={!word.trim() || saving}>
-          <Plus className="size-4" /> {saving ? "Đang lưu…" : "Lưu vào sổ"}
-        </button>
+        {error && (
+          <p role="alert" className="alert alert-err">
+            {error}
+          </p>
+        )}
+        </div>
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={onClose}>
+            Huỷ
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={!word.trim() || saving}>
+            <Plus className="size-4" /> {saving ? "Đang lưu…" : "Lưu vào sổ"}
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -276,11 +290,13 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
 
   if (!items.length) {
     return (
-      <div className="card flex flex-col items-center gap-2 p-10 text-center">
-        <BookOpen className="size-10 text-link" />
-        <p className="font-bold">Chưa có từ nào</p>
-        <p className="text-sm text-muted">Khi luyện một bài, bấm vào từ trong câu rồi chọn “Lưu từ” — hoặc tự thêm từ.</p>
-        <button className="btn btn-primary mt-2" onClick={() => setAdding(true)}>
+      <div className="card empty">
+        <span className="icon-bubble tint-link size-16 rounded-panel">
+          <BookOpen className="size-8" />
+        </span>
+        <p className="font-display text-lg font-extrabold text-foreground">Chưa có từ nào</p>
+        <p className="max-w-sm">Khi luyện một bài, bấm vào từ trong câu rồi chọn “Lưu từ” — hoặc tự thêm từ.</p>
+        <button className="btn btn-primary btn-lg mt-1" onClick={() => setAdding(true)}>
           <Plus className="size-4" /> Thêm từ
         </button>
         {adding && <AddWordDialog onClose={() => setAdding(false)} />}
@@ -312,12 +328,12 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
           <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
         </button>
         <button className="btn h-11" onClick={() => setAdding(true)}>
-          <Plus className="size-4 text-link" /> Thêm từ
+          <Plus className="size-4 text-accent-text" /> Thêm từ
         </button>
         <button className="btn h-11" onClick={() => setReview({ title: "Tất cả", items })}>
           <Brain className="size-4 text-amber" /> Ôn tất cả
         </button>
-        <button className="btn h-11 px-3" title="Tải CSV (nhập vào Anki)" onClick={() => downloadCsv(items)}>
+        <button className="btn h-11 px-3" title="Tải CSV (nhập vào Anki)" aria-label="Tải CSV (nhập vào Anki)" onClick={() => downloadCsv(items)}>
           <Download className="size-4" />
         </button>
       </div>
@@ -328,16 +344,16 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
         return (
           <section key={day} className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <h2 className="font-extrabold">{dayLabel(day, local)}</h2>
-              <span className="text-sm text-muted">· {list.length} từ</span>
+              <h2 className="font-display text-lg font-extrabold">{dayLabel(day, local)}</h2>
+              <span className="badge badge-muted">{list.length} từ</span>
               <button
-                className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-muted transition hover:bg-foreground/5 hover:text-foreground"
+                className="btn btn-ghost btn-sm ml-auto text-muted hover:text-foreground"
                 onClick={() => setReview({ title: dayLabel(day, local), items: list })}
               >
                 <Brain className="size-3.5 text-amber" /> Ôn ngày này
               </button>
             </div>
-            <ul className="card divide-y divide-border p-0">
+            <ul className="card divide-y divide-line overflow-hidden p-0">
               {list.slice(0, room).map((v) => (
                 <VocabRow key={v.id} v={v} now={now} />
               ))}
@@ -350,7 +366,7 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
           Xem thêm ({shown.length - limit} từ)
         </button>
       )}
-      {!shown.length && <p className="text-sm text-muted">Không tìm thấy “{q}”.</p>}
+      {!shown.length && <p className="empty py-6">Không tìm thấy “{q}”.</p>}
       {adding && <AddWordDialog onClose={() => setAdding(false)} />}
       {review && (
         <VocabReview

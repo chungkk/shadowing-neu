@@ -176,10 +176,8 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
       <div className="flex flex-col gap-2 md:col-start-2 md:row-start-1">
         {v.status === "playing" && <MascotSay mood={mood}>{say}</MascotSay>}
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
-          <span className="rounded-full border-2 border-ink bg-card px-2.5 py-0.5">
-            {SUDOKU_LEVEL_LABEL[v.level || "easy"]}
-          </span>
-          <span className="rounded-full border-2 border-ink bg-card px-2.5 py-0.5 tabular-nums">{board.errors} lỗi</span>
+          <span className="badge badge-muted px-3 py-1 text-sm text-foreground">{SUDOKU_LEVEL_LABEL[v.level || "easy"]}</span>
+          <span className={`badge px-3 py-1 text-sm tabular-nums ${board.errors ? "badge-red" : "badge-muted text-foreground"}`}>{board.errors} lỗi</span>
           {v.status === "playing" && <GameClock v={v} send={send} ms={left} warn={left < 60_000} />}
         </div>
         {showPlayers && (
@@ -187,7 +185,7 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
             {v.players.map((p) => (
               <li key={p.id} className="flex items-center gap-2 text-xs font-bold">
                 <span className={`w-24 truncate ${p.out ? "text-muted line-through" : ""}`}>{p.me ? "Bạn" : p.name}</span>
-                <span className="h-2 flex-1 overflow-hidden rounded-full bg-card-2">
+                <span className="progress h-2 flex-1">
                   <span
                     className={`block h-full rounded-full transition-[width] ${p.me ? "bg-gem" : "bg-gold"}`}
                     style={{ width: `${((p.me ? board.grid.filter((x, i) => x && !s.givens[i]).length : p.progress) / total) * 100}%` }}
@@ -201,7 +199,7 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
       </div>
 
       <div className="relative md:col-start-1 md:row-span-2 md:row-start-1">
-        <div className="mx-auto grid aspect-square w-full max-w-[32rem] grid-cols-9 grid-rows-9 overflow-hidden rounded-2xl border-[3px] border-ink bg-card shadow-[0_4px_0_var(--ink)] select-none">
+        <div className="g-sudoku mx-auto grid aspect-square w-full max-w-[32rem] grid-cols-9 grid-rows-9 overflow-hidden select-none">
           {board.grid.map((n, i) => {
             const r = row(i);
             const c = col(i);
@@ -214,7 +212,7 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
               sel === i
                 ? "bg-gem/35"
                 : conflict || wrong
-                  ? "bg-red-500/15"
+                  ? "bg-red/15"
                   : selVal && n === selVal
                     ? "bg-gem/20"
                     : sel !== null && peers(sel, i)
@@ -228,14 +226,14 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
                 onClick={() => setSel(i)}
                 aria-label={`Ô hàng ${r + 1}, cột ${c + 1}${n ? `, số ${n}` : ", trống"}${given ? ", số đề bài" : ""}${conflict ? ", bị trùng" : ""}`}
                 className={`relative flex min-h-0 min-w-0 items-center justify-center text-[clamp(1.05rem,5.2vw,1.75rem)] leading-none tabular-nums transition-colors ${
-                  c % 3 === 2 && c < 8 ? "border-r-2 border-r-ink" : c < 8 ? "border-r border-r-border" : ""
-                } ${r % 3 === 2 && r < 8 ? "border-b-2 border-b-ink" : r < 8 ? "border-b border-b-border" : ""} ${bg}`}
+                  c % 3 === 2 && c < 8 ? "g-block-r" : c < 8 ? "g-cell-r" : ""
+                } ${r % 3 === 2 && r < 8 ? "g-block-b" : r < 8 ? "g-cell-b" : ""} ${bg}`}
               >
                 {n ? (
                   given ? (
                     <span className="font-black">{n}</span>
                   ) : (
-                    <span key={n} className={`play-drop font-extrabold ${conflict || wrong ? "text-red-500 dark:text-red-400" : "text-gem"}`}>
+                    <span key={n} className={`play-drop font-extrabold ${conflict || wrong ? "text-red-400" : "text-gem"}`}>
                       {n}
                     </span>
                   )
@@ -263,7 +261,7 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
             <button className="btn px-1 whitespace-nowrap" disabled={!canPlay || !history.length} onClick={undo}>
               <Undo2 className="size-4" /> Hoàn tác
             </button>
-            <button aria-pressed={noteMode} className={`btn px-1 whitespace-nowrap ${noteMode ? "bg-gold/60" : ""}`} disabled={!canPlay} onClick={() => setNoteMode(!noteMode)}>
+            <button aria-pressed={noteMode} className={`btn px-1 whitespace-nowrap ${noteMode ? "border-gold bg-gold-soft text-amber" : ""}`} disabled={!canPlay} onClick={() => setNoteMode(!noteMode)}>
               <Pencil className="size-4" /> Ghi chú
             </button>
             <ResignButton send={send} className="px-1 whitespace-nowrap" />
@@ -275,17 +273,22 @@ export default function SudokuPlay({ v, send, apply }: { v: View; send: Send; ap
                 aria-label={`Số ${n}`}
                 disabled={!canPlay}
                 onClick={() => input(n)}
-                className={`btn relative aspect-square px-0 text-2xl font-black md:aspect-auto md:py-3 ${selVal === n ? "bg-gem/25 ring-2 ring-gem" : ""} ${counts[n] >= 9 ? "opacity-50" : ""}`}
+                aria-current={selVal === n || undefined}
+                className={`g-num aspect-square md:aspect-auto md:py-3 ${counts[n] >= 9 ? "opacity-50" : ""}`}
               >
                 {n}
               </button>
             ))}
-            <button aria-label="Xoá ô đang chọn" disabled={!canPlay} onClick={erase} className="btn aspect-square bg-candy/60 px-0 md:col-start-2 md:aspect-auto md:py-3">
+            <button aria-label="Xoá ô đang chọn" disabled={!canPlay} onClick={erase} className="g-num aspect-square text-red-400 md:col-start-2 md:aspect-auto md:py-3">
               <Delete className="size-6" />
             </button>
           </div>
           {noteMode && <p className="text-center text-xs font-bold text-muted">Đang ghi chú: bấm số để ghi / bỏ ghi chú ở ô đang chọn.</p>}
-          {msg && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{msg}</p>}
+          {msg && (
+            <p role="alert" className="alert alert-err">
+              {msg}
+            </p>
+          )}
         </div>
       )}
       {me?.out && v.status === "playing" && <p className="text-center text-sm font-bold text-muted md:col-start-2">Bạn đã bỏ cuộc, đang chờ những người khác…</p>}

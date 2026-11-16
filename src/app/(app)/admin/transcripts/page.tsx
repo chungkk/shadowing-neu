@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { listSavedTranscripts } from "@/lib/db";
 import TranscriptList, { type SavedVideo } from "./TranscriptList";
 import { ListSkeleton } from "@/components/Skeleton";
+import AdminNav from "../AdminNav";
 
 async function Transcripts() {
   await requireAdmin();
@@ -21,16 +21,13 @@ async function Transcripts() {
 
   return (
     <>
-      <div className="flex items-start gap-2">
-        <h1 className="page-title flex-1">Phụ đề đã lưu ({list.length} video)</h1>
-        <Link href="/admin" className="btn">
-          Bài học
-        </Link>
-      </div>
-      <p className="text-sm text-muted">
+      <div className="flex flex-col gap-2">
+        <h1 className="page-title">Phụ đề đã lưu ({list.length} video)</h1>
+        <p className="text-sm leading-relaxed text-muted">
         Phụ đề của các video YouTube người dùng đã mở, lưu lại để người sau mở cùng video có ngay. Sửa nếu phụ đề sai;
-        xoá để lần sau lấy lại từ YouTube / Whisper.
-      </p>
+          xoá để lần sau lấy lại từ YouTube / Whisper.
+        </p>
+      </div>
       <TranscriptList videos={list} />
     </>
   );
@@ -39,6 +36,7 @@ async function Transcripts() {
 export default function TranscriptsPage() {
   return (
     <main className="page page-narrow">
+      <AdminNav />
       <Suspense fallback={<ListSkeleton thumb />}>
         <Transcripts />
       </Suspense>

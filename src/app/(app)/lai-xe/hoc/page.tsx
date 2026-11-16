@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, BookOpen, RotateCcw, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, RotateCcw, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { DEFAULT_CLASS, classQuestionIds, learnTree, prefs } from "@/lib/laixe";
@@ -57,91 +57,88 @@ async function Topics() {
           // Mỗi phần thu gọn thành 1 thẻ, bấm mới xổ ra các chủ đề. Nút Đọc/Luyện nằm ngoài <summary> để không lồng link trong nút
           <section key={part.key} className="relative">
             <details className="sticker group/part overflow-hidden">
-              <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 pr-44 [&::-webkit-details-marker]:hidden">
-                <span className="flex items-baseline gap-2">
-                  <span aria-hidden className="inline-block transition group-open/part:rotate-90">
-                    ▸
+              <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 sm:pr-44 [&::-webkit-details-marker]:hidden">
+                {/* Điện thoại: chỉ dòng tiêu đề chừa chỗ cho nút Đọc/Luyện, dòng mô tả dùng hết bề ngang */}
+                <span className="flex min-h-9 items-center gap-3 pr-32 sm:pr-0">
+                  <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card-2 text-muted transition-transform group-open/part:rotate-180 motion-reduce:transition-none">
+                    <ChevronDown className="size-4" />
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-xl font-extrabold">{part.title}</span>
-                    <span className="block text-sm text-muted">
-                      {part.subtitle} · {user ? `${ps.done}/` : ""}
-                      {ps.total} câu · {part.themes.length} chủ đề
-                    </span>
-                  </span>
+                  <span className="block min-w-0 font-display text-xl leading-tight font-extrabold">{part.title}</span>
+                </span>
+                <span className="-mt-1 block pl-11 text-sm text-muted">
+                  {part.subtitle} · {user ? `${ps.done}/` : ""}
+                  {ps.total} câu · {part.themes.length} chủ đề
                 </span>
                 {user && <ProgressBar {...ps} />}
               </summary>
-              <div className="border-t-2 border-ink/10 p-2">
-                <div className="flex flex-col gap-2">
-                  {part.themes.map((t) => {
-                    const ts = summarize(t.ids, stats);
-                    return (
-                      <details key={t.id} className="group overflow-hidden rounded-2xl border-2 border-ink/20 open:border-ink/40">
-                        <summary className="flex cursor-pointer list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden">
-                          <span className="flex items-baseline justify-between gap-2">
-                            <span className="min-w-0 font-extrabold">
-                              <span aria-hidden className="mr-1 inline-block transition group-open:rotate-90">
-                                ▸
-                              </span>
+              <div className="flex flex-col gap-2 border-t border-line p-3">
+                {part.themes.map((t) => {
+                  const ts = summarize(t.ids, stats);
+                  return (
+                    <details key={t.id} className="quiz-group group">
+                      <summary className="flex cursor-pointer list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-2 font-extrabold">
+                            <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+                            <span className="min-w-0">
                               {t.vi || t.de} <span className="text-sm font-bold text-muted">· {t.de}</span>
                             </span>
-                            <span className="shrink-0 text-xs text-muted tabular-nums">
-                              {user ? `${ts.done}/` : ""}
-                              {ts.total}
-                            </span>
                           </span>
-                          {user && <ProgressBar {...ts} />}
-                        </summary>
-                        <div className="flex flex-col gap-1 border-t-2 border-ink/10 p-2">
-                          <div className="flex justify-end gap-2 px-1 pb-1">
-                            <Link href={`/lai-xe/hoc/${t.id}?mode=lesen`} className="text-sm font-bold text-muted underline-offset-2 hover:underline">
-                              Đọc cả chủ đề
-                            </Link>
-                            <Link href={`/lai-xe/hoc/${t.id}`} className="text-sm font-extrabold text-accent-text underline-offset-2 hover:underline">
-                              Luyện cả chủ đề →
-                            </Link>
-                          </div>
-                          <ul className="grid gap-2 sm:grid-cols-2">
-                            {t.chapters.map((c) => {
-                              const cs = summarize(c.ids, stats);
-                              return (
-                                <li key={c.id} className="flex flex-col gap-2 rounded-2xl border-2 border-ink/20 p-3">
-                                  <Link href={`/lai-xe/hoc/${c.id}`} className="flex flex-col hover:underline">
-                                    <span className="font-bold">{c.vi || c.de}</span>
-                                    <span className="text-xs text-muted">
-                                      {c.id} · {c.de}
-                                    </span>
-                                  </Link>
-                                  {user && <ProgressBar {...cs} />}
-                                  <span className="flex items-center gap-2">
-                                    <span className="flex-1 text-xs text-muted tabular-nums">
-                                      {user ? `${cs.done}/` : ""}
-                                      {cs.total} câu
-                                    </span>
-                                    <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="btn btn-sm">
-                                      Đọc
-                                    </Link>
-                                    <Link href={`/lai-xe/hoc/${c.id}`} className="btn btn-sm btn-amber">
-                                      Luyện
-                                    </Link>
-                                  </span>
-                                </li>
-                              );
-                            })}
-                          </ul>
+                          <span className="badge badge-muted shrink-0 tabular-nums">
+                            {user ? `${ts.done}/` : ""}
+                            {ts.total}
+                          </span>
+                        </span>
+                        {user && <ProgressBar {...ts} />}
+                      </summary>
+                      <div className="flex flex-col gap-2 border-t border-line p-2.5">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Link href={`/lai-xe/hoc/${t.id}?mode=lesen`} className="btn btn-sm btn-ghost">
+                            Đọc cả chủ đề
+                          </Link>
+                          <Link href={`/lai-xe/hoc/${t.id}`} className="btn btn-sm btn-ghost text-accent-text">
+                            Luyện cả chủ đề <ArrowRight className="size-3.5" />
+                          </Link>
                         </div>
-                      </details>
-                    );
-                  })}
-                </div>
+                        <ul className="grid gap-2 sm:grid-cols-2">
+                          {t.chapters.map((c) => {
+                            const cs = summarize(c.ids, stats);
+                            return (
+                              <li key={c.id} className="tile flex flex-col gap-2.5">
+                                <Link href={`/lai-xe/hoc/${c.id}`} className="flex flex-col underline-offset-2 hover:underline">
+                                  <span className="font-bold">{c.vi || c.de}</span>
+                                  <span className="text-xs text-muted">
+                                    {c.id} · {c.de}
+                                  </span>
+                                </Link>
+                                {user && <ProgressBar {...cs} />}
+                                <span className="flex items-center gap-2">
+                                  <span className="flex-1 text-xs font-semibold text-muted tabular-nums">
+                                    {user ? `${cs.done}/` : ""}
+                                    {cs.total} câu
+                                  </span>
+                                  <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="btn btn-sm">
+                                    Đọc
+                                  </Link>
+                                  <Link href={`/lai-xe/hoc/${c.id}`} className="btn btn-sm btn-soft">
+                                    Luyện
+                                  </Link>
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             </details>
             <div className="absolute top-4 right-4 flex items-center gap-2">
               <Link href={`/lai-xe/hoc/${part.key}?mode=lesen`} className="btn btn-sm">
                 Đọc
               </Link>
-              <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-sm btn-amber">
+              <Link href={`/lai-xe/hoc/${part.key}`} className="btn btn-sm btn-soft">
                 Luyện
               </Link>
             </div>

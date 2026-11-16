@@ -28,8 +28,11 @@ function Svg({ d, className = 'h-5 w-5' }: { d: string; className?: string }) {
     );
 }
 
+// Nút điều khiển trên nền tối: tròn 44px, kính mờ, viền sáng mảnh; nhấn thì lún nhẹ (tắt khi giảm chuyển động)
 const btn =
-    'inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:opacity-30 disabled:hover:bg-white/10';
+    'inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/15 backdrop-blur transition-[background-color,transform] duration-(--dur-fast) hover:bg-white/20 active:scale-95 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-30 disabled:hover:bg-white/10 disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100';
+// Nút nằm trong khay (nhóm phóng to/thu nhỏ): không viền riêng
+const trayBtn = `${btn} bg-transparent ring-0`;
 
 /** Trình xem ảnh toàn màn hình: chuyển ảnh, phóng to bằng cuộn chuột / chạm hai ngón / nhấp đúp, kéo để di chuyển. */
 export function Lightbox({
@@ -215,31 +218,34 @@ export function Lightbox({
     const zoomed = view.scale > 1;
 
     return createPortal(
-        <div role="dialog" aria-modal="true" aria-label={t.viewer} className="fixed inset-0 z-[100] flex flex-col text-white backdrop-blur-xl" style={{ background: 'rgba(8, 9, 12, 0.96)', animation: 'lb-in 180ms ease-out' }}>
-            <style>{`@keyframes lb-in{from{opacity:0}to{opacity:1}}`}</style>
+        // Nền tối có chủ đích (như phòng chiếu ảnh) ở cả giao diện sáng lẫn tối: ảnh chụp màn hình nổi rõ nhất trên nền gần đen.
+        // .sheet-fade: hiệu ứng mờ dần có sẵn của design system (tự tắt khi prefers-reduced-motion).
+        <div role="dialog" aria-modal="true" aria-label={t.viewer} className="sheet-fade fixed inset-0 z-[100] flex flex-col bg-[rgb(10_8_10/0.96)] text-white backdrop-blur-xl">
 
             {/* Thanh trên */}
-            <div className="relative z-10 flex items-center justify-between gap-3 px-3 py-3 sm:px-5">
-                <span className="min-w-[4rem] text-sm font-semibold tabular-nums text-white/80" aria-live="polite">
+            <div className="relative z-10 flex items-center justify-between gap-3 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:px-5">
+                <span className="inline-flex h-9 min-w-[4rem] items-center justify-center rounded-full bg-white/10 px-3 font-display text-sm font-extrabold tabular-nums text-white/90 ring-1 ring-white/15" aria-live="polite">
                     {index + 1} / {count}
                 </span>
                 <div className="flex items-center gap-2">
-                    <button type="button" className={btn} onClick={() => (setAnimate(true), zoomAt(view.scale / 1.5))} disabled={!zoomed} aria-label={t.zoomOut} title={t.zoomOut}>
-                        <Svg d="M5 12h14" />
-                    </button>
-                    <button
-                        type="button"
-                        className="hidden h-11 min-w-[4.5rem] items-center justify-center rounded-full bg-white/10 px-3 text-sm font-semibold tabular-nums backdrop-blur transition-colors hover:bg-white/20 sm:inline-flex"
-                        onClick={() => (setAnimate(true), setView(RESET))}
-                        aria-label={t.reset}
-                        title={t.reset}
-                    >
-                        {Math.round(view.scale * 100)}%
-                    </button>
-                    <button type="button" className={btn} onClick={() => (setAnimate(true), zoomAt(view.scale * 1.5))} disabled={view.scale >= MAX} aria-label={t.zoomIn} title={t.zoomIn}>
-                        <Svg d="M12 5v14M5 12h14" />
-                    </button>
-                    <span className="mx-1 h-6 w-px bg-white/20" aria-hidden="true" />
+                    {/* Khay phóng to / thu nhỏ */}
+                    <div className="flex items-center rounded-full bg-white/10 p-0.5 ring-1 ring-white/15 backdrop-blur">
+                        <button type="button" className={trayBtn} onClick={() => (setAnimate(true), zoomAt(view.scale / 1.5))} disabled={!zoomed} aria-label={t.zoomOut} title={t.zoomOut}>
+                            <Svg d="M5 12h14" />
+                        </button>
+                        <button
+                            type="button"
+                            className="hidden h-11 min-w-[4.5rem] items-center justify-center rounded-full px-3 text-sm font-bold tabular-nums transition-colors duration-(--dur-fast) hover:bg-white/15 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent sm:inline-flex"
+                            onClick={() => (setAnimate(true), setView(RESET))}
+                            aria-label={t.reset}
+                            title={t.reset}
+                        >
+                            {Math.round(view.scale * 100)}%
+                        </button>
+                        <button type="button" className={trayBtn} onClick={() => (setAnimate(true), zoomAt(view.scale * 1.5))} disabled={view.scale >= MAX} aria-label={t.zoomIn} title={t.zoomIn}>
+                            <Svg d="M12 5v14M5 12h14" />
+                        </button>
+                    </div>
                     <button ref={closeRef} type="button" className={btn} onClick={onClose} aria-label={t.close} title={`${t.close} (Esc)`}>
                         <Svg d="M6 6l12 12M18 6L6 18" />
                     </button>
@@ -265,10 +271,10 @@ export function Lightbox({
                     width={screen.width}
                     height={screen.height}
                     draggable={false}
-                    className="max-h-full max-w-[calc(100%-2rem)] object-contain shadow-2xl sm:max-w-[calc(100%-8rem)]"
+                    className="max-h-full max-w-[calc(100%-2rem)] rounded-ui object-contain shadow-float sm:max-w-[calc(100%-8rem)]"
                     style={{
                         transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})`,
-                        transition: animate ? 'transform 220ms cubic-bezier(.2,.8,.2,1)' : 'none',
+                        transition: animate ? 'transform 220ms var(--ease-out)' : 'none',
                         willChange: 'transform',
                     }}
                 />
@@ -287,8 +293,8 @@ export function Lightbox({
 
             {/* Dải ảnh thu nhỏ */}
             {count > 1 && (
-                <div className="relative z-10 flex justify-center px-3 py-3">
-                    <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
+                <div className="relative z-10 flex justify-center px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    <div className="flex max-w-full gap-2 overflow-x-auto rounded-panel bg-white/5 p-2 ring-1 ring-white/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {screens.map((s, n) => (
                             <button
                                 key={s.src}
@@ -296,7 +302,7 @@ export function Lightbox({
                                 onClick={() => onIndex(() => n)}
                                 aria-label={`${n + 1} / ${count}`}
                                 aria-current={n === index}
-                                className={`h-14 shrink-0 overflow-hidden rounded-md ring-2 transition-opacity sm:h-16 ${n === index ? 'opacity-100 ring-white' : 'opacity-50 ring-transparent hover:opacity-90'}`}
+                                className={`h-14 shrink-0 overflow-hidden rounded-xl ring-2 transition-[opacity,box-shadow] duration-(--dur-fast) focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-16 ${n === index ? 'opacity-100 ring-accent' : 'opacity-50 ring-transparent hover:opacity-90'}`}
                             >
                                 <Image src={s.src} alt="" width={s.width} height={s.height} sizes="96px" draggable={false} className="h-full w-auto" />
                             </button>

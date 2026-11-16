@@ -3,17 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Car, Check, Trash2 } from "lucide-react";
+import { ArrowRight, Car, Check, Trash2 } from "lucide-react";
 import { setLicenseClass, setLidState } from "@/app/(app)/lai-xe/actions";
 import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 /** Chọn hạng bằng dạng danh sách thả xuống (trang Cài đặt) */
 export function ClassSelect({ groups, current }: { groups: { title: string; classes: ClassOption[] }[]; current: string }) {
   const [pending, start] = useTransition();
   return (
-    <label className="flex flex-wrap items-center gap-2 text-sm font-bold">
-      Hạng bằng:
+    <label className="field w-full max-w-sm">
+      Hạng bằng
       <select
         value={current}
         disabled={pending}
@@ -21,7 +22,7 @@ export function ClassSelect({ groups, current }: { groups: { title: string; clas
           const v = e.target.value;
           start(() => setLicenseClass(v));
         }}
-        className="min-w-0 max-w-full rounded-xl border-2 border-ink bg-card px-2 py-1.5 font-bold"
+        className="min-h-11 w-full min-w-0 font-bold"
       >
         {groups.map((g) => (
           <optgroup key={g.title} label={g.title}>
@@ -50,7 +51,9 @@ export function DrivingSettings({ groups, current }: { groups: { title: string; 
           <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học. Bản dịch câu hỏi là tiếng Việt.</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="flex h-12 min-w-12 items-center justify-center rounded-2xl border-2 border-ink bg-gold px-2 text-lg font-extrabold text-black">{current}</span>
+          <span className="icon-bubble tint-accent h-12 min-w-12 px-2 font-display text-xl font-extrabold" aria-hidden>
+            {current}
+          </span>
           {info && (
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="font-extrabold">
@@ -65,8 +68,8 @@ export function DrivingSettings({ groups, current }: { groups: { title: string; 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <ClassSelect groups={groups} current={current} />
         </div>
-        <Link href="/lai-xe/hang" className="self-start text-sm font-bold text-muted underline-offset-2 hover:underline">
-          Xem mô tả từng hạng →
+        <Link href="/lai-xe/hang" className="btn btn-sm btn-ghost self-start text-link">
+          Xem mô tả từng hạng <ArrowRight className="size-3.5" aria-hidden />
         </Link>
       </div>
     </section>
@@ -101,9 +104,9 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
                         router.push("/lai-xe");
                       });
                     }}
-                    className={`tile sticker-link flex h-full w-full items-start gap-3 text-left ${on ? "bg-gold/25" : ""}`}
+                    className={`tile card-link flex h-full w-full cursor-pointer items-start gap-3 text-left disabled:cursor-wait ${on ? "border-accent bg-accent-soft" : ""}`}
                   >
-                    <span className={`flex h-11 min-w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink px-1.5 text-base font-extrabold ${on ? "bg-gold text-black" : "bg-card-2"}`}>{c.id}</span>
+                    <span className={`icon-bubble h-11 min-w-11 px-1.5 font-display text-lg font-extrabold ${on ? "bg-accent text-white" : "tint-muted"}`}>{c.id}</span>
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="font-extrabold">
                         {c.vi} <span className="text-sm font-bold text-muted">· {c.name}</span>
@@ -113,8 +116,8 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
                         {c.count.toLocaleString("vi-VN")} câu · thi {c.exam}
                       </span>
                     </span>
-                    {on && <Check className="size-5 shrink-0" aria-label="Đang học" />}
-                    {pending && choosing === c.id && <span className="text-xs text-muted">Đang đổi…</span>}
+                    {on && <Check className="size-5 shrink-0 text-accent-text" aria-label="Đang học" />}
+                    {pending && choosing === c.id && <span className="badge badge-muted shrink-0">Đang đổi…</span>}
                   </button>
                 </li>
               );
@@ -130,8 +133,8 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
 export function StateSelect({ states, current }: { states: { code: string; name: string }[]; current: string }) {
   const [pending, start] = useTransition();
   return (
-    <label className="flex flex-wrap items-center gap-2 text-sm font-bold">
-      Bang:
+    <label className="field w-full max-w-sm">
+      Bang
       <select
         value={current}
         disabled={pending}
@@ -139,7 +142,7 @@ export function StateSelect({ states, current }: { states: { code: string; name:
           const v = e.target.value;
           start(() => setLidState(v));
         }}
-        className="rounded-xl border-2 border-ink bg-card px-2 py-1.5 font-bold"
+        className="min-h-11 w-full font-bold"
       >
         {states.map((s) => (
           <option key={s.code} value={s.code}>
@@ -155,8 +158,8 @@ export function StateSelect({ states, current }: { states: { code: string; name:
 export function AutoMarkToggle() {
   const [on, setOn] = useLocalStorage<boolean>("lid:auto-mark", true);
   return (
-    <label className="flex items-center gap-2 text-sm font-bold">
-      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5 accent-[var(--accent)]" />
+    <label className="check min-h-11 text-sm font-bold">
+      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5" />
       Tự đánh dấu câu làm sai, bỏ đánh dấu khi làm đúng
     </label>
   );
@@ -166,8 +169,8 @@ export function AutoMarkToggle() {
 export function VibrateToggle() {
   const [on, setOn] = useLocalStorage<boolean>("lid:vibrate", true);
   return (
-    <label className="flex items-center gap-2 text-sm font-bold">
-      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5 accent-[var(--accent)]" />
+    <label className="check min-h-11 text-sm font-bold">
+      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5" />
       Rung khi trả lời sai (điện thoại)
     </label>
   );
@@ -178,14 +181,22 @@ export function ResetProgress({ module = "fuehrerschein", userId }: { module?: "
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [ask, confirmDialog] = useConfirm();
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col items-start gap-2">
       <button
         type="button"
         className="btn btn-red"
         disabled={busy}
         onClick={async () => {
-          if (!confirm(`Xoá toàn bộ tiến độ ${module === "lid" ? "Leben in Deutschland" : "lái xe"}: câu đã làm, câu đánh dấu và lịch sử thi? Không hoàn tác được.`)) return;
+          const ok = await ask({
+            title: `Xoá toàn bộ tiến độ ${module === "lid" ? "Leben in Deutschland" : "lái xe"}?`,
+            text: "Câu đã làm, câu đánh dấu và lịch sử thi sẽ bị xoá. Không hoàn tác được.",
+            ok: "Xoá tiến độ",
+            tone: "red",
+            icon: <Trash2 className="size-5" />,
+          });
+          if (!ok) return;
           setBusy(true);
           setError("");
           try {
@@ -205,7 +216,12 @@ export function ResetProgress({ module = "fuehrerschein", userId }: { module?: "
       >
         <Trash2 className="size-4" /> Xoá tiến độ
       </button>
-      {error && <span className="text-sm text-red-400">{error}</span>}
+      {error && (
+        <p className="alert alert-err" role="alert">
+          {error}
+        </p>
+      )}
+      {confirmDialog}
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronRight } from 'lucide-react';
+import type { CSSProperties, ReactNode } from 'react';
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { SERVICES, productPath } from '@/lib/company/services';
 import type { ServiceId } from '@/lib/company/services';
 import { PRODUCT_PAGES } from '@/lib/company/productPages';
@@ -79,7 +79,7 @@ function SectionShots({ page, indexes, alts }: { page: ProductPage; indexes: num
 function SectionHead({ id, title, children }: { id: string; title: string; children?: ReactNode }) {
     return (
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
-            <h2 id={id} className="text-2xl font-extrabold text-balance sm:text-3xl">
+            <h2 id={id} className="section-title text-2xl text-balance sm:text-3xl">
                 {title}
             </h2>
             {children}
@@ -92,7 +92,7 @@ function FeatureText({ section, i }: { section: PageSection; i: number }) {
     return (
         <div className="flex min-w-0 flex-col gap-3">
             <span className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-card-2 font-display text-lg font-extrabold">{i + 1}</span>
+                <span className="icon-bubble tint-accent rounded-full font-display text-lg font-extrabold">{i + 1}</span>
                 <h2 id={`feature-${i}`} className="text-xl leading-snug font-extrabold text-balance sm:text-2xl">
                     {section.title}
                 </h2>
@@ -107,7 +107,7 @@ function FeatureText({ section, i }: { section: PageSection; i: number }) {
             </ul>
             {section.link && (
                 <Link href={section.link.href} className={`group ${moreLink}`}>
-                    {section.link.label} <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                    {section.link.label} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
                 </Link>
             )}
         </div>
@@ -130,8 +130,8 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
 
     return (
         <div className="page gap-10 md:gap-14">
-            {/* Đầu trang: linh vật + nhãn vàng nghiêng như trang Tiếng Đức, ảnh chụp bên cạnh */}
-            <section aria-labelledby="product-title" className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
+            {/* Đầu trang: thẻ .hero (nền gradient nhạt) + linh vật + nhãn vàng, ảnh chụp bên cạnh */}
+            <section aria-labelledby="product-title" className="sticker hero rise-in grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
                 <div className="flex min-w-0 flex-col gap-4">
                     <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm font-bold text-muted">
                         <Link href="/about" className="hover:text-foreground hover:underline">
@@ -145,14 +145,14 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                     <div className="flex items-center gap-3 sm:gap-5">
                         <Mascot animated className="bob size-20 sm:size-28" />
                         <div className="flex min-w-0 flex-col items-start gap-1.5">
-                            <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">{t.current}</span>
-                            <h1 id="product-title" className="text-3xl leading-tight font-extrabold sm:text-4xl md:text-5xl">
+                            <span className="badge badge-gold text-sm">{t.current}</span>
+                            <h1 id="product-title" className="display">
                                 {service.name}
                             </h1>
                         </div>
                     </div>
                     <p className="text-lg font-bold text-balance">{sc.tagline}</p>
-                    <p className="text-muted">{copy.intro}</p>
+                    <p className="lead">{copy.intro}</p>
                     <StartButton service={service} />
                     <div className="flex flex-wrap gap-2">
                         <Link href={`${productPath(service)}/support`} className="btn btn-sm">
@@ -177,8 +177,8 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
             {/* Số liệu: thẻ con số như trang chủ app */}
             <section aria-label={t.facts}>
                 <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    {copy.facts.map((fact) => (
-                        <div key={fact.label} className="sticker flex min-w-0 flex-col-reverse gap-1 p-4 text-center">
+                    {copy.facts.map((fact, n) => (
+                        <div key={fact.label} style={{ '--i': n + 1 } as CSSProperties} className="sticker rise-in flex min-w-0 flex-col-reverse gap-1 p-4 text-center">
                             <dt className="text-sm text-muted hyphens-auto">{fact.label}</dt>
                             <dd className="font-display text-3xl leading-none font-extrabold text-accent-text tabular-nums">{fact.value}</dd>
                         </div>
@@ -211,14 +211,14 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
             {copy.plans && (
                 <section aria-labelledby="plans-title" className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1">
-                        <h2 id="plans-title" className="text-2xl font-extrabold text-balance sm:text-3xl">
+                        <h2 id="plans-title" className="section-title text-2xl text-balance sm:text-3xl">
                             {copy.plans.title}
                         </h2>
                         <p className="max-w-3xl text-muted">{copy.plans.intro}</p>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                         {copy.plans.columns.map((col, i) => (
-                            <div key={col.title} className={`sticker flex flex-col gap-3 p-5 ${i ? 'bg-accent/10' : ''}`}>
+                            <div key={col.title} style={i ? ({ '--hero': 'var(--accent)' } as CSSProperties) : undefined} className={`sticker flex flex-col gap-3 p-5 ${i ? 'hero' : ''}`}>
                                 <h3 className="flex items-center gap-2 text-xl font-extrabold">
                                     <BadgeCheck className="size-6 text-accent-text" /> {col.title}
                                 </h3>
@@ -250,7 +250,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                                 e.preventDefault();
                                 setViewing(n);
                             }}
-                            className={`snap-start cursor-zoom-in rounded-2xl transition hover:-translate-y-1 hover:-rotate-1 motion-reduce:hover:rotate-0 ${landscape ? 'w-[18rem] md:w-[26rem]' : 'w-[11rem] md:w-[13rem]'}`}
+                            className={`snap-start cursor-zoom-in rounded-panel transition-transform duration-(--dur) ease-(--ease-out) hover:-translate-y-1 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${landscape ? 'w-[18rem] md:w-[26rem]' : 'w-[11rem] md:w-[13rem]'}`}
                         >
                             <Shot screen={screen} alt={copy.alts[n]} sizes={landscape ? '26rem' : '13rem'} />
                         </a>
@@ -268,36 +268,41 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                         {t.faq}
                     </h2>
                     <Link href={`${productPath(service)}/support`} className={`group ${moreLink}`}>
-                        {t.moreFaq} <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                        {t.moreFaq} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
                     </Link>
                 </div>
                 {copy.faq.map((item) => (
-                    <details key={item.q} className="rounded-2xl border-2 border-ink/15 px-3 py-2">
-                        <summary className="cursor-pointer font-bold">{item.q}</summary>
-                        <p className="mt-1 text-sm text-muted">{item.a}</p>
+                    <details key={item.q} className="faq-item group surface p-0 transition-colors open:bg-accent-soft/60">
+                        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-ui px-3.5 py-2.5 font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                            {item.q}
+                            <ChevronDown className="size-5 shrink-0 text-link transition-transform duration-(--dur) group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+                        </summary>
+                        <p className="px-3.5 pb-3 text-sm text-muted">{item.a}</p>
                     </details>
                 ))}
             </section>
 
             {/* Lời mời cuối trang */}
-            <section aria-labelledby="closing-title" className="sticker flex flex-col items-center gap-4 bg-accent/10 p-6 text-center sm:p-10">
-                <h2 id="closing-title" className="text-2xl font-extrabold text-balance sm:text-3xl">
+            <section aria-labelledby="closing-title" style={{ '--hero': 'var(--aqua)' } as CSSProperties} className="sticker hero flex flex-col items-center gap-4 p-6 text-center sm:p-10">
+                <h2 id="closing-title" className="section-title text-2xl text-balance sm:text-3xl">
                     {t.closing}
                 </h2>
-                <p className="max-w-xl text-muted">{sc.tagline}</p>
+                <p className="lead max-w-xl">{sc.tagline}</p>
                 <StartButton service={service} center />
             </section>
 
             {/* HalloVN cũng nhận làm phần mềm theo yêu cầu */}
             <section aria-labelledby="more-title">
                 <Link href="/about#auftrag" className="group sticker sticker-link flex flex-col gap-2 p-5 motion-reduce:hover:translate-y-0">
-                    <BriefcaseBusiness className="size-7 text-accent-text" />
+                    <span className="icon-bubble tint-link size-12">
+                        <BriefcaseBusiness className="size-6" aria-hidden="true" />
+                    </span>
                     <h2 id="more-title" className="text-xl font-extrabold">
                         {t.moreTitle}
                     </h2>
                     <p className="text-muted">{t.moreText}</p>
                     <span className={moreLink}>
-                        {t.moreLink} <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                        {t.moreLink} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
                     </span>
                 </Link>
             </section>

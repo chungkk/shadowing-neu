@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Flag,
+  LogOut,
+  PartyPopper,
   Check,
   ChevronFirst,
   ChevronLast,
@@ -30,6 +34,7 @@ import { FAIL_TEXT, grade, isRight, type DrivingQ, type ExamAnswer, type ExamRes
 import type { QuizStat } from "@/lib/quiz/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 /**
  * Màn làm câu hỏi của tab Lái xe và Leben in Deutschland (giống app iOS/Android):
@@ -99,6 +104,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   const showTr = isExam ? trExam : trLearn;
   const setShowTr = isExam ? setTrExam : setTrLearn;
   const top = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const [ask, confirmDialog] = useConfirm();
 
   const submitted = mode === "review" || (mode === "exam" && !!result);
   const q = questions[idx];
@@ -217,11 +224,19 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
       .catch((e: Error) => setSaveError(e.message));
   }, [exam, result, questions, picked, loggedIn, startedAt, module, autoMark, marked]); // eslint-disable-line react-hooks/exhaustive-deps -- setMark chỉ gọi API
 
-  const askSubmit = () => {
+  const askSubmit = async () => {
     const left = questions.length - answeredCount;
-    if (left && !confirm(`Còn ${left} câu chưa làm (tính là sai). Nộp bài?`)) return;
-    if (!left && !confirm("Nộp bài và xem kết quả?")) return;
-    submit();
+    const yes = await ask(
+      left
+        ? { title: "Nộp bài?", text: `Còn ${left} câu chưa làm (tính là sai). Nộp bài?`, ok: "Nộp bài", cancel: "Làm tiếp", tone: "red", icon: <Flag className="size-5" /> }
+        : { title: "Nộp bài?", text: "Nộp bài và xem kết quả?", ok: "Nộp bài", cancel: "Làm tiếp", icon: <Flag className="size-5" /> },
+    );
+    if (yes) submit();
+  };
+
+  const askLeave = async () => {
+    const yes = await ask({ title: "Thoát bài thi?", text: "Thoát bài thi? Bài đang làm sẽ không được lưu.", ok: "Thoát", cancel: "Làm tiếp", tone: "red", icon: <LogOut className="size-5" /> });
+    if (yes) router.push(backHref);
   };
 
   const toggleMark = (id: string) => {
@@ -247,7 +262,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (e.metaKey || e.ctrlKey || e.altKey || t?.closest("input, textarea, select, [contenteditable]")) return;
+      if (confirmDialog || e.metaKey || e.ctrlKey || e.altKey || t?.closest("input, textarea, select, [contenteditable]")) return;
       if (e.key === "ArrowRight") go(idx + 1);
       else if (e.key === "ArrowLeft") go(idx - 1);
       else if (/^[1-9]$/.test(e.key) && !videoStep) {
@@ -263,8 +278,11 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
   if (!q) {
     return (
-      <div className="card flex flex-col items-center gap-3 p-6 text-center">
-        <p className="font-bold">Không có câu nào ở đây.</p>
+      <div className="card empty">
+        <span className="icon-bubble tint-muted size-14 text-2xl" aria-hidden>
+          🗂️
+        </span>
+        <p className="font-bold text-foreground">Không có câu nào ở đây.</p>
         <Link href={backHref} className="btn">
           <ArrowLeft className="size-4" /> Quay lại
         </Link>
@@ -287,13 +305,16 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   return (
     <div ref={top} className="flex scroll-mt-20 flex-col gap-4">
       {/* Đầu trang */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Link
           href={backHref}
           className="btn-icon"
           aria-label="Quay lại"
           onClick={(e) => {
-            if (mode === "exam" && !submitted && answeredCount && !confirm("Thoát bài thi? Bài đang làm sẽ không được lưu.")) e.preventDefault();
+            if (mode === "exam" && !submitted && answeredCount) {
+              e.preventDefault();
+              askLeave();
+            }
           }}
         >
           <ArrowLeft className="size-5" />
@@ -303,22 +324,15 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           {subtitle && <p className="truncate text-sm text-muted">{subtitle}</p>}
         </div>
         {mode === "exam" && !submitted && exam && <Timer minutes={exam.minutes} startedAt={startedAt} onEnd={submit} />}
-        <button type="button" onClick={() => setShowTr(!showTr)} aria-pressed={showTr} className={`btn ${showTr ? "bg-accent/15" : ""}`} title="Hiện / ẩn bản dịch">
+        <button type="button" onClick={() => setShowTr(!showTr)} aria-pressed={showTr} className={`btn ${showTr ? "btn-soft" : "btn-ghost"}`} aria-label={showTr ? "Ẩn bản dịch" : "Hiện bản dịch"} title="Hiện / ẩn bản dịch">
           <Languages className="size-4" /> <span className="hidden sm:inline">{showTr ? "Ẩn bản dịch" : "Hiện bản dịch"}</span>
         </button>
       </div>
 
       {modeLinks && (mode === "lesen" || mode === "ueben") && (
-        <div className="flex gap-1 self-start rounded-2xl border-2 border-ink bg-card p-1" role="tablist" aria-label="Chế độ học">
+        <div className="tabs self-start" role="tablist" aria-label="Chế độ học">
           {(["lesen", "ueben"] as const).map((m) => (
-            <Link
-              key={m}
-              href={modeLinks[m]}
-              role="tab"
-              aria-selected={mode === m}
-              replace
-              className={`rounded-xl px-3 py-1 text-sm font-extrabold ${mode === m ? "bg-gold text-black" : "text-muted hover:text-foreground"}`}
-            >
+            <Link key={m} href={modeLinks[m]} role="tab" aria-selected={mode === m} replace className="tab">
               {m === "lesen" ? "Đọc (Lesen)" : "Luyện (Üben)"}
             </Link>
           ))}
@@ -330,7 +344,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
       {result && <ResultBar module={module} result={result} maxErrorPoints={maxErrorPoints} savedId={savedId} saveError={saveError} />}
 
-      <div className={fs ? "theme-fahrschule flex flex-col overflow-hidden rounded-3xl border-2 border-ink bg-background shadow-[0_4px_0_var(--ink)]" : "contents"}>
+      <div className={fs ? "theme-fahrschule laixe-sim flex flex-col overflow-hidden rounded-panel border-2 border-border bg-background shadow-md" : "contents"}>
       {/* Bảng số câu (thi: chia phần cơ bản / phần riêng) — lái xe: nằm dưới câu hỏi như app */}
       {fs && isExam ? (
         <FsExamBar
@@ -347,9 +361,9 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           last={idx === questions.length - 1}
         />
       ) : (
-      <section className={fs ? "order-last flex flex-col bg-accent px-2 pt-2 pb-3 sm:px-4" : "flex flex-col gap-2"}>
+      <section className={fs ? "sim-bar order-last flex flex-col px-2 pt-2 pb-3 sm:px-4" : "flex flex-col gap-2"}>
         {isExam && grundCount > 0 && grundCount < questions.length && (
-          <div className={fs ? "-mt-2 mb-2 flex gap-1" : "flex gap-1"} role="tablist" aria-label="Phần thi">
+          <div className={fs ? "-mt-2 mb-2 flex gap-1" : "tabs self-start"} role="tablist" aria-label="Phần thi">
             {(["grund", "zusatz"] as const).map((t) => {
               const n = t === "grund" ? grundCount : questions.length - grundCount;
               return (
@@ -361,8 +375,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                   onClick={() => setTab(t)}
                   className={
                     fs
-                      ? `rounded-b-lg px-3 py-1 text-sm font-extrabold ${tab === t ? "bg-white text-accent-dark" : "text-white/80 hover:text-white"}`
-                      : `rounded-xl border-2 px-3 py-1 text-sm font-extrabold ${tab === t ? "border-ink bg-gold text-black" : "border-ink/30 text-muted"}`
+                      ? "sim-subtab"
+                      : "tab"
                   }
                 >
                   {t === "grund" ? cfg.parts[0] : module === "lid" ? cfg.parts[1] : `${cfg.parts[1]} ${exam?.cls ?? ""}`.trim()} · {n}
@@ -384,16 +398,20 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
       )}
 
       <article key={`${q.id}-${shake}`} className={`${fs ? "min-h-[28rem] p-4 sm:h-[36rem]" : "card"} flex flex-col gap-4 sm:p-6 ${shake && reveal && !right && mode === "ueben" ? "shake" : ""}`}>
-        <div className={`flex flex-wrap items-center gap-2 text-xs font-bold ${fs ? "-mx-4 -mt-4 bg-accent px-4 py-2 text-white sm:-mx-6 sm:-mt-6 sm:px-6" : "text-muted"}`}>
+        <div className={`flex flex-wrap items-center gap-2 text-xs font-bold ${fs ? "sim-head -mx-4 -mt-4 px-4 py-2 sm:-mx-6 sm:-mt-6 sm:px-6" : "text-muted"}`}>
           <span className="tabular-nums">
             Câu {idx + 1}/{questions.length}
           </span>
-          <span className={`pill border px-2 py-0.5 tabular-nums ${fs ? "border-white/50" : "border-ink/30"}`}>{module === "lid" ? q.chapter : q.id}</span>
-          {fs && <span className={`pill px-2 py-0.5 tabular-nums ${q.points === 5 ? "bg-red text-white" : "bg-white/20"}`}>Punkte: {q.points}</span>}
+          <span className={`tabular-nums ${fs ? "sim-tag" : "badge badge-muted"}`}>{module === "lid" ? q.chapter : q.id}</span>
+          {fs && (
+            <span className="sim-tag tabular-nums" data-hot={q.points === 5 || undefined}>
+              Punkte: {q.points}
+            </span>
+          )}
           <span className="flex-1" />
           {!cfg.single && q.options.length > 0 && !reveal && <span>Có thể có nhiều đáp án đúng</span>}
           {loggedIn && !(fs && isExam) ? (
-            <button type="button" onClick={() => toggleMark(q.id)} aria-pressed={marked.has(q.id)} className={`btn-icon size-8 ${fs ? "text-white hover:bg-white/15" : ""}`} aria-label={marked.has(q.id) ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
+            <button type="button" onClick={() => toggleMark(q.id)} aria-pressed={marked.has(q.id)} className={`btn-icon hit-44 size-8 ${fs ? "sim-head-icon" : ""}`} aria-label={marked.has(q.id) ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
               <Star className={`size-4 ${marked.has(q.id) ? "fill-gold text-gold" : ""}`} />
             </button>
           ) : null}
@@ -405,11 +423,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           <h2 className={`section-title whitespace-pre-line ${fs ? "min-h-[2lh]" : ""}`}>
             {videoStep ? "Bitte starten Sie den Film, um sich mit der Situation vertraut zu machen." : q.q}
           </h2>
-          {showTr && !videoStep && q.tr?.q && (
-            <p className="border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
-              {q.tr.q}
-            </p>
-          )}
+          {showTr && !videoStep && q.tr?.q && <p className="quiz-tr">{q.tr.q}</p>}
         </div>
 
         {videoStep ? (
@@ -443,23 +457,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                   // Đọc: tích sẵn đáp án đúng · Luyện/Thi sau khi chấm: tô đúng/sai
                   const ticked = mode === "lesen" ? correct : on;
                   const mistake = reveal && mode !== "lesen" && on !== correct;
-                  const tone = fs
-                    ? !reveal
-                      ? "hover:bg-white/50"
-                      : correct
-                        ? "bg-accent/15"
-                        : on
-                          ? "bg-red/15"
-                          : ""
-                    : !reveal
-                    ? on
-                      ? "border-ink bg-gold/30"
-                      : "border-ink/30 hover:border-ink"
-                    : correct
-                      ? "border-accent bg-accent/10"
-                      : on
-                        ? "border-red bg-red/10"
-                        : "border-ink/20";
+                  const state = !reveal ? (on ? "on" : "") : correct ? "correct" : on ? "wrong" : "idle";
                   return (
                     <li key={o.key}>
                       <button
@@ -468,35 +466,32 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                         aria-checked={ticked}
                         disabled={reveal}
                         onClick={() => toggle(o.key)}
-                        className={`relative flex w-full items-center gap-3 overflow-hidden text-left transition disabled:cursor-default ${fs ? "rounded-md p-2" : "rounded-2xl border-2 p-3"} ${tone}`}
+                        data-state={state || undefined}
+                        className={fs ? "sim-option" : "quiz-option"}
                       >
                         {mistake && <span className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />}
                         {fs ? (
-                          <span className="flex size-9 shrink-0 items-center justify-center border-2 border-black bg-white text-black">
+                          <span className="sim-check">
                             {ticked && <Check className="size-6" strokeWidth={3.5} />}
                           </span>
                         ) : (
-                          <span className={`flex size-9 shrink-0 items-center justify-center ${cfg.single ? "rounded-full" : "rounded-lg"} border-2 border-ink text-sm font-extrabold ${ticked ? (reveal && correct ? "border-accent bg-accent text-white" : reveal ? "border-red bg-red text-white" : "bg-foreground text-background") : "bg-card"}`}>
-                            {ticked ? <Check className="size-5" strokeWidth={3} /> : <span className="text-muted">{n + 1}</span>}
+                          <span className={`quiz-mark ${cfg.single ? "rounded-full" : "rounded-lg"}`} data-tick={ticked ? (reveal && !correct ? "bad" : "on") : undefined}>
+                            {ticked ? <Check className="size-5" strokeWidth={3} /> : <span>{n + 1}</span>}
                           </span>
                         )}
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           {img ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={img} alt={`Lựa chọn ${n + 1}`} className="max-h-28 w-auto self-start rounded-lg bg-white" loading="lazy" />
+                            <img src={img} alt={`Lựa chọn ${n + 1}`} className="max-h-28 w-auto self-start rounded-lg border border-line bg-white" loading="lazy" />
                           ) : (
                             <span className={fs ? "text-sm font-bold sm:text-base" : "font-bold"}>{o.text || `Lựa chọn ${o.key} (xem hình)`}</span>
                           )}
-                          {showTr && trText && trText !== o.text && (
-                            <span className="text-sm text-accent-text italic">
-                              {trText}
-                            </span>
-                          )}
+                          {showTr && trText && trText !== o.text && <span className="quiz-tr border-l-0 pl-0 text-sm">{trText}</span>}
                         </span>
                         {reveal && mode !== "lesen" && (
                           <span className="shrink-0" aria-label={correct ? (on ? "Chọn đúng" : "Bỏ sót đáp án đúng") : on ? "Chọn sai" : undefined}>
                             {correct ? (
-                              <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-accent text-white" : "border-2 border-accent text-accent-text"}`}>
+                              <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-accent text-white" : "border-2 border-accent bg-card text-accent-text"}`}>
                                 <Check className="size-4" strokeWidth={3} />
                               </span>
                             ) : on ? (
@@ -534,25 +529,26 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         )}
 
         {reveal && mode !== "lesen" && (
-          <p className={`rounded-2xl border-2 px-3 py-2 font-extrabold ${right ? "border-accent bg-accent/15" : "border-red bg-red/15"}`} role="status">
-            {right ? "✓ Đúng rồi!" : `${mine.length ? "✗ Chưa đúng" : "Chưa trả lời"}${module === "fuehrerschein" ? ` · ${q.points} điểm lỗi` : ""}`}
+          <p className="quiz-verdict" data-ok={right} role="status">
+            <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${right ? "bg-accent" : "bg-red"}`} aria-hidden>
+              {right ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
+            </span>
+            {right ? "Đúng rồi!" : `${mine.length ? "Chưa đúng" : "Chưa trả lời"}${module === "fuehrerschein" ? ` · ${q.points} điểm lỗi` : ""}`}
           </p>
         )}
 
         {(reveal || mode === "ueben") && !videoStep && q.explain && (
           <div className="flex flex-col gap-2">
-            <button type="button" className="btn btn-sm self-start" aria-expanded={showExplain} onClick={() => setShowExplain(!showExplain)}>
+            <button type="button" className={`btn btn-sm self-start ${showExplain ? "btn-soft" : ""}`} aria-expanded={showExplain} onClick={() => setShowExplain(!showExplain)}>
               <Lightbulb className="size-4" /> {showExplain ? "Ẩn giải thích" : "Giải thích"}
             </button>
             {showExplain && (
-              <div className="rounded-2xl border-2 border-gold/60 bg-gold/10 p-3 text-sm">
-                <p className="font-extrabold">💡 Giải thích</p>
+              <div className="quiz-explain rise-in">
+                <p className="flex items-center gap-1.5 font-extrabold text-amber">
+                  <Lightbulb className="size-4" /> Giải thích
+                </p>
                 <p className="mt-1 whitespace-pre-line">{q.explain}</p>
-                {showTr && q.tr?.c && (
-                  <p className="mt-2 border-l-4 border-accent/60 pl-2 text-accent-text italic whitespace-pre-line">
-                    {q.tr.c}
-                  </p>
-                )}
+                {showTr && q.tr?.c && <p className="quiz-tr mt-2">{q.tr.c}</p>}
               </div>
             )}
           </div>
@@ -572,7 +568,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           )}
           <div className="flex-1" />
           {mode === "ueben" && !reveal && !videoStep && !cfg.single && (
-            <button type="button" className="btn btn-amber" onClick={() => check()} disabled={!mine.length}>
+            <button type="button" className="btn btn-primary" onClick={() => check()} disabled={!mine.length}>
               Kiểm tra
             </button>
           )}
@@ -583,8 +579,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           )}
           <div className="flex-1" />
           {mode === "exam" && !submitted && !fs && idx === questions.length - 1 ? (
-            <button type="button" className="btn btn-red" onClick={askSubmit}>
-              Nộp bài
+            <button type="button" className="btn btn-primary" onClick={askSubmit}>
+              <Flag className="size-4" /> Nộp bài
             </button>
           ) : fs ? null : (
             <button type="button" className={`btn ${reveal || mode === "exam" ? "btn-primary" : ""}`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1}>
@@ -602,15 +598,18 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
       </div>
 
       {mode === "exam" && !submitted && !fs && (
-        <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 p-3 text-sm ${answeredCount === questions.length ? "border-accent bg-accent/10" : "border-ink/20"}`}>
-          <span className="font-bold">{answeredCount === questions.length ? "Đã làm hết các câu — có thể nộp bài." : `Đã làm ${answeredCount}/${questions.length} câu`}</span>
-          <button type="button" className="btn btn-red" onClick={askSubmit}>
-            Nộp bài
+        <div className={`alert flex-wrap items-center justify-between gap-2 ${answeredCount === questions.length ? "alert-ok" : ""}`}>
+          <span className="font-bold" aria-live="polite">
+            {answeredCount === questions.length ? "Đã làm hết các câu — có thể nộp bài." : `Đã làm ${answeredCount}/${questions.length} câu`}
+          </span>
+          <button type="button" className="btn btn-primary" onClick={askSubmit}>
+            <Flag className="size-4" /> Nộp bài
           </button>
         </div>
       )}
 
       <p className="hidden text-xs text-muted sm:block">Phím tắt: ← → chuyển câu · 1–4 chọn đáp án{mode === "ueben" && !cfg.single ? " · Enter kiểm tra" : ""}</p>
+      {confirmDialog}
     </div>
   );
 }
@@ -618,21 +617,14 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 type Cell = "empty" | "answered" | "ok" | "bad" | "ok-old" | "bad-old";
 
 function GridCell({ n, state, current, marked, onClick }: { n: number; state: Cell; current: boolean; marked: boolean; onClick: () => void }) {
-  const tone = {
-    ok: "bg-accent text-white",
-    bad: "bg-red text-white",
-    "ok-old": "bg-accent/20",
-    "bad-old": "bg-red/20",
-    answered: "bg-accent/40",
-    empty: "bg-card",
-  }[state];
   return (
     <button
       type="button"
       onClick={onClick}
       aria-current={current ? "true" : undefined}
       aria-label={`Câu ${n}${marked ? " (đã đánh dấu)" : ""}`}
-      className={`relative flex size-8 items-center justify-center rounded-lg border-2 text-xs font-extrabold tabular-nums transition ${current ? "border-ink ring-2 ring-gold" : "border-ink/30"} ${tone}`}
+      data-state={state === "empty" ? undefined : state}
+      className="quiz-cell"
     >
       {n}
       {marked && <Star className="absolute -top-1.5 -right-1.5 size-3 fill-gold text-gold" aria-hidden />}
@@ -647,12 +639,12 @@ function CellMarks({ video, num, marked }: { video: boolean; num: boolean; marke
   return (
     <>
       {video && (
-        <span className="absolute top-0 left-0 flex h-2.5 w-3.5 items-center justify-center bg-black lg:h-3 lg:w-4" aria-hidden>
-          <Play className="size-2 fill-white text-white" strokeWidth={0} />
+        <span className="sim-mark-video" aria-hidden>
+          <Play className="size-2 fill-current" strokeWidth={0} />
         </span>
       )}
-      {num && <span className="absolute top-0 right-0 size-4 bg-[#e3b13c] [clip-path:polygon(0_0,100%_0,100%_100%)] sm:size-5" aria-hidden />}
-      {marked && <Star className={`absolute -top-1.5 size-3.5 fill-gold text-black ${num ? "-left-1.5" : "-right-1.5"}`} strokeWidth={1.5} aria-hidden />}
+      {num && <span className="sim-mark-num" aria-hidden />}
+      {marked && <Star className={`sim-mark-star ${num ? "-left-1.5" : "-right-1.5"}`} strokeWidth={1.5} aria-hidden />}
     </>
   );
 }
@@ -664,14 +656,6 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
   const page = items.slice(start, start + 10);
   const first = idx === 0;
   const last = idx === total - 1;
-  const tone: Record<Cell, string> = {
-    empty: "bg-white",
-    answered: "bg-[#fff3b0]",
-    ok: "bg-[#9fe3b5]",
-    bad: "bg-[#ffb3b8]",
-    "ok-old": "bg-[#d9f5e2]",
-    "bad-old": "bg-[#ffe0e2]",
-  };
   return (
     <nav aria-label="Danh sách câu" className="flex items-center gap-1 sm:gap-1.5">
       <PagerBtn label="Câu đầu" disabled={first} onClick={() => go(0)} icon={SkipBack} hideSm />
@@ -687,9 +671,8 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
               onClick={() => go(i)}
               aria-current={current ? "true" : undefined}
               aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
-              className={`relative flex h-8 max-w-12 min-w-0 flex-1 items-center justify-center border text-xs font-bold lg:h-9 lg:max-w-15 lg:text-sm text-black tabular-nums ${
-                current ? "border-2 border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border-black/70 ${tone[state]} hover:brightness-95`
-              }`}
+              data-state={state}
+              className="sim-cell h-8 max-w-12 min-w-0 flex-1 text-xs lg:h-9 lg:max-w-15 lg:text-sm"
             >
               <CellMarks video={video} num={num} marked={marked} />
               <span className="relative">{i + 1}</span>
@@ -731,15 +714,8 @@ function FsExamBar({
   mark: { on: boolean; toggle: () => void } | null;
   last: boolean;
 }) {
-  const tone: Record<Cell, string> = {
-    empty: "bg-white",
-    answered: "bg-[#fff3b0]",
-    ok: "bg-[#9fe3b5]",
-    bad: "bg-[#ffb3b8]",
-    "ok-old": "bg-white",
-    "bad-old": "bg-white",
-  };
-  const bigBtn = "flex h-10 items-center justify-center rounded-md px-4 text-lg font-medium text-white shadow-sm transition hover:brightness-105 active:brightness-95 disabled:opacity-50 sm:h-10 sm:text-xl";
+  // Thi: ô câu học trước đó (ok-old / bad-old) không tô màu — chỉ "đã trả lời" / kết quả bài này
+  const cell = (st: Cell) => (st === "ok-old" || st === "bad-old" ? "empty" : st);
   return (
     <section className="order-last flex flex-col">
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2 pt-2 sm:flex-nowrap">
@@ -751,35 +727,33 @@ function FsExamBar({
               role="tab"
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`h-10 min-w-14 rounded-t-md px-4 text-lg font-extrabold sm:h-11 sm:px-6 sm:text-xl ${
-                tab === t ? "bg-[#518f52] text-white" : "border border-b-0 border-black/20 bg-[#f2f2f2] text-black hover:bg-white"
-              }`}
+              className="sim-tab"
             >
               {label}
             </button>
           ))}
         </div>
-        <p className="order-3 flex min-w-0 items-center gap-2 pb-2.5 whitespace-nowrap text-base font-bold text-[#1d3a2c] sm:order-none sm:text-lg">
-          {warn && <TriangleAlert className="size-6 shrink-0 fill-[#f2c443] text-[#8a6d1a]" strokeWidth={1.75} aria-hidden />}
+        <p className="order-3 flex min-w-0 items-center gap-2 pb-2.5 text-base font-bold whitespace-nowrap text-foreground sm:order-none sm:text-lg">
+          {warn && <TriangleAlert className="sim-warn size-6 shrink-0" strokeWidth={1.75} aria-hidden />}
           {info}
         </p>
         <div className="order-1 flex w-full justify-end gap-2 px-2 sm:order-none sm:ml-auto sm:w-auto sm:shrink-0 sm:gap-3 sm:px-3 sm:pb-4">
           {onSubmit && (
-            <button type="button" onClick={onSubmit} className={`${bigBtn} bg-[#e8322f]`}>
+            <button type="button" onClick={onSubmit} className="sim-btn" data-tone="submit">
               Auswertung
             </button>
           )}
           {mark && (
-            <button type="button" onClick={mark.toggle} aria-pressed={mark.on} aria-label={mark.on ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu" className={`${bigBtn} bg-[#f2c443] !px-0 w-12 sm:w-14`}>
-              <Star className={`size-6 sm:size-7 ${mark.on ? "fill-black" : ""} text-black`} strokeWidth={2} />
+            <button type="button" onClick={mark.toggle} aria-pressed={mark.on} aria-label={mark.on ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu" className="sim-btn w-12 px-0 sm:w-14" data-tone="mark">
+              <Star className={`size-6 sm:size-7 ${mark.on ? "fill-current" : ""}`} strokeWidth={2} />
             </button>
           )}
-          <button type="button" onClick={() => go(idx + 1)} disabled={last} className={`${bigBtn} bg-[#3f9a52] sm:min-w-32`}>
+          <button type="button" onClick={() => go(idx + 1)} disabled={last} className="sim-btn sm:min-w-32" data-tone="go">
             Weiter
           </button>
         </div>
       </div>
-      <nav aria-label="Danh sách câu" className="flex flex-wrap gap-2 border-t-2 border-[#3d7a3e] bg-[#518f52] p-2 sm:gap-3.5 sm:px-2 sm:py-3">
+      <nav aria-label="Danh sách câu" className="sim-bar flex flex-wrap gap-2 p-2 sm:gap-3.5 sm:px-2 sm:py-3">
         {items.map(({ i, state, marked, video, num }) => {
           const current = i === idx;
           return (
@@ -789,9 +763,9 @@ function FsExamBar({
               onClick={() => go(i)}
               aria-current={current ? "true" : undefined}
               aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
-              className={`relative flex h-7 w-12 items-center justify-center text-sm font-bold tabular-nums sm:h-8 sm:w-14 sm:text-base ${
-                current ? "outline-[3px] outline-black outline-offset-2 border border-black bg-linear-to-b from-white to-[#c9c9c9] text-[#1a73e8]" : `border border-black/40 text-black ${tone[state]} hover:brightness-95`
-              }`}
+              data-state={cell(state)}
+              data-ring
+              className="sim-cell h-7 w-12 text-sm sm:h-8 sm:w-14 sm:text-base"
             >
               <CellMarks video={video} num={num} marked={marked} />
               <span className="relative">{i + 1}</span>
@@ -811,7 +785,7 @@ function PagerBtn({ label, disabled, onClick, icon: Icon, hideSm, flip }: { labe
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`${hideSm ? "hidden sm:flex" : "flex"} size-9 shrink-0 items-center justify-center border border-black bg-white text-black hover:bg-[#eee] disabled:opacity-50 lg:size-11`}
+      className={`sim-key ${hideSm ? "hidden sm:flex" : "flex"} size-9 shrink-0 lg:size-11`}
     >
       <Icon className={`size-5 fill-current ${flip ? "rotate-180" : ""}`} strokeWidth={1.5} />
     </button>
@@ -827,7 +801,7 @@ function NavBtn({ label, disabled, onClick, icon: Icon, hideSm }: { label: strin
 }
 
 function Media({ q, gated, fs }: { q: DrivingQ; gated: boolean; fs?: boolean }) {
-  const frame = fs ? "w-full bg-black" : "w-full max-w-xl rounded-2xl border-2 border-ink bg-black";
+  const frame = fs ? "sim-media w-full" : "w-full max-w-xl rounded-ui border border-line bg-black";
   if (q.video) {
     // Đã qua bước xem video (đọc / luyện / thi): chỉ hiện khung hình; xem lại bài thi: xem video tự do
     if (gated)
@@ -846,7 +820,7 @@ function Media({ q, gated, fs }: { q: DrivingQ; gated: boolean; fs?: boolean }) 
     <div className="flex flex-wrap gap-2">
       {q.images.map((src) => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className={fs ? "w-full bg-white object-contain" : "max-h-80 w-auto max-w-full rounded-2xl border-2 border-ink bg-white object-contain"} />
+        <img key={src} src={src} alt="Hình minh hoạ câu hỏi" loading="lazy" className={fs ? "w-full bg-white object-contain" : "max-h-80 w-auto max-w-full rounded-ui border border-line bg-white object-contain shadow-xs"} />
       ))}
     </div>
   );
@@ -895,11 +869,9 @@ function VideoGate({ src, poster, count, onView, onAnswer }: { src: string; post
     };
   }, [open, close]);
 
-  const blue = "flex h-11 w-full max-w-md items-center justify-center rounded-md bg-[#0000a8] px-4 text-lg text-white shadow-md transition hover:bg-[#0000c8] disabled:opacity-50 sm:text-xl";
-
   return (
     <div className="grid items-start gap-4 sm:grid-cols-2 sm:gap-8">
-      <div className="relative min-w-0 bg-black">
+      <div className="sim-media relative min-w-0">
         {count && poster ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={poster} alt="Khung hình cuối của video" className="w-full object-contain" />
@@ -908,26 +880,26 @@ function VideoGate({ src, poster, count, onView, onAnswer }: { src: string; post
         )}
         {left > 0 && (
           <button type="button" onClick={start} aria-label="Xem video" className="group absolute inset-0 flex items-center justify-center">
-            <span className="flex size-20 items-center justify-center rounded-full border-[6px] border-white/75 transition group-hover:border-white sm:size-24">
-              <Play className="ml-2 size-10 fill-white/75 text-transparent group-hover:fill-white sm:size-12" />
+            <span className="sim-play">
+              <Play className="ml-2 size-10 fill-current text-transparent sm:size-12" />
             </span>
           </button>
         )}
       </div>
 
       <div className="flex min-w-0 flex-col items-center gap-5 sm:pt-4">
-        <button type="button" className={blue} onClick={start} disabled={left <= 0}>
+        <button type="button" className="sim-btn h-11 w-full max-w-md" data-tone="video" onClick={start} disabled={left <= 0}>
           Video starten
         </button>
         {count > 0 && (
-          <button type="button" className={blue} onClick={onAnswer}>
+          <button type="button" className="sim-btn h-11 w-full max-w-md" data-tone="video" onClick={onAnswer}>
             Zur Aufgabenstellung
           </button>
         )}
         <p className="mt-4 text-center text-lg font-bold">
           {count ? (
             <>
-              Sie können sich den Film noch <span className="text-red">{left}</span> mal ansehen.
+              Sie können sich den Film noch <span className="text-red-400">{left}</span> mal ansehen.
             </>
           ) : (
             `Sie können das Video insgesamt ${MAX_VIEWS} Mal ansehen.`
@@ -938,14 +910,14 @@ function VideoGate({ src, poster, count, onView, onAnswer }: { src: string; post
 
       {mounted &&
         createPortal(
-          <div className={`fixed inset-0 z-[100] flex flex-col bg-[#d9f2da] ${open ? "" : "hidden"}`} role="dialog" aria-modal="true" aria-label="Video tình huống">
+          <div className={`theme-fahrschule laixe-sim fixed inset-0 z-[100] flex flex-col bg-background ${open ? "" : "hidden"}`} role="dialog" aria-modal="true" aria-label="Video tình huống">
             <div className="flex min-h-0 flex-1 items-center justify-center">
               <video ref={ref} src={src} playsInline preload="metadata" onEnded={() => setOpen(false)} className="max-h-full w-full bg-black object-contain">
                 Trình duyệt không phát được video.
               </video>
             </div>
-            <div className="flex justify-end bg-[#518f52] px-4 py-2.5">
-              <button type="button" onClick={close} className="rounded px-2 text-lg font-bold text-white hover:bg-white/15">
+            <div className="sim-bar flex justify-end px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+              <button type="button" onClick={close} className="sim-btn h-10" data-tone="go">
                 Schliessen
               </button>
             </div>
@@ -958,7 +930,7 @@ function VideoGate({ src, poster, count, onView, onAnswer }: { src: string; post
 
 function NumberAnswer({ value, disabled, onChange, onEnter, correct }: { value: string; disabled: boolean; onChange: (v: string) => void; onEnter: () => void; correct: string | null }) {
   return (
-    <label className="flex flex-wrap items-center gap-2 font-bold">
+    <label className="field flex-row flex-wrap items-center gap-2 text-base text-foreground">
       Đáp án:
       <input
         inputMode="decimal"
@@ -968,10 +940,10 @@ function NumberAnswer({ value, disabled, onChange, onEnter, correct }: { value: 
         onKeyDown={(e) => {
           if (e.key === "Enter") onEnter();
         }}
-        className="w-32 rounded-xl border-2 border-ink bg-card px-3 py-2 text-lg tabular-nums"
+        className="input w-32 tabular-nums"
         placeholder="Nhập số"
       />
-      {correct !== null && <span className="text-sm text-muted">Đáp án đúng: {correct}</span>}
+      {correct !== null && <span className="field-hint">Đáp án đúng: {correct}</span>}
     </label>
   );
 }
@@ -1014,20 +986,21 @@ function FsNumberAnswer({
             onKeyDown={(e) => {
               if (e.key === "Enter") onEnter();
             }}
-            className={`h-8 w-28 border bg-white px-2 text-base text-black tabular-nums outline-none focus:border-2 ${correct === null ? "border-black/60" : ok ? "border-2 border-accent" : "border-2 border-red"}`}
+            data-ok={correct === null ? undefined : ok}
+            className="sim-input h-9 w-28 tabular-nums"
           />
           {hint?.unit && <span>{hint.unit}</span>}
         </span>
       </label>
       {correct !== null && !ok && <p className="text-accent-text">Đáp án đúng: {correct}{hint?.unit ? ` ${hint.unit}` : ""}</p>}
       {!disabled && (
-        <div className="grid w-44 grid-cols-3 gap-1.5" aria-label="Bàn phím số">
+        <div className="grid w-48 grid-cols-3 gap-1.5" role="group" aria-label="Bàn phím số">
           {KEYS.map((k) => (
-            <button key={k} type="button" onClick={() => press(k)} aria-label={k === "C" ? "Xoá 1 ký tự" : k} className="h-9 border border-black/30 bg-white text-black hover:bg-[#eee] active:bg-[#ddd]">
+            <button key={k} type="button" onClick={() => press(k)} aria-label={k === "C" ? "Xoá 1 ký tự" : k} className="sim-key h-10">
               {k}
             </button>
           ))}
-          <button type="button" onClick={() => onChange("")} className="col-span-3 h-9 border border-black/30 bg-white text-black hover:bg-[#eee] active:bg-[#ddd]">
+          <button type="button" onClick={() => onChange("")} className="sim-key col-span-3 h-10">
             Löschen
           </button>
         </div>
@@ -1054,42 +1027,80 @@ function Timer({ minutes, startedAt, onEnd }: { minutes: number; startedAt: numb
   const mm = Math.floor(left / 60_000);
   const ss = Math.floor((left % 60_000) / 1000);
   return (
-    <span className={`pill gap-1 border-2 border-ink px-2.5 py-1 text-sm tabular-nums ${left < 5 * 60_000 ? "bg-red text-white" : "bg-card"}`} role="timer" aria-label="Thời gian còn lại">
+    <span className="quiz-timer" data-warn={left < 5 * 60_000} role="timer" aria-label="Thời gian còn lại">
       <Clock className="size-4" /> {mm}:{String(ss).padStart(2, "0")}
     </span>
   );
 }
 
 function ResultBar({ module, result, maxErrorPoints, savedId, saveError }: { module: QuizModule; result: ExamResult; maxErrorPoints: number; savedId: number | null; saveError: string }) {
+  const lid = module === "lid";
+  const pct = result.total ? (result.correct / result.total) * 100 : 0;
   return (
-    <section className={`card flex flex-col gap-1 ${result.passed ? "bg-accent/15" : "bg-red/15"}`} aria-live="polite">
-      <p className="text-2xl font-extrabold">{result.passed ? "🎉 Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
-      <p className="font-bold">
-        {module === "lid" ? (
+    <section className="sticker hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--leaf)" : "var(--candy)" }} aria-live="polite">
+      <div className="flex items-center gap-4">
+        <span className={`icon-bubble size-14 shrink-0 sm:size-16 ${result.passed ? "tint-accent" : "tint-red"}`} aria-hidden>
+          {result.passed ? <PartyPopper className="size-7" /> : <X className="size-7" strokeWidth={3} />}
+        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className={`font-display text-2xl leading-tight font-extrabold ${result.passed ? "text-accent-text" : "text-red-400"}`}>{result.passed ? "Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
+          {!lid && result.failReason && <p className="text-sm font-bold text-red-400">{FAIL_TEXT[result.failReason]}</p>}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {lid ? (
           <>
-            Đúng {result.correct}/{result.total} câu · cần đúng ≥ {result.total - maxErrorPoints} câu
+            <div className="surface stat">
+              <span className="stat-value">
+                {result.correct}/{result.total}
+              </span>
+              <span className="stat-label">câu đúng</span>
+            </div>
+            <div className="surface stat">
+              <span className="stat-value">≥ {result.total - maxErrorPoints}</span>
+              <span className="stat-label">câu đúng để đậu</span>
+            </div>
           </>
         ) : (
           <>
-            {result.errorPoints} / {maxErrorPoints} điểm lỗi · đúng {result.correct}/{result.total} câu
-            {result.failReason ? ` · ${FAIL_TEXT[result.failReason]}` : ""}
+            <div className="surface stat">
+              <span className={`stat-value ${result.errorPoints > maxErrorPoints ? "text-red-400" : ""}`}>
+                {result.errorPoints}
+                <span className="text-base text-muted">/{maxErrorPoints}</span>
+              </span>
+              <span className="stat-label">điểm lỗi (tối đa {maxErrorPoints})</span>
+            </div>
+            <div className="surface stat">
+              <span className="stat-value">
+                {result.correct}
+                <span className="text-base text-muted">/{result.total}</span>
+              </span>
+              <span className="stat-label">câu đúng</span>
+            </div>
           </>
         )}
-      </p>
+      </div>
+      <div className="progress" aria-hidden>
+        <div className="progress-bar" style={{ width: `${pct}%` }} />
+      </div>
       <p className="text-sm text-muted">
         Bấm số câu để xem lại từng câu: ✓ xanh = đáp án đúng, ✗ đỏ = chọn sai, vạch đỏ = chỗ sai.
         {savedId ? (
           <>
             {" "}
             Đã lưu vào{" "}
-            <Link href={`${MODULES[module].base}/thong-ke`} className="font-bold underline">
+            <Link href={`${MODULES[module].base}/thong-ke`} className="font-bold text-link underline">
               lịch sử thi
             </Link>
             .
           </>
         ) : null}
-        {saveError ? ` Không lưu được: ${saveError}` : ""}
       </p>
+      {saveError && (
+        <p className="alert alert-err" role="alert">
+          Không lưu được: {saveError}
+        </p>
+      )}
     </section>
   );
 }

@@ -270,7 +270,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
           // pt-2: khe trong suốt vẫn thuộc vùng rê chuột
           <div className="absolute top-full right-0 z-50 w-64 pt-2">
             <div role="menu" className="popover flex max-h-[calc(100dvh-6rem)] flex-col gap-0.5 overflow-y-auto">
-              <div className="hero mb-1 flex items-center gap-3 rounded-[14px] px-3 py-3">
+              <div className="hero mb-1 flex items-center gap-3 rounded-ui px-3 py-3">
                 <Avatar user={user} className="size-11 text-lg ring-2 ring-card" />
                 <div className="min-w-0">
                   <p className="truncate font-display text-base leading-tight font-extrabold">{user.name}</p>

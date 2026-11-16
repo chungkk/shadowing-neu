@@ -78,31 +78,31 @@ export default function DeckWords({
           </Link>
         )}
         {msg.ok && (
-          <Link href="/vocab/notebook" className="text-sm font-bold text-accent-text hover:underline">
-            {msg.ok}
+          <Link href="/vocab/notebook" role="status" className="alert alert-ok hover:underline">
+            <Check className="size-4 shrink-0" /> {msg.ok}
           </Link>
         )}
-        {msg.error && <p className="text-sm text-red-400">{msg.error}</p>}
+        {msg.error && <p role="alert" className="alert alert-err">{msg.error}</p>}
       </div>
 
-      <ul className="card divide-y divide-border p-0">
+      <ul className="card divide-y divide-line overflow-hidden p-0">
         {words.slice(0, limit).map((w, i) => {
           const a = article(w);
           const adding = busy === "all" ? !w.saved : busy.has(w.key);
           return (
-            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-card-2">
+            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-3 transition-colors hover:bg-card-2/50">
+              <span className="icon-bubble size-11 rounded-ui">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {w.image && <img src={w.image} alt="" loading="lazy" className="size-8 object-contain" />}
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:grid sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-x-4">
-                <p className="text-lg font-bold">
+                <p className="font-display text-lg font-bold">
                   {a && <span className={GENDER[a]}>{a} </span>}
                   {w.word}
                   {!!w.plural && w.plural !== w.word && <span className="text-sm font-medium text-muted"> · die {w.plural}</span>}
                 </p>
                 <div className="flex min-w-0 flex-col gap-0.5 sm:justify-center">
-                  <p className="text-sm text-foreground/85 sm:text-base">{w.meaning}</p>
+                  <p className="text-sm text-foreground sm:text-base">{w.meaning}</p>
                   {w.example && <p className="text-sm text-muted italic">{w.example}</p>}
                 </div>
               </div>
@@ -116,7 +116,7 @@ export default function DeckWords({
                   type="button"
                   title={w.saved ? "Đã có trong sổ" : "Thêm vào sổ"}
                   disabled={w.saved || adding || busy === "all"}
-                  className={`btn-icon shrink-0 ${w.saved ? "text-accent-text" : "text-foreground"}`}
+                  className={`btn-icon shrink-0 ${w.saved ? "tint-accent" : "text-foreground"}`}
                   onClick={() => add([w.key], false)}
                 >
                   {adding ? <Loader2 className="size-4 animate-spin" /> : w.saved ? <Check className="size-5" /> : <Plus className="size-5" />}

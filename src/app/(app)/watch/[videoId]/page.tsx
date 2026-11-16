@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
+import Mascot from "@/components/Mascot";
 import { RememberVideo } from "@/components/RecentVideos";
 import { extractVideoId, getYouTubeTranscript, WHISPER } from "@/lib/youtube";
 import { getCurrentUser } from "@/lib/auth";
@@ -34,11 +35,14 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
     data = await getYouTubeTranscript(videoId, undefined, opts);
   } catch (e) {
     return (
-      <main className="mx-auto flex max-w-xl flex-col items-center gap-4 p-4 pt-20 text-center">
-        <p className="rounded-md bg-red-500/10 p-4 text-sm text-red-400">{(e as Error).message}</p>
-        <Link href="/tieng-duc" className="btn">
-          ← Về trang học
-        </Link>
+      <main className="page page-narrow max-w-xl items-center pt-16 text-center">
+        <div className="card empty w-full gap-4 py-10">
+          <Mascot className="size-24" />
+          <p role="alert" className="alert alert-err w-full justify-center">{(e as Error).message}</p>
+          <Link href="/tieng-duc" className="btn btn-soft">
+            ← Về trang học
+          </Link>
+        </div>
       </main>
     );
   }
@@ -53,9 +57,9 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
         loggedIn={!!user}
         sourceUrl={`/watch/${data.videoId}`}
       >
-        <div className="flex flex-wrap items-end gap-3 text-xs text-muted">
-          {data.track.auto && <span>⚠ Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.</span>}
-          {data.track.languageCode === WHISPER && <span>Phụ đề do Whisper (AI) tạo.</span>}
+        <div className="flex flex-wrap items-end gap-2 text-xs">
+          {data.track.auto && <span className="badge badge-gold">⚠ Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.</span>}
+          {data.track.languageCode === WHISPER && <span className="badge badge-gem">Phụ đề do Whisper (AI) tạo.</span>}
         </div>
       </ShadowPlayer>
     </>

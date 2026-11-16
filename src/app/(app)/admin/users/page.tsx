@@ -1,11 +1,12 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { envAdminEmail, requireAdmin } from "@/lib/auth";
 import { listUsers } from "@/lib/db";
 import { changeUserRole, removeUser } from "../actions";
 import DeleteButton from "../DeleteButton";
 import PasswordButton from "./PasswordButton";
 import { ListSkeleton } from "@/components/Skeleton";
+import { Users as UsersIcon } from "lucide-react";
+import AdminNav from "../AdminNav";
 
 async function Users() {
   const me = await requireAdmin();
@@ -15,37 +16,48 @@ async function Users() {
   return (
     <>
       <h1 className="page-title">Người dùng ({users.length})</h1>
-      <div className="card divide-y divide-border p-0">
+      <div className="card overflow-hidden p-0">
+        <ul className="divide-y divide-line">
         {users.map((u) => {
           const locked = u.id === me.id || u.email === fixedAdmin;
           const nextRole = u.role === "admin" ? "user" : "admin";
           return (
-            <div key={u.id} className="flex flex-wrap items-center gap-3 p-3">
+            <li key={u.id} className="flex flex-wrap items-center gap-2 p-3 transition-colors hover:bg-card-2/50 sm:px-4">
               <div className="min-w-0 flex-1 max-sm:basis-full">
-                <div className="truncate font-medium">
-                  {u.name} {u.id === me.id && <span className="text-xs text-muted">(bạn)</span>}
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate font-bold">{u.name}</span>
+                  {u.id === me.id && <span className="text-xs text-muted">(bạn)</span>}
+                  <span className={`badge ${u.role === "admin" ? "badge-accent" : "badge-muted"}`}>
+                    {u.role === "admin" ? "Admin" : "Học viên"}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-x-2 text-xs text-muted">
                   <span className="min-w-0 truncate">{u.email}</span>
-                  <span className={u.role === "admin" ? "font-semibold text-accent-text" : ""}>
-                    {u.role === "admin" ? "Admin" : "Học viên"}
-                  </span>
-                  <span>{u.createdAt.slice(0, 10)}</span>
+                  <span aria-hidden>·</span>
+                  <span className="tabular-nums">{u.createdAt.slice(0, 10)}</span>
                 </div>
               </div>
               {!locked && (
                 <>
                   <PasswordButton userId={u.id} email={u.email} />
                   <form action={changeUserRole.bind(null, u.id, nextRole)}>
-                    <button className="btn">{nextRole === "admin" ? "Cấp quyền admin" : "Bỏ quyền admin"}</button>
+                    <button className="btn btn-sm">{nextRole === "admin" ? "Cấp quyền admin" : "Bỏ quyền admin"}</button>
                   </form>
                   <DeleteButton action={removeUser.bind(null, u.id)} confirmText={`Xoá tài khoản ${u.email}?`} />
                 </>
               )}
-            </div>
+            </li>
           );
         })}
-        {!users.length && <p className="p-6 text-center text-sm text-muted">Chưa có người dùng nào.</p>}
+        </ul>
+        {!users.length && (
+          <div className="empty">
+            <span className="icon-bubble tint-link">
+              <UsersIcon className="size-5" aria-hidden />
+            </span>
+            <p>Chưa có người dùng nào.</p>
+          </div>
+        )}
       </div>
     </>
   );
@@ -54,9 +66,7 @@ async function Users() {
 export default function UsersPage() {
   return (
     <main className="page page-narrow">
-      <Link href="/admin" className="text-sm text-muted hover:underline">
-        ← Quản trị
-      </Link>
+      <AdminNav />
       <Suspense fallback={<ListSkeleton />}>
         <Users />
       </Suspense>

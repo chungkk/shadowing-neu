@@ -32,9 +32,9 @@ const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 export function SectionHeader({ title, count, children }: { title: string; count?: number; children?: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-      <h2 className="section-title flex items-baseline gap-2">
+      <h2 className="section-title flex items-center gap-2">
         {title}
-        {count !== undefined && <span className="text-sm font-bold text-muted">{count}</span>}
+        {count !== undefined && <span className="badge badge-muted tabular-nums">{count}</span>}
       </h2>
       {children && <div className="min-w-0 max-sm:w-full sm:ml-auto">{children}</div>}
     </div>
@@ -60,36 +60,36 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
       }}
       className={`group sticker sticker-link flex flex-col overflow-hidden ${className}`}
     >
-      <div className="relative aspect-video overflow-hidden border-b-2 border-ink bg-black">
+      <div className="relative m-2 mb-0 aspect-video overflow-hidden rounded-[calc(var(--radius-lg)-6px)] bg-card-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className={`size-full object-cover transition group-hover:scale-105 ${l.access === "locked" ? "opacity-80" : ""}`}
+          className={`size-full object-cover transition duration-300 group-hover:scale-105 motion-reduce:transition-none ${l.access === "locked" ? "opacity-75 saturate-50" : ""}`}
         />
-        {l.access === "free" && <span className="pill absolute top-2 left-2 bg-accent text-white">Miễn phí</span>}
+        {l.access === "free" && <span className="badge absolute top-2 left-2 bg-accent text-white shadow-[var(--shadow-sm)]">Miễn phí</span>}
         <LevelBadge level={l.level} className="absolute top-2 right-2" />
         {l.access === "locked" && (
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-11 items-center justify-center rounded-full bg-black/65 text-white">
+            <span className="flex size-12 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-md)] backdrop-blur-sm">
               <Lock className="size-5" />
               <span className="sr-only">Khoá</span>
             </span>
           </span>
         )}
         {l.duration > 0 && (
-          <span className="pill absolute right-2 bottom-2 bg-black/75 text-white">
+          <span className="pill absolute right-2 bottom-2 bg-black/70 text-white tabular-nums backdrop-blur-sm">
             <Clock className="size-3.5" /> {formatDuration(l.duration)}
           </span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <h3 className="line-clamp-2 min-h-[2.75em] font-extrabold leading-snug">{l.title}</h3>
+        <h3 className="line-clamp-2 min-h-[2.75em] leading-snug font-extrabold group-hover:text-accent-text">{l.title}</h3>
         {l.description && <p className="line-clamp-2 text-xs text-muted">{l.description}</p>}
         <div className="mt-auto flex flex-col gap-2">
           <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold text-muted">
-            {l.isNew && <span className="pill bg-gold text-black">Mới</span>}
+            {l.isNew && <span className="badge badge-gold">Mới</span>}
             Shadowing{l.dictation && " · Dictation"} · {l.sentences} câu
           </p>
           {l.percent >= 100 ? (
@@ -98,9 +98,9 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
             </p>
           ) : (
             l.percent > 0 && (
-              <div className="flex items-center gap-2 text-xs font-bold text-accent-text">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-2">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${l.percent}%` }} />
+              <div className="flex items-center gap-2 text-xs font-bold text-accent-text tabular-nums">
+                <div className="progress h-2 flex-1">
+                  <div className="progress-bar" style={{ width: `${l.percent}%` }} />
                 </div>
                 {l.percent}%
               </div>
@@ -120,8 +120,8 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
     </span>
   );
   return (
-    <p className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
-      <Lock className="size-4" />
+    <p className="alert alert-info flex-wrap items-center gap-x-1 text-muted">
+      <Lock className="size-4 shrink-0 text-gem" />
       {admin ? (
         <>Khoá bài đang bật — nhãn bên dưới là những gì khách thấy. Admin vẫn mở được mọi bài.</>
       ) : !lock.loggedIn ? (
@@ -148,9 +148,9 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
 
   if (!lessons.length)
     return (
-      <div className="flex flex-col items-center gap-1 py-6 text-center">
+      <div className="card empty">
         <Mascot className="size-28" />
-        <p className="text-sm font-bold text-muted">Chưa có bài học nào.</p>
+        <p className="font-bold">Chưa có bài học nào.</p>
       </div>
     );
 
@@ -175,12 +175,10 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
       key={lv ?? "all"}
       onClick={() => setLevel(lv)}
       aria-pressed={level === lv}
-      className={`flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-ink px-3.5 py-1.5 text-sm font-bold transition ${
-        level === lv ? "bg-accent text-white" : "bg-card text-foreground hover:bg-card-2"
-      }`}
+      className="chip"
     >
       {lv ?? "Tất cả"}
-      <span className={level === lv ? "text-white/75 dark:text-white" : "text-muted"}>{count}</span>
+      <span className={`tabular-nums ${level === lv ? "opacity-80" : "text-muted"}`}>{count}</span>
     </button>
   );
 
@@ -200,14 +198,14 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
           {levels.map((g) => (
             <div key={g.level} className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-extrabold">Trình độ {g.level}</h3>
+                <h3 className="font-display text-lg font-extrabold">Trình độ {g.level}</h3>
                 {g.count > 1 && (
                   <button
                     onClick={() => {
                       top.current?.scrollIntoView();
                       setLevel(g.level);
                     }}
-                    className="btn btn-sm rounded-full"
+                    className="btn btn-sm btn-ghost text-link"
                   >
                     Xem tất cả ({g.count})
                   </button>

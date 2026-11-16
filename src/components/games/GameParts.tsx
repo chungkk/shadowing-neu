@@ -9,45 +9,16 @@ export { sameLetter, type GameWord, type Topic } from "@/lib/games/falling-words
 /** Phần dùng chung của các game từ vựng (/games): tiêu đề, màn chọn bộ từ, bàn phím trên màn hình */
 
 export type DeckOption = { slug: string; title: string; level: string; wordCount: number; topicCount: number };
-/** Màu chủ đạo của từng game */
+/** Màu chủ đạo của từng game (class .g-tone-* trong styles/games.css đặt --tone / --tone-soft / --tone-text) */
 export type Tone = "cyan" | "amber";
 
-const TONE = {
-  cyan: {
-    text: "text-cyan-800 dark:text-cyan-300",
-    icon: "border-ink bg-cyan-200 text-cyan-900",
-    banner: "border-cyan-700/30 bg-cyan-500/10",
-    selected: "border-ink bg-cyan-200/60 dark:bg-cyan-400/25 shadow-[0_4px_0_var(--ink)]",
-    hover: "hover:border-cyan-600 dark:hover:border-cyan-300",
-    badge: "border-2 border-ink bg-cyan-300 text-black",
-    bar: "bg-cyan-500",
-    button: "bg-cyan-600 dark:bg-cyan-700 text-white shadow-[0_4px_0_var(--ink)] active:shadow-[0_1px_0_var(--ink)]",
-  },
-  amber: {
-    text: "text-amber",
-    icon: "border-ink bg-gold/40 text-amber-dark",
-    banner: "border-amber/30 bg-gold/15",
-    selected: "border-ink bg-gold/30 shadow-[0_4px_0_var(--ink)]",
-    hover: "hover:border-amber",
-    badge: "border-2 border-ink bg-gold text-black",
-    bar: "bg-gold",
-    button: "bg-gold text-black shadow-[0_4px_0_var(--ink)] active:shadow-[0_1px_0_var(--ink)]",
-  },
-} satisfies Record<Tone, Record<string, string>>;
-
-/** Nút bấm chính kiểu "nổi" theo màu game */
-const toneButton = (tone: Tone) =>
-  `btn btn-lg tracking-wide uppercase hover:brightness-110 active:translate-y-0.5 ${TONE[tone].button}`;
+const TONE_CLASS: Record<Tone, string> = { cyan: "g-tone-cyan", amber: "g-tone-amber" };
 
 /** Ô bộ từ: màu theo nhóm trình độ (như DeckCover) */
-const LEVEL_TILE: Record<string, string> = { A: "bg-emerald-200 text-emerald-900", B: "bg-sky-200 text-sky-900", C: "bg-violet-200 text-violet-900" };
+const LEVEL_TILE: Record<string, string> = { A: "g-level-a", B: "g-level-b", C: "g-level-c" };
 
 export function LevelTile({ level }: { level: string }) {
-  return (
-    <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-lg font-black shadow-[0_3px_0_rgba(0,0,0,0.35)] ${LEVEL_TILE[level[0]] ?? LEVEL_TILE.A}`}>
-      {level || "Aa"}
-    </span>
-  );
+  return <span className={`g-level ${LEVEL_TILE[level[0]] ?? LEVEL_TILE.A}`}>{level || "Aa"}</span>;
 }
 
 /** Tiêu đề game: nút quay lại (link về /games, hoặc onBack khi đang chơi) · biểu tượng · tên · mô tả · nút bên phải */
@@ -68,22 +39,22 @@ export function GameHeader({
 }) {
   const back = <ChevronLeft className="size-6" />;
   return (
-    <header className="flex items-center gap-3">
+    <header className={`flex items-center gap-3 ${TONE_CLASS[tone]}`}>
       {onBack ? (
-        <button title="Chọn bộ từ" className="btn-icon" onClick={onBack}>
+        <button title="Chọn bộ từ" aria-label="Chọn bộ từ" className="btn-icon -ml-2" onClick={onBack}>
           {back}
         </button>
       ) : (
-        <Link href="/games" title="Game" className="btn-icon">
+        <Link href="/games" title="Game" aria-label="Game" className="btn-icon -ml-2">
           {back}
         </Link>
       )}
-      <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${TONE[tone].icon}`}>
+      <span className="g-icon">
         <Icon className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <h1 className="page-title">{title}</h1>
-        <p className={`truncate text-xs md:text-sm ${TONE[tone].text}`}>{subtitle}</p>
+        <h1 className="page-title truncate">{title}</h1>
+        <p className="truncate text-xs font-semibold text-muted md:text-sm">{subtitle}</p>
       </div>
       {right}
     </header>
@@ -91,34 +62,29 @@ export function GameHeader({
 }
 
 /** Thẻ bộ từ ở màn chọn — kèm số mốc đã qua (lưu trong trình duyệt ở progressKey) */
-function DeckCard({ deck, tone, progressKey, selected, disabled, extra, onSelect }: { deck: DeckOption; tone: Tone; progressKey: string; selected: boolean; disabled: boolean; extra?: ReactNode; onSelect: () => void }) {
+function DeckCard({ deck, progressKey, selected, disabled, extra, onSelect }: { deck: DeckOption; progressKey: string; selected: boolean; disabled: boolean; extra?: ReactNode; onSelect: () => void }) {
   const [cleared] = useLocalStorage(progressKey, 0);
   const total = Math.max(deck.topicCount, 1);
-  const t = TONE[tone];
   return (
-    <button
-      onClick={onSelect}
-      disabled={disabled}
-      className={`relative flex cursor-pointer flex-col gap-3 rounded-2xl border-2 p-3.5 text-left transition hover:-translate-y-0.5 ${
-        selected ? t.selected : `border-border bg-card ${t.hover}`
-      }`}
-    >
+    <button onClick={onSelect} disabled={disabled} aria-pressed={selected} className="g-deck">
       {selected && (
-        <span className={`absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full ${t.badge}`}>
+        <span className="g-check" aria-hidden>
           <Check className="size-4" strokeWidth={3} />
         </span>
       )}
-      <LevelTile level={deck.level} />
-      <span className="flex flex-col gap-0.5">
-        <span className="font-extrabold">{deck.title}</span>
-        <span className={`text-sm ${t.text}`}>
-          {deck.wordCount} từ · {total} mốc
+      <span className="flex items-center gap-3">
+        <LevelTile level={deck.level} />
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-extrabold leading-snug">{deck.title}</span>
+          <span className="text-sm font-semibold text-muted">
+            {deck.wordCount} từ · {total} mốc
+          </span>
         </span>
       </span>
       {cleared > 0 && (
-        <span className="flex items-center gap-2 text-xs font-bold text-muted">
-          <span className="h-1.5 flex-1 rounded-full bg-card-2">
-            <span className={`block h-full rounded-full ${t.bar}`} style={{ width: `${Math.min(cleared / total, 1) * 100}%` }} />
+        <span className="flex items-center gap-2 text-xs font-bold text-muted tabular-nums">
+          <span className="g-bar">
+            <span style={{ width: `${Math.min(cleared / total, 1) * 100}%` }} />
           </span>
           {Math.min(cleared, total)}/{total}
         </span>
@@ -163,38 +129,41 @@ export function DeckMenu({
   deckExtra?: (deck: DeckOption) => ReactNode; // dòng thêm ở cuối thẻ bộ từ
   notice?: ReactNode; // dòng thêm dưới lời giới thiệu (vd. tên tạm của khách)
 }) {
-  const t = TONE[tone];
   const total = Math.max(current?.topicCount ?? 1, 1);
   const from = cleared < total ? cleared : 0;
   return (
-    <>
-      <div className={`flex items-center gap-4 rounded-2xl border p-4 ${t.banner}`}>
-        <span className={`flex size-12 shrink-0 items-center justify-center rounded-xl border ${t.icon}`}>
+    <div className={`flex flex-col gap-5 ${TONE_CLASS[tone]}`}>
+      <div className="card hero flex items-start gap-4" style={{ ["--hero" as string]: tone === "amber" ? "var(--gold)" : "var(--aqua)" }}>
+        <span className="g-icon size-12">
           <Icon className="size-6" />
         </span>
-        <div>
-          <p className="font-extrabold">Chọn bộ từ</p>
-          <p className={`text-sm ${t.text}`}>{intro}</p>
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="section-title">Chọn bộ từ</p>
+          <p className="text-sm leading-relaxed text-muted">{intro}</p>
         </div>
       </div>
       {notice}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {decks.map((d) => (
-          <DeckCard key={d.slug} deck={d} tone={tone} progressKey={progressKey(d.slug)} selected={d.slug === current?.slug} disabled={loading} extra={deckExtra?.(d)} onSelect={() => onSelect(d.slug)} />
+          <DeckCard key={d.slug} deck={d} progressKey={progressKey(d.slug)} selected={d.slug === current?.slug} disabled={loading} extra={deckExtra?.(d)} onSelect={() => onSelect(d.slug)} />
         ))}
       </div>
-      {!decks.length && <p className="text-center text-sm text-muted">Chưa có bộ từ nào.</p>}
-      {error && <p className="text-center text-sm text-red-400">{error}</p>}
+      {!decks.length && <p className="card empty">Chưa có bộ từ nào.</p>}
+      {error && (
+        <p role="alert" className="alert alert-err">
+          {error}
+        </p>
+      )}
 
       {/* Thanh bắt đầu dính đáy (điện thoại: nằm trên thanh điều hướng) */}
       {current && (
-        <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] mt-2 flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl shadow-black/60 backdrop-blur md:bottom-4">
+        <div className="g-startbar">
           <LevelTile level={current.level} />
           <div className="min-w-0 flex-1">
             <p className="truncate font-extrabold">{current.title}</p>
-            <p className={`text-xs ${t.text}`}>
+            <p className="truncate text-xs font-semibold text-muted">
               {current.wordCount} từ · {from ? `tiếp tục mốc ${from + 1}/${total}` : `${total} mốc`}
-              {best > 0 && ` · kỷ lục ${best}`}
+              {best > 0 && <span className="text-amber"> · kỷ lục {best}</span>}
             </p>
           </div>
           {from > 0 && (
@@ -202,12 +171,12 @@ export function DeckMenu({
               <RotateCcw className="size-4" /> <span className="max-sm:hidden">Từ đầu</span>
             </button>
           )}
-          <button className={toneButton(tone)} disabled={loading} onClick={() => onStart(from)}>
+          <button className="btn btn-amber btn-lg max-sm:px-4" disabled={loading} onClick={() => onStart(from)}>
             <Play className="size-4 fill-current" /> {loading ? "Đang tải…" : "Bắt đầu"}
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -233,17 +202,17 @@ export function ScreenKeyboard({ onKey, disabled, enter }: { onKey: (key: string
       {OSK_ROWS.map((row, r) => (
         <div key={row} className="flex justify-center gap-1">
           {r === 2 && (
-            <button className="btn h-11 flex-[1.5] px-0" disabled={disabled} onClick={() => onKey("Backspace")} title="Xoá">
+            <button className="g-key flex-[1.5]" disabled={disabled} onClick={() => onKey("Backspace")} title="Xoá" aria-label="Xoá">
               <Delete className="size-5" />
             </button>
           )}
           {[...row].map((ch) => (
-            <button key={ch} className="btn h-11 max-w-12 flex-1 px-0 text-base" disabled={disabled} onClick={() => onKey(ch)}>
+            <button key={ch} className="g-key max-w-12" disabled={disabled} onClick={() => onKey(ch)}>
               {ch}
             </button>
           ))}
           {r === 2 && (
-            <button className={`btn h-11 flex-[1.5] px-0 text-xs ${enter.className ?? ""}`} disabled={disabled} onClick={() => onKey("Enter")} title={enter.title}>
+            <button className={`g-key flex-[1.5] text-xs ${enter.className ?? ""}`} disabled={disabled} onClick={() => onKey("Enter")} title={enter.title}>
               {enter.label}
             </button>
           )}

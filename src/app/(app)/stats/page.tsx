@@ -17,10 +17,16 @@ async function Stats() {
       {/* Điện thoại: Xếp hạng và Cài đặt không có ở thanh dưới đáy khi đã đăng nhập → lối vào ở đây */}
       <nav aria-label="Liên kết tài khoản" className="grid gap-3 sm:grid-cols-2">
         <Link href="/leaderboard" className="sticker sticker-link flex items-center gap-3 p-4 font-extrabold">
-          <Trophy className="size-5 text-amber" /> Bảng xếp hạng <ChevronRight className="ml-auto size-5 text-muted" />
+          <span className="icon-bubble tint-gold" aria-hidden>
+            <Trophy className="size-5" />
+          </span>
+          Bảng xếp hạng <ChevronRight className="ml-auto size-5 text-muted" />
         </Link>
         <Link href="/settings" className="sticker sticker-link flex items-center gap-3 p-4 font-extrabold">
-          <Settings className="size-5 text-muted" /> Hồ sơ & cài đặt <ChevronRight className="ml-auto size-5 text-muted" />
+          <span className="icon-bubble tint-muted" aria-hidden>
+            <Settings className="size-5" />
+          </span>
+          Hồ sơ & cài đặt <ChevronRight className="ml-auto size-5 text-muted" />
         </Link>
       </nav>
     </>

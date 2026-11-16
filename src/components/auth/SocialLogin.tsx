@@ -117,7 +117,7 @@ export default function SocialLogin({
           <div className={`group relative ${pending || !googleReady ? "pointer-events-none opacity-50" : ""}`}>
             <div
               aria-hidden
-              className="btn btn-lg w-full bg-white text-neutral-900 group-focus-within:border-accent group-hover:border-accent"
+              className="btn btn-lg btn-block social-btn group-focus-within:border-accent group-hover:border-accent"
             >
               {pending === "google" ? <Loader2 className="size-5 animate-spin" /> : <GoogleLogo />}
               Tiếp tục với Google
@@ -137,19 +137,23 @@ export default function SocialLogin({
             onReady={initApple}
           />
           {/* Cùng kiểu với nút Google; logo Apple bên trái chữ */}
-          <button type="button" onClick={signInApple} disabled={!appleReady || !!pending} className="btn btn-lg w-full">
+          <button type="button" onClick={signInApple} disabled={!appleReady || !!pending} className="btn btn-lg btn-block social-btn">
             {pending === "apple" ? <Loader2 className="size-5 animate-spin" /> : <AppleLogo />}
             Tiếp tục với Apple
           </button>
         </>
       )}
 
-      {error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
+      {error && (
+        <p role="alert" className="alert alert-err">
+          {error}
+        </p>
+      )}
 
-      <div className="mt-1 flex items-center gap-3 text-xs font-bold text-muted uppercase">
-        <span className="h-px flex-1 bg-border" />
+      <div className="mt-1 flex items-center gap-3 text-xs font-bold text-muted">
+        <span className="divider flex-1" />
         hoặc tiếp tục với email
-        <span className="h-px flex-1 bg-border" />
+        <span className="divider flex-1" />
       </div>
     </div>
   );

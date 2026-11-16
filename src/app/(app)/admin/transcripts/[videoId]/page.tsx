@@ -7,6 +7,7 @@ import { toSrt } from "@/lib/subtitles";
 import type { Transcript } from "@/lib/youtube";
 import TranscriptForm from "../TranscriptForm";
 import { FormSkeleton } from "@/components/Skeleton";
+import AdminNav from "../../AdminNav";
 
 async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[videoId]">) {
   await requireAdmin();
@@ -27,7 +28,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={`/watch/${videoId}`} className="btn">
+        <Link href={`/watch/${videoId}`} className="btn btn-sm">
           Xem video
         </Link>
         {entries.length > 1 &&
@@ -35,12 +36,13 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
             <Link
               key={e.key}
               href={`?key=${encodeURIComponent(e.key)}`}
-              className={`btn ${e.key === current.key ? "border-accent text-accent-text" : ""}`}
+              className="chip hit-44 min-h-8 px-3 py-1 text-xs"
+              aria-current={e.key === current.key ? "true" : undefined}
             >
               {label(e.t)}
             </Link>
           ))}
-        <span className="text-muted">
+        <span className="badge badge-muted">
           {label(current.t)} · {current.t.segments.length} dòng
         </span>
       </div>
@@ -58,6 +60,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
 export default function EditTranscriptPage(props: PageProps<"/admin/transcripts/[videoId]">) {
   return (
     <main className="page page-narrow">
+      <AdminNav />
       <h1 className="page-title">Sửa phụ đề đã lưu</h1>
       <Suspense fallback={<FormSkeleton fields={1} />}>
         <Edit {...props} />

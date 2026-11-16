@@ -103,8 +103,8 @@ const CaroArt = () => (
         const p = CARO_SAMPLE[i + 2];
         return (
           <span key={i} className="flex size-7 items-center justify-center border-r border-b border-black/10">
-            {p === "X" && <X className={`size-5 text-red-500 ${i === 9 ? "transition group-hover:scale-125" : ""}`} strokeWidth={3.5} />}
-            {p === "O" && <span className="size-4 rounded-full border-[3px] border-sky-500" />}
+            {p === "X" && <X className={`size-5 text-red ${i === 9 ? "transition group-hover:scale-125" : ""}`} strokeWidth={3.5} />}
+            {p === "O" && <span className="size-4 rounded-full border-[3px] border-sky-700" />}
           </span>
         );
       })}
@@ -167,31 +167,33 @@ export default function GamesPage() {
   const fun = GAMES.filter((g) => g.fun);
   return (
     <main className="page gap-8">
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="page-title">Game luyện từ</h1>
-          <p className="text-sm text-muted">Ôn từ vựng theo bộ Goethe A1–B1, Aspekte B2 và điều dưỡng. Từ sai lưu vào sổ để ôn sau.</p>
+      <section className="flex flex-col gap-5">
+        <div className="card hero g-hub-hero rise-in flex items-center gap-4 p-5 sm:p-6">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <p className="eyebrow">Vừa chơi vừa học</p>
+            <h1 className="page-title">Game luyện từ</h1>
+            <p className="text-sm leading-relaxed text-muted sm:text-base">Ôn từ vựng theo bộ Goethe A1–B1, Aspekte B2 và điều dưỡng. Từ sai lưu vào sổ để ôn sau.</p>
+          </div>
+          <Mascot animated className="size-20 shrink-0 max-sm:hidden sm:size-24" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {practice.map((g) => (
-            <Link key={g.href} href={g.href} className="group sticker sticker-link flex flex-col overflow-hidden">
-              <div className="theme-night relative h-32 overflow-hidden border-b-2 border-ink sm:h-40">
+          {practice.map((g, i) => (
+            <Link key={g.href} href={g.href} className="group sticker sticker-link rise-in flex flex-col overflow-hidden" style={{ ["--i" as string]: i + 1 }}>
+              <div className="theme-night g-art">
                 {g.art}
-                <span className="absolute top-2.5 right-2.5 rounded-full border border-gold/50 bg-black/60 px-2 py-0.5 text-xs font-extrabold text-gold">
-                  {g.players ?? "1 người chơi"}
-                </span>
+                <span className="g-art-tag">{g.players ?? "1 người chơi"}</span>
               </div>
-              <div className="flex flex-1 flex-col gap-3 p-4">
+              <div className="flex flex-1 flex-col gap-2.5 p-4 sm:p-5">
                 <h2 className="section-title flex items-center gap-2.5">
-                  <span className="flex size-8 items-center justify-center rounded-full border border-amber/40 text-amber">
-                    <g.icon className="size-4" />
+                  <span className="icon-bubble tint-gold size-9 rounded-xl">
+                    <g.icon className="size-[1.1rem]" />
                   </span>
                   {g.title}
                 </h2>
-                {/* Cả thẻ đã bấm được → chỉ 1 mũi tên nhỏ thay cho nút "Chơi ngay" */}
-                <p className="flex-1 text-sm text-muted">{g.description}</p>
-                <span className="inline-flex items-center gap-1 self-end text-sm font-extrabold text-amber">
-                  Chơi <ArrowRight className="size-4 transition group-hover:translate-x-1 motion-reduce:transition-none" />
+                {/* Cả thẻ đã bấm được → chỉ 1 nhãn "Chơi" nhỏ thay cho nút "Chơi ngay" */}
+                <p className="flex-1 text-sm leading-relaxed text-muted">{g.description}</p>
+                <span className="g-play-cta mt-1 self-end">
+                  Chơi <ArrowRight className="size-4 transition group-hover:translate-x-0.5 motion-reduce:transition-none" />
                 </span>
               </div>
             </Link>
@@ -201,20 +203,22 @@ export default function GamesPage() {
 
       {/* Chơi cho vui (không luyện tiếng Đức): hàng nhỏ, không tranh chỗ với game luyện từ */}
       <section className="flex flex-col gap-4">
-        <h2 className="section-title">Giải trí</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="section-title">Giải trí</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
           {fun.map((g) => (
-            <Link key={g.href} href={g.href} className="group sticker sticker-link flex items-center gap-3 p-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2 text-amber">
+            <Link key={g.href} href={g.href} className="group card card-link flex items-center gap-3.5 p-3.5">
+              <span className="icon-bubble tint-link size-12">
                 <g.icon className="size-5" />
               </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="font-extrabold">
-                  {g.title} <span className="text-xs font-bold text-muted">· {g.players}</span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex flex-wrap items-center gap-2 font-extrabold">
+                  {g.title} <span className="badge badge-muted">{g.players}</span>
                 </span>
                 <span className="line-clamp-2 text-sm text-muted">{g.description}</span>
               </span>
-              <ArrowRight className="size-4 shrink-0 text-amber transition group-hover:translate-x-1 motion-reduce:transition-none" />
+              <ArrowRight className="size-5 shrink-0 text-muted transition group-hover:translate-x-1 group-hover:text-foreground motion-reduce:transition-none" />
             </Link>
           ))}
         </div>

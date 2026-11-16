@@ -76,7 +76,7 @@ export function GuestTrialNote({ area, quota, extra }: { area: GuestArea; quota:
   const pathname = usePathname();
   const { unit } = GUEST_LIMITS[area];
   return (
-    <p className="rounded-2xl border-2 border-dashed border-ink/40 px-3 py-2 text-sm">
+    <p className="alert block font-medium">
       Bạn đang học thử — còn <b className="tabular-nums">{quota.left}/{quota.limit}</b> {unit} hôm nay.{" "}
       <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="font-extrabold text-accent-text underline">
         Đăng nhập
@@ -95,13 +95,12 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
   if (!quota.wall && !exam) return null;
   const { unit, name } = GUEST_LIMITS[area];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Hết lượt học thử">
-      <div className="sheet-fade absolute inset-0 bg-black/55" aria-hidden />
-      <div className="sticker sheet-up relative flex w-full max-w-sm flex-col gap-4 bg-card p-5">
+    <div className="dialog-backdrop">
+      <div className="dialog max-w-sm" role="dialog" aria-modal="true" aria-label="Hết lượt học thử">
         <div className="flex items-center gap-3">
           <Mascot animated className="size-14 shrink-0" />
           <div>
-            <p className="text-lg font-black">{exam ? "Thi thử cần tài khoản" : "Học tốt lắm! 🎉"}</p>
+            <p className="dialog-title">{exam ? "Thi thử cần tài khoản" : "Học tốt lắm! 🎉"}</p>
             <p className="text-sm text-muted">
               {exam ? "Đăng nhập để làm bài thi, xem điểm và lịch sử các lần thi." : `Bạn đã học thử ${quota.limit} ${unit} ${name} hôm nay.`}
             </p>
@@ -110,10 +109,10 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
         <p className="text-sm font-bold">Đăng ký miễn phí để học tiếp không giới hạn:</p>
         <ul className="flex flex-col gap-1.5 text-sm">
           <li className="flex items-start gap-2">
-            <BarChart3 className="mt-0.5 size-4 shrink-0 text-amber" /> Lưu tiến độ, mở lại đúng chỗ trên mọi máy
+            <BarChart3 className="mt-0.5 size-4 shrink-0 text-accent-text" /> Lưu tiến độ, mở lại đúng chỗ trên mọi máy
           </li>
           <li className="flex items-start gap-2">
-            <Star className="mt-0.5 size-4 shrink-0 text-amber" /> Đánh dấu câu khó, ôn lại câu sai
+            <Star className="mt-0.5 size-4 shrink-0 text-accent-text" /> Đánh dấu câu khó, ôn lại câu sai
           </li>
           {/* Leben in Deutschland / Lái xe chưa tặng kim cương — không hứa điều chưa có */}
           {area !== "lid" && area !== "fuehrerschein" && (
@@ -122,10 +121,10 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
             </li>
           )}
         </ul>
-        <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-amber btn-lg font-black">
+        <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary btn-lg btn-block">
           <LogIn className="size-4" /> Đăng nhập / Đăng ký
         </LoginLink>
-        <Link href={backHref} className="-mt-1 inline-flex items-center justify-center gap-1 text-sm font-bold text-muted hover:text-foreground">
+        <Link href={backHref} className="btn btn-ghost -mt-2 text-muted">
           <ArrowLeft className="size-4" /> Quay lại
         </Link>
       </div>

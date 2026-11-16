@@ -1,15 +1,25 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { Camera, Download, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
+import { Camera, CircleAlert, CircleCheck, Download, KeyRound, LogOut, Mail, ShieldAlert, Trash2, UserRound } from "lucide-react";
 import { deleteAccount, deleteAvatar, logoutOtherDevices, requestEmailChange, submitEmailChange, updatePassword, updateProfile, uploadAvatar, type FormResult } from "@/app/(app)/account-actions";
 import { logout } from "@/app/(app)/auth-actions";
 import { clientApi } from "@/lib/client-api";
 import Avatar from "./Avatar";
 
 function Status({ state }: { state: FormResult }) {
-  if (state.error) return <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{state.error}</p>;
-  if (state.ok) return <p className="rounded-xl bg-accent/15 p-3 text-sm text-accent-text">{state.ok}</p>;
+  if (state.error)
+    return (
+      <p role="alert" className="alert alert-err">
+        <CircleAlert className="mt-px size-4 shrink-0" aria-hidden /> {state.error}
+      </p>
+    );
+  if (state.ok)
+    return (
+      <p role="status" className="alert alert-ok">
+        <CircleCheck className="mt-px size-4 shrink-0" aria-hidden /> {state.ok}
+      </p>
+    );
   return null;
 }
 
@@ -30,19 +40,20 @@ function Section({
   danger?: boolean;
 }) {
   return (
-    <section className={`sticker overflow-hidden ${danger ? "border-red" : ""}`}>
+    <section className={`sticker overflow-hidden ${danger ? "settings-danger" : ""}`}>
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <div>
-          <h2 className={`section-title flex items-center gap-2 ${danger ? "text-red-400" : ""}`}>
-            <Icon className={`size-5 ${danger ? "" : "text-link"}`} /> {title}
-          </h2>
-          <p className="mt-0.5 text-sm text-muted">{desc}</p>
+        <div className="flex items-start gap-3">
+          <span className={`icon-bubble ${danger ? "tint-red" : "tint-link"}`} aria-hidden>
+            <Icon className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <h2 className={`section-title ${danger ? "text-red-400" : ""}`}>{title}</h2>
+            <p className="mt-0.5 text-sm text-muted">{desc}</p>
+          </div>
         </div>
         {children}
       </div>
-      {footer && (
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-card-2/40 px-4 py-3 sm:px-6">{footer}</div>
-      )}
+      {footer && <div className="settings-foot">{footer}</div>}
     </section>
   );
 }
@@ -247,9 +258,9 @@ export default function SettingsForms({
   return (
     <div className="flex flex-col gap-5">
       {/* Hồ sơ */}
-      <section className="card flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:p-6 sm:text-left">
+      <section className="card hero settings-profile flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:p-6 sm:text-left">
         <div>
-          <Avatar user={user} className={`size-24 text-4xl ring-4 ring-card-2 ${avatarPending ? "animate-pulse opacity-60" : ""}`} />
+          <Avatar user={user} className={`size-24 text-4xl ring-4 ring-card shadow-[var(--shadow-md)] ${avatarPending ? "animate-pulse opacity-60" : ""}`} />
           <input
             ref={fileRef}
             type="file"
@@ -263,25 +274,29 @@ export default function SettingsForms({
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2 max-sm:items-center">
           <div className="min-w-0">
-            <p className="truncate text-2xl font-extrabold">{user.name}</p>
+            <p className="truncate font-display text-2xl leading-tight font-extrabold sm:text-3xl">{user.name}</p>
             <p className="truncate text-sm text-muted">{user.email}</p>
           </div>
           <div className="flex flex-wrap gap-2 max-sm:justify-center">
-            <span className={`pill ${user.admin ? "bg-amber/15 text-amber" : "bg-accent/15 text-accent-text"}`}>{user.admin ? "Quản trị viên" : "Học viên"}</span>
-            <span className="pill bg-card-2 text-muted">Tham gia {joined(user.createdAt)}</span>
-            {!hasPassword && <span className="pill bg-card-2 text-muted">Đăng nhập bằng Google / Apple</span>}
+            <span className={`badge ${user.admin ? "badge-gold" : "badge-accent"}`}>{user.admin ? "Quản trị viên" : "Học viên"}</span>
+            <span className="badge badge-muted">Tham gia {joined(user.createdAt)}</span>
+            {!hasPassword && <span className="badge badge-muted">Đăng nhập bằng Google / Apple</span>}
           </div>
           <div className="mt-1 flex flex-wrap gap-2 max-sm:justify-center">
             <button className="btn" onClick={() => fileRef.current?.click()} disabled={avatarPending}>
               <Camera className="size-4" /> {avatarPending ? "Đang tải ảnh…" : user.avatarAt ? "Đổi ảnh" : "Tải ảnh lên"}
             </button>
             {user.avatarAt && (
-              <button className="btn text-muted hover:border-red hover:text-red-400" onClick={removeAvatar} disabled={avatarPending}>
+              <button className="btn btn-ghost text-red-400" onClick={removeAvatar} disabled={avatarPending}>
                 <Trash2 className="size-4" /> Xoá ảnh
               </button>
             )}
           </div>
-          {avatarError && <p className="text-sm text-red-400">{avatarError}</p>}
+          {avatarError && (
+            <p role="alert" className="alert alert-err">
+              {avatarError}
+            </p>
+          )}
         </div>
       </section>
 
@@ -396,21 +411,21 @@ export default function SettingsForms({
           danger
           footer={
             !confirmDelete && (
-              <button className="btn border-red/50 text-red-400 hover:border-red" onClick={() => setConfirmDelete(true)}>
+              <button className="btn settings-danger-btn" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="size-4" /> Xoá tài khoản
               </button>
             )
           }
         >
           {confirmDelete && (
-            <form action={delAction} className="flex flex-col gap-3 rounded-xl border border-red/40 bg-red/10 p-4">
+            <form action={delAction} className="settings-confirm">
               {hasPassword ? (
                 <input name="password" type="password" placeholder="Nhập mật khẩu để xác nhận" className="input" autoComplete="current-password" required autoFocus />
               ) : (
                 <p className="text-sm">Bạn chắc chắn muốn xoá? Mọi dữ liệu sẽ mất vĩnh viễn.</p>
               )}
               <Status state={del} />
-              <div className="flex justify-end gap-2">
+              <div className="dialog-actions mt-0">
                 <button type="button" className="btn" onClick={() => setConfirmDelete(false)}>
                   Huỷ
                 </button>

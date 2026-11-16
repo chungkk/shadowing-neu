@@ -57,35 +57,35 @@ export function UnlockBox({
     <div className="flex flex-col gap-3">
       {!lock.loggedIn ? (
         <>
-          <p className="font-bold">Đăng nhập để mở khoá bài này</p>
+          <p className="section-title">Đăng nhập để mở khoá bài này</p>
           <p className="text-sm text-muted">Tài khoản mới được tự chọn thêm {FREE_PICKS} bài bất kỳ để học miễn phí.</p>
-          <LoginLink href="/login" onClick={onLogin} className="btn btn-primary self-start">
+          <LoginLink href="/login" onClick={onLogin} className="btn btn-primary btn-lg self-start max-sm:w-full">
             Đăng nhập / Đăng ký
           </LoginLink>
         </>
       ) : lock.picksLeft > 0 ? (
         <>
-          <p className="font-bold">Bạn còn {lock.picksLeft} lượt chọn bài miễn phí</p>
+          <p className="section-title">Bạn còn {lock.picksLeft} lượt chọn bài miễn phí</p>
           <p className="text-sm text-muted">Dùng 1 lượt để mở bài này — mở rồi thì học mãi.</p>
-          <button onClick={unlock} disabled={busy} className="btn btn-primary self-start">
+          <button onClick={unlock} disabled={busy} className="btn btn-primary btn-lg self-start max-sm:w-full">
             {done ? "Đang vào bài…" : pending ? "Đang mở…" : "Mở bài này miễn phí"}
           </button>
         </>
       ) : (
         <>
-          <p className="flex flex-wrap items-center gap-1.5 font-bold">
+          <p className="section-title flex flex-wrap items-center gap-1.5">
             Đổi <Gem className="size-5" /> <span className="text-gem">{fmt(lock.price)}</span> kim cương để mở bài này
           </p>
           <p className="text-sm text-muted">
             Bạn đang có <span className="font-bold text-gem">{fmt(lock.points)}</span> kim cương.
             {short && " Chép chính tả đúng mỗi từ được +1 — luyện thêm ở các bài đã mở để đủ kim cương."}
           </p>
-          <button onClick={unlock} disabled={busy || short} className="btn btn-primary self-start">
+          <button onClick={unlock} disabled={busy || short} className="btn btn-primary btn-lg self-start max-sm:w-full">
             {done ? "Đang vào bài…" : pending ? "Đang mở…" : short ? `Cần thêm ${fmt(lock.price - lock.points)} kim cương` : `Đổi ${fmt(lock.price)} kim cương`}
           </button>
         </>
       )}
-      {error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
+      {error && <p role="alert" className="alert alert-err">{error}</p>}
     </div>
   );
 }
@@ -102,11 +102,11 @@ export default function LockedLesson({
 }) {
   return (
     <main className="page page-narrow">
-      <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
+      <div className="sticker relative aspect-video overflow-hidden bg-card-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-40 blur-[2px]" />
+        <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-50 blur-[3px] saturate-50" />
         <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex size-16 items-center justify-center rounded-full bg-black/60 text-white">
+          <span className="flex size-16 items-center justify-center rounded-full bg-card text-foreground shadow-[var(--shadow-md)]">
             <Lock className="size-8" />
           </span>
         </span>
@@ -118,16 +118,16 @@ export default function LockedLesson({
       </div>
       {lesson.description && <p className="whitespace-pre-line text-sm text-muted">{lesson.description}</p>}
 
-      <section className="card sm:p-5">
+      <section className="card hero sm:p-6" style={{ "--hero": "var(--aqua)" } as React.CSSProperties}>
         <UnlockBox lesson={lesson} lock={lock} confirmFirst />
       </section>
 
       {freeLessons.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-bold text-muted">Học thử miễn phí</h2>
+          <h2 className="eyebrow">Học thử miễn phí</h2>
           <div className="flex flex-wrap gap-2">
             {freeLessons.map((l) => (
-              <Link key={l.slug} href={lessonPath(l.slug)} className="btn">
+              <Link key={l.slug} href={lessonPath(l.slug)} className="chip">
                 {l.title}
               </Link>
             ))}

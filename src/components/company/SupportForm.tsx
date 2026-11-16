@@ -99,7 +99,7 @@ const COPY = {
 };
 
 /** Ô nhập kiểu app (.input), chữ đen/trắng theo giao diện */
-const fieldClass = 'input w-full text-foreground';
+const fieldClass = 'input w-full font-normal text-foreground';
 
 interface SupportFormProps {
     /** Tên sản phẩm (ghi kèm vào tin nhắn); bỏ trống ở trang hỗ trợ chung */
@@ -159,15 +159,17 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
 
     if (status.state === 'sent') {
         return (
-            <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-ink bg-accent/15 p-4 shadow-[0_3px_0_var(--ink)] sm:p-5" role="status">
-                <p className="flex items-start gap-2.5 font-bold text-accent-text">
-                    <CircleCheck className="mt-0.5 size-5 shrink-0" />
-                    <span>
+            <div className="alert alert-ok rise-in flex-col items-start gap-3 p-4 text-base sm:p-5" role="status">
+                <p className="flex items-start gap-2.5 font-bold">
+                    <span className="icon-bubble size-8 rounded-full bg-card text-accent-text">
+                        <CircleCheck className="size-5" aria-hidden="true" />
+                    </span>
+                    <span className="pt-1">
                         {t.sentTitle} <span className="font-normal text-foreground">{t.sentDesc}</span>
                     </span>
                 </p>
                 <button type="button" onClick={() => setStatus({ state: 'idle' })} className="btn btn-sm">
-                    <PenLine className="size-4 text-link" /> {t.another}
+                    <PenLine className="size-4 text-link" aria-hidden="true" /> {t.another}
                 </button>
             </div>
         );
@@ -177,17 +179,17 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
     return (
         <form onSubmit={submit} className="grid gap-4" aria-busy={sending}>
             <div className="grid gap-4 sm:grid-cols-2">
-                <label className="field text-sm font-bold">
+                <label className="field">
                     {t.name}
                     <input autoComplete="name" maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={fieldClass} />
                 </label>
-                <label className="field text-sm font-bold">
+                <label className="field">
                     {t.email}
                     <input required type="email" autoComplete="email" maxLength={200} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={fieldClass} />
                 </label>
             </div>
             {/* Không dùng .field ở đây: .field select của app là kiểu ô chọn nhỏ, còn ô này cần cỡ .input */}
-            <label className="flex flex-col gap-1 text-sm font-bold text-muted">
+            <label className="flex flex-col gap-1.5 text-sm font-bold text-muted">
                 {t.subject}
                 <span className="relative">
                     <select
@@ -204,7 +206,7 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
                     <ChevronDown className="pointer-events-none absolute top-1/2 right-4 size-5 -translate-y-1/2 text-link" />
                 </span>
             </label>
-            <label className="field text-sm font-bold">
+            <label className="field">
                 {t.message}
                 <textarea
                     required
@@ -216,11 +218,11 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
                     aria-describedby="support-hint"
                     className={`${fieldClass} resize-y`}
                 />
-                <span id="support-hint" className="text-xs font-normal">{t.hint}</span>
+                <span id="support-hint" className="field-hint font-normal">{t.hint}</span>
             </label>
             {status.state === 'error' && (
-                <p role="alert" className="flex items-start gap-2 rounded-xl bg-red-500/10 p-3 text-sm text-red-400">
-                    <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                <p role="alert" className="alert alert-err">
+                    <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     <span>
                         <b>{status.message}</b> {t.fallback}{' '}
                         <a href={`mailto:${SITE.contactEmail}`} className="font-bold underline underline-offset-2">

@@ -1,1 +1,149 @@
-/* Area CSS: deutsch — owned by the deutsch worker. Plain CSS or @layer components; tokens from globals.css. */
+/* Area CSS: deutsch — owned by the deutsch worker. Plain CSS or @layer components; tokens from globals.css.
+   Học tiếng Đức: chính tả (DictationPanel), bảng tra từ (WordPopup). */
+
+@layer components {
+  /* ───── Chính tả ───── */
+  /* Bong bóng thoại của linh vật (đuôi ::before nằm ở globals.css) */
+  .dict-bubble {
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background-color: var(--card);
+  }
+
+  /* Ô từng từ — data-state: hint (chưa gõ) · correct · close · wrong · missing · revealed · given; data-typed · data-active */
+  .dict-box {
+    @apply min-h-9 min-w-10 max-w-full rounded-xl px-2 py-1 text-center font-mono text-base font-bold break-all;
+    border: 2px dashed color-mix(in srgb, var(--line-strong) 55%, var(--card));
+    background-color: var(--card);
+    color: var(--muted);
+    transition:
+      border-color var(--dur-fast),
+      background-color var(--dur-fast),
+      box-shadow var(--dur-fast),
+      translate var(--dur-fast) var(--ease-out);
+  }
+  .dict-box[data-typed] {
+    border-style: solid;
+    border-color: var(--line-strong);
+    color: var(--foreground);
+  }
+  .dict-box[data-state="correct"] {
+    border: 2px solid color-mix(in srgb, var(--accent) 55%, var(--ink));
+    background-color: var(--accent-soft);
+    color: color-mix(in srgb, var(--accent-text) 85%, var(--foreground));
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, var(--ink));
+  }
+  .dict-box[data-state="close"] {
+    border: 2px solid var(--gold);
+    background-color: var(--gold-soft);
+    color: var(--amber);
+  }
+  .dict-box[data-state="wrong"] {
+    border: 2px solid var(--red);
+    background-color: var(--red-soft);
+    color: var(--red-400);
+  }
+  .dict-box[data-state="missing"] {
+    border: 2px dashed color-mix(in srgb, var(--red) 60%, var(--card));
+    color: var(--muted);
+  }
+  .dict-box[data-state="revealed"] {
+    border: 2px dashed color-mix(in srgb, var(--gold) 80%, var(--card));
+    background-color: color-mix(in srgb, var(--gold-soft) 60%, var(--card));
+    color: var(--amber);
+  }
+  .dict-box[data-state="given"] {
+    border: 2px solid var(--line);
+    background-color: var(--card-2);
+    color: var(--foreground);
+  }
+  /* Ô đang gõ: viền teal, nhấc nhẹ */
+  .dict-box[data-active] {
+    translate: 0 -2px;
+    border-style: solid;
+    border-color: var(--link);
+    background-color: var(--card);
+    box-shadow: 0 3px 0 var(--link);
+  }
+  /* Câu xong: bấm từ để tra nghĩa */
+  @media (hover: hover) {
+    .dict-box[data-tap]:hover {
+      translate: 0 -2px;
+      box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, var(--ink));
+    }
+  }
+  .dict-box[data-tap]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Nút mắt nhỏ trên ô (xem từ, bị trừ điểm) — vùng bấm rộng hơn hình */
+  .dict-eye {
+    @apply flex size-5 cursor-pointer items-center justify-center rounded-full text-foreground;
+    border: 2px solid var(--ink);
+    background-color: var(--card);
+    transition:
+      background-color var(--dur-fast),
+      color var(--dur-fast),
+      opacity var(--dur-fast);
+  }
+  .dict-eye::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+  .dict-eye:hover {
+    border-color: var(--gold);
+    background-color: var(--gold-soft);
+    color: var(--amber);
+  }
+
+  /* Điện thoại đang gõ: hàng nút ghim ngay trên bàn phím */
+  .dict-dock {
+    border-top: 1.5px solid var(--line);
+    background-color: var(--card);
+    box-shadow: 0 -6px 18px rgb(var(--shadow-color) / 0.08);
+  }
+
+  /* ───── Bảng tra từ (WordPopup) ───── */
+  /* .dialog không padding: tay cầm của bottom sheet cần khoảng trống phía trên */
+  .word-sheet::before {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+  }
+  /* Ví dụ: ▶ + câu, bấm để nghe */
+  .word-example {
+    @apply flex cursor-pointer gap-2.5 rounded-xl text-left;
+    transition: opacity var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .word-example:hover {
+      opacity: 0.85;
+    }
+  }
+  .word-example:active {
+    opacity: 0.65;
+  }
+  .word-example:focus-visible,
+  .word-sense:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* 1 nghĩa trong từ điển / câu hay gặp; nghĩa đang dùng trong câu → nền xanh nhạt */
+  .word-sense {
+    @apply flex flex-col gap-1 p-3;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--line);
+    background-color: color-mix(in srgb, var(--card-2) 45%, var(--card));
+    transition: border-color var(--dur-fast);
+  }
+  .word-sense[data-current] {
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    background-color: var(--accent-soft);
+  }
+  @media (hover: hover) {
+    button.word-sense:hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    }
+  }
+}

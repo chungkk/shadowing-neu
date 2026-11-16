@@ -56,26 +56,29 @@ export default function UnlockDialog({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={lesson.title}>
-      <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={onClose} aria-label="Đóng" />
-      <div ref={panel} tabIndex={-1} className="sheet-up relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border-t border-border bg-card outline-none md:rounded-[28px] md:border">
-        <div className="relative aspect-video bg-black">
+    <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="unlock-title" className="dialog outline-none">
+        <div className="dialog-head">
+          <h2 id="unlock-title" className="dialog-title line-clamp-2">
+            {lesson.title}
+          </h2>
+          <div className="flex shrink-0 items-center gap-1">
+            <LevelBadge level={lesson.level} />
+            <button onClick={onClose} title="Đóng" aria-label="Đóng" className="btn-icon -mt-1 -mr-2">
+              <X className="size-5" />
+            </button>
+          </div>
+        </div>
+        <div className="relative aspect-video shrink-0 overflow-hidden rounded-[var(--radius)] bg-card-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-45" />
+          <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-55 saturate-50" />
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-14 items-center justify-center rounded-full bg-black/65 text-white">
+            <span className="flex size-14 items-center justify-center rounded-full bg-card text-foreground shadow-[var(--shadow-md)]">
               <Lock className="size-7" />
             </span>
           </span>
-          <button onClick={onClose} title="Đóng" className="btn-icon absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70">
-            <X className="size-5" />
-          </button>
         </div>
-        <div className="flex flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-start gap-2">
-            <h2 className="section-title line-clamp-2 flex-1">{lesson.title}</h2>
-            <LevelBadge level={lesson.level} className="shrink-0" />
-          </div>
+        <div className="dialog-body">
           <UnlockBox lesson={lesson} lock={lock} onLogin={onClose} onUnlocked={() => router.push(lessonPath(lesson.slug))} />
         </div>
       </div>

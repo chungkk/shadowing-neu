@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpen, ChevronRight, Layers } from "lucide-react";
@@ -26,7 +26,7 @@ function byCategory(decks: DeckSummary[]) {
   return [...groups];
 }
 
-const BUBBLE = "-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black";
+const BUBBLE = "rounded-2xl rounded-bl-sm bg-gold-soft px-3 py-1 text-sm font-extrabold text-amber";
 
 /** Bong bóng thoại của linh vật: nhắc số từ đến hạn ôn nếu có */
 async function MascotSays() {
@@ -38,14 +38,14 @@ async function MascotSays() {
 /** Đầu trang như trang chủ: linh vật nhấp nhô + bong bóng thoại */
 function VocabHero() {
   return (
-    <section className="sticker flex items-center gap-3 p-4 sm:gap-6 sm:p-6">
+    <section className="sticker hero flex items-center gap-3 p-4 sm:gap-6 sm:p-6" style={{ "--hero": "var(--leaf)" } as CSSProperties}>
       <Mascot className="bob size-20 sm:size-28" />
       <div className="flex min-w-0 flex-col items-start gap-1.5">
         <Suspense fallback={<span className={BUBBLE}>Hallo! Học từ mới nào!</span>}>
           <MascotSays />
         </Suspense>
-        <h1 className="page-title">Từ vựng</h1>
-        <p className="text-sm text-muted sm:text-base">Học theo bộ từ từng trình độ, lưu từ vào sổ và ôn đúng lúc.</p>
+        <h1 className="display">Từ vựng</h1>
+        <p className="lead text-sm sm:text-base">Học theo bộ từ từng trình độ, lưu từ vào sổ và ôn đúng lúc.</p>
       </div>
     </section>
   );
@@ -55,18 +55,18 @@ function VocabHero() {
 function NotebookBanner({ notebook }: { notebook: { total: number; due: number } | null }) {
   const inner = (
     <>
-      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-[0_4px_0_var(--accent-dark)]">
+      <span className="icon-bubble tint-accent size-14 rounded-panel">
         <BookOpen className="size-7" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-lg font-extrabold">Sổ từ vựng</span>
+        <span className="font-display text-lg font-extrabold">Sổ từ vựng</span>
         <span className="truncate text-sm text-muted">
           {notebook
             ? [`${notebook.total} từ đã lưu`, notebook.due ? `${notebook.due} đến hạn ôn` : ""].filter(Boolean).join(" · ")
             : "Đăng nhập để lưu từ và ôn tập"}
         </span>
       </span>
-      {!notebook?.due && <ChevronRight className="size-5 text-muted" />}
+      {!notebook?.due && <ChevronRight className="size-5 shrink-0 text-muted" />}
     </>
   );
   const cls = "sticker sticker-link flex items-center gap-4 p-3.5 sm:p-4 lg:p-6";
@@ -74,7 +74,7 @@ function NotebookBanner({ notebook }: { notebook: { total: number; due: number }
   if (notebook?.due)
     return (
       <div className="sticker flex items-center gap-3 p-3.5 pr-4 sm:p-4 lg:p-6">
-        <Link href="/vocab/notebook" className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl">
+        <Link href="/vocab/notebook" className="flex min-w-0 flex-1 items-center gap-4 rounded-ui">
           {inner}
         </Link>
         <Link href="/vocab/notebook?review=1" className="btn btn-primary shrink-0">
@@ -107,16 +107,16 @@ function DeckCard({ deck, learned }: { deck: DeckSummary; learned: number | null
           className={`pointer-events-none absolute -right-1.5 -bottom-2 size-14 transition sm:size-16 motion-reduce:transition-none ${done ? "group-hover:-translate-y-1" : "translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"}`}
         />
       </div>
-      <h3 className="line-clamp-2 min-h-[2lh] px-0.5 leading-snug font-extrabold sm:text-lg">{deck.title}</h3>
+      <h3 className="line-clamp-2 min-h-[2lh] px-0.5 font-display leading-snug font-extrabold sm:text-lg">{deck.title}</h3>
       <div className="flex items-center gap-1.5 px-0.5 text-sm font-bold text-muted">
         <Layers className="size-4" />
         <span className="flex-1">{deck.wordCount} từ</span>
-        {!!learned && <span className={done ? "text-accent-text" : "text-amber"}>{done ? "✓" : `${learned}/${deck.wordCount}`}</span>}
+        {!!learned && <span className={`badge ${done ? "badge-accent" : "badge-gold"}`}>{done ? "✓" : `${learned}/${deck.wordCount}`}</span>}
       </div>
       {/* Tiến độ: phần đã học */}
       {!!learned && !done && (
-        <div className="-mt-1.5 mx-0.5 h-2.5 overflow-hidden rounded-full border-2 border-ink bg-card-2">
-          <div className="candy-bar h-full" style={{ width: `${(learned * 100) / deck.wordCount}%` }} />
+        <div className="progress -mt-1.5 mx-0.5 w-auto">
+          <div className="progress-bar" style={{ width: `${(learned * 100) / deck.wordCount}%` }} />
         </div>
       )}
     </Link>
@@ -142,7 +142,7 @@ async function Decks() {
           <h2 className="section-title flex items-center gap-2">
             <SoundMark />
             {title}
-            <span className="flex h-6 min-w-7 items-center justify-center rounded-full border-2 border-ink bg-accent px-2 font-sans text-sm text-white">{list.length}</span>
+            <span className="badge badge-accent font-sans">{list.length}</span>
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {list.map((d) => (
@@ -155,12 +155,14 @@ async function Decks() {
         <Link href="/games" className="group sticker sticker-link flex items-center gap-3 overflow-hidden p-3 sm:px-5">
           <Mascot animated className="size-14 -scale-x-100 sm:size-16" />
           <span className="min-w-0 flex-1 font-extrabold sm:text-lg">Học mệt rồi? Chơi game từ vựng nhé!</span>
-          <ArrowRight className="size-5 shrink-0 text-muted transition group-hover:translate-x-1 motion-reduce:transition-none" />
+          <span className="icon-bubble tint-gold">
+            <ArrowRight className="size-5 transition group-hover:translate-x-0.5 motion-reduce:transition-none" />
+          </span>
         </Link>
       ) : (
-        <div className="flex flex-col items-center gap-1 py-6 text-center">
+        <div className="card empty">
           <Mascot className="size-28" />
-          <p className="text-sm font-bold text-muted">Chưa có bộ từ nào.</p>
+          <p className="font-bold">Chưa có bộ từ nào.</p>
         </div>
       )}
     </>
@@ -172,7 +174,7 @@ export default function VocabPage() {
     <main className="page">
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr] lg:gap-6">
         <VocabHero />
-        <Suspense fallback={<div className="skeleton min-h-24 rounded-3xl" />}>
+        <Suspense fallback={<div className="skeleton min-h-24 rounded-panel" />}>
           <Notebook />
         </Suspense>
       </div>

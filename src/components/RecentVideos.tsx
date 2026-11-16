@@ -21,11 +21,11 @@ export function RecentVideos() {
           <Link
             key={r.videoId}
             href={`/watch/${r.videoId}`}
-            className="group sticker sticker-link overflow-hidden"
+            className="group sticker sticker-link flex flex-col overflow-hidden"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />
-            <div className="line-clamp-2 p-3 text-sm font-bold">{r.title}</div>
+            <img src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`} alt="" className="m-1.5 mb-0 aspect-video w-[calc(100%-0.75rem)] rounded-[calc(var(--radius-lg)-6px)] bg-card-2 object-cover" />
+            <div className="line-clamp-2 p-3 text-sm leading-snug font-bold group-hover:text-accent-text">{r.title}</div>
           </Link>
         ))}
       </div>

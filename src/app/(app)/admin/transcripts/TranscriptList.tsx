@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Captions, Search } from "lucide-react";
 import { removeTranscripts } from "../actions";
 import DeleteButton from "../DeleteButton";
 
@@ -22,36 +22,37 @@ export default function TranscriptList({ videos }: { videos: SavedVideo[] }) {
 
   return (
     <>
-      <label className="input flex items-center gap-2">
-        <Search className="size-4 text-muted" />
+      <label className="input-group">
+        <Search className="size-4 shrink-0 text-muted" aria-hidden />
         <input
-          className="flex-1 bg-transparent outline-none"
+          aria-label="Tìm theo tiêu đề hoặc mã video"
           placeholder="Tìm theo tiêu đề hoặc mã video…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
       </label>
-      <div className="card divide-y divide-border p-0">
+      <div className="card overflow-hidden p-0">
+        <ul className="divide-y divide-line">
         {shown.map((v) => (
-          <div key={v.videoId} className="flex flex-wrap items-center gap-3 p-3">
+          <li key={v.videoId} className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-card-2/50 sm:px-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`https://i.ytimg.com/vi/${v.videoId}/default.jpg`} alt="" className="h-12 w-20 rounded-lg object-cover" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium">{v.title}</div>
-              <div className="flex flex-wrap gap-x-3 text-xs text-muted">
+            <img src={`https://i.ytimg.com/vi/${v.videoId}/default.jpg`} alt="" className="h-12 w-20 shrink-0 rounded-xl bg-card-2 object-cover" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="truncate font-bold">{v.title}</div>
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                 {v.tracks.map((t) => (
-                  <span key={t.label}>
+                  <span key={t.label} className="badge badge-muted">
                     {t.label} · {t.lines} dòng
                   </span>
                 ))}
-                {v.updatedAt && <span>lưu {new Date(v.updatedAt).toLocaleDateString("vi-VN")}</span>}
+                {v.updatedAt && <span className="tabular-nums">lưu {new Date(v.updatedAt).toLocaleDateString("vi-VN")}</span>}
               </div>
             </div>
-            <div className="flex gap-2 max-sm:basis-full max-sm:justify-end">
-              <Link href={`/watch/${v.videoId}`} className="btn">
+            <div className="flex items-center gap-1.5 max-sm:basis-full max-sm:justify-end">
+              <Link href={`/watch/${v.videoId}`} className="btn btn-ghost btn-sm">
                 Xem
               </Link>
-              <Link href={`/admin/transcripts/${v.videoId}`} className="btn">
+              <Link href={`/admin/transcripts/${v.videoId}`} className="btn btn-sm">
                 Sửa
               </Link>
               <DeleteButton
@@ -59,12 +60,16 @@ export default function TranscriptList({ videos }: { videos: SavedVideo[] }) {
                 confirmText={`Xoá phụ đề đã lưu của “${v.title}”? Lần sau có người mở, app sẽ lấy lại từ YouTube / Whisper.`}
               />
             </div>
-          </div>
+          </li>
         ))}
+        </ul>
         {!shown.length && (
-          <p className="p-6 text-center text-sm text-muted">
-            {videos.length ? `Không tìm thấy “${q}”.` : "Chưa có phụ đề nào được lưu."}
-          </p>
+          <div className="empty">
+            <span className="icon-bubble tint-muted">
+              {videos.length ? <Search className="size-5" aria-hidden /> : <Captions className="size-5" aria-hidden />}
+            </span>
+            <p>{videos.length ? `Không tìm thấy “${q}”.` : "Chưa có phụ đề nào được lưu."}</p>
+          </div>
         )}
       </div>
     </>

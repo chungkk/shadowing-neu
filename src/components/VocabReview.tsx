@@ -82,14 +82,15 @@ const PROMPT_SENTENCE: Partial<Record<Kind, string>> = {
 const PRAISE = ["Tuyệt vời!", "Chính xác!", "Giỏi lắm!", "Xuất sắc!", "Quá chuẩn!"];
 
 /** Ô / nút kiểu "nổi" có viền dưới dày */
-const tile = "rounded-2xl border-2 border-b-4 font-bold transition active:translate-y-0.5 active:border-b-2 disabled:active:translate-y-0";
+const tile =
+  "cursor-pointer rounded-ui border-2 border-b-4 font-bold transition-[transform,background-color,border-color,color] duration-150 active:translate-y-0.5 active:border-b-2 disabled:cursor-default disabled:active:translate-y-0 disabled:active:border-b-4 motion-reduce:transition-none motion-reduce:active:translate-y-0";
 const tone = (state: "idle" | "sel" | "right" | "wrong" | "dim") =>
   ({
-    idle: "border-border bg-card-2 hover:bg-foreground/5",
-    sel: "border-link bg-link/15 text-link",
-    right: "border-accent bg-accent/15 text-accent-text",
-    wrong: "border-red bg-red/15 text-red-400",
-    dim: "border-border bg-card-2 opacity-40",
+    idle: "border-ink bg-card hover:bg-card-2",
+    sel: "border-link bg-link-soft text-link",
+    right: "border-accent bg-accent-soft text-accent-text",
+    wrong: "border-red bg-red-soft text-red-400",
+    dim: "border-line bg-card-2 opacity-40",
   })[state];
 
 /** Câu ví dụ: che từ (khi hỏi), điền từ đang chọn, hoặc tô đậm */
@@ -102,12 +103,12 @@ function Context({ text, word, blank, fill }: { text: string; word: string; blan
       {text.slice(0, i)}
       {blank ? (
         fill ? (
-          <span className="rounded-lg border-b-2 border-link px-1 font-bold text-link">{fill}</span>
+          <span className="rounded-lg border-b-2 border-link bg-link-soft px-1 font-bold text-link">{fill}</span>
         ) : (
-          <span className="inline-block min-w-16 rounded border-b-2 border-muted px-1">{" ".repeat(Math.min(end - i, 12))}</span>
+          <span className="inline-block min-w-16 rounded border-b-2 border-line-strong px-1">{" ".repeat(Math.min(end - i, 12))}</span>
         )
       ) : (
-        <mark className="rounded bg-amber/20 px-0.5 text-amber">{text.slice(i, end)}</mark>
+        <mark className="rounded bg-gold-soft px-0.5 text-amber">{text.slice(i, end)}</mark>
       )}
       {text.slice(end)}
     </>
@@ -135,7 +136,7 @@ function SpeakButton({ text, tts, big }: { text: string; tts: boolean; big?: boo
 function ListenButtons({ word }: { word: string }) {
   return (
     <div className="flex items-end justify-center gap-3">
-      <button className={`${tile} flex size-24 items-center justify-center border-link bg-link text-on-link`} onClick={() => speak(word, 0.85)} title="Nghe lại">
+      <button className={`${tile} flex size-24 items-center justify-center rounded-sheet border-link bg-link-soft text-link`} onClick={() => speak(word, 0.85)} title="Nghe lại">
         <Volume2 className="size-12" />
       </button>
       <button className={`${tile} ${tone("idle")} flex size-14 items-center justify-center text-link`} onClick={() => speak(word, 0.5)} title="Nghe chậm">
@@ -412,18 +413,18 @@ export default function VocabReview({
       case "intro":
         return (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="rounded-full bg-amber/15 px-3 py-1 text-xs font-extrabold tracking-wider text-amber uppercase">
+            <span className="badge badge-gold">
               {sentence ? "Câu mới" : "Từ mới"} — ghi nhớ nhé
             </span>
             <div className="flex items-center gap-3">
               <SpeakButton text={spoken(v.word)} tts={tts} big />
-              <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
+              <p className={`${headline} font-display font-extrabold wrap-anywhere`}>{v.word}</p>
             </div>
             <p className={`wrap-anywhere ${v.meaning ? `${sentence ? "text-lg" : "text-2xl"} font-bold text-amber` : "text-muted italic"}`}>
               {v.meaning || "Chưa ghi nghĩa"}
             </p>
             {v.context && (
-              <div className="flex items-start gap-1 rounded-2xl border-2 border-border p-4 text-left">
+              <div className="surface flex items-start gap-1 p-4 text-left">
                 <p className="leading-relaxed wrap-anywhere">
                   <Context text={v.context} word={v.word} />
                 </p>
@@ -442,7 +443,7 @@ export default function VocabReview({
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="flex items-center gap-3">
                   <SpeakButton text={spoken(v.word)} tts={tts} big />
-                  <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
+                  <p className={`${headline} font-display font-extrabold wrap-anywhere`}>{v.word}</p>
                 </div>
                 {v.context && (
                   <p className="text-sm leading-relaxed text-muted wrap-anywhere">
@@ -454,7 +455,7 @@ export default function VocabReview({
             {kind === "listen-choose" && <ListenButtons word={spoken(v.word)} />}
             {kind === "choose-word" && <p className={`text-center ${sentence ? "text-xl" : "text-3xl"} font-extrabold text-amber wrap-anywhere`}>{v.meaning}</p>}
             {kind === "cloze-bank" && (
-              <div className="rounded-2xl border-2 border-border p-4 text-lg leading-loose wrap-anywhere">
+              <div className="surface p-4 text-lg leading-loose wrap-anywhere">
                 <Context text={v.context} word={v.word} blank={!feedback} fill={sel} />
                 {v.meaning && <p className="mt-2 text-sm text-amber">Nghĩa: {v.meaning}</p>}
               </div>
@@ -489,7 +490,7 @@ export default function VocabReview({
             {v.meaning ? (
               <p className="text-center text-3xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p>
             ) : canCloze(v) ? (
-              <p className="rounded-2xl border-2 border-border p-4 text-lg leading-loose wrap-anywhere">
+              <p className="surface p-4 text-lg leading-loose wrap-anywhere">
                 <Context text={v.context} word={v.word} blank={!feedback} />
               </p>
             ) : (
@@ -497,7 +498,7 @@ export default function VocabReview({
             )}
             {/* Hàng chữ đã xếp */}
             <div
-              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-border"}`}
+              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-line-strong"}`}
             >
               {built.map((i) => (
                 <button
@@ -514,7 +515,7 @@ export default function VocabReview({
             <div className="flex flex-wrap justify-center gap-2">
               {step.tiles!.map((c, i) =>
                 built.includes(i) ? (
-                  <span key={i} className="min-w-11 rounded-2xl bg-foreground/5 px-3 py-2 text-2xl text-transparent">
+                  <span key={i} className="min-w-11 rounded-ui bg-card-2 px-3 py-2 text-2xl text-transparent">
                     {c}
                   </span>
                 ) : (
@@ -538,7 +539,7 @@ export default function VocabReview({
           <div className="flex flex-col gap-5">
             {kind === "type" && <p className="text-center text-3xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p>}
             {kind === "cloze-type" && (
-              <div className="rounded-2xl border-2 border-border p-4 text-lg leading-loose wrap-anywhere">
+              <div className="surface p-4 text-lg leading-loose wrap-anywhere">
                 <Context text={v.context} word={v.word} blank={!feedback} />
                 {v.meaning && <p className="mt-2 text-sm text-amber">Nghĩa: {v.meaning}</p>}
               </div>
@@ -549,7 +550,7 @@ export default function VocabReview({
             </p>
             <input
               ref={inputRef}
-              className={`input rounded-2xl border-2 text-center text-xl font-bold ${feedback ? (feedback.ok ? "border-accent text-accent-text" : "border-red text-red-400 line-through") : ""}`}
+              className={`input h-14 text-center text-xl font-bold ${feedback ? (feedback.ok ? "border-accent text-accent-text" : "border-red text-red-400 line-through") : ""}`}
               placeholder="Gõ bằng tiếng Đức…"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
@@ -631,7 +632,7 @@ export default function VocabReview({
             {kind === "order" ? <p className="text-center text-xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p> : <ListenButtons word={spoken(v.word)} />}
             {/* Hàng từ đã xếp */}
             <div
-              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-border"}`}
+              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-line-strong"}`}
             >
               {built.map((i) => (
                 <button
@@ -648,7 +649,7 @@ export default function VocabReview({
             <div className="flex flex-wrap justify-center gap-2">
               {step.tiles!.map((w, i) =>
                 built.includes(i) ? (
-                  <span key={i} className="rounded-2xl bg-foreground/5 px-3 py-2 text-lg text-transparent">
+                  <span key={i} className="rounded-ui bg-card-2 px-3 py-2 text-lg text-transparent">
                     {w}
                   </span>
                 ) : (
@@ -670,7 +671,7 @@ export default function VocabReview({
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-3">
               <SpeakButton text={spoken(v.word)} tts={tts} big />
-              <p className={`${headline} font-extrabold wrap-anywhere`}>{v.word}</p>
+              <p className={`${headline} font-display font-extrabold wrap-anywhere`}>{v.word}</p>
             </div>
             {flipped || feedback ? (
               <>
@@ -695,13 +696,13 @@ export default function VocabReview({
     if (feedback) {
       const ok = feedback.ok;
       return (
-        <div className={`border-t-2 ${ok ? "border-accent/40 bg-accent/15" : "border-red/40 bg-red/15"}`}>
+        <div role="status" className={`border-t-2 ${ok ? "border-accent/30 bg-accent-soft" : "border-red/30 bg-red-soft"}`}>
           <div className="pb-safe mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:p-6">
-            <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card sm:flex ${ok ? "text-accent-text" : "text-red-400"}`}>
+            <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card shadow-soft sm:flex ${ok ? "text-accent-text" : "text-red-400"}`}>
               {ok ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className={`text-xl font-extrabold ${ok ? "text-accent-text" : "text-red-400"}`}>
+              <p className={`font-display text-xl font-extrabold ${ok ? "text-accent-text" : "text-red-400"}`}>
                 {ok ? (feedback.note ?? PRAISE[step.id % PRAISE.length]) : "Đáp án đúng:"}
               </p>
               {feedback.combo >= 3 && feedback.combo % 3 === 0 && (
@@ -732,7 +733,7 @@ export default function VocabReview({
       );
     }
     return (
-      <div className="border-t-2 border-border">
+      <div className="border-t-2 border-line bg-card">
         <div className="pb-safe mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 pt-4 sm:p-6">
           {kind === "intro" ? (
             <button className="btn btn-primary ml-auto py-3 sm:min-w-40" onClick={next}>
@@ -741,15 +742,15 @@ export default function VocabReview({
           ) : kind === "flash" ? (
             flipped ? (
               <div className="grid flex-1 grid-cols-2 gap-3">
-                <button className="btn btn-red py-3" onClick={() => answer(false)}>
-                  <X className="size-4" /> Chưa nhớ
+                <button className="btn py-3" onClick={() => answer(false)}>
+                  <X className="size-4 text-red-400" /> Chưa nhớ
                 </button>
                 <button className="btn btn-primary py-3" onClick={() => answer(true)}>
                   <Check className="size-4" /> Đã nhớ
                 </button>
               </div>
             ) : (
-              <button className="btn btn-amber ml-auto py-3 sm:min-w-40" onClick={() => setFlipped(true)}>
+              <button className="btn btn-primary ml-auto py-3 sm:min-w-40" onClick={() => setFlipped(true)}>
                 Lật thẻ
               </button>
             )
@@ -773,9 +774,9 @@ export default function VocabReview({
   };
 
   const stats = [
-    { icon: Check, label: "Đã ôn", value: `${graded.length} từ`, color: "border-amber text-amber" },
-    { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "border-accent text-accent-text" },
-    { icon: Clock, label: "Thời gian", value: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, color: "border-link text-link" },
+    { icon: Check, label: "Đã ôn", value: `${graded.length} từ`, color: "tint-gold" },
+    { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "tint-accent" },
+    { icon: Clock, label: "Thời gian", value: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, color: "tint-link" },
   ];
 
   return (
@@ -785,9 +786,9 @@ export default function VocabReview({
         <button title="Thoát (Esc)" className="btn-icon size-9 shrink-0 text-muted" onClick={() => onClose(changed)}>
           <X className="size-6" />
         </button>
-        <div className="h-4 flex-1 overflow-hidden rounded-full bg-card-2">
+        <div className="progress h-4 flex-1">
           <div
-            className="relative h-full rounded-full bg-accent transition-all duration-500"
+            className="progress-bar relative"
             style={{ width: `${queue.length ? (Math.min(pos + (feedback ? 1 : 0), queue.length) / queue.length) * 100 : 100}%` }}
           >
             <div className="absolute inset-x-2 top-1 h-1 rounded-full bg-white/30" />
@@ -802,18 +803,22 @@ export default function VocabReview({
       </div>
 
       {!items.length ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-          <p className="text-5xl">🎉</p>
-          <p className="text-xl font-extrabold">Không có từ nào cần ôn lúc này</p>
-          <button className="btn btn-primary" onClick={() => onClose(false)}>
+        <div className="empty flex-1 justify-center gap-4 p-6">
+          <span className="icon-bubble tint-accent size-24 rounded-sheet text-5xl" aria-hidden>
+            🎉
+          </span>
+          <p className="font-display text-xl font-extrabold text-foreground">Không có từ nào cần ôn lúc này</p>
+          <button className="btn btn-primary btn-lg" onClick={() => onClose(false)}>
             Quay lại
           </button>
         </div>
       ) : done ? (
         <div className="pb-safe flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 pt-6 text-center sm:p-6">
-          <p className="text-6xl">{wrong.length ? "💪" : "🏆"}</p>
+          <span className="icon-bubble tint-gold rise-in size-24 rounded-sheet text-6xl" aria-hidden>
+            {wrong.length ? "💪" : "🏆"}
+          </span>
           <div>
-            <p className="text-3xl font-extrabold text-amber">{practice ? "Luyện xong!" : "Hoàn thành bài ôn!"}</p>
+            <p className="display text-amber">{practice ? "Luyện xong!" : "Hoàn thành bài ôn!"}</p>
             {!practice && streak.count > 0 && (
               <p className="mt-1 flex items-center justify-center gap-1 font-bold text-amber">
                 <Flame className="size-5" /> {streak.count} ngày ôn liên tiếp
@@ -822,26 +827,32 @@ export default function VocabReview({
           </div>
           <div className="grid w-full max-w-md grid-cols-3 gap-3">
             {stats.map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className={`overflow-hidden rounded-2xl border-2 ${color}`}>
-                <p className="bg-current/15 py-1 text-[10px] font-extrabold tracking-wider uppercase sm:text-xs">{label}</p>
-                <p className="flex items-center justify-center gap-1 py-3 text-xl font-extrabold">
-                  <Icon className="size-5" /> {value}
-                </p>
+              <div key={label} className="tile stat items-center gap-2 py-4">
+                <span className={`icon-bubble size-9 ${color}`}>
+                  <Icon className="size-5" />
+                </span>
+                <p className="stat-value text-xl sm:text-2xl">{value}</p>
+                <p className="stat-label">{label}</p>
               </div>
             ))}
           </div>
-          <p className="max-w-md text-sm text-muted">
+          <p className="lead max-w-md text-sm sm:text-sm">
             Đúng ngay lần đầu {firstTry}/{graded.length} từ · chuỗi dài nhất {bestCombo} câu. Từ đúng được hẹn ôn lại xa hơn, từ sai quay lại vào ngày mai.
           </p>
           {unsaved > 0 && (
-            <p role="alert" className="max-w-md rounded-md bg-red-500/10 p-3 text-sm text-red-400">
+            <p role="alert" className="alert alert-err max-w-md text-left">
               {unsaved} lượt chấm chưa lưu được (mất kết nối hoặc phiên đăng nhập đã hết hạn). Đăng nhập lại rồi ôn lại để
               lịch ôn được cập nhật.
             </p>
           )}
           {wrong.length > 0 && (
-            <div className="flex w-full max-w-md flex-col gap-2 rounded-2xl border-2 border-border p-4 text-left">
-              <p className="font-extrabold text-red-400">Từ cần chú ý</p>
+            <div className="card flex w-full max-w-md flex-col gap-2 text-left">
+              <p className="flex items-center gap-2 font-display font-extrabold text-red-400">
+                <span className="icon-bubble tint-red size-8">
+                  <Target className="size-4" />
+                </span>
+                Từ cần chú ý
+              </p>
               {wrong.map((g) => (
                 <div key={g.item.id} className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 wrap-anywhere">
@@ -855,11 +866,11 @@ export default function VocabReview({
           )}
           <div className="flex flex-wrap justify-center gap-3">
             {wrong.length > 0 && (
-              <button className="btn py-3" onClick={() => restart(shuffle(wrong.map((g) => ({ ...g.item, stage: g.stage ?? 1 }))))}>
+              <button className="btn btn-lg" onClick={() => restart(shuffle(wrong.map((g) => ({ ...g.item, stage: g.stage ?? 1 }))))}>
                 <RotateCcw className="size-4" /> Luyện thêm từ sai
               </button>
             )}
-            <button className="btn btn-primary py-3 sm:min-w-40" onClick={() => onClose(changed)}>
+            <button className="btn btn-primary btn-lg sm:min-w-40" onClick={() => onClose(changed)}>
               Tiếp tục
             </button>
           </div>
@@ -869,8 +880,8 @@ export default function VocabReview({
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-5 px-4 py-3 sm:gap-6 sm:py-8">
               <div className="flex items-center gap-2">
-                <h2 className="flex-1 text-xl font-extrabold sm:text-2xl">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
-                {step.role === "retry" && <span className="pill text-xs text-red-400">Hỏi lại</span>}
+                <h2 className="flex-1 font-display text-xl font-extrabold sm:text-2xl">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
+                {step.role === "retry" && <span className="badge badge-red">Hỏi lại</span>}
                 {step.role === "graded" && kind !== "intro" && (
                   <span className={`text-xs font-bold ${stageInfo(v.stage).color}`}>{stageInfo(v.stage).label}</span>
                 )}

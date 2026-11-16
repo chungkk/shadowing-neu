@@ -21,7 +21,7 @@ const STORE = "wordmatch"; // tiền tố khoá localStorage
 const PAINT_MS = 100; // đồng hồ chạy theo khung hình, giao diện vẽ lại thưa hơn (bấm thẻ thì vẽ ngay)
 
 const RoundBtn = ({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) => (
-  <button title={title} onClick={onClick} className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/85 transition hover:bg-black/60">
+  <button title={title} aria-label={title} onClick={onClick} className="g-round size-9">
     {children}
   </button>
 );
@@ -254,19 +254,19 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
       {header}
       <div
         ref={field}
-        className={`theme-night relative flex flex-col gap-2 overflow-hidden bg-gradient-to-b from-[#0a1f24] to-[#0b2a2a] p-2.5 select-none sm:gap-3 sm:p-3 ${
-          full ? "h-full" : "h-[calc(100dvh-14rem)] min-h-[520px] rounded-2xl border border-white/5 md:h-[calc(100dvh-10rem)]"
+        className={`theme-night g-field-match relative flex flex-col gap-2 overflow-hidden p-2.5 select-none sm:gap-3 sm:p-3 ${
+          full ? "h-full" : "g-stage h-[calc(100dvh-14rem)] min-h-[520px] md:h-[calc(100dvh-10rem)]"
         }`}
       >
         {/* HUD: đồng hồ · điểm · nút */}
         <div className="flex items-center gap-2 text-white">
           <Mascot animated className="pointer-events-none size-9 max-sm:hidden" />
-          <Clock className={`size-5 shrink-0 ${low ? "text-red-400" : "text-cyan-300"}`} />
-          <span className="h-2.5 max-w-sm min-w-8 flex-1 rounded-full bg-white/10">
-            <span className={`block h-full rounded-full ${low ? "bg-red-500" : "bg-cyan-400"}`} style={{ width: `${(v.left / v.limit) * 100}%` }} />
+          <Clock className={`size-5 shrink-0 ${low ? "text-red-400" : "text-[var(--tone-text)]"}`} />
+          <span className="g-hud-bar h-2.5 max-w-sm min-w-8 flex-1">
+            <span className={low ? "bg-red" : ""} style={{ width: `${(v.left / v.limit) * 100}%` }} />
           </span>
           <b className={`w-9 shrink-0 text-sm tabular-nums ${low ? "text-red-400" : ""}`}>{Math.ceil(v.left)}s</b>
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-sm font-extrabold">
+          <span className="g-hud ml-auto shrink-0">
             <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
             {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
           </span>
@@ -282,7 +282,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
         </div>
 
         <p className="flex min-w-0 items-center gap-1.5 text-xs text-white/70">
-          <Flag className="size-3.5 shrink-0 text-cyan-300" />
+          <Flag className="size-3.5 shrink-0 text-[var(--tone-text)]" />
           <b className="shrink-0 text-white">
             Mốc {v.milestone + 1}/{v.topics.length}
           </b>
@@ -307,19 +307,9 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                 disabled={c.done}
                 aria-pressed={selected}
                 lang={isWord ? "de" : "vi"}
-                className={`relative flex min-h-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 px-2 text-center text-sm leading-snug font-bold [overflow-wrap:anywhere] transition-colors focus-visible:outline-2 focus-visible:outline-white sm:px-4 sm:text-base ${
-                  c.done
-                    ? "rain-hit pointer-events-none border-accent bg-accent/20 text-white"
-                    : wrong
-                      ? "shake border-red bg-red/25 text-white"
-                      : selected
-                        ? "border-amber bg-amber/25 text-white shadow-[0_0_16px_rgba(250,204,21,0.45)]"
-                        : isWord
-                          ? "border-teal-500/60 bg-[#0e1b26] text-cyan-100 hover:border-teal-300 hover:bg-[#13283a]"
-                          : "border-orange-500/60 bg-[#33221a] text-amber-100 hover:border-orange-300 hover:bg-[#46301f]"
-                }`}
+                className={`g-mcard ${isWord ? "g-mcard-word" : "g-mcard-mean"} ${c.done ? "g-mcard-done rain-hit" : wrong ? "g-mcard-wrong shake" : ""}`}
               >
-                <span aria-hidden className={`absolute top-1 left-2 text-[10px] font-extrabold ${isWord ? "text-teal-400" : "text-orange-400"}`}>
+                <span aria-hidden className="g-mcard-tag">
                   {isWord ? "Aa" : "•••"}
                 </span>
                 {isWord ? fullWord(c.w) : c.w.meaning}
@@ -329,29 +319,33 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
           })}
         </div>
 
-        {note && <p className="sheet-fade pointer-events-none absolute inset-x-0 top-24 z-10 mx-auto w-fit max-w-[90%] rounded-xl bg-cyan-500 px-3 py-1.5 text-center text-sm font-bold text-white">{note}</p>}
+        {note && (
+          <p role="status" className="g-toast g-toast-ok top-24">
+            {note}
+          </p>
+        )}
 
         {/* Lớp phủ: tạm dừng / thua / thắng */}
         {phase !== "play" && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center overflow-y-auto bg-[#06181c]/95 p-4 backdrop-blur-sm">
-            <div className="m-auto flex w-full max-w-md flex-col items-center gap-4 text-center">
+          <div className="g-overlay g-overlay-night">
+            <div className="g-panel">
               {phase === "pause" ? (
                 <>
-                  <p className="text-xl font-extrabold">Tạm dừng</p>
-                  <button className="btn btn-primary btn-lg w-full" onClick={() => setPhase("play")}>
+                  <p className="font-display text-2xl font-extrabold">Tạm dừng</p>
+                  <button className="btn btn-amber btn-lg btn-block" onClick={() => setPhase("play")}>
                     <Play className="size-5" /> Tiếp tục
                   </button>
-                  <button className="btn btn-lg w-full" onClick={quit}>
+                  <button className="btn btn-lg btn-block" onClick={quit}>
                     Thoát ván
                   </button>
                 </>
               ) : (
                 <>
-                  <p className="text-xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.left > 0 ? "Đã thoát ván" : "Hết giờ!"}</p>
-                  <p className="text-5xl font-extrabold text-amber tabular-nums">{v.score}</p>
+                  <p className="font-display text-2xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.left > 0 ? "Đã thoát ván" : "Hết giờ!"}</p>
+                  <p className="g-score">{v.score}</p>
                   {v.score > v.best ? (
-                    <p className="flex items-center gap-1.5 font-bold text-amber">
-                      <Trophy className="size-5" /> Kỷ lục mới!
+                    <p className="badge badge-gold px-3 py-1 text-sm">
+                      <Trophy className="size-4" /> Kỷ lục mới!
                     </p>
                   ) : (
                     <p className="text-sm text-muted">Kỷ lục: {best}</p>
@@ -381,11 +375,17 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                         ))}
                       </ul>
                       {saved ? (
-                        <p className="mt-2 text-center text-sm font-bold text-accent-text">{saved}</p>
+                        <p role="status" className="alert alert-ok mt-2 justify-center">
+                          {saved}
+                        </p>
                       ) : loggedIn ? (
                         <>
-                          {saveError && <p className="mt-2 text-center text-sm text-red-400">{saveError}</p>}
-                          <button className="btn btn-amber btn-lg mt-3 w-full" disabled={saving} onClick={saveMissed}>
+                          {saveError && (
+                            <p role="alert" className="alert alert-err mt-2">
+                              {saveError}
+                            </p>
+                          )}
+                          <button className="btn btn-soft btn-lg btn-block mt-3" disabled={saving} onClick={saveMissed}>
                             <BookmarkPlus className="size-4" /> {saveError ? "Thử lưu lại" : "Lưu vào sổ để ôn"}
                           </button>
                         </>
@@ -396,7 +396,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                     <button className="btn btn-lg flex-1" onClick={quit}>
                       Đổi bộ từ
                     </button>
-                    <button className="btn btn-primary btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
+                    <button className="btn btn-amber btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
                       <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
                     </button>
                   </div>

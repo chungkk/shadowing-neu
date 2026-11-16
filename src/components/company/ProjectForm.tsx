@@ -50,9 +50,8 @@ const COPY = {
     },
 };
 
-// Ô nhập dùng .input của app; lỗi thì viền đỏ (--red-400 là màu chữ lỗi của app)
-const fieldClass = 'input mt-1.5 w-full font-normal text-foreground';
-const fieldError = 'border-red-400 focus:border-red-400 dark:border-red-400';
+// Ô nhập: .field (nhãn) + .input của app; lỗi → aria-invalid="true" (viền đỏ do .input tự đổi) + .field-error
+const fieldClass = 'input w-full font-normal';
 
 export default function ProjectForm() {
     const t = useT(COPY);
@@ -85,12 +84,12 @@ export default function ProjectForm() {
     return (
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
             <fieldset className="flex flex-col gap-2">
-                <legend className="mb-2 font-bold">{t.kindLabel}</legend>
+                <legend className="mb-2 text-sm font-bold text-muted">{t.kindLabel}</legend>
                 <div className="grid grid-cols-2 gap-2">
                     {t.kinds.map((label, i) => (
                         <label
                             key={i}
-                            className={`btn has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${kind === i ? 'btn-primary' : ''}`}
+                            className={`chip min-h-11 justify-center whitespace-normal text-center has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${kind === i ? 'chip-on' : ''}`}
                         >
                             <input type="radio" name="kind" className="sr-only" checked={kind === i} onChange={() => setKind(i)} />
                             {label}
@@ -99,13 +98,13 @@ export default function ProjectForm() {
                 </div>
             </fieldset>
 
-            <label className="block font-bold">
+            <label className="field">
                 {t.nameLabel}
                 <input type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} />
             </label>
 
-            <div>
-                <label className="block font-bold">
+            <div className="flex flex-col gap-1.5">
+                <label className="field">
                     {t.messageLabel}
                     <textarea
                         ref={messageRef}
@@ -118,15 +117,15 @@ export default function ProjectForm() {
                         }}
                         aria-invalid={error}
                         aria-describedby={error ? 'project-error' : 'project-hint'}
-                        className={`${fieldClass} ${error ? fieldError : ''}`}
+                        className={fieldClass}
                     />
                 </label>
                 {error ? (
-                    <p id="project-error" role="alert" className="mt-1.5 text-sm font-bold text-red-400">
+                    <p id="project-error" role="alert" className="field-error text-sm">
                         {t.messageError}
                     </p>
                 ) : (
-                    <p id="project-hint" className="mt-1.5 text-sm text-muted">
+                    <p id="project-hint" className="field-hint text-sm font-normal">
                         {t.messageHint}
                     </p>
                 )}
@@ -135,7 +134,7 @@ export default function ProjectForm() {
             <button type="submit" className="btn btn-primary btn-lg w-full">
                 {t.submit}
             </button>
-            <p className="text-sm text-muted" aria-live="polite">
+            <p className={opened ? 'alert alert-ok block' : 'text-sm text-muted'} aria-live="polite">
                 {opened ? (
                     <>
                         {t.opened}{' '}

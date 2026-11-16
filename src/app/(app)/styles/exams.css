@@ -1,1 +1,484 @@
 /* Area CSS: exams — owned by the exams worker. Plain CSS or @layer components; tokens from globals.css. */
+
+@layer components {
+  /* Thanh tiến độ 2 màu (đúng / sai) trong .progress */
+  .quiz-bar-ok {
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--leaf) 55%, var(--accent)));
+    transition: width 500ms var(--ease-out);
+  }
+  .quiz-bar-bad {
+    background: var(--red);
+    transition: width 500ms var(--ease-out);
+  }
+
+  /* Thẻ lớn chính (Thi thử): nền xanh có gradient + gờ xanh đậm */
+  .quiz-big-primary {
+    --hero: var(--leaf);
+    background:
+      radial-gradient(22rem 12rem at 100% 0%, color-mix(in srgb, var(--leaf) 40%, transparent), transparent 70%),
+      linear-gradient(160deg, color-mix(in srgb, white 8%, var(--accent)), var(--accent));
+    border-color: var(--accent);
+    box-shadow: 0 4px 0 var(--accent-dark), var(--shadow-md);
+  }
+  @media (hover: hover) {
+    .quiz-big-primary.sticker-link:hover {
+      border-color: var(--accent);
+      box-shadow: 0 6px 0 var(--accent-dark), var(--shadow-lg);
+    }
+  }
+  .quiz-big-primary.sticker-link:active {
+    box-shadow: 0 1px 0 var(--accent-dark), var(--shadow-xs);
+  }
+
+  /* Phương án trả lời (màn Học / Luyện / Thi — ngoài khung giả lập phần mềm thi) */
+  .quiz-option {
+    @apply relative flex w-full items-center gap-3 overflow-hidden p-3 text-left disabled:cursor-default;
+    border-radius: var(--radius);
+    border: 2px solid var(--ink);
+    background-color: var(--card);
+    box-shadow: 0 2px 0 var(--ink);
+    transition:
+      border-color var(--dur-fast),
+      background-color var(--dur-fast),
+      box-shadow var(--dur-fast),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .quiz-option:not(:disabled):hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--ink));
+      background-color: color-mix(in srgb, var(--accent-soft) 40%, var(--card));
+    }
+  }
+  .quiz-option:not(:disabled):active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .quiz-option[data-state="on"] {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, var(--accent-soft));
+  }
+  .quiz-option[data-state="correct"] {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+    box-shadow: none;
+  }
+  .quiz-option[data-state="wrong"] {
+    border-color: var(--red);
+    background-color: var(--red-soft);
+    box-shadow: none;
+  }
+  .quiz-option[data-state="idle"] {
+    box-shadow: none;
+    opacity: 0.85;
+  }
+
+  /* Ô chọn số / dấu tích ở đầu phương án */
+  .quiz-mark {
+    @apply flex size-9 shrink-0 items-center justify-center border-2 text-sm font-extrabold;
+    border-color: var(--line-strong);
+    background-color: var(--card);
+    color: var(--muted);
+    transition:
+      background-color var(--dur-fast),
+      border-color var(--dur-fast),
+      color var(--dur-fast);
+  }
+  .quiz-mark[data-tick="on"] {
+    border-color: var(--accent);
+    background-color: var(--accent);
+    color: #fff;
+  }
+  .quiz-mark[data-tick="bad"] {
+    border-color: var(--red);
+    background-color: var(--red);
+    color: #fff;
+  }
+
+  /* Ô số câu trong bảng câu hỏi */
+  .quiz-cell {
+    @apply relative flex size-9 items-center justify-center rounded-xl text-xs font-extrabold tabular-nums sm:size-8 sm:rounded-lg;
+    border: 2px solid var(--line);
+    background-color: var(--card);
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast),
+      border-color var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .quiz-cell:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    }
+  }
+  .quiz-cell[data-state="ok"] {
+    border-color: var(--accent);
+    background-color: var(--accent);
+    color: #fff;
+  }
+  .quiz-cell[data-state="bad"] {
+    border-color: var(--red);
+    background-color: var(--red);
+    color: #fff;
+  }
+  .quiz-cell[data-state="ok-old"] {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--accent-soft));
+    background-color: var(--accent-soft);
+    color: var(--accent-text);
+  }
+  .quiz-cell[data-state="bad-old"] {
+    border-color: color-mix(in srgb, var(--red) 30%, var(--red-soft));
+    background-color: var(--red-soft);
+    color: var(--red-400);
+  }
+  .quiz-cell[data-state="answered"] {
+    border-color: color-mix(in srgb, var(--gold) 70%, var(--gold-soft));
+    background-color: var(--gold-soft);
+    color: var(--amber);
+  }
+  .quiz-cell[aria-current="true"] {
+    box-shadow:
+      0 0 0 2px var(--card),
+      0 0 0 4px var(--foreground);
+  }
+
+  /* Phản hồi sau khi chấm (Đúng rồi! / Chưa đúng) */
+  .quiz-verdict {
+    @apply flex items-center gap-2.5 px-3.5 py-2.5 font-extrabold;
+    border-radius: var(--radius);
+    animation: quiz-pop 260ms var(--ease-spring);
+  }
+  .quiz-verdict[data-ok="true"] {
+    color: var(--accent-text);
+    background-color: var(--accent-soft);
+    border: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .quiz-verdict[data-ok="false"] {
+    color: var(--red-400);
+    background-color: var(--red-soft);
+    border: 2px solid color-mix(in srgb, var(--red) 35%, transparent);
+  }
+
+  /* Hộp giải thích */
+  .quiz-explain {
+    @apply p-3.5 text-sm;
+    border-radius: var(--radius);
+    background-color: var(--gold-soft);
+    border: 1.5px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+
+  /* Bản dịch tiếng Việt dưới câu gốc */
+  .quiz-tr {
+    @apply border-l-4 pl-2.5 whitespace-pre-line text-accent-text italic;
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  /* Ô đồng hồ thi */
+  .quiz-timer {
+    @apply inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 font-display text-lg font-extrabold tabular-nums;
+    background-color: var(--card-2);
+    color: var(--foreground);
+  }
+  .quiz-timer[data-warn="true"] {
+    background-color: var(--red-soft);
+    color: var(--red-400);
+  }
+  /* Câu hỏi thường gặp (FAQ) ở trang chính Lái xe / LiD: <details class="quiz-faq group"><summary>…</summary><p/></details> */
+  .quiz-faq {
+    @apply px-3.5 py-2.5;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background-color: color-mix(in srgb, var(--card-2) 50%, transparent);
+    transition: background-color var(--dur-fast);
+  }
+  .quiz-faq[open] {
+    background-color: var(--card-2);
+  }
+  .quiz-faq > summary {
+    @apply flex min-h-8 cursor-pointer list-none items-center gap-2 font-bold;
+  }
+  .quiz-faq > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Nhóm thu gọn lồng trong thẻ (chủ đề trong một phần ở Lái xe › Học theo chủ đề) */
+  .quiz-group {
+    @apply overflow-hidden;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--line);
+    background-color: var(--card);
+    transition: border-color var(--dur-fast);
+  }
+  .quiz-group[open] {
+    border-color: var(--line-strong);
+  }
+
+  /* ═════ Màn làm bài Lái xe (.theme-fahrschule .laixe-sim) — giả lập phần mềm thi lý thuyết thật ═════
+     Màu riêng của phần mềm thi (thanh xanh, nút đỏ "Auswertung", nút vàng ☆, nút xanh dương "Video starten", ô số)
+     gom ở đây thành biến --sim-*, JSX chỉ dùng class sim-*. */
+  .laixe-sim {
+    --sim-bar: #518f52;
+    --sim-bar-line: #3d7a3e;
+    --sim-go: #3f9a52;
+    --sim-submit: #e8322f;
+    --sim-mark: #f2c443;
+    --sim-mark-ink: #8a6d1a;
+    --sim-video: #0000a8;
+    --sim-key-ink: #1a1a1a;
+    --sim-current: #1a73e8;
+    --sim-num: #e3b13c;
+    --sim-answered: #fff3b0;
+    --sim-ok: #9fe3b5;
+    --sim-bad: #ffb3b8;
+    --sim-ok-old: #d9f5e2;
+    --sim-bad-old: #ffe0e2;
+  }
+  .sim-bar {
+    background-color: var(--sim-bar);
+    border-top: 2px solid var(--sim-bar-line);
+  }
+  /* Dải đầu khung câu hỏi: "Câu n/N · mã câu · Punkte" */
+  .sim-head {
+    background-color: var(--accent);
+    color: #fff;
+  }
+  .sim-tag {
+    @apply inline-flex items-center rounded-full px-2 py-0.5;
+    border: 1px solid rgb(255 255 255 / 0.5);
+  }
+  .sim-tag[data-hot] {
+    border-color: var(--red);
+    background-color: var(--red);
+  }
+  .sim-head-icon {
+    color: #fff;
+  }
+  @media (hover: hover) {
+    .sim-head-icon:hover:not(:disabled) {
+      background-color: rgb(255 255 255 / 0.15);
+    }
+  }
+  /* Nút lớn kiểu phần mềm thi: Auswertung (đỏ) · ☆ (vàng) · Weiter (xanh) · Video starten (xanh dương) */
+  .sim-btn {
+    @apply inline-flex h-10 cursor-pointer items-center justify-center gap-2 px-4 text-lg font-semibold text-white select-none sm:text-xl;
+    border-radius: 6px;
+    background-color: var(--sim-go);
+    box-shadow: 0 2px 0 rgb(0 0 0 / 0.18);
+    transition:
+      filter var(--dur-fast),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .sim-btn:hover:not(:disabled) {
+      filter: brightness(1.06);
+    }
+  }
+  .sim-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    filter: brightness(0.95);
+  }
+  .sim-btn:disabled {
+    @apply cursor-not-allowed;
+    opacity: 0.5;
+  }
+  .sim-btn:focus-visible,
+  .sim-key:focus-visible,
+  .sim-cell:focus-visible,
+  .sim-tab:focus-visible,
+  .sim-subtab:focus-visible,
+  .sim-option:focus-visible {
+    outline: 3px solid var(--sim-current);
+    outline-offset: 2px;
+  }
+  .sim-btn[data-tone="submit"] {
+    background-color: var(--sim-submit);
+  }
+  .sim-btn[data-tone="mark"] {
+    background-color: var(--sim-mark);
+    color: var(--sim-key-ink);
+  }
+  .sim-btn[data-tone="video"] {
+    background-color: var(--sim-video);
+  }
+  /* Tab phần thi (Grundstoff / hạng) dính vào thanh số câu */
+  .sim-tab {
+    @apply h-10 min-w-14 cursor-pointer px-4 text-lg font-extrabold sm:h-11 sm:px-6 sm:text-xl;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid rgb(0 0 0 / 0.2);
+    border-bottom: 0;
+    background-color: #f2f2f2;
+    color: var(--sim-key-ink);
+    transition: background-color var(--dur-fast);
+  }
+  .sim-tab:hover {
+    background-color: #fff;
+  }
+  .sim-tab[aria-selected="true"] {
+    border-color: var(--sim-bar);
+    background-color: var(--sim-bar);
+    color: #fff;
+  }
+  /* Tab phần trong thanh xanh ở chế độ học */
+  .sim-subtab {
+    @apply cursor-pointer rounded-b-lg px-3 py-1.5 text-sm font-extrabold;
+    color: rgb(255 255 255 / 0.8);
+  }
+  .sim-subtab:hover {
+    color: #fff;
+  }
+  .sim-subtab[aria-selected="true"] {
+    background-color: #fff;
+    color: var(--accent-dark);
+  }
+  /* Ô số câu: trắng · vàng = đã trả lời · xanh / đỏ = đúng / sai (nhạt = lần học trước) · đang xem = nổi + chữ xanh dương */
+  .sim-cell {
+    @apply relative flex cursor-pointer items-center justify-center font-bold tabular-nums;
+    border: 1px solid rgb(0 0 0 / 0.55);
+    background-color: #fff;
+    color: var(--sim-key-ink);
+    transition: filter var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .sim-cell:hover {
+      filter: brightness(0.95);
+    }
+  }
+  .sim-cell[data-state="answered"] {
+    background-color: var(--sim-answered);
+  }
+  .sim-cell[data-state="ok"] {
+    background-color: var(--sim-ok);
+  }
+  .sim-cell[data-state="bad"] {
+    background-color: var(--sim-bad);
+  }
+  .sim-cell[data-state="ok-old"] {
+    background-color: var(--sim-ok-old);
+  }
+  .sim-cell[data-state="bad-old"] {
+    background-color: var(--sim-bad-old);
+  }
+  .sim-cell[aria-current="true"] {
+    border: 2px solid #000;
+    background: linear-gradient(#fff, #c9c9c9);
+    color: var(--sim-current);
+  }
+  .sim-cell[data-ring][aria-current="true"] {
+    border-width: 1px;
+    outline: 3px solid #000;
+    outline-offset: 2px;
+  }
+  /* Dấu góc ô số: ▶ = câu video · tam giác vàng = câu điền số · ☆ = đã đánh dấu */
+  .sim-mark-video {
+    @apply absolute top-0 left-0 flex h-2.5 w-3.5 items-center justify-center lg:h-3 lg:w-4;
+    background-color: #000;
+    color: #fff;
+  }
+  .sim-mark-num {
+    @apply absolute top-0 right-0 size-4 sm:size-5;
+    background-color: var(--sim-num);
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+  .sim-mark-star {
+    @apply absolute -top-1.5 size-3.5;
+    fill: var(--gold);
+    color: #000;
+  }
+  /* Nút vuông trắng viền đen: |◀ ◀◀ ◀ ▶ ▶▶ ▶| và bàn phím số */
+  .sim-key {
+    @apply cursor-pointer items-center justify-center text-center font-bold;
+    border: 1px solid rgb(0 0 0 / 0.45);
+    background-color: #fff;
+    color: var(--sim-key-ink);
+    transition: background-color var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .sim-key:hover:not(:disabled) {
+      background-color: #eee;
+    }
+  }
+  .sim-key:active:not(:disabled) {
+    background-color: #ddd;
+  }
+  .sim-key:disabled {
+    @apply cursor-not-allowed;
+    opacity: 0.5;
+  }
+  /* Phương án trả lời: ô vuông tích đen như phần mềm thi; sau khi chấm tô nền đúng / sai */
+  .sim-option {
+    @apply relative flex w-full cursor-pointer items-center gap-3 overflow-hidden p-2 text-left disabled:cursor-default;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--dur-fast);
+  }
+  @media (hover: hover) {
+    .sim-option:not(:disabled):hover {
+      background-color: rgb(255 255 255 / 0.6);
+    }
+  }
+  .sim-option[data-state="correct"] {
+    background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  .sim-option[data-state="wrong"] {
+    background-color: color-mix(in srgb, var(--red) 15%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--red) 40%, transparent);
+  }
+  .sim-check {
+    @apply flex size-9 shrink-0 items-center justify-center;
+    border-radius: 2px;
+    border: 2px solid #000;
+    background-color: #fff;
+    color: #000;
+  }
+  .sim-input {
+    @apply px-2 text-base outline-none;
+    border: 1px solid rgb(0 0 0 / 0.6);
+    background-color: #fff;
+    color: #000;
+  }
+  .sim-input:focus-visible {
+    border: 2px solid var(--sim-current);
+  }
+  .sim-input[data-ok="true"] {
+    border: 2px solid var(--accent);
+  }
+  .sim-input[data-ok="false"] {
+    border: 2px solid var(--red);
+  }
+  .sim-warn {
+    fill: var(--sim-mark);
+    color: var(--sim-mark-ink);
+  }
+  .sim-media {
+    background-color: #000;
+  }
+  /* Nút ▶ tròn giữa khung video */
+  .sim-play {
+    @apply flex size-20 items-center justify-center rounded-full sm:size-24;
+    border: 6px solid rgb(255 255 255 / 0.75);
+    color: rgb(255 255 255 / 0.75);
+    transition:
+      border-color var(--dur-fast),
+      color var(--dur-fast);
+  }
+  .group:hover .sim-play {
+    border-color: #fff;
+    color: #fff;
+  }
+}
+
+@keyframes quiz-pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quiz-verdict {
+    animation: none;
+  }
+}

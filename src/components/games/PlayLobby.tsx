@@ -31,10 +31,10 @@ export const GAME_TITLE: Record<PlayGame, string> = { sudoku: "Sudoku", caro: "C
 function Choice<T extends string | number>({ options, value, onChange, label }: { options: { value: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; label: string }) {
   return (
     <div>
-      <p className="mb-2 text-sm font-extrabold">{label}</p>
+      <p className="label mb-2">{label}</p>
       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
-          <button key={o.value} aria-pressed={o.value === value} className={`btn px-0 ${o.value === value ? "bg-gem/20 ring-2 ring-gem" : ""}`} onClick={() => onChange(o.value)}>
+          <button key={o.value} aria-pressed={o.value === value} className="chip min-h-11 justify-center px-2" onClick={() => onChange(o.value)}>
             {o.label}
           </button>
         ))}
@@ -98,20 +98,20 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
 
   return (
     <>
-      <div className="contents">
       <GameHeader
         icon={game === "sudoku" ? Grid3x3 : Users}
         tone="cyan"
         title={GAME_TITLE[game]}
         subtitle={game === "sudoku" ? "Giải đề một mình hoặc đua với bạn" : "5 quân liền nhau là thắng, đấu máy hoặc đấu bạn"}
       />
-      </div>
       {guest.chip}
       {active && (
-        <button className="card flex items-center gap-3 text-left font-bold" onClick={() => router.push(`/games/${active.game}/${active.code}`)}>
-          <Play className="size-5 shrink-0 fill-current text-gem" />
+        <button className="card card-link flex cursor-pointer items-center gap-3 text-left font-bold" onClick={() => router.push(`/games/${active.game}/${active.code}`)}>
+          <span className="icon-bubble tint-gold">
+            <Play className="size-5 fill-current" />
+          </span>
           <span className="flex-1">Bạn đang có ván {GAME_TITLE[active.game]} chưa xong (phòng {active.code})</span>
-          <ArrowRight className="size-5" />
+          <ArrowRight className="size-5 shrink-0 text-muted" />
         </button>
       )}
 
@@ -121,10 +121,10 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <section className="card flex flex-col gap-3">
-          <h2 className="section-title flex items-center gap-2">
-            {game === "sudoku" ? <User className="size-5" /> : <Bot className="size-5" />}
+          <h2 className="section-title flex items-center gap-2.5">
+            <span className="icon-bubble tint-gold size-9 rounded-xl">{game === "sudoku" ? <User className="size-[1.1rem]" /> : <Bot className="size-[1.1rem]" />}</span>
             {game === "sudoku" ? "Chơi một mình" : "Đấu với máy"}
           </h2>
           <p className="flex-1 text-sm text-muted">{game === "sudoku" ? "Giải 1 đề trong thời gian cho phép." : "Bạn cầm X đi trước, thử xem có thắng nổi máy không."}</p>
@@ -134,8 +134,10 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
         </section>
 
         <section className="card flex flex-col gap-3">
-          <h2 className="section-title flex items-center gap-2">
-            <Users className="size-5" />
+          <h2 className="section-title flex items-center gap-2.5">
+            <span className="icon-bubble tint-link size-9 rounded-xl">
+              <Users className="size-[1.1rem]" />
+            </span>
             Chơi với bạn
           </h2>
           {game === "sudoku" && (
@@ -147,7 +149,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
             />
           )}
           <p className="flex-1 text-sm text-muted">Tạo phòng rồi gửi mã cho bạn. Bạn bè chưa có tài khoản cũng vào được bằng tên tạm.</p>
-          <button className="btn btn-primary btn-lg" disabled={busy || !!active} onClick={() => go({ mode: "room", capacity })}>
+          <button className="btn btn-lg" disabled={busy || !!active} onClick={() => go({ mode: "room", capacity })}>
             <Users className="size-4" /> Tạo phòng
           </button>
           <form
@@ -158,7 +160,8 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
             }}
           >
             <input
-              className="input min-w-0 flex-1 font-mono tracking-[0.3em] uppercase"
+              className="input min-w-0 flex-1 font-mono font-bold tracking-[0.3em] uppercase"
+              aria-label="Mã phòng"
               placeholder="MÃ PHÒNG"
               maxLength={6}
               value={code}
@@ -171,7 +174,11 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
         </section>
       </div>
 
-      {(error || guest.error) && <p className="text-center text-sm font-bold text-red-500 dark:text-red-400">{error || guest.error}</p>}
+      {(error || guest.error) && (
+        <p role="alert" className="alert alert-err">
+          {error || guest.error}
+        </p>
+      )}
 
       <div className="card">
         <Rules game={game} />

@@ -15,19 +15,36 @@ export type AccountStatsData = {
   sentences: number; // số câu đã chép chính tả
 };
 
-function Tile({ icon, label, value, sub, href }: { icon: ReactNode; label: string; value: ReactNode; sub?: ReactNode; href?: string }) {
+function Tile({
+  icon,
+  tint,
+  label,
+  value,
+  sub,
+  href,
+}: {
+  icon: ReactNode;
+  tint: "accent" | "gold" | "link";
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  href?: string;
+}) {
   const body = (
     <>
-      <span className="flex items-center gap-1.5 text-xs font-bold text-muted">
-        {icon} {label}
+      <span className={`icon-bubble size-9 rounded-xl tint-${tint}`} aria-hidden>
+        {icon}
       </span>
-      <span className="text-2xl font-extrabold tabular-nums">{value}</span>
-      {sub && <span className="text-xs text-muted">{sub}</span>}
+      <span className="stat mt-1">
+        <span className="stat-label">{label}</span>
+        <span className="stat-value">{value}</span>
+        {sub && <span className="text-xs font-semibold text-muted">{sub}</span>}
+      </span>
     </>
   );
-  const cls = "flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-card-2/40 p-3 sm:p-4";
+  const cls = "tile flex min-w-0 flex-col items-start gap-1 sm:p-4";
   return href ? (
-    <Link href={href} className={`${cls} transition hover:border-link/60`}>
+    <Link href={href} className={`${cls} card-link`}>
       {body}
     </Link>
   ) : (
@@ -63,20 +80,25 @@ export default function AccountStats({ stats }: { stats: AccountStatsData }) {
 
   return (
     <section className="card flex flex-col gap-4 p-4 sm:p-6">
-      <div>
-        <h2 className="section-title flex items-center gap-2">
-          <Trophy className="size-5 text-link" /> Thành tích học tập
-        </h2>
-        <p className="mt-0.5 text-sm text-muted">Mỗi từ chép chính tả đúng +1 kim cương, mỗi từ bấm xem −2.</p>
+      <div className="flex items-start gap-3">
+        <span className="icon-bubble tint-gold" aria-hidden>
+          <Trophy className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="section-title">Thành tích học tập</h2>
+          <p className="mt-0.5 text-sm text-muted">Mỗi từ chép chính tả đúng +1 kim cương, mỗi từ bấm xem −2.</p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4 rounded-xl border border-gem/35 bg-gem/10 p-4">
-        <Gem className="size-9 shrink-0" />
+      <div className="stats-gem">
+        <span className="stats-gem-icon" aria-hidden>
+          <Gem className="size-9" />
+        </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold text-gem/80">Kim cương</p>
-          <p className="text-3xl leading-tight font-extrabold text-gem tabular-nums">{fmt(points)}</p>
+          <p className="text-xs font-extrabold tracking-[0.06em] text-gem uppercase">Kim cương</p>
+          <p className="font-display text-4xl leading-tight font-extrabold text-gem tabular-nums">{fmt(points)}</p>
           {!!today && (
-            <p className="text-xs font-bold text-gem/80">
+            <p className="badge badge-gem mt-1 bg-card">
               Hôm nay {today > 0 ? `+${fmt(today)}` : `−${fmt(-today)}`}
             </p>
           )}
@@ -85,20 +107,22 @@ export default function AccountStats({ stats }: { stats: AccountStatsData }) {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Tile
-          icon={<Flame className="size-4 text-amber" />}
+          tint="gold"
+          icon={<Flame className="size-4" />}
           label="Chuỗi ngày ôn"
           value={streak === null ? "–" : `${fmt(streak)} ngày`}
         />
         <Tile
-          icon={<BookOpen className="size-4 text-link" />}
+          tint="link"
+          icon={<BookOpen className="size-4" />}
           label="Sổ từ vựng"
           value={fmt(stats.words)}
           sub={`Đã thuộc ${fmt(stats.mastered)}`}
           href="/vocab/notebook"
         />
-        <Tile icon={<CalendarClock className="size-4 text-link" />} label="Cần ôn hôm nay" value={fmt(stats.due)} href="/vocab/notebook" />
-        <Tile icon={<PlayCircle className="size-4 text-accent-text" />} label="Bài đã học" value={fmt(stats.lessons)} />
-        <Tile icon={<PenLine className="size-4 text-accent-text" />} label="Câu đã chép" value={fmt(stats.sentences)} />
+        <Tile tint="link" icon={<CalendarClock className="size-4" />} label="Cần ôn hôm nay" value={fmt(stats.due)} href="/vocab/notebook" />
+        <Tile tint="accent" icon={<PlayCircle className="size-4" />} label="Bài đã học" value={fmt(stats.lessons)} />
+        <Tile tint="accent" icon={<PenLine className="size-4" />} label="Câu đã chép" value={fmt(stats.sentences)} />
       </div>
     </section>
   );

@@ -35,11 +35,11 @@ export function GameClock({ v, send, ms, warn = false }: { v: View; send: Send; 
   const seated = v.players.some((p) => p.me && !p.out);
   const canPause = seated && v.status === "playing" && (mine || (!v.pause && v.pauseLeft > 0));
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border-2 border-ink bg-card py-0.5 pr-0.5 pl-2.5 font-bold tabular-nums ${warn ? "text-red-400" : ""}`}>
+    <span className={`g-clock ${warn ? "g-clock-warn" : ""}`}>
       <Clock className="size-4" /> {clock(ms)}
       {seated && (
         <button
-          className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-ink text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="hit-44 flex size-7 cursor-pointer items-center justify-center rounded-full bg-foreground text-background transition-transform active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
           disabled={!canPause}
           title={v.pause ? (mine ? "Chạy tiếp" : `${v.pause.byName} đang tạm dừng`) : `Tạm dừng (còn ${clock(v.pauseLeft)})`}
           aria-label={v.pause ? "Chạy tiếp" : "Tạm dừng"}
@@ -58,9 +58,12 @@ export function PausedCover({ v, send, children }: { v: View; send: Send; childr
   if (!v.pause) return null;
   const mine = v.pause.byId === v.meId;
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-card/95 p-4 text-center backdrop-blur-sm">
-      <p className="text-xl font-black">{mine ? "Bạn đang tạm dừng" : `${v.pause.byName} đang tạm dừng`}</p>
-      <p className="text-sm text-muted">Tự chạy tiếp sau {clock(left)}</p>
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] bg-card/90 p-4 text-center backdrop-blur-md sheet-fade">
+      <span className="icon-bubble tint-gold size-14 rounded-full">
+        <Pause className="size-6 fill-current" />
+      </span>
+      <p className="font-display text-2xl font-extrabold">{mine ? "Bạn đang tạm dừng" : `${v.pause.byName} đang tạm dừng`}</p>
+      <p className="badge badge-muted text-sm tabular-nums">Tự chạy tiếp sau {clock(left)}</p>
       {children}
       {mine && (
         <button className="btn btn-amber btn-lg" onClick={() => send({ action: "pause", paused: false })}>
@@ -75,10 +78,11 @@ export function ResignButton({ send, className = "" }: { send: Send; className?:
   const [ask, setAsk] = useState(false);
   return ask ? (
     <button className={`btn btn-red ${className}`} onClick={() => send({ action: "resign" })} onBlur={() => setAsk(false)} autoFocus>
+      <Flag className="size-4" />
       Chắc chắn?
     </button>
   ) : (
-    <button className={`btn ${className}`} onClick={() => setAsk(true)}>
+    <button className={`btn text-red-400 ${className}`} onClick={() => setAsk(true)}>
       <Flag className="size-4" /> Bỏ cuộc
     </button>
   );
@@ -95,7 +99,7 @@ export function MascotSay({ mood = "happy", children, className = "" }: { mood?:
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="relative shrink-0">
         <span key={mood} className={`block mascot-${mood}`}>
-          <Mascot animated={mood !== "sleep" && mood !== "sad"} className="size-14 md:size-16" />
+          <Mascot animated={mood !== "sleep" && mood !== "sad"} className="size-14 drop-shadow-sm md:size-16" />
         </span>
         {mood === "sleep" && (
           <span aria-hidden className="mascot-zzz absolute -top-1 right-0 text-sm font-black text-muted">
@@ -103,10 +107,7 @@ export function MascotSay({ mood = "happy", children, className = "" }: { mood?:
           </span>
         )}
       </span>
-      <p
-        aria-live="polite"
-        className="say-bubble relative min-w-0 flex-1 rounded-2xl border-2 border-ink bg-card px-3 py-2 text-sm leading-snug font-bold text-balance shadow-[0_3px_0_var(--ink)] before:absolute before:top-1/2 before:-left-[7px] before:size-3 before:-translate-y-1/2 before:rotate-45 before:border-b-2 before:border-l-2 before:border-ink before:bg-card md:text-base"
-      >
+      <p aria-live="polite" className="say-bubble g-say">
         {children}
       </p>
     </div>

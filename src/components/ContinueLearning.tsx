@@ -22,23 +22,25 @@ export default function ContinueLearning({ userId }: { userId: number }) {
             <Link
               key={p.source}
               href={href}
-              className="group sticker sticker-link flex items-center gap-3 p-3"
+              className="group tile sticker-link flex items-center gap-3 p-2.5 pr-3"
             >
-              <div className="relative w-24 shrink-0 overflow-hidden rounded-lg bg-black sm:w-28">
+              <div className="relative w-24 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-card-2 sm:w-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-full object-cover" />
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
-                  <div className="h-full bg-accent" style={{ width: `${n}%` }} />
+                <div className="absolute inset-x-0 bottom-0 h-1.5 bg-black/45">
+                  <div className="progress-bar rounded-none" style={{ width: `${n}%` }} />
                 </div>
-                <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-                  <Play className="size-7 fill-white text-white" />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100 motion-reduce:transition-none">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-card text-accent-text shadow-[var(--shadow-md)]">
+                    <Play className="size-4 translate-x-px fill-current" />
+                  </span>
                 </span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <h3 className="line-clamp-2 text-sm font-extrabold leading-snug">{title}</h3>
+                <h3 className="line-clamp-2 text-sm leading-snug font-extrabold group-hover:text-accent-text">{title}</h3>
                 <p className="flex items-center gap-2 text-xs text-muted">
                   {at}
-                  {!!n && <span className="font-bold text-accent-text">{n}%</span>}
+                  {!!n && <span className="badge badge-accent tabular-nums">{n}%</span>}
                 </p>
               </div>
             </Link>

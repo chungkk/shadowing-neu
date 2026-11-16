@@ -1,7 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BookOpen, RotateCcw, Star } from "lucide-react";
+import { BookOpen, ChevronDown, RotateCcw, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { CATEGORIES, generalIds, getSet, hasTopics, listSets, prefs, stateIds } from "@/lib/lid";
@@ -23,8 +23,8 @@ function SetCard({ id, title, sub, ids, stats, user, icon }: { id: string; title
   const s = summarize(ids, stats);
   const href = `/leben-in-deutschland/${id}`;
   return (
-    <li className="flex flex-col gap-2 rounded-2xl border-2 border-ink/20 p-3">
-      <Link href={href} prefetch={false} className="flex items-center gap-2 hover:underline">
+    <li className="tile flex flex-col gap-2.5">
+      <Link href={href} prefetch={false} className="flex items-center gap-2 underline-offset-2 hover:underline">
         {icon}
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-bold">{title}</span>
@@ -33,14 +33,14 @@ function SetCard({ id, title, sub, ids, stats, user, icon }: { id: string; title
       </Link>
       {user && <ProgressBar {...s} />}
       <span className="flex items-center gap-2">
-        <span className="flex-1 text-xs text-muted tabular-nums">
+        <span className="flex-1 text-xs font-semibold text-muted tabular-nums">
           {user ? `${s.done}/` : ""}
           {s.total} câu
         </span>
         <Link href={`${href}?mode=lesen`} prefetch={false} className="btn btn-sm">
           Đọc
         </Link>
-        <Link href={href} prefetch={false} className="btn btn-sm btn-amber">
+        <Link href={href} prefetch={false} className="btn btn-sm btn-soft">
           Luyện
         </Link>
       </span>
@@ -54,21 +54,21 @@ function Part({ title, subtitle, ids, stats, user, open, children }: { title: st
   return (
     <details className="sticker group/part overflow-hidden" open={open}>
       <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 [&::-webkit-details-marker]:hidden">
-        <span className="flex items-baseline gap-2">
-          <span aria-hidden className="inline-block transition group-open/part:rotate-90">
-            ▸
-          </span>
-          <span className="min-w-0">
-            <span className="block text-xl font-extrabold">{title}</span>
+        <span className="flex items-center gap-3">
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-xl font-extrabold">{title}</span>
             <span className="block text-sm text-muted">
               {subtitle} · {user ? `${ps.done}/` : ""}
               {ps.total} câu
             </span>
           </span>
+          <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card-2 text-muted transition-transform group-open/part:rotate-180 motion-reduce:transition-none">
+            <ChevronDown className="size-4" />
+          </span>
         </span>
         {user && <ProgressBar {...ps} />}
       </summary>
-      <div className="border-t-2 border-ink/10 p-2">{children}</div>
+      <div className="border-t border-line p-3">{children}</div>
     </details>
   );
 }
@@ -108,10 +108,13 @@ async function Topics() {
       </div>
 
       {/* Học tất cả: 300 câu chung + câu của bang, như nút Đọc / Luyện của từng phần ở Lái xe */}
-      <section className="sticker flex flex-col gap-2 p-4">
-        <div className="flex items-center gap-3">
+      <section className="sticker hero flex flex-col gap-3 p-4 sm:p-5" style={{ ["--hero" as string]: "var(--leaf)" }}>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="icon-bubble tint-accent size-11" aria-hidden>
+            <BookOpen className="size-5" />
+          </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-xl font-extrabold">Học tất cả</span>
+            <span className="block font-display text-xl font-extrabold">Học tất cả</span>
             <span className="block text-sm text-muted">
               300 câu chung + 10 câu của {state.name} · {user ? `${all.done}/` : ""}
               {all.total} câu
@@ -120,7 +123,7 @@ async function Topics() {
           <Link href="/leben-in-deutschland/hoc?mode=lesen" prefetch={false} className="btn btn-sm">
             Đọc
           </Link>
-          <Link href="/leben-in-deutschland/hoc" prefetch={false} className="btn btn-sm btn-amber">
+          <Link href="/leben-in-deutschland/hoc" prefetch={false} className="btn btn-sm btn-primary">
             Luyện
           </Link>
         </div>

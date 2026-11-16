@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type CSSProperties } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
@@ -69,7 +69,7 @@ const levelRank = (lv: string) => {
 /** Ô dán link YouTube — lựa chọn phụ: người mới nên bắt đầu từ bài có sẵn */
 function OwnVideo() {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <p className="text-sm font-bold text-muted">Hoặc luyện với video YouTube bất kỳ có phụ đề tiếng Đức:</p>
       <YouTubeUrlForm secondary />
     </div>
@@ -79,14 +79,14 @@ function OwnVideo() {
 /** Khách: hero giới thiệu, nút chính = bài dễ nhất học được ngay, chip trình độ lọc thư viện */
 function GuestHero({ first, levels }: { first?: { slug: string; title: string; level: string }; levels: string[] }) {
   return (
-    <section className="sticker grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-4 p-4 sm:gap-x-6 sm:p-6">
-      <Mascot className="bob size-20 sm:row-span-3 sm:size-36" />
-      <div className="flex flex-col items-start gap-1.5">
-        <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">Hallo! Cùng nói nào!</span>
+    <section className="sticker hero rise-in grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-5 sm:gap-x-8 sm:p-8" style={{ "--hero": "var(--aqua)" } as CSSProperties}>
+      <Mascot className="bob size-20 sm:row-span-3 sm:size-40" />
+      <div className="flex flex-col items-start gap-2">
+        <span className="badge badge-gold rounded-bl-sm text-sm">Hallo! Cùng nói nào!</span>
         <h1 className="page-title">Luyện nói tiếng Đức với video thật</h1>
       </div>
       <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
-        <p className="text-muted">Nghe từng câu, nói theo và ghi âm để so với người bản xứ.</p>
+        <p className="lead">Nghe từng câu, nói theo và ghi âm để so với người bản xứ.</p>
         {first && (
           <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg self-start max-sm:w-full">
             Thử bài {first.level} đầu tiên <ChevronRight className="size-5" />
@@ -96,14 +96,14 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold text-muted">Trình độ của bạn:</span>
             {levels.map((lv) => (
-              <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="btn btn-sm hit-44">
+              <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="chip hit-44">
                 {lv}
               </Link>
             ))}
           </div>
         )}
       </div>
-      <div className="col-span-2 sm:col-span-1">
+      <div className="col-span-2 border-t-2 border-dashed border-line pt-4 sm:col-span-1">
         <OwnVideo />
       </div>
     </section>
@@ -119,7 +119,7 @@ async function Top() {
       <>
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <Mascot className="size-12 shrink-0" />
+            <Mascot className="bob size-14 shrink-0" />
             <h1 className="page-title">Hallo, {user.name}! Hôm nay học gì?</h1>
           </div>
           <TodayStrip userId={user.id} />
@@ -143,7 +143,7 @@ async function Top() {
 async function OwnVideoForUser() {
   const user = await getCurrentUser();
   return user ? (
-    <section className="sticker p-4 sm:p-6">
+    <section className="card p-5 sm:p-6">
       <OwnVideo />
     </section>
   ) : null;
@@ -152,7 +152,7 @@ async function OwnVideoForUser() {
 export default function Home() {
   return (
     <main className="page gap-8 md:gap-10">
-      <Suspense fallback={<div className="sticker h-48 animate-pulse motion-reduce:animate-none" />}>
+      <Suspense fallback={<div className="skeleton h-48 rounded-[var(--radius-lg)]" />}>
         <Top />
       </Suspense>
 

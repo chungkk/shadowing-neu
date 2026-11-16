@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flag } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
 import { classQuestionIds, isGrund, prefs } from "@/lib/laixe";
@@ -22,21 +22,27 @@ function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: 
     <figure className="card flex h-full flex-col items-center gap-3">
       <div
         className="relative size-36 rounded-full"
-        style={{ background: `conic-gradient(var(--accent) 0 ${a}%, var(--red) ${a}% ${b}%, color-mix(in srgb, var(--foreground) 12%, transparent) ${b}% 100%)` }}
+        style={{ background: `conic-gradient(var(--accent) 0 ${a}%, var(--red) ${a}% ${b}%, color-mix(in srgb, var(--line-strong) 40%, var(--card)) ${b}% 100%)` }}
         role="img"
         aria-label={`${title}: ${ok} đúng, ${wrong} sai, ${total - ok - wrong} chưa làm trên ${total} câu`}
       >
-        <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-card">
-          <span className="text-2xl font-extrabold tabular-nums">{Math.round(a)}%</span>
-          <span className="text-xs text-muted">đúng</span>
+        <div className="stat absolute inset-5 items-center justify-center rounded-full bg-card">
+          <span className="stat-value">{Math.round(a)}%</span>
+          <span className="stat-label">đúng</span>
         </div>
       </div>
       <figcaption className="flex flex-col items-center gap-1 text-center">
         <span className="font-extrabold">{title}</span>
-        <span className="flex flex-wrap justify-center gap-x-3 text-xs font-bold tabular-nums">
-          <span className="text-accent-text">● {ok} đúng</span>
-          <span className="text-red-400">● {wrong} sai</span>
-          <span className="text-muted">● {total - ok - wrong} chưa làm</span>
+        <span className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-bold tabular-nums">
+          <span className="flex items-center gap-1 text-accent-text">
+            <span className="size-2 rounded-full bg-accent" aria-hidden /> {ok} đúng
+          </span>
+          <span className="flex items-center gap-1 text-red-400">
+            <span className="size-2 rounded-full bg-red" aria-hidden /> {wrong} sai
+          </span>
+          <span className="flex items-center gap-1 text-muted">
+            <span className="size-2 rounded-full bg-[color-mix(in_srgb,var(--line-strong)_40%,var(--card))]" aria-hidden /> {total - ok - wrong} chưa làm
+          </span>
         </span>
       </figcaption>
     </figure>
@@ -45,9 +51,9 @@ function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: 
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="tile flex h-full flex-col">
-      <span className="text-2xl font-extrabold tabular-nums">{value}</span>
-      <span className="text-sm text-muted">{label}</span>
+    <div className="tile stat h-full gap-1.5">
+      <span className="stat-value">{value}</span>
+      <span className="stat-label">{label}</span>
     </div>
   );
 }
@@ -82,23 +88,26 @@ async function Stats() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">10 bài thi gần nhất</h2>
           {exams.length > 0 && (
-            <Link href="/lai-xe/cau-sai?tu=bai-thi" className="text-sm font-bold text-accent-text underline-offset-2 hover:underline">
-              Ôn câu sai của bài gần nhất →
+            <Link href="/lai-xe/cau-sai?tu=bai-thi" className="btn btn-sm btn-soft">
+              Ôn câu sai của bài gần nhất <ArrowRight className="size-3.5" aria-hidden />
             </Link>
           )}
         </div>
         {exams.length ? (
           <ExamHistory exams={exams.slice(0, 10)} />
         ) : (
-          <p className="text-muted">
-            Chưa có bài thi nào.{" "}
-            <Link href="/lai-xe/thi-thu" className="font-bold underline">
+          <div className="card empty">
+            <span className="icon-bubble tint-accent size-12" aria-hidden>
+              <Flag className="size-6" />
+            </span>
+            <p>Chưa có bài thi nào.</p>
+            <Link href="/lai-xe/thi-thu" className="btn btn-primary">
               Thi thử ngay
             </Link>
-          </p>
+          </div>
         )}
       </section>
 

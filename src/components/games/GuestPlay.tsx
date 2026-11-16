@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookmarkPlus, Gem, LogIn, Pencil, Play, Trophy, UserRound } from "lucide-react";
+import { BookmarkPlus, Gem, LogIn, Pencil, Play, Trophy, UserRound, X } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { LoginLink } from "../auth/LoginDialog";
 import Mascot from "../Mascot";
@@ -51,15 +51,17 @@ export function useGuestGate(loggedIn: boolean, start: (from: number) => void) {
   /** Dòng "Đang chơi với tên …" ở màn chọn bộ từ (khách) */
   const chip =
     !loggedIn && name ? (
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border-2 border-ink/15 bg-card-2 px-3 py-2 text-sm">
-        <UserRound className="size-4 shrink-0 text-muted" />
+      <div className="surface flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+        <span className="icon-bubble tint-link size-7 rounded-full">
+          <UserRound className="size-4" />
+        </span>
         <span>
           Chơi với tên tạm <b>{name}</b>
         </span>
-        <button className="inline-flex cursor-pointer items-center gap-1 font-bold text-link hover:underline" onClick={() => setEditing(true)}>
+        <button className="btn btn-ghost btn-sm text-link" onClick={() => setEditing(true)}>
           <Pencil className="size-3.5" /> Đổi tên
         </button>
-        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="ml-auto font-bold text-link hover:underline">
+        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
           Đăng nhập
         </LoginLink>
       </div>
@@ -78,21 +80,28 @@ function GuestNameDialog({ initial, editing, onSubmit, onCancel }: { initial: st
     return () => removeEventListener("keydown", onKey);
   }, [onCancel]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Nhập tên tạm thời">
-      <button className="sheet-fade absolute inset-0 cursor-default bg-black/55" onClick={onCancel} aria-label="Đóng" />
+    <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && onCancel()}>
       <form
-        className="sticker sheet-up relative flex w-full max-w-sm flex-col gap-4 bg-card p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Nhập tên tạm thời"
+        className="dialog"
         onSubmit={(e) => {
           e.preventDefault();
           if (name) onSubmit(name);
         }}
       >
-        <div className="flex items-center gap-3">
-          <Mascot animated className="size-14 shrink-0" />
-          <div>
-            <p className="text-lg font-black">{editing ? "Đổi tên tạm" : "Bạn tên là gì?"}</p>
-            <p className="text-sm text-muted">Nhập tên tạm để chơi ngay, không cần tài khoản.</p>
+        <div className="dialog-head">
+          <div className="flex items-center gap-3">
+            <Mascot animated className="size-14 shrink-0" />
+            <div>
+              <p className="dialog-title">{editing ? "Đổi tên tạm" : "Bạn tên là gì?"}</p>
+              <p className="text-sm text-muted">Nhập tên tạm để chơi ngay, không cần tài khoản.</p>
+            </div>
           </div>
+          <button type="button" className="btn-icon -mt-1 -mr-2" onClick={onCancel} aria-label="Đóng">
+            <X className="size-5" />
+          </button>
         </div>
         <input
           ref={input}
@@ -101,9 +110,10 @@ function GuestNameDialog({ initial, editing, onSubmit, onCancel }: { initial: st
           maxLength={MAX_NAME}
           placeholder="Ví dụ: Minh"
           autoComplete="nickname"
-          className="w-full rounded-xl border-2 border-ink/20 bg-card-2 px-3 py-2.5 text-base font-bold outline-none focus:border-ink"
+          aria-label="Tên tạm"
+          className="input w-full font-bold"
         />
-        <button type="submit" className="btn btn-amber btn-lg font-black" disabled={!name}>
+        <button type="submit" className="btn btn-amber btn-lg btn-block" disabled={!name}>
           <Play className="size-4 fill-current" /> {editing ? "Lưu tên" : "Vào chơi"}
         </button>
         <p className="-mt-1 text-center text-sm text-muted">
@@ -177,15 +187,17 @@ export function usePlayGuest(loggedIn: boolean) {
     ) : null;
   const chip =
     !loggedIn && name ? (
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border-2 border-ink/15 bg-card-2 px-3 py-2 text-sm">
-        <UserRound className="size-4 shrink-0 text-muted" />
+      <div className="surface flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+        <span className="icon-bubble tint-link size-7 rounded-full">
+          <UserRound className="size-4" />
+        </span>
         <span>
           Chơi với tên tạm <b>{name}</b>
         </span>
-        <button className="inline-flex cursor-pointer items-center gap-1 font-bold text-link hover:underline" onClick={() => setDialog("edit")}>
+        <button className="btn btn-ghost btn-sm text-link" onClick={() => setDialog("edit")}>
           <Pencil className="size-3.5" /> Đổi tên
         </button>
-        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="ml-auto font-bold text-link hover:underline">
+        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
           Đăng nhập
         </LoginLink>
       </div>
@@ -199,11 +211,11 @@ export function GuestResult({ name, score, record }: { name: string; score: numb
   const title = score <= 0 ? `Cố lên ${who}!` : record ? `Chúc mừng ${who}! 🎉` : `Giỏi lắm ${who}!`;
   const line = score <= 0 ? "Ván sau chắc chắn sẽ tốt hơn." : record ? `Bạn vừa lập kỷ lục mới ${score} điểm.` : `Bạn ghi được ${score} điểm ván này.`;
   return (
-    <div className="flex w-full flex-col gap-3 rounded-2xl border-2 border-amber/50 bg-gold/10 p-4 text-left">
+    <div className="hero flex w-full flex-col gap-3 rounded-[var(--radius)] p-4 text-left" style={{ ["--hero" as string]: "var(--gold)" }}>
       <div className="flex items-center gap-3">
         <Mascot animated className="size-12 shrink-0" />
         <div className="min-w-0">
-          <p className="truncate text-lg font-black">{title}</p>
+          <p className="truncate font-display text-xl font-extrabold">{title}</p>
           <p className="text-sm text-muted">{line}</p>
         </div>
       </div>
@@ -219,7 +231,7 @@ export function GuestResult({ name, score, record }: { name: string; score: numb
           <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Luyện bài nhận kim cương, leo bảng xếp hạng
         </li>
       </ul>
-      <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-amber btn-lg font-black">
+      <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-soft btn-lg btn-block">
         <LogIn className="size-4" /> Đăng nhập / Đăng ký
       </LoginLink>
     </div>

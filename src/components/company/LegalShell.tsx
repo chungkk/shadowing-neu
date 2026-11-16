@@ -49,7 +49,7 @@ function MoreNav({ nav, title, locale }: { nav: LegalNavItem[]; title: string; l
     const pathname = usePathname();
     return (
         <nav aria-label={title} className="card flex flex-col gap-2">
-            <h2 className="label px-1 pt-1 text-muted">{title}</h2>
+            <h2 className="eyebrow px-1 pt-1">{title}</h2>
             <ul className="grid gap-1.5 max-lg:sm:grid-cols-2">
                 {nav.map((item) => {
                     const Icon = item.icon;
@@ -59,11 +59,13 @@ function MoreNav({ nav, title, locale }: { nav: LegalNavItem[]; title: string; l
                             <Link
                                 href={item.href}
                                 aria-current={active ? 'page' : undefined}
-                                className={`flex min-h-11 items-center gap-2.5 rounded-2xl border-2 px-3 py-2 text-sm font-bold transition ${
-                                    active ? 'border-ink bg-accent text-white shadow-[0_3px_0_var(--ink)]' : 'border-transparent hover:border-ink/25 hover:bg-card-2'
+                                className={`flex min-h-11 items-center gap-2.5 rounded-ui px-2 py-1.5 text-sm font-bold transition-colors duration-(--dur-fast) focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                                    active ? 'bg-accent-soft text-accent-text' : 'hover:bg-card-2'
                                 }`}
                             >
-                                <Icon className={`size-4.5 shrink-0 ${active ? '' : 'text-link'}`} />
+                                <span className={`icon-bubble size-8 rounded-xl ${active ? 'bg-card text-accent-text' : 'tint-link'}`}>
+                                    <Icon className="size-4.5" aria-hidden="true" />
+                                </span>
                                 <span className="min-w-0">{item[locale]}</span>
                             </Link>
                         </li>
@@ -81,18 +83,18 @@ export default function LegalShell({ title, intro, content, showUpdated = true, 
 
     return (
         <div className="page gap-6 md:gap-8">
-            {/* Đầu trang như hero của app: thẻ sticker, linh vật, nhãn vàng nghiêng */}
-            <header className="sticker grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-4 sm:gap-x-6 sm:p-6">
+            {/* Đầu trang như hero của app: thẻ .sticker.hero (nền gradient nhạt), linh vật, nhãn vàng */}
+            <header className="sticker hero rise-in grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-4 sm:gap-x-6 sm:p-6">
                 <Mascot className="bob size-16 sm:row-span-2 sm:size-28" />
                 <div className="flex min-w-0 flex-col items-start gap-1.5">
                     {sticker && (
-                        <span className="-rotate-2 rounded-2xl rounded-bl-sm border-2 border-ink bg-gold px-3 py-0.5 text-sm font-extrabold text-black">
+                        <span className="badge badge-gold text-sm">
                             {sticker}
                         </span>
                     )}
                     <h1 className="page-title text-balance hyphens-auto [overflow-wrap:anywhere]">{title[locale]}</h1>
                 </div>
-                {intro && <p className="col-span-2 max-w-[65ch] text-muted sm:col-span-1">{intro[locale]}</p>}
+                {intro && <p className="lead col-span-2 max-w-[65ch] sm:col-span-1">{intro[locale]}</p>}
             </header>
 
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">

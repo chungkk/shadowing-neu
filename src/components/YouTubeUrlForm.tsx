@@ -25,6 +25,8 @@ export default function YouTubeUrlForm({ secondary = false }: { secondary?: bool
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
           className="input min-w-0 flex-1"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "yt-url-error" : undefined}
           placeholder="Dán link video YouTube…"
           aria-label="Link video YouTube"
           inputMode="url"
@@ -34,11 +36,15 @@ export default function YouTubeUrlForm({ secondary = false }: { secondary?: bool
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className={`btn btn-lg ${secondary ? "" : "btn-primary"}`} disabled={pending}>
+        <button className={`btn btn-lg ${secondary ? "btn-soft" : "btn-primary"}`} disabled={pending}>
           {pending ? "Đang lấy phụ đề…" : secondary ? "Mở video" : "Bắt đầu"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <p id="yt-url-error" role="alert" className="field-error text-sm">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

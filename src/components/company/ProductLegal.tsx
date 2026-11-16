@@ -140,11 +140,14 @@ function faqInline(text: string): ReactNode[] {
 const topicsFor = (product: LegalProduct): SupportTopic[] =>
     product.slug === HALLOVN_SLUG ? ['account', 'bug', 'idea', 'content', 'privacy', 'other'] : ['bug', 'idea', 'privacy', 'other'];
 
-/** Tiêu đề của một thẻ: icon màu link + chữ Baloo như mục trong /settings */
+/** Tiêu đề của một thẻ: ô icon (.icon-bubble.tint-link) + chữ Baloo như mục trong /settings */
 function CardTitle({ id, icon: Icon, children }: { id: string; icon: typeof Mail; children: ReactNode }) {
     return (
         <h2 id={id} className="section-title flex scroll-mt-24 items-center gap-2">
-            <Icon className="size-5 shrink-0 text-link" /> {children}
+            <span className="icon-bubble tint-link size-9 rounded-xl">
+                <Icon className="size-5" aria-hidden="true" />
+            </span>{' '}
+            {children}
         </h2>
     );
 }
@@ -165,15 +168,18 @@ function ContactSection({ id, title, locale, product }: { id: string; title: str
     );
 }
 
-/** Câu hỏi thường gặp: mỗi câu là một ô bo tròn, mở ra thì nổi viền đậm như thẻ app */
+/** Câu hỏi thường gặp: mỗi câu là một thẻ mềm (viền mảnh), mở ra thì nổi nhẹ + viền xanh nhạt */
 function FaqList({ items }: { items: { q: string; a: string }[] }) {
     return (
         <div className="flex flex-col gap-2">
             {items.map((item) => (
-                <details key={item.q} className="faq-item group rounded-2xl border-2 border-ink/15 bg-card transition open:border-ink open:shadow-[0_3px_0_var(--ink)]">
-                    <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 font-bold hover:bg-card-2/60">
+                <details
+                    key={item.q}
+                    className="faq-item group rounded-ui border-2 border-line bg-card transition-[border-color,box-shadow] duration-(--dur) open:border-accent/40 open:shadow-soft motion-reduce:transition-none"
+                >
+                    <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-ui px-3.5 py-2.5 font-bold transition-colors hover:bg-card-2/60 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
                         {item.q}
-                        <ChevronDown className="size-5 shrink-0 text-link transition-transform group-open:rotate-180" />
+                        <ChevronDown className="size-5 shrink-0 text-link transition-transform duration-(--dur) group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
                     </summary>
                     <p className="legal-links max-w-[70ch] px-3.5 pb-3.5 text-[0.95rem] leading-relaxed text-muted">{faqInline(item.a)}</p>
                 </details>
@@ -232,6 +238,8 @@ export function ProductPrivacy({ slug }: { slug: string }) {
 }
 
 const QUICK_ICONS = [CircleHelp, KeyRound, Settings, ShieldCheck];
+/** Màu ô icon của từng thẻ trợ giúp nhanh (cùng thứ tự QUICK_ICONS) */
+const QUICK_TINTS = ['tint-link', 'tint-gold', 'tint-accent', 'tint-gem'];
 
 export function SupportHub() {
     return (
@@ -250,14 +258,14 @@ export function SupportHub() {
                                 const Icon = QUICK_ICONS[i] ?? CircleHelp;
                                 return (
                                     <Link key={item.href} href={item.href} className="group sticker sticker-link flex items-center gap-3 p-3">
-                                        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border-2 border-ink bg-card-2">
-                                            <Icon className="size-5" />
+                                        <span className={`icon-bubble size-11 ${QUICK_TINTS[i] ?? 'tint-link'}`}>
+                                            <Icon className="size-5" aria-hidden="true" />
                                         </span>
                                         <span className="flex min-w-0 flex-1 flex-col">
                                             <span className="font-extrabold">{item.label}</span>
                                             <span className="text-sm text-muted">{item.desc}</span>
                                         </span>
-                                        <ArrowRight className="size-4 shrink-0 text-link transition group-hover:translate-x-1" />
+                                        <ArrowRight className="size-4 shrink-0 text-link transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
                                     </Link>
                                 );
                             })}

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/auth";
 import LessonForm from "../LessonForm";
+import AdminNav from "../AdminNav";
 import { FormSkeleton } from "@/components/Skeleton";
 
 async function Guard({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ async function Guard({ children }: { children: React.ReactNode }) {
 export default function NewLessonPage() {
   return (
     <main className="page page-narrow">
+      <AdminNav />
       <h1 className="page-title">Bài học mới</h1>
       <Suspense fallback={<FormSkeleton />}>
         <Guard>

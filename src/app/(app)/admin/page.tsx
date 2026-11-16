@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { ListVideo, Lock } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { lessonUnlockStats, listLessons } from "@/lib/db";
 import { earnableFreePoints, lockSettings } from "@/lib/access";
 import { FREE_PICKS, LESSON_PRICE } from "@/lib/lesson-lock";
 import { removeLesson, setLessonLock, toggleFreeLesson, toggleLessonPublished } from "./actions";
 import DeleteButton from "./DeleteButton";
+import AdminNav from "./AdminNav";
 import LevelBadge from "@/components/LevelBadge";
 import { ListSkeleton } from "@/components/Skeleton";
 import { lessonPath } from "@/lib/slug";
@@ -19,18 +20,21 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
   const earnable = earnableFreePoints();
   const short = earnable < LESSON_PRICE; // bài miễn phí không kiếm đủ kim cương để mở 1 bài
   return (
-    <div className="card flex flex-wrap items-center gap-3 p-4">
-      <Lock className={`size-5 shrink-0 ${enabled ? "text-accent-text" : "text-muted"}`} />
-      <div className="min-w-0 flex-1 text-sm">
-        <p className="font-bold">
-          Khoá bài học: {enabled ? <span className="text-accent-text">đang bật</span> : <span className="text-muted">đang tắt — mọi bài đều mở</span>}
+    <div className="card flex flex-wrap items-start gap-3">
+      <span className={`icon-bubble ${enabled ? "tint-accent" : "tint-muted"}`}>
+        <Lock className="size-5" aria-hidden />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+        <p className="flex flex-wrap items-center gap-2 font-bold">
+          Khoá bài học:{" "}
+          {enabled ? <span className="badge badge-accent">đang bật</span> : <span className="badge badge-muted">đang tắt — mọi bài đều mở</span>}
         </p>
-        <p className="text-xs text-muted">
+        <p className="text-xs leading-relaxed text-muted">
           Khách chỉ học {freeCount} bài “Miễn phí” (chọn ở từng bài bên dưới). Người đã đăng nhập chọn thêm {FREE_PICKS} bài, sau đó{" "}
           {fmt(LESSON_PRICE)} kim cương / bài. Bài ai đang học dở lúc bật vẫn học tiếp được.
         </p>
         {short && (
-          <p className="text-xs font-bold text-amber">
+          <p className="alert alert-warn mt-1 text-xs">
             Các bài “Miễn phí” có bật Dictation chỉ kiếm được tối đa {fmt(earnable)} kim cương, chưa đủ {fmt(LESSON_PRICE)} để mở 1 bài. Hãy bật Dictation hoặc thêm bài miễn phí.
           </p>
         )}
@@ -40,9 +44,9 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
           </p>
         )}
       </div>
-      <form action={setLessonLock.bind(null, !enabled)} className="max-sm:basis-full max-sm:text-right">
+      <form action={setLessonLock.bind(null, !enabled)} className="self-center max-sm:basis-full max-sm:*:w-full">
         <button
-          className={`btn ${enabled ? "" : "btn-primary"}`}
+          className={`btn ${enabled ? "" : "btn-soft"}`}
           disabled={!enabled && short}
           title={!enabled && short ? "Các bài “Miễn phí” chưa kiếm đủ kim cương để mở 1 bài" : undefined}
         >
@@ -61,17 +65,8 @@ async function Dashboard() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="page-title flex-1 max-sm:basis-full">Bài học ({lessons.length})</h1>
-        <Link href="/admin/transcripts" className="btn">
-          Phụ đề đã lưu
-        </Link>
-        <Link href="/admin/users" className="btn">
-          Người dùng
-        </Link>
-        <Link href="/admin/feedback" className="btn">
-          Góp ý
-        </Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="page-title flex-1">Bài học ({lessons.length})</h1>
         <Link href="/admin/new" className="btn btn-primary">
           + Bài mới
         </Link>
@@ -79,49 +74,71 @@ async function Dashboard() {
 
       <LockPanel enabled={lock.enabled} freeCount={free.size} />
 
-      <div className="card divide-y divide-border p-0">
-        {lessons.map((l) => (
-          <div key={l.id} className="flex flex-wrap items-center gap-3 p-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`https://i.ytimg.com/vi/${l.videoId}/default.jpg`} alt="" className="h-12 w-20 rounded-lg object-cover" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium">{l.title}</div>
-              <div className="flex gap-2 text-xs text-muted">
-                <LevelBadge level={l.level} className="text-xs" />
-                <span>{l.sentenceCount} câu</span>
-                {l.dictation && <span className="text-gem">Dictation</span>}
-              </div>
-            </div>
-            {/* Điện thoại: các nút xuống hàng riêng dưới tiêu đề */}
-            <div className="flex flex-wrap gap-2 max-sm:basis-full max-sm:justify-end">
-              <form action={toggleLessonPublished.bind(null, l.id, !l.published)}>
-                <button
-                  title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
-                  className={`btn ${l.published ? "text-accent-text" : "text-muted"}`}
-                >
-                  {l.published ? "● Đã đăng" : "○ Nháp"}
-                </button>
-              </form>
-              {/* Bài miễn phí (khoá bài học): khách cũng học được */}
-              <form action={toggleFreeLesson.bind(null, l.id, !free.has(l.id))}>
-                <button
-                  title={free.has(l.id) ? "Bấm để bỏ miễn phí" : "Bấm để cho khách học miễn phí bài này"}
-                  className={`btn ${free.has(l.id) ? "text-accent-text" : "text-muted"}`}
-                >
-                  {free.has(l.id) ? "● Miễn phí" : "○ Miễn phí"}
-                </button>
-              </form>
-              <Link href={lessonPath(l.slug)} className="btn">
-                Xem
-              </Link>
-              <Link href={`/admin/${l.id}`} className="btn">
-                Sửa
-              </Link>
-              <DeleteButton action={removeLesson.bind(null, l.id)} />
-            </div>
+      <div className="card overflow-hidden p-0">
+        {lessons.length ? (
+          <ul className="divide-y divide-line">
+            {lessons.map((l) => (
+              <li
+                key={l.id}
+                className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-card-2/50 sm:px-4"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://i.ytimg.com/vi/${l.videoId}/default.jpg`}
+                  alt=""
+                  className="h-12 w-20 shrink-0 rounded-xl bg-card-2 object-cover"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="truncate font-bold">{l.title}</div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                    <LevelBadge level={l.level} className="text-xs" />
+                    <span className="badge badge-muted">{l.sentenceCount} câu</span>
+                    {l.dictation && <span className="badge badge-gem">Dictation</span>}
+                  </div>
+                </div>
+                {/* Điện thoại: các nút xuống hàng riêng dưới tiêu đề */}
+                <div className="flex flex-wrap items-center gap-1.5 max-sm:basis-full max-sm:justify-end">
+                  <form action={toggleLessonPublished.bind(null, l.id, !l.published)}>
+                    <button
+                      title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
+                      aria-pressed={l.published}
+                      className="chip hit-44 min-h-8 px-3 py-1 text-xs"
+                    >
+                      {l.published ? "● Đã đăng" : "○ Nháp"}
+                    </button>
+                  </form>
+                  {/* Bài miễn phí (khoá bài học): khách cũng học được */}
+                  <form action={toggleFreeLesson.bind(null, l.id, !free.has(l.id))}>
+                    <button
+                      title={free.has(l.id) ? "Bấm để bỏ miễn phí" : "Bấm để cho khách học miễn phí bài này"}
+                      aria-pressed={free.has(l.id)}
+                      className="chip hit-44 min-h-8 px-3 py-1 text-xs"
+                    >
+                      {free.has(l.id) ? "● Miễn phí" : "○ Miễn phí"}
+                    </button>
+                  </form>
+                  <Link href={lessonPath(l.slug)} className="btn btn-ghost btn-sm">
+                    Xem
+                  </Link>
+                  <Link href={`/admin/${l.id}`} className="btn btn-sm">
+                    Sửa
+                  </Link>
+                  <DeleteButton action={removeLesson.bind(null, l.id)} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="empty">
+            <span className="icon-bubble tint-accent">
+              <ListVideo className="size-5" aria-hidden />
+            </span>
+            <p>Chưa có bài nào. Bấm “+ Bài mới”.</p>
+            <Link href="/admin/new" className="btn btn-soft btn-sm">
+              + Bài mới
+            </Link>
           </div>
-        ))}
-        {!lessons.length && <p className="p-6 text-center text-sm text-muted">Chưa có bài nào. Bấm “+ Bài mới”.</p>}
+        )}
       </div>
     </>
   );
@@ -130,6 +147,7 @@ async function Dashboard() {
 export default function AdminPage() {
   return (
     <main className="page page-narrow">
+      <AdminNav />
       <Suspense fallback={<ListSkeleton thumb />}>
         <Dashboard />
       </Suspense>

@@ -42,7 +42,7 @@
   --link: #0f766e;
   --accent: #15803d;
   --accent-dark: #0f5e2c;
-  --accent-text: #15803d; /* chữ màu xanh; --accent là nền nút chữ trắng */
+  --accent-text: #146c37; /* chữ màu xanh; --accent là nền nút chữ trắng */
   --accent-soft: #e5f6ea; /* nền nhạt cho chip / badge / ô đang chọn */
   --on-link: #ffffff; /* chữ trên nền --link */
   --stripe: #fffaf3; /* vạch sáng của dải sọc kẹo */
@@ -141,6 +141,7 @@
   --border: #26362c;
   --muted: #8ea395;
   --link: #facc15;
+  --link-soft: #2e2a12;
   --accent: #16a34a;
   --accent-dark: #14532d;
   --accent-text: #16a34a;
@@ -754,6 +755,26 @@ select {
     @apply cursor-not-allowed;
     background-color: var(--card-2);
   }
+  /* .input-group: khung giống .input bọc tiền tố/icon + <input> trần (vd. "/tieng-duc/" + slug, kính lúp + ô tìm) */
+  .input-group {
+    @apply flex items-center gap-2 px-4 text-base text-muted md:text-sm;
+    border-radius: var(--radius);
+    border: 2px solid color-mix(in srgb, var(--line-strong) 70%, var(--card));
+    background-color: var(--card);
+    transition:
+      border-color var(--dur-fast),
+      box-shadow var(--dur-fast);
+  }
+  .input-group:hover:not(:focus-within) {
+    border-color: var(--line-strong);
+  }
+  .input-group:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .input-group > input {
+    @apply min-w-0 flex-1 bg-transparent py-3 text-foreground outline-none placeholder:text-muted;
+  }
   .field {
     @apply flex flex-col gap-1.5 text-sm font-bold text-muted;
   }
@@ -917,7 +938,7 @@ select {
   .dialog::before {
     content: "";
     @apply mx-auto -mt-1 mb-1 block h-1.5 w-10 shrink-0 rounded-full md:hidden;
-    background: var(--line);
+    background: color-mix(in srgb, var(--line-strong) 55%, transparent);
   }
   .dialog-lg {
     @apply max-w-2xl;
@@ -933,6 +954,17 @@ select {
   }
   .dialog-actions {
     @apply mt-1 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end;
+  }
+  /* Popup kết quả / chúc mừng: nội dung căn giữa, nút giãn đều */
+  .dialog-center {
+    @apply items-center text-center;
+  }
+  .dialog-center .dialog-actions {
+    @apply w-full sm:justify-center;
+  }
+  /* Dialog p-0 có vùng cuộn riêng: tay cầm không dính mép trên */
+  .dialog.p-0::before {
+    @apply mt-2;
   }
   .popover {
     @apply z-40 min-w-48 p-1.5 text-sm text-foreground;
