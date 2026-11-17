@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Animated, Easing, Image as RNImage, Pressable, View } from "react-native";
+import { Animated, Easing, Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Text, TextInput } from "./Text";
 import { SymbolView } from "expo-symbols";
@@ -12,13 +12,13 @@ import { useI18n } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout";
 
 const BOX = themed((): Record<WordState | "hint", { border: string; bg: string; fg: string }> => ({
-  correct: { border: C.ink, bg: alpha(C.accent, 0.2), fg: C.text },
-  close: { border: C.amber, bg: alpha(C.gold, 0.1), fg: C.amber },
-  wrong: { border: C.red, bg: alpha(C.red, 0.1), fg: C.redText },
+  correct: { border: alpha(C.ok, 0.6), bg: C.okSoft, fg: C.okText },
+  close: { border: C.goldDark, bg: C.goldSoft, fg: C.amber },
+  wrong: { border: C.red, bg: C.redSoft, fg: C.redText },
   missing: { border: alpha(C.red, 0.6), bg: "transparent", fg: C.muted },
   revealed: { border: alpha(C.gold, 0.6), bg: alpha(C.gold, 0.05), fg: C.amber },
-  given: { border: alpha(C.inkLine, 0.4), bg: C.card2, fg: C.text },
-  hint: { border: alpha(C.inkLine, 0.3), bg: C.card, fg: C.muted },
+  given: { border: C.border, bg: C.card2, fg: C.text },
+  hint: { border: C.border, bg: C.card, fg: C.muted },
 }));
 const TILT = ["-1.5deg", "1deg", "-0.5deg", "1.5deg"];
 
@@ -226,14 +226,14 @@ export function DictationPanel({
                 width: 11,
                 height: 11,
                 backgroundColor: C.card,
-                borderLeftWidth: 2,
-                borderBottomWidth: 2,
-                borderColor: C.ink,
+                borderLeftWidth: 1.5,
+                borderBottomWidth: 1.5,
+                borderColor: C.border,
                 transform: [{ rotate: "45deg" }],
                 zIndex: 1,
               }}
             />
-            <View style={{ borderWidth: 2, borderColor: C.ink, borderRadius: 14, backgroundColor: C.card, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <View style={{ borderWidth: 1.5, borderColor: C.border, borderRadius: 12, backgroundColor: C.card, paddingHorizontal: 10, paddingVertical: 6 }}>
               <Text accessibilityLiveRegion="polite" style={{ color: C.text, fontWeight: "800", fontSize: 13 }}>
                 {say}
               </Text>
@@ -244,11 +244,9 @@ export function DictationPanel({
           </Pressable>
         </View>
 
-        {/* Tiến độ câu: dải sọc kẹo như thân linh vật */}
-        <View style={{ height: 12, borderRadius: 6, borderWidth: 2, borderColor: C.ink, backgroundColor: C.card2, overflow: "hidden" }}>
-          <View style={{ width: `${result.total ? (solved / result.total) * 100 : 0}%`, height: "100%", overflow: "hidden" }}>
-            <RNImage source={require("@/assets/images/candy-stripe.png")} resizeMode="repeat" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
-          </View>
+        {/* Tiến độ câu: thanh phẳng màu "đúng" như .progress của web */}
+        <View style={{ height: 8, borderRadius: 4, backgroundColor: C.card2, overflow: "hidden" }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: result.total, now: solved }}>
+          <View style={{ width: `${result.total ? (solved / result.total) * 100 : 0}%`, height: "100%", borderRadius: 4, backgroundColor: C.ok }} />
         </View>
 
         {/* Ô từng từ: chưa gõ → gợi ý theo mức độ (đáp án ẩn), gõ tới đâu hiện trong ô tới đó; mắt phía trên ô để xem từ; xong → chạm để tra từ */}
@@ -298,10 +296,10 @@ export function DictationPanel({
                     flexDirection: "row",
                     borderColor: isActive ? C.link : typed && !shown && !checked ? alpha(C.inkLine, 0.6) : b.border,
                     backgroundColor: isActive ? C.card : b.bg,
-                    borderWidth: 2,
+                    borderWidth: 1.5,
                     borderStyle: !shown && !typed && !isActive && (!checked || w.state === "missing") ? "dashed" : "solid",
                     borderRadius: 12,
-                    boxShadow: isActive ? `0 3px 0 ${C.link}` : w.state === "correct" ? `0 2px 0 ${C.ink}` : undefined,
+                    
                     transform: w.state === "correct" ? [{ rotate: TILT[k % TILT.length] }] : isActive ? [{ translateY: -2 }] : undefined,
                     paddingHorizontal: 8,
                     minHeight: 32,
@@ -325,8 +323,8 @@ export function DictationPanel({
                       width: 20,
                       height: 20,
                       borderRadius: 10,
-                      borderWidth: 2,
-                      borderColor: C.ink,
+                      borderWidth: 1.5,
+                      borderColor: C.border,
                       backgroundColor: C.card,
                       alignItems: "center",
                       justifyContent: "center",

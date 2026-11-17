@@ -5,65 +5,104 @@ import { useSyncExternalStore } from "react";
 
 export type Scheme = "light" | "dark";
 
-/** Màu giống bản web (src/app/globals.css): nền kem · viền nâu mận (ink) · xanh lá (chính) · vàng tai nghe (nhấn) · đỏ kẹo (ghi âm / xoá) */
+/**
+ * Design system "Nhãn vở" — cùng token với web (src/app/(app)/globals.css, DESIGN.md).
+ * Mỗi màu một việc: xanh lam = thương hiệu / hành động chính / khu Tiếng Đức · vàng = Lái xe, thưởng ·
+ * coral = Leben in Deutschland, ghi âm · tím = Game · ok (xanh lá) = ĐÚNG / đã xong · đỏ = SAI / xoá · gem = kim cương.
+ * Tên khoá cũ (ink, inkLine, card2, bar…) giữ nguyên để mọi màn vẫn chạy; nghĩa mới ghi bên cạnh.
+ */
 const LIGHT = {
-  background: "#fff6e9",
-  card: "#fffdf9",
-  card2: "#ffedd6",
-  bar: "#fffdf9", // thanh trên cùng
-  border: "#ecd3bb",
-  ink: "#55303f",
-  inkLine: "#55303f", // viền mảnh của ô nhập (dùng với alpha)
-  text: "#43232f",
-  muted: "#7a5a65",
-  link: "#0f766e",
-  accent: "#17803f", // nền nút, chữ trắng
-  accentDark: "#0e5a2b",
-  accentText: "#17803f", // chữ, biểu tượng màu xanh
-  amber: "#a85605", // đủ đậm để làm chữ trên nền kem; nền nút dùng gold
-  onAmber: "#ffffff",
-  gold: "#fbbf24",
-  phrase: "#0369a1", // cụm từ cố định AI tìm thấy
-  gem: "#0369a1", // điểm chính tả (kim cương)
-  gemFill: "#0369a1", // nền nút xanh dương, chữ trắng
-  gemDark: "#075985",
-  red: "#e8384f",
-  redText: "#c81e3a",
-  // Màu nhấn của dòng đang học trong transcript
-  candy: "#ffb3bd",
-  sun: "#ffd15c",
-  leaf: "#93e4a8",
-  aqua: "#a5e1f5",
+  background: "#fbfaf7", // giấy trắng ấm
+  card: "#ffffff",
+  card2: "#f3f1ea", // bề mặt phụ, nền nhóm
+  bar: "#ffffff", // thanh trên cùng
+  border: "#e3e0d7", // viền mặc định của khung
+  line: "#ebe8e0", // đường kẻ phân cách hàng
+  ink: "#16203a", // mực đậm — viền của thứ đang chọn / đang làm
+  inkLine: "#16203a", // dùng với alpha cho viền mảnh của ô nhập
+  text: "#16203a",
+  muted: "#5a6175",
+  link: "#1d3bb8",
+  accent: "#2a4fe0", // xanh lam vở: nền nút chính, chữ trắng
+  accentDark: "#1d3bb8",
+  accentText: "#1d3bb8", // chữ, biểu tượng màu thương hiệu
+  accentSoft: "#e8edff",
+  amber: "#8a5b00", // chữ vàng đậm đọc được trên nền sáng; nền nút dùng gold
+  onAmber: "#16203a",
+  gold: "#ffc93a",
+  goldDark: "#e0a300",
+  goldSoft: "#fff4d2",
+  coral: "#ff6b55",
+  coralDark: "#d9452f",
+  coralSoft: "#ffe9e4",
+  coralText: "#b5311b",
+  grape: "#6a4ae0",
+  grapeDark: "#4f33bd",
+  grapeSoft: "#efeaff",
+  grapeText: "#5236c4",
+  ok: "#1a7f45", // đúng / thành công — không dùng làm nút chính
+  okSoft: "#e3f5ea",
+  okText: "#136136",
+  phrase: "#0b7aa6", // cụm từ cố định AI tìm thấy
+  gem: "#0b7aa6", // kim cương
+  gemFill: "#0b7aa6",
+  gemDark: "#075a7b",
+  gemSoft: "#e1f3fa",
+  red: "#d92d35",
+  redText: "#c4242b",
+  redSoft: "#fde7e7",
+  // Màu nhạt của bước học trong transcript (nền, chữ mực ở trên)
+  candy: "#ffb4a8", // nói
+  sun: "#ffe08a", // chép chính tả
+  leaf: "#a6e6be", // đúng / so sánh
+  aqua: "#b9ccff", // nghe
 };
 
-/** Giao diện tối ấm: nâu ca cao lấy từ viền linh vật, như bàn học dưới ánh đèn vàng buổi tối */
+/** Tối: "mực xanh đêm" — trang vở dưới đèn bàn (như [data-theme="dark"] của web) */
 const DARK: typeof LIGHT = {
-  background: "#241a1c",
-  card: "#32252a",
-  card2: "#3f2f33",
-  bar: "#1c1416",
-  border: "#4e3b40",
-  ink: "#5c4248",
-  inkLine: "#b49a9f",
-  text: "#f9ecdf",
-  muted: "#cdb7aa",
-  link: "#83d8cc",
-  accent: "#1d8048",
-  accentDark: "#0f4f2b",
-  accentText: "#8adea6",
-  amber: "#f6c26b",
-  onAmber: "#2b1520",
-  gold: "#f5b93c",
-  phrase: "#93d2f7",
-  gem: "#93d2f7",
-  gemFill: "#2c6f95",
-  gemDark: "#1d4f6d",
-  red: "#cf3a4e",
-  redText: "#ff9ca7",
-  candy: "#ffb3bd",
-  sun: "#ffd15c",
-  leaf: "#93e4a8",
-  aqua: "#a5e1f5",
+  background: "#0e1424",
+  card: "#151c2f",
+  card2: "#1c2540",
+  bar: "#0b101d",
+  border: "#2a3552",
+  line: "#222c45",
+  ink: "#e9edf7",
+  inkLine: "#e9edf7",
+  text: "#e9edf7",
+  muted: "#a3adc6",
+  link: "#8ea6ff",
+  accent: "#3d5ef0",
+  accentDark: "#2c48c9",
+  accentText: "#8ea6ff",
+  accentSoft: "#1c2a5c",
+  amber: "#ffd36a",
+  onAmber: "#16203a",
+  gold: "#ffd36a",
+  goldDark: "#c99a1e",
+  goldSoft: "#3a3017",
+  coral: "#ff8f7e",
+  coralDark: "#d9654f",
+  coralSoft: "#3f2420",
+  coralText: "#ffa596",
+  grape: "#8f74ff",
+  grapeDark: "#6a4ae0",
+  grapeSoft: "#2a2350",
+  grapeText: "#bfaeff",
+  ok: "#2f9e5e",
+  okSoft: "#173326",
+  okText: "#6fdc9c",
+  phrase: "#7fd3f0",
+  gem: "#7fd3f0",
+  gemFill: "#2f86a8",
+  gemDark: "#13304a",
+  gemSoft: "#13304a",
+  red: "#e5484d",
+  redText: "#ff8a8f",
+  redSoft: "#3a1c22",
+  candy: "#8a4a42",
+  sun: "#6b5520",
+  leaf: "#245c3d",
+  aqua: "#2c3f80",
 };
 
 export const PALETTE: Record<Scheme, typeof LIGHT> = { light: LIGHT, dark: DARK };
@@ -142,32 +181,52 @@ export function stageBg(hex: string) {
   return `rgb(${r},${g},${b})`;
 }
 
-/** Màn chơi game: vẽ riêng cho nền đêm nên giữ bảng màu tối (như .theme-night trên web); giao diện tối thì khung cùng tông ca cao */
+/** Màn chơi game: "giấy than tím đêm" như .theme-night của web — luôn tối, chung chữ / nút / bo góc với cả app */
 const NIGHT_BASE = {
-  background: "#0c110e",
-  card: "#131b16",
-  card2: "#1b261f",
-  border: "#26362c",
-  text: "#eef5ef",
-  muted: "#8ea395",
-  accent: "#16a34a",
-  accentDark: "#14532d",
-  amber: "#facc15",
-  phrase: "#38bdf8",
-  red: "#dc2626",
-  redText: "#f87171",
+  background: "#120f24",
+  card: "#1a1533",
+  card2: "#231d42",
+  border: "#2f2852",
+  text: "#f1eeff",
+  muted: "#a9a2cc",
+  accent: "#6a4ae0",
+  accentDark: "#4f33bd",
+  amber: "#ffd36a",
+  phrase: "#7fd3f0",
+  red: "#e5484d",
+  redText: "#ff8a8f",
+  ok: "#2f9e5e",
+  okText: "#6fdc9c",
 };
-export const NIGHT = themed(() =>
-  isDark() ? { ...NIGHT_BASE, background: "#1c1416", card: "#2a1f23", card2: "#32252a", border: "#4e3b40", text: "#f9ecdf", muted: "#cdb7aa" } : NIGHT_BASE,
-);
+export const NIGHT = themed(() => NIGHT_BASE);
 
-/** Viền + bóng cứng kiểu sticker như .card / .btn của web */
-export const STICKER = themed(() => ({ borderWidth: 2, borderColor: C.ink, boxShadow: `0 4px 0 ${C.ink}` }));
+/** Khung phẳng như .card của web: nền trắng + viền 1px, không bóng (chiều sâu = lớp màu dán chồng) */
+export const STICKER = themed(() => ({ borderWidth: 1, borderColor: C.border }));
 
+/** Bóng mềm — chỉ cho thứ thật sự nổi (popover, sheet, toast, nút nổi) */
+export const FLOAT = themed(() => ({ boxShadow: isDark() ? "0 8px 24px rgba(0,0,0,0.45)" : "0 8px 24px rgba(22,32,58,0.12)" }));
+
+/** Bo góc chung: khung 16 · ô / nút 12 · nhỏ 8 */
+export const R = { sm: 8, md: 12, lg: 16, xl: 24 } as const;
+
+/** Màu bìa theo khu vực (data-sec của web): de xanh lam · laixe vàng · lid coral · game tím · ink tài khoản / thông tin */
+export type Sec = "de" | "laixe" | "lid" | "game" | "ink";
+export type SecColors = { sec: string; secDark: string; secSoft: string; secText: string; onSec: string };
+export const SEC = themed((): Record<Sec, SecColors> => ({
+  de: { sec: C.accent, secDark: C.accentDark, secSoft: C.accentSoft, secText: C.accentText, onSec: "#ffffff" },
+  laixe: { sec: C.gold, secDark: C.goldDark, secSoft: C.goldSoft, secText: C.amber, onSec: "#16203a" },
+  lid: { sec: C.coral, secDark: C.coralDark, secSoft: C.coralSoft, secText: C.coralText, onSec: "#16203a" },
+  game: { sec: C.grape, secDark: C.grapeDark, secSoft: C.grapeSoft, secText: C.grapeText, onSec: "#ffffff" },
+  ink: isDark()
+    ? { sec: "#26314f", secDark: "#1a233d", secSoft: C.card2, secText: C.text, onSec: "#ffffff" }
+    : { sec: "#16203a", secDark: "#0b1226", secSoft: C.card2, secText: C.text, onSec: "#ffffff" },
+}));
+
+/** Nhãn trình độ: A xanh lá · B xanh lam · C tím — tông nhạt, chữ đậm (như .badge của web) */
 export const LEVEL_COLORS: Record<string, { bg: string; fg: string }> = {
-  A: { bg: "#a7f3d0", fg: "#064e3b" },
-  B: { bg: "#bae6fd", fg: "#0c4a6e" },
-  C: { bg: "#ddd6fe", fg: "#4c1d95" },
+  A: { bg: "#d6f2e0", fg: "#0f5130" },
+  B: { bg: "#dbe3ff", fg: "#1a2f99" },
+  C: { bg: "#e6defe", fg: "#3f2a9c" },
 };
 
 export const LEVELS = [

@@ -5,7 +5,8 @@ import { ActivityIndicator, Pressable, View, type TextInputProps } from "react-n
 import { DISPLAY, Text, TextInput } from "./Text";
 import { useAuth } from "@/lib/auth";
 import { SocialLogin } from "@/components/SocialLogin";
-import { C, STICKER, alpha } from "@/lib/theme";
+import { haptic } from "@/lib/haptics";
+import { C, alpha } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,7 +42,7 @@ function Field({
           gap: 10,
           height: 46,
           paddingHorizontal: 14,
-          borderRadius: 14,
+          borderRadius: 12,
           borderWidth: 1.5,
           borderColor,
           backgroundColor: C.background,
@@ -78,21 +79,24 @@ function Field({
 function PrimaryButton({ title, onPress, busy, disabled }: { title: string; onPress: () => void; busy?: boolean; disabled?: boolean }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        haptic.firm();
+        onPress();
+      }}
       disabled={busy || disabled}
+      accessibilityRole="button"
+      accessibilityState={{ busy: !!busy, disabled: !!disabled }}
       style={({ pressed }) => ({
-        height: 48,
-        borderRadius: 16,
+        height: 52,
+        borderRadius: 12,
         backgroundColor: C.accent,
-        ...STICKER,
-        boxShadow: `0 ${pressed ? 1 : 4}px 0 ${C.ink}`,
         alignItems: "center",
         justifyContent: "center",
         opacity: busy || disabled ? 0.6 : 1,
-        transform: [{ translateY: pressed ? 2 : 0 }],
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
-      {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>{title}</Text>}
+      {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 17, fontWeight: "700" }}>{title}</Text>}
     </Pressable>
   );
 }
@@ -150,9 +154,9 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
     <View style={{ gap: 18, paddingTop: 4 }}>
       <View style={{ alignItems: "center", gap: 8 }}>
         <View
-          style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: C.accent, alignItems: "center", justifyContent: "center" }}
+          style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: C.accentSoft, alignItems: "center", justifyContent: "center" }}
         >
-          <SymbolView name={step === "code" ? "envelope.badge" : "key.fill"} size={32} tintColor="#fff" />
+          <SymbolView name={step === "code" ? "envelope.badge" : "key.fill"} size={32} tintColor={C.accentText} weight="semibold" />
         </View>
         <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 22, fontWeight: "800" }}>
           {step === "code" ? t("auth.resetTitle") : t("auth.forgotTitle")}
@@ -346,16 +350,12 @@ export function AuthForm() {
               width: 72,
               height: 72,
               borderRadius: 22,
-              backgroundColor: C.accent,
+              backgroundColor: C.accentSoft,
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: C.accent,
-              shadowOpacity: 0.45,
-              shadowRadius: 18,
-              shadowOffset: { width: 0, height: 6 },
             }}
           >
-            <SymbolView name="envelope.badge" size={34} tintColor="#fff" weight="bold" />
+            <SymbolView name="envelope.badge" size={34} tintColor={C.accentText} weight="semibold" />
           </View>
         ) : (
           <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 84, height: 84 }} />
@@ -476,19 +476,22 @@ export function AuthForm() {
         {!!notice && <Text style={{ color: C.accentText, fontSize: 14, textAlign: "center" }}>{notice}</Text>}
 
         <Pressable
-          onPress={codeStep ? () => confirm() : submit}
+          onPress={() => {
+            haptic.firm();
+            if (codeStep) confirm();
+            else submit();
+          }}
           disabled={busy || (codeStep && code.length !== 6)}
+          accessibilityRole="button"
           style={({ pressed }) => ({
-            height: 48,
+            height: 52,
             marginTop: 2,
-            borderRadius: 16,
+            borderRadius: 12,
             backgroundColor: C.accent,
-            ...STICKER,
-            boxShadow: `0 ${pressed ? 1 : 4}px 0 ${C.ink}`,
             alignItems: "center",
             justifyContent: "center",
             opacity: busy || (codeStep && code.length !== 6) ? 0.6 : 1,
-            transform: [{ translateY: pressed ? 2 : 0 }],
+            transform: [{ scale: pressed ? 0.97 : 1 }],
           })}
         >
           {busy ? (

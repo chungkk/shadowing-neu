@@ -10,9 +10,9 @@ const sharp = require("sharp");
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "images");
 const WEB_OUT = path.join(process.cwd(), "src", "app");
 
-// Nền kem như giao diện web/app
-const BG_HI = "#fffdf9";
-const BG_LO = "#ffedd6";
+// Bìa vở xanh lam phẳng của design system "Nhãn vở" (DESIGN.md): không gradient; gáy băng dính đậm hơn bên trái
+const BG_LO = "#2a4fe0";
+const SPINE = "#1d3bb8";
 
 // Linh vật tắc kè đeo tai nghe (nền trong suốt, khung 1024); tâm hình nằm ở CX, CY.
 const MASCOT = (await readFile(path.join(OUT, "mascot.svg"), "utf8")).replace(/^<svg[^>]*>|<\/svg>\s*$/g, "");
@@ -34,17 +34,11 @@ function headMark() {
 }
 
 const svg = (body, bg = "") => `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <radialGradient id="bg" gradientUnits="userSpaceOnUse" cx="205" cy="102" r="1178">
-      <stop offset="0" stop-color="${BG_HI}"/>
-      <stop offset="1" stop-color="${BG_LO}"/>
-    </radialGradient>
-  </defs>
   ${bg}
   ${body}
 </svg>`;
 
-const DARK_BG = `<rect width="1024" height="1024" fill="url(#bg)"/>`;
+const DARK_BG = `<rect width="1024" height="1024" fill="${BG_LO}"/><rect width="104" height="1024" fill="${SPINE}"/>`;
 const WEB_MARK = headMark();
 
 /** Giữ lại nét sáng làm độ đục: icon đơn sắc vẫn thấy mặt thay vì một khối đặc. */

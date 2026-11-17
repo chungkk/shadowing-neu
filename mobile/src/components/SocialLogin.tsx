@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, View } from "react-native";
 import { Text } from "./Text";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { C, STICKER } from "@/lib/theme";
+import { C, isDark } from "@/lib/theme";
 import { useI18n } from "@/lib/i18n";
 import { apple, googleAvailable, signInWithApple, signInWithGoogle, type SocialResult } from "@/lib/social";
 
@@ -40,22 +40,23 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+        <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
         <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>{t("auth.or")}</Text>
-        <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+        <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
       </View>
 
       {appleOk && apple && (
-        <View style={{ height: 54, borderRadius: 16, backgroundColor: "#fff", ...STICKER, opacity: busy === "google" ? 0.6 : 1 }}>
+        <View style={{ height: 52, borderRadius: 12, overflow: "hidden", backgroundColor: isDark() ? "#fff" : "#000", opacity: busy === "google" ? 0.6 : 1 }}>
           {busy === "apple" ? (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <ActivityIndicator color="#000" />
+              <ActivityIndicator color={isDark() ? "#000" : "#fff"} />
             </View>
           ) : (
             <apple.AppleAuthenticationButton
               buttonType={apple.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={apple.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={14}
+              // HIG: nút đen trên nền sáng, nút trắng trên nền tối
+              buttonStyle={isDark() ? apple.AppleAuthenticationButtonStyle.WHITE : apple.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={12}
               style={{ width: "100%", height: "100%" }}
               onPress={() => run("apple", signInWithApple)}
             />
@@ -69,17 +70,17 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
           disabled={!!busy}
           accessibilityRole="button"
           style={({ pressed }) => ({
-            height: 54,
-            borderRadius: 16,
+            height: 52,
+            borderRadius: 12,
             backgroundColor: "#fff",
-            ...STICKER,
-            boxShadow: `0 ${pressed ? 1 : 4}px 0 ${C.ink}`,
+            borderWidth: 1.5,
+            borderColor: "#dadce0",
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 10,
             opacity: busy === "apple" ? 0.6 : 1,
-            transform: [{ translateY: pressed ? 2 : 0 }],
+            transform: [{ scale: pressed ? 0.97 : 1 }],
           })}
         >
           {busy === "google" ? (

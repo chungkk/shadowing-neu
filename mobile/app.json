@@ -106,7 +106,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffedd6",
+        "backgroundColor": "#2a4fe0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -125,46 +125,61 @@
         {
           "ios": {
             "fonts": [
-              "./node_modules/@expo-google-fonts/nunito/400Regular/Nunito_400Regular.ttf",
-              "./node_modules/@expo-google-fonts/nunito/600SemiBold/Nunito_600SemiBold.ttf",
-              "./node_modules/@expo-google-fonts/nunito/700Bold/Nunito_700Bold.ttf",
-              "./node_modules/@expo-google-fonts/nunito/800ExtraBold/Nunito_800ExtraBold.ttf",
-              "./node_modules/@expo-google-fonts/nunito/900Black/Nunito_900Black.ttf",
-              "./node_modules/@expo-google-fonts/baloo-2/800ExtraBold/Baloo2_800ExtraBold.ttf"
+              "./node_modules/@expo-google-fonts/be-vietnam-pro/400Regular/BeVietnamPro_400Regular.ttf",
+              "./node_modules/@expo-google-fonts/be-vietnam-pro/500Medium/BeVietnamPro_500Medium.ttf",
+              "./node_modules/@expo-google-fonts/be-vietnam-pro/600SemiBold/BeVietnamPro_600SemiBold.ttf",
+              "./node_modules/@expo-google-fonts/be-vietnam-pro/700Bold/BeVietnamPro_700Bold.ttf",
+              "./node_modules/@expo-google-fonts/be-vietnam-pro/800ExtraBold/BeVietnamPro_800ExtraBold.ttf",
+              "./node_modules/@expo-google-fonts/be-vietnam-pro/900Black/BeVietnamPro_900Black.ttf",
+              "./node_modules/@expo-google-fonts/bricolage-grotesque/600SemiBold/BricolageGrotesque_600SemiBold.ttf",
+              "./node_modules/@expo-google-fonts/bricolage-grotesque/700Bold/BricolageGrotesque_700Bold.ttf",
+              "./node_modules/@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf"
             ]
           },
           "android": {
             "fonts": [
               {
-                "fontFamily": "Nunito",
+                "fontFamily": "Be Vietnam Pro",
                 "fontDefinitions": [
                   {
-                    "path": "./node_modules/@expo-google-fonts/nunito/400Regular/Nunito_400Regular.ttf",
+                    "path": "./node_modules/@expo-google-fonts/be-vietnam-pro/400Regular/BeVietnamPro_400Regular.ttf",
                     "weight": 400
                   },
                   {
-                    "path": "./node_modules/@expo-google-fonts/nunito/600SemiBold/Nunito_600SemiBold.ttf",
+                    "path": "./node_modules/@expo-google-fonts/be-vietnam-pro/500Medium/BeVietnamPro_500Medium.ttf",
+                    "weight": 500
+                  },
+                  {
+                    "path": "./node_modules/@expo-google-fonts/be-vietnam-pro/600SemiBold/BeVietnamPro_600SemiBold.ttf",
                     "weight": 600
                   },
                   {
-                    "path": "./node_modules/@expo-google-fonts/nunito/700Bold/Nunito_700Bold.ttf",
+                    "path": "./node_modules/@expo-google-fonts/be-vietnam-pro/700Bold/BeVietnamPro_700Bold.ttf",
                     "weight": 700
                   },
                   {
-                    "path": "./node_modules/@expo-google-fonts/nunito/800ExtraBold/Nunito_800ExtraBold.ttf",
+                    "path": "./node_modules/@expo-google-fonts/be-vietnam-pro/800ExtraBold/BeVietnamPro_800ExtraBold.ttf",
                     "weight": 800
                   },
                   {
-                    "path": "./node_modules/@expo-google-fonts/nunito/900Black/Nunito_900Black.ttf",
+                    "path": "./node_modules/@expo-google-fonts/be-vietnam-pro/900Black/BeVietnamPro_900Black.ttf",
                     "weight": 900
                   }
                 ]
               },
               {
-                "fontFamily": "Baloo 2",
+                "fontFamily": "Bricolage Grotesque",
                 "fontDefinitions": [
                   {
-                    "path": "./node_modules/@expo-google-fonts/baloo-2/800ExtraBold/Baloo2_800ExtraBold.ttf",
+                    "path": "./node_modules/@expo-google-fonts/bricolage-grotesque/600SemiBold/BricolageGrotesque_600SemiBold.ttf",
+                    "weight": 600
+                  },
+                  {
+                    "path": "./node_modules/@expo-google-fonts/bricolage-grotesque/700Bold/BricolageGrotesque_700Bold.ttf",
+                    "weight": 700
+                  },
+                  {
+                    "path": "./node_modules/@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf",
                     "weight": 800
                   }
                 ]
@@ -176,9 +191,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#fff6e9",
+          "backgroundColor": "#fbfaf7",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 180
+          "imageWidth": 180,
+          "dark": {
+            "backgroundColor": "#0e1424",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       [

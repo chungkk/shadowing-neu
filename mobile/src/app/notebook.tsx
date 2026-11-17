@@ -55,7 +55,7 @@ const ARTICLE = /^(der|die|das|sich|ein|eine) /i;
 /** Khoá xếp A–Z: bỏ mạo từ / "sich" đầu ("der Hund" xếp ở H) */
 const sortKey = (w: string) => norm(w).replace(ARTICLE, "");
 /** Màu mạo từ theo giống (quy ước hay dùng khi học tiếng Đức): der xanh dương · die đỏ · das xanh lá */
-const GENDER = themed((): Record<string, string> => ({ der: C.phrase, die: C.redText, das: C.accentText }));
+const GENDER = themed((): Record<string, string> => ({ der: C.phrase, die: C.redText, das: C.okText }));
 
 const kindOf = (v: VocabItem): Kind => (isSentence(v) ? "sentence" : isPhrase(v) ? "phrase" : "word");
 const byNewest = (a: VocabItem, b: VocabItem) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id;

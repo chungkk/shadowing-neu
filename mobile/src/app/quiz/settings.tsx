@@ -7,6 +7,7 @@ import { C } from "@/lib/theme";
 import { CLASS_GROUPS, classInfo, classQuestionIds, type ClassId } from "@/lib/quiz/fuehrerschein";
 import { STATES } from "@/lib/quiz/lid";
 import { setPrefs, usePrefs } from "@/lib/quiz/store";
+import { haptic } from "@/lib/haptics";
 import { useL } from "@/lib/quiz/strings";
 
 /** Cài đặt phần Lái xe (hạng bằng) / LiD (bang) + hiện/ẩn bản dịch tiếng Việt (dùng chung 2 phần) */
@@ -58,13 +59,16 @@ export default function QuizSettingsScreen() {
 function Choice({ title, subtitle, on, first, onPress }: { title: string; subtitle?: string; on: boolean; first?: boolean; onPress: () => void }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        if (!on) haptic.select();
+        onPress();
+      }}
       accessibilityRole="radio"
       accessibilityState={{ checked: on }}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: 52, borderTopWidth: first ? 0 : 1, borderTopColor: C.border, backgroundColor: pressed ? C.card2 : "transparent" })}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: 52, borderTopWidth: first ? 0 : 1, borderTopColor: C.line, backgroundColor: pressed ? C.card2 : "transparent" })}
     >
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={{ color: C.text, fontSize: 16, fontWeight: on ? "800" : "600" }}>{title}</Text>
+        <Text style={{ color: C.text, fontSize: 16, fontWeight: on ? "700" : "500" }}>{title}</Text>
         {!!subtitle && <Text style={{ color: C.muted, fontSize: 13 }}>{subtitle}</Text>}
       </View>
       {on && <SymbolView name="checkmark" size={16} weight="bold" tintColor={C.accentText} />}
@@ -74,7 +78,7 @@ function Choice({ title, subtitle, on, first, onPress }: { title: string; subtit
 
 function Toggle({ title, value, onChange, first }: { title: string; value: boolean; onChange: (v: boolean) => void; first?: boolean }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, minHeight: 52, borderTopWidth: first ? 0 : 1, borderTopColor: C.border }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, minHeight: 52, borderTopWidth: first ? 0 : 1, borderTopColor: C.line }}>
       <Text style={{ flex: 1, color: C.text, fontSize: 16, fontWeight: "600" }}>{title}</Text>
       <Switch value={value} onValueChange={onChange} trackColor={{ true: C.accent }} />
     </View>

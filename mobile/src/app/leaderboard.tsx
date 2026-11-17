@@ -103,7 +103,7 @@ export default function LeaderboardScreen() {
         {!board && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
         {board && user && (
           <>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 16 }}>
               <Face name={user.name} url={user.avatarUrl} size={46} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700" }}>{t("board.yourRank")}</Text>
@@ -125,7 +125,7 @@ export default function LeaderboardScreen() {
             {board.top.length === 0 ? (
               <MascotMessage text={t("board.empty")} />
             ) : (
-              <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, overflow: "hidden" }}>
+              <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, overflow: "hidden" }}>
                 {board.top.map((r, i) => (
                   <BoardRow key={r.id} r={r} first={i === 0} mine={r.id === user.id} url={user.avatarUrl} />
                 ))}

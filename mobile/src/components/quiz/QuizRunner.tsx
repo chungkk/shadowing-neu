@@ -24,6 +24,7 @@ import {
 } from "@shared/laixe/rules";
 import { Text, TextInput } from "@/components/Text";
 import { styles } from "@/components/ui";
+import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/lib/auth";
 import { C, STICKER, alpha } from "@/lib/theme";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
@@ -157,6 +158,8 @@ export function QuizRunner({
   const check = (answer = mine) => {
     if (!q || !answer.length) return;
     const ok = isRight(q, answer);
+    if (ok) haptic.success();
+    else haptic.error();
     setChecked((c) => ({ ...c, [q.id]: true }));
     recordAnswer(module, q.id, ok, user);
     if (module === "lid" && prefs.autoMark && marked.has(q.id) === ok)
@@ -165,6 +168,7 @@ export function QuizRunner({
 
   const toggle = (key: string) => {
     if (reveal || !q) return;
+    haptic.select();
     if (single) {
       setPicked((p) => ({ ...p, [q.id]: [key] }));
       if (mode === "ueben") check([key]);
@@ -533,14 +537,14 @@ export function QuizRunner({
           <View
             accessibilityRole="alert"
             style={{
-              borderRadius: 16,
-              borderWidth: 2,
-              borderColor: right ? C.accent : C.red,
-              backgroundColor: alpha(right ? C.accent : C.red, 0.12),
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: alpha(right ? C.ok : C.red, 0.35),
+              backgroundColor: right ? C.okSoft : C.redSoft,
               padding: 12,
             }}
           >
-            <Text style={{ color: C.text, fontWeight: "800", fontSize: 16 }}>
+            <Text style={{ color: right ? C.okText : C.redText, fontWeight: "700", fontSize: 16 }}>
               {right
                 ? L("✓ Đúng rồi!", "✓ Richtig!")
                 : `${mine.length ? L("✗ Chưa đúng", "✗ Leider falsch") : L("Chưa trả lời", "Nicht beantwortet")}${module === "fuehrerschein" ? ` · ${q.points} ${L("điểm lỗi", "Fehlerpunkte")}` : ""}`}
@@ -568,10 +572,10 @@ export function QuizRunner({
             {showExplain && (
               <View
                 style={{
-                  borderRadius: 16,
-                  borderWidth: 2,
-                  borderColor: alpha(C.gold, 0.7),
-                  backgroundColor: alpha(C.gold, 0.12),
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: alpha(C.gold, 0.6),
+                  backgroundColor: C.goldSoft,
                   padding: 12,
                   gap: 8,
                 }}
@@ -596,7 +600,7 @@ export function QuizRunner({
           paddingTop: 10,
           paddingBottom: Math.max(bottom, 10),
           borderTopWidth: 1,
-          borderTopColor: C.border,
+          borderTopColor: C.line,
           backgroundColor: C.bar,
         }}
       >
@@ -611,7 +615,7 @@ export function QuizRunner({
             <BarBtn
               title={L("Kiểm tra", "Prüfen")}
               bg={C.gold}
-              fg="#000"
+              fg="#16203a"
               disabled={!mine.length}
               onPress={() => check()}
             />
@@ -652,8 +656,8 @@ const chipBtn = () => ({
   paddingHorizontal: 14,
   height: 40,
   borderRadius: 12,
-  borderWidth: 2,
-  borderColor: C.ink,
+  borderWidth: 1.5,
+  borderColor: C.border,
   backgroundColor: C.card,
 });
 
@@ -714,9 +718,6 @@ function Translation({ text }: { text: string }) {
         fontStyle: "italic",
         fontSize: 15,
         lineHeight: 21,
-        borderLeftWidth: 3,
-        borderLeftColor: alpha(C.accent, 0.6),
-        paddingLeft: 8,
       }}
     >
       {text}
@@ -725,9 +726,9 @@ function Translation({ text }: { text: string }) {
 }
 
 const CELL_TONE = (): Record<Cell, { bg: string; fg: string }> => ({
-  ok: { bg: C.accent, fg: "#fff" },
+  ok: { bg: C.ok, fg: "#fff" },
   bad: { bg: C.red, fg: "#fff" },
-  "ok-old": { bg: alpha(C.accent, 0.22), fg: C.text },
+  "ok-old": { bg: alpha(C.ok, 0.22), fg: C.text },
   "bad-old": { bg: alpha(C.red, 0.22), fg: C.text },
   answered: { bg: alpha(C.gold, 0.55), fg: C.text },
   empty: { bg: C.card, fg: C.muted },
@@ -759,8 +760,8 @@ function NumChip({
         width: CHIP_W,
         height: 36,
         borderRadius: 10,
-        borderWidth: current ? 2.5 : 1.5,
-        borderColor: current ? C.ink : alpha(C.inkLine, 0.3),
+        borderWidth: current ? 2 : 1,
+        borderColor: current ? C.accent : C.border,
         backgroundColor: tone.bg,
         alignItems: "center",
         justifyContent: "center",
@@ -831,28 +832,28 @@ function OptionRow({
   const judged = reveal && mode !== "lesen";
   const border = !reveal
     ? on
-      ? C.ink
-      : alpha(C.inkLine, 0.3)
-    : correct
       ? C.accent
+      : C.border
+    : correct
+      ? C.ok
       : on
         ? C.red
-        : alpha(C.inkLine, 0.2);
+        : C.line;
   const bg = !reveal
     ? on
-      ? alpha(C.gold, 0.3)
+      ? C.accentSoft
       : C.card
     : correct
-      ? alpha(C.accent, 0.1)
+      ? C.okSoft
       : on
-        ? alpha(C.red, 0.1)
+        ? C.redSoft
         : C.card;
   const boxBg = ticked
     ? reveal && correct
-      ? C.accent
+      ? C.ok
       : reveal
         ? C.red
-        : C.text
+        : C.accent
     : C.card;
   return (
     <Pressable
@@ -865,33 +866,23 @@ function OptionRow({
         alignItems: "center",
         gap: 12,
         padding: 12,
-        borderRadius: 16,
-        borderWidth: 2,
+        minHeight: 56,
+        borderRadius: 14,
+        borderWidth: 1.5,
         borderColor: border,
         backgroundColor: bg,
         overflow: "hidden",
         opacity: pressed ? 0.85 : 1,
+        transform: [{ scale: pressed && !reveal ? 0.98 : 1 }],
       })}
     >
-      {judged && on !== correct && (
-        <View
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 5,
-            backgroundColor: C.red,
-          }}
-        />
-      )}
       <View
         style={{
           width: 34,
           height: 34,
           borderRadius: single ? 17 : 9,
-          borderWidth: 2,
-          borderColor: ticked && reveal ? boxBg : C.ink,
+          borderWidth: 1.5,
+          borderColor: ticked && reveal ? boxBg : ticked ? C.accent : alpha(C.inkLine, 0.35),
           backgroundColor: boxBg,
           alignItems: "center",
           justifyContent: "center",
@@ -954,16 +945,16 @@ function OptionRow({
             borderRadius: 13,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: correct ? (on ? C.accent : "transparent") : C.red,
+            backgroundColor: correct ? (on ? C.ok : "transparent") : C.red,
             borderWidth: correct && !on ? 2 : 0,
-            borderColor: C.accent,
+            borderColor: C.ok,
           }}
         >
           <SymbolView
             name={correct ? "checkmark" : "xmark"}
             size={13}
             weight="heavy"
-            tintColor={correct && !on ? C.accentText : "#fff"}
+            tintColor={correct && !on ? C.okText : "#fff"}
           />
         </View>
       )}
@@ -1236,8 +1227,8 @@ function NumberAnswer({
             width: 130,
             height: 48,
             borderRadius: 12,
-            borderWidth: 2,
-            borderColor: correct === null ? C.ink : ok ? C.accent : C.red,
+            borderWidth: 1.5,
+            borderColor: correct === null ? C.border : ok ? C.ok : C.red,
             backgroundColor: C.card,
             color: C.text,
             fontSize: 20,
@@ -1284,15 +1275,14 @@ function NavBtn({
       style={({ pressed }) => ({
         width: 52,
         height: 48,
-        borderRadius: 14,
-        borderWidth: 2,
-        borderColor: C.ink,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: primary ? C.accent : C.border,
         backgroundColor: primary ? C.accent : C.card,
         alignItems: "center",
         justifyContent: "center",
         opacity: disabled ? 0.35 : 1,
-        transform: [{ translateY: pressed ? 2 : 0 }],
-        boxShadow: `0 ${pressed ? 1 : 3}px 0 ${C.ink}`,
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
       <SymbolView
@@ -1330,19 +1320,18 @@ function BarBtn({
         alignSelf: wide ? "stretch" : undefined,
         height: 48,
         paddingHorizontal: 18,
-        borderRadius: 14,
-        borderWidth: 2,
-        borderColor: C.ink,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: bg === C.card ? C.border : bg,
         backgroundColor: bg,
         alignItems: "center",
         justifyContent: "center",
         opacity: disabled ? 0.4 : 1,
-        transform: [{ translateY: pressed ? 2 : 0 }],
-        boxShadow: `0 ${pressed ? 1 : 3}px 0 ${C.ink}`,
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
       <Text
-        style={{ color: fg, fontWeight: "800", fontSize: 16 }}
+        style={{ color: fg, fontWeight: "700", fontSize: 16 }}
         numberOfLines={1}
       >
         {title}
@@ -1406,7 +1395,7 @@ function ResultCard({
       style={{
         borderRadius: 20,
         ...STICKER,
-        backgroundColor: alpha(result.passed ? C.accent : C.red, 0.15),
+        backgroundColor: alpha(result.passed ? C.ok : C.red, 0.15),
         padding: 14,
         gap: 4,
       }}

@@ -5,7 +5,8 @@ import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type ViewStyle } from "react-native";
-import { Text, TextInput } from "@/components/Text";
+import { DISPLAY, Text, TextInput } from "@/components/Text";
+import { haptic } from "@/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   buildQueue,
@@ -50,14 +51,14 @@ const say = (text: string, slow?: boolean) => speakGerman(text, { slow }).catch(
 
 type Tone = "idle" | "sel" | "right" | "wrong" | "dim";
 const TONES = themed((): Record<Tone, { border: string; bg: string; fg: string }> => ({
-  idle: { border: C.border, bg: C.card2, fg: C.text },
-  sel: { border: C.phrase, bg: alpha(C.gem, 0.15), fg: C.phrase },
-  right: { border: C.accentText, bg: alpha(C.accent, 0.18), fg: C.accentText },
-  wrong: { border: C.red, bg: alpha(C.red, 0.15), fg: C.redText },
-  dim: { border: C.border, bg: C.card2, fg: C.muted },
+  idle: { border: C.border, bg: C.card, fg: C.text },
+  sel: { border: C.accent, bg: C.accentSoft, fg: C.accentText },
+  right: { border: C.ok, bg: C.okSoft, fg: C.okText },
+  wrong: { border: C.red, bg: C.redSoft, fg: C.redText },
+  dim: { border: C.line, bg: C.card2, fg: C.muted },
 }));
 
-/** Ô / nút kiểu "nổi" có viền dưới dày (giống bài học Duolingo) */
+/** Ô / nút phẳng (như .btn của web): viền 1.5px theo trạng thái, bấm = co nhẹ */
 function Tile({
   tone = "idle",
   onPress,
@@ -78,13 +79,12 @@ function Tile({
       disabled={disabled}
       style={({ pressed }) => [
         {
-          borderWidth: 2,
-          borderBottomWidth: pressed ? 2 : 4,
-          borderRadius: 16,
+          borderWidth: 1.5,
+          borderRadius: 14,
           borderColor: c.border,
           backgroundColor: c.bg,
           opacity: tone === "dim" ? 0.45 : 1,
-          transform: [{ translateY: pressed ? 2 : 0 }],
+          transform: [{ scale: pressed ? 0.97 : 1 }],
           alignItems: "center",
           justifyContent: "center",
         },
@@ -175,13 +175,11 @@ function ListenButtons({ word }: { word: string }) {
         style={({ pressed }) => ({
           width: 104,
           height: 104,
-          borderRadius: 24,
-          backgroundColor: C.gemFill,
-          borderBottomWidth: pressed ? 2 : 6,
-          borderColor: C.gemDark,
+          borderRadius: 16,
+          backgroundColor: C.accent,
           alignItems: "center",
           justifyContent: "center",
-          transform: [{ translateY: pressed ? 3 : 0 }],
+          transform: [{ scale: pressed ? 0.97 : 1 }],
         })}
       >
         <SymbolView name="speaker.wave.3.fill" size={48} tintColor="#fff" />
@@ -329,6 +327,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const answer = (ok: boolean, note?: string) => {
     const s = step!;
     const nextCombo = ok ? combo + 1 : 0;
+    if (ok) haptic.success();
+    else haptic.error();
     setFeedback({ ok, note, combo: nextCombo });
     setCombo(nextCombo);
     setBestCombo((b) => Math.max(b, nextCombo));
@@ -459,7 +459,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       </Big>
     );
     const clozeBox = (fill?: string | null) => (
-      <View style={{ borderWidth: 2, borderColor: C.border, borderRadius: 18, padding: 16, gap: 8 }}>
+      <View style={{ borderWidth: 1, borderColor: C.border, backgroundColor: C.card, borderRadius: 16, padding: 16, gap: 8 }}>
         <Context text={v.context} word={v.word} blank={!feedback} fill={fill} size={19} color={C.text} />
         {!!v.meaning && <Text style={{ color: C.amber, fontSize: 14 }}>{t("review.meaning", { m: v.meaning })}</Text>}
       </View>
@@ -481,7 +481,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               {v.meaning || t("vocab.noMeaning")}
             </Text>
             {!!v.context && (
-              <View style={{ flexDirection: "row", gap: 8, borderWidth: 2, borderColor: C.border, borderRadius: 18, padding: 14, alignSelf: "stretch" }}>
+              <View style={{ flexDirection: "row", gap: 8, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, borderRadius: 16, padding: 14, alignSelf: "stretch" }}>
                 <View style={{ flex: 1 }}>
                   <Context text={v.context} word={v.word} size={16} color={C.text} />
                 </View>
@@ -604,8 +604,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               submitBehavior="submit"
               onSubmitEditing={() => (feedback ? next() : check())}
               style={{
-                borderWidth: 2,
-                borderRadius: 16,
+                borderWidth: 1.5,
+                borderRadius: 14,
                 borderColor: feedback ? TONES[feedback.ok ? "right" : "wrong"].border : C.border,
                 backgroundColor: C.card,
                 color: feedback ? TONES[feedback.ok ? "right" : "wrong"].fg : C.text,
@@ -739,7 +739,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       const tone = TONES[ok ? "right" : "wrong"];
       const praise = t("review.praise").split("|");
       return (
-        <View style={{ backgroundColor: ok ? alpha(C.accent, 0.16) : alpha(C.red, 0.14), borderTopWidth: 2, borderColor: tone.border, padding: 16, gap: 10 }}>
+        <View style={{ backgroundColor: ok ? C.okSoft : C.redSoft, borderTopWidth: 1, borderColor: alpha(tone.border, 0.4), padding: 16, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.card, alignItems: "center", justifyContent: "center" }}>
               <SymbolView name={ok ? "checkmark" : "xmark"} size={18} weight="black" tintColor={tone.fg} />
@@ -794,7 +794,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
 
   const stats = [
     { label: t("review.xp"), value: `⚡ ${xp}`, color: C.amber },
-    { label: t("review.accuracy"), value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: C.accentText },
+    { label: t("review.accuracy"), value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: C.okText },
     { label: t("review.time"), value: `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`, color: C.phrase },
   ];
 
@@ -826,25 +826,25 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", gap: 18, padding: 24 }}>
             <Mascot size={132} animated bob />
             <View style={{ alignItems: "center", gap: 4 }}>
-              <Text style={{ color: C.amber, fontSize: 28, fontWeight: "800", textAlign: "center" }}>{practice ? t("review.practiceDone") : t("review.finished")}</Text>
+              <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 28, fontWeight: "800", textAlign: "center" }}>{practice ? t("review.practiceDone") : t("review.finished")}</Text>
               {!practice && streak > 0 && <Text style={{ color: C.amber, fontWeight: "800" }}>🔥 {t("review.streak", { n: streak })}</Text>}
             </View>
             <View style={{ flexDirection: "row", gap: 10, alignSelf: "stretch" }}>
               {stats.map((s) => (
-                <View key={s.label} style={{ flex: 1, borderWidth: 2, borderColor: s.color, borderRadius: 16, overflow: "hidden" }}>
+                <View key={s.label} style={{ flex: 1, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, borderRadius: 14, overflow: "hidden" }}>
                   <Text
-                    style={{ backgroundColor: s.color, color: C.background, textAlign: "center", fontSize: 11, fontWeight: "800", paddingVertical: 4, textTransform: "uppercase" }}
+                    style={{ color: C.muted, textAlign: "center", fontSize: 11, fontWeight: "700", paddingTop: 10, letterSpacing: 0.6, textTransform: "uppercase" }}
                     numberOfLines={1}
                   >
                     {s.label}
                   </Text>
-                  <Text style={{ color: s.color, textAlign: "center", fontSize: 20, fontWeight: "800", paddingVertical: 12 }}>{s.value}</Text>
+                  <Text style={{ color: s.color, textAlign: "center", fontFamily: DISPLAY, fontSize: 24, fontWeight: "800", paddingTop: 2, paddingBottom: 12 }}>{s.value}</Text>
                 </View>
               ))}
             </View>
             <Text style={[styles.muted, { textAlign: "center" }]}>{t("review.summary", { ok: firstTry, n: graded.length, best: bestCombo })}</Text>
             {wrong.length > 0 && (
-              <View style={{ alignSelf: "stretch", borderWidth: 2, borderColor: C.border, borderRadius: 16, padding: 14, gap: 10 }}>
+              <View style={{ alignSelf: "stretch", borderWidth: 1, borderColor: C.border, backgroundColor: C.card, borderRadius: 16, padding: 14, gap: 10 }}>
                 <Text style={{ color: C.redText, fontWeight: "800" }}>{t("review.watch")}</Text>
                 {wrong.map((g) => (
                   <View key={g.item.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -1064,7 +1064,7 @@ function ChoiceRow({ icon, title, info, onPress }: { icon: SFSymbol; title: stri
 /** Thẻ nhiệm vụ hôm nay: icon · tên · tình trạng · nút hành động */
 function TaskCard({ icon, title, info, children }: { icon: SFSymbol; title: string; info: string; children: ReactNode }) {
   return (
-    <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16, gap: 14 }}>
+    <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 16, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: alpha(C.accent, 0.15), alignItems: "center", justifyContent: "center" }}>
           <SymbolView name={icon} size={18} tintColor={C.accentText} />

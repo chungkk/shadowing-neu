@@ -20,6 +20,7 @@ import {
   ScrollView,
   View,
 } from "react-native";
+import { haptic } from "@/lib/haptics";
 import { Text } from "./Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
@@ -901,7 +902,7 @@ export default function Player({
               <View style={{ flexDirection: "row", gap: 4 }} accessibilityLabel={t("player.doneOf", { d: queue.filter((k) => dictDone[k]).length, n: queue.length })}>
                 {queue.map((k) => {
                   const r = dictDone[k];
-                  const color = r ? (r.correct === r.total ? C.accentText : C.amber) : k === idx ? C.text : C.border;
+                  const color = r ? (r.correct === r.total ? C.okText : C.amber) : k === idx ? C.text : C.border;
                   return (
                     <Pressable key={k} onPress={() => k !== idx && playSegment(k)} hitSlop={{ top: 10, bottom: 10 }} style={{ flex: 1, paddingVertical: 2 }}>
                       <View style={{ height: 5, borderRadius: 3, backgroundColor: color, opacity: k === idx && !r ? 1 : 0.9 }} />
@@ -1023,10 +1024,10 @@ export default function Player({
               marginBottom: 10,
               padding: tablet ? 16 : 14,
               borderRadius: 16,
-              borderWidth: 2,
-              borderColor: index === idx ? C.ink : C.border,
+              borderWidth: index === idx ? 1.5 : 1,
+              borderColor: index === idx ? alpha(C.text, 0.55) : C.line,
               backgroundColor: index === idx ? stageBg(stage) : "transparent",
-              boxShadow: index === idx ? `0 3px 0 ${C.ink}` : undefined,
+              
               gap: 6,
             }}
           >
@@ -1171,14 +1172,17 @@ export default function Player({
         {!dictation && (
           <>
             <Pressable
-              onPress={toggleRecord}
+              onPress={() => {
+                haptic.firm();
+                toggleRecord();
+              }}
               accessibilityRole="button"
               accessibilityLabel={recState.isRecording ? t("player.a11yStopRecord") : t("player.a11yRecord")}
               style={({ pressed }) => ({
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: recState.isRecording ? C.red : alpha(C.red, 0.15),
+                backgroundColor: recState.isRecording ? C.red : C.coral,
                 alignItems: "center",
                 justifyContent: "center",
                 transform: [{ scale: pressed ? 0.92 : 1 }],
@@ -1187,7 +1191,7 @@ export default function Player({
               <SymbolView
                 name={recState.isRecording ? "stop.fill" : "mic.fill"}
                 size={18}
-                tintColor={recState.isRecording ? "#fff" : C.redText}
+                tintColor={recState.isRecording ? "#fff" : "#16203a"}
               />
             </Pressable>
             <IconButton icon="speaker.wave.2.fill" label={t("player.a11yPlayRecording")} onPress={() => playRecording(idx)} disabled={!recordings[idx]} />

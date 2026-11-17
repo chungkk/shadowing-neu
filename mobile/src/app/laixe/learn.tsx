@@ -72,7 +72,7 @@ function ThemeRow({ theme, stats, open, onToggle }: { theme: ThemeNode; stats: P
         </View>
       </Pressable>
       {open && (
-        <View style={{ marginLeft: 14, borderLeftWidth: 3, borderLeftColor: C.border }}>
+        <View style={{ marginLeft: 14, borderLeftWidth: 1, borderLeftColor: C.line }}>
           {theme.chapters.map((c) => (
             <SetRow
               key={c.id}

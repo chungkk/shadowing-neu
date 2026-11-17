@@ -4,7 +4,7 @@ import { SymbolView, type SFSymbol } from "expo-symbols";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync, type PermissionResponse } from "expo-audio";
 import { ActivityIndicator, Alert, AppState, Linking, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Row, Section } from "@/components/SettingsList";
+import { ICON, Row, Section } from "@/components/SettingsList";
 import { styles } from "@/components/ui";
 import { api } from "@/lib/api";
 import { notice, showError } from "@/lib/dialogs";
@@ -27,7 +27,7 @@ function Pledge({ icon, children }: { icon: SFSymbol; children: string }) {
 function Hero() {
   const { t } = useI18n();
   return (
-    <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 24, padding: 18, gap: 14 }}>
+    <View style={{ backgroundColor: C.card, ...STICKER, borderRadius: 16, padding: 18, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View
           style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: alpha(C.accent, 0.16), alignItems: "center", justifyContent: "center" }}
@@ -108,14 +108,14 @@ export default function PrivacyScreen() {
           <Row
             first
             icon="mic.fill"
-            iconBg="#ea580c"
+            iconBg={ICON.gold}
             title={t("priv.mic")}
             subtitle={t("priv.micSub")}
             value={micValue}
-            valueColor={mic?.granted ? C.accentText : C.muted}
+            valueColor={mic?.granted ? C.okText : C.muted}
             onPress={onMic}
           />
-          <Row icon="gearshape.fill" iconBg="#475569" title={t("priv.systemSettings")} external onPress={() => Linking.openSettings().catch(() => {})} />
+          <Row icon="gearshape.fill" iconBg={ICON.slate} title={t("priv.systemSettings")} external onPress={() => Linking.openSettings().catch(() => {})} />
         </Section>
 
         <Section title={t("priv.sectionData")} footer={user ? t("priv.dataNote") : t("priv.guestNote")}>
@@ -123,7 +123,7 @@ export default function PrivacyScreen() {
             <Row
               first
               icon="arrow.down.doc.fill"
-              iconBg="#2563eb"
+              iconBg={ICON.blue}
               title={t("priv.export")}
               subtitle={t("priv.exportSub")}
               chevron={!exporting}
@@ -132,7 +132,7 @@ export default function PrivacyScreen() {
               onPress={exportData}
             />
           )}
-          <Row first={!user} icon="lock.shield.fill" iconBg="#475569" title={t("set.privacyPolicy")} external onPress={() => openLegal("privacy")} />
+          <Row first={!user} icon="lock.shield.fill" iconBg={ICON.slate} title={t("set.privacyPolicy")} external onPress={() => openLegal("privacy")} />
         </Section>
       </ScrollView>
     </View>

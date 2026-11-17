@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Image } from "expo-image";
@@ -19,11 +19,11 @@ import {
   Switch,
   View,
 } from "react-native";
-import { Text } from "@/components/Text";
+import { DISPLAY, Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
+import { Button, CoverTag, ErrorText, Input, Nhan, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
-import { Row, Section } from "@/components/SettingsList";
+import { ICON, Row, Section } from "@/components/SettingsList";
 import { useSwitchTheme } from "@/components/ThemeRoot";
 import {
   api,
@@ -38,7 +38,7 @@ import { BrandBar } from "@/components/Brand";
 import { useAuth } from "@/lib/auth";
 import { useDueCount } from "@/lib/due";
 import { openLegal } from "@/lib/legal";
-import { C, STICKER, useScheme, alpha } from "@/lib/theme";
+import { C, SEC, useScheme } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
 import { germanVoices, speakGerman, stopSpeaking } from "@/lib/speak";
@@ -157,8 +157,8 @@ function Avatar({ user }: { user: User }) {
           height: 72,
           borderRadius: 36,
           backgroundColor: C.accent,
-          borderWidth: 2,
-          borderColor: C.accentDark,
+          borderWidth: 3,
+          borderColor: C.accentSoft,
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
@@ -231,10 +231,10 @@ function Tile({
         gap: 2,
         paddingVertical: 12,
         borderLeftWidth: first ? 0 : 1,
-        borderLeftColor: C.border,
+        borderLeftColor: C.line,
       }}
     >
-      <Text style={{ color: C.text, fontSize: 22, fontWeight: "800" }}>
+      <Text style={{ color: C.text, fontFamily: DISPLAY, fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
         {value}
       </Text>
       <Text
@@ -260,15 +260,30 @@ function ProfileCard({
     stats && Object.values(stats.mastery).reduce((a, b) => a + b, 0); // như web: không tính câu ⭐
   const num = (n: number | null | undefined) =>
     n === null || n === undefined ? "—" : String(n);
+  const ink = SEC.ink;
   return (
-    <View
-      style={{
-        backgroundColor: C.card,
-        ...STICKER,
-        borderRadius: 24,
-        overflow: "hidden",
-      }}
-    >
+    <View>
+      {/* Bìa vở mực của khu tài khoản (như PageHeader sec="ink" của web) */}
+      <View
+        style={{
+          backgroundColor: ink.sec,
+          borderRadius: 16,
+          overflow: "hidden",
+          height: 76,
+          paddingLeft: 26,
+          paddingRight: 14,
+          paddingTop: 14,
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 12, backgroundColor: ink.secDark }} />
+        <SymbolView name="person.crop.square.fill" size={26} tintColor={ink.onSec} weight="semibold" style={{ opacity: 0.9 }} />
+        <CoverTag icon={user.role === "admin" ? "key.fill" : "graduationcap.fill"}>
+          {user.role === "admin" ? t("acc.admin") : t("acc.student")}
+        </CoverTag>
+      </View>
+      <Nhan style={{ marginTop: -36, marginHorizontal: 10, padding: 0, paddingHorizontal: 0, gap: 0, overflow: "hidden" }}>
       <View
         style={{
           flexDirection: "row",
@@ -280,8 +295,9 @@ function ProfileCard({
         <Avatar user={user} />
         <View style={{ flex: 1, gap: 3 }}>
           <Text
-            style={{ color: C.text, fontSize: 20, fontWeight: "800" }}
+            style={{ color: C.text, fontFamily: DISPLAY, fontSize: 22, fontWeight: "800", letterSpacing: -0.4 }}
             numberOfLines={1}
+            accessibilityRole="header"
           >
             {user.name}
           </Text>
@@ -297,9 +313,6 @@ function ProfileCard({
               flexWrap: "wrap",
             }}
           >
-            <Pill color={user.role === "admin" ? C.amber : C.accentText}>
-              {user.role === "admin" ? t("acc.admin") : t("acc.student")}
-            </Pill>
             <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>
               {t("acc.memberSince", { date: monthYear(user.createdAt, lang) })}
             </Text>
@@ -312,7 +325,7 @@ function ProfileCard({
         accessibilityLabel={t("acc.viewStats")}
         style={({ pressed }) => ({
           borderTopWidth: 1,
-          borderTopColor: C.border,
+          borderTopColor: C.line,
           backgroundColor: pressed ? C.card2 : "transparent",
         })}
       >
@@ -327,9 +340,9 @@ function ProfileCard({
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
-            paddingVertical: 11,
+            paddingVertical: 12,
             borderTopWidth: 1,
-            borderTopColor: C.border,
+            borderTopColor: C.line,
           }}
         >
           <SymbolView
@@ -350,23 +363,7 @@ function ProfileCard({
           />
         </View>
       </Pressable>
-    </View>
-  );
-}
-
-function Pill({ color, children }: { color: string; children: ReactNode }) {
-  return (
-    <View
-      style={{
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 99,
-        borderWidth: 1,
-        borderColor: C.border,
-        backgroundColor: C.card2,
-      }}
-    >
-      <Text style={{ color, fontSize: 12, fontWeight: "700" }}>{children}</Text>
+      </Nhan>
     </View>
   );
 }
@@ -399,7 +396,7 @@ function SettingsSection() {
       <Row
         first
         icon={scheme === "dark" ? "moon.fill" : "sun.max.fill"}
-        iconBg="#b45309"
+        iconBg={ICON.gold}
         title={t("theme.title")}
         chevron={false}
         trailing={
@@ -416,7 +413,7 @@ function SettingsSection() {
       />
       <Row
         icon="globe"
-        iconBg="#0891b2"
+        iconBg={ICON.gem}
         title={t("acc.language")}
         value={LANGS.find((l) => l.code === lang)?.label}
         open={langOpen}
@@ -486,7 +483,7 @@ function ReminderSettings() {
       <Row
         first
         icon="bell.fill"
-        iconBg="#dc2626"
+        iconBg={ICON.red}
         title={t("remind.toggle")}
         subtitle={t("remind.toggleSub")}
         chevron={false}
@@ -495,7 +492,7 @@ function ReminderSettings() {
       {p.on && (
         <Row
           icon="clock.fill"
-          iconBg="#7c3aed"
+          iconBg={ICON.grape}
           title={t("remind.time")}
           chevron={false}
           trailing={
@@ -525,7 +522,7 @@ function MoreSections() {
         <Row
           first
           icon="hand.raised.fill"
-          iconBg="#0d9488"
+          iconBg={ICON.gem}
           title={t("set.privacy")}
           subtitle={t("set.privacySub")}
           onPress={() => router.push("/privacy")}
@@ -536,7 +533,7 @@ function MoreSections() {
         <Row
           first
           icon="bubble.left.and.text.bubble.right.fill"
-          iconBg="#2563eb"
+          iconBg={ICON.blue}
           title={t("set.feedback")}
           subtitle={t("set.feedbackSub")}
           onPress={() =>
@@ -545,7 +542,7 @@ function MoreSections() {
         />
         <Row
           icon="ant.fill"
-          iconBg="#dc2626"
+          iconBg={ICON.red}
           title={t("set.reportBug")}
           subtitle={t("set.reportBugSub")}
           onPress={() =>
@@ -554,7 +551,7 @@ function MoreSections() {
         />
         <Row
           icon="square.and.arrow.up"
-          iconBg="#7c3aed"
+          iconBg={ICON.grape}
           title={t("set.share")}
           chevron={false}
           onPress={share}
@@ -565,14 +562,14 @@ function MoreSections() {
         <Row
           first
           icon="lock.shield.fill"
-          iconBg="#475569"
+          iconBg={ICON.slate}
           title={t("set.privacyPolicy")}
           external
           onPress={() => openLegal("privacy")}
         />
         <Row
           icon="doc.text.fill"
-          iconBg="#475569"
+          iconBg={ICON.slate}
           title={t("set.terms")}
           external
           onPress={() => openLegal("terms")}
@@ -773,7 +770,7 @@ function Signed({ user }: { user: User }) {
         <Row
           first
           icon="trophy.fill"
-          iconBg="#d97706"
+          iconBg={ICON.gold}
           title={t("board.title")}
           onPress={() => router.push("/leaderboard")}
         />
@@ -783,7 +780,7 @@ function Signed({ user }: { user: User }) {
         <Row
           first
           icon="person.text.rectangle"
-          iconBg="#2563eb"
+          iconBg={ICON.blue}
           title={t("acc.profile")}
           open={panel === "profile"}
           onPress={() => toggle("profile")}
@@ -808,7 +805,7 @@ function Signed({ user }: { user: User }) {
           <>
             <Row
               icon="envelope.fill"
-              iconBg="#0891b2"
+              iconBg={ICON.gem}
               title={t("acc.changeEmail")}
               open={panel === "email"}
               onPress={() => toggle("email")}
@@ -875,7 +872,7 @@ function Signed({ user }: { user: User }) {
             </Row>
             <Row
               icon="key.fill"
-              iconBg="#7c3aed"
+              iconBg={ICON.grape}
               title={hasPassword ? t("acc.changePw") : t("acc.setPw")}
               open={panel === "password"}
               onPress={() => toggle("password")}
@@ -934,7 +931,7 @@ function Signed({ user }: { user: User }) {
           <Row
             first
             icon="person.2.fill"
-            iconBg="#b45309"
+            iconBg={ICON.gold}
             title={t("admin.users")}
             onPress={() => router.push("/admin/users")}
           />
@@ -945,7 +942,7 @@ function Signed({ user }: { user: User }) {
         <Row
           first
           icon="rectangle.portrait.and.arrow.right"
-          iconBg={C.card2}
+          iconBg={C.redSoft}
           color={C.redText}
           title={t("acc.logout")}
           chevron={false}
@@ -953,7 +950,7 @@ function Signed({ user }: { user: User }) {
         />
         <Row
           icon="iphone.and.arrow.forward"
-          iconBg={C.card2}
+          iconBg={C.redSoft}
           color={C.redText}
           title={t("acc.logoutOthers")}
           chevron={false}
@@ -966,7 +963,7 @@ function Signed({ user }: { user: User }) {
           <Row
             first
             icon="trash.fill"
-            iconBg={alpha(C.red, 0.25)}
+            iconBg={C.redSoft}
             color={C.redText}
             title={t("acc.deleteTitle")}
             open={panel === "delete"}

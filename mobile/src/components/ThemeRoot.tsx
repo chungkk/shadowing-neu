@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { SymbolView } from "expo-symbols";
 import { createContext, Fragment, use, useEffect, useState, type ReactNode } from "react";
 import { Animated, Easing, Pressable, StyleSheet } from "react-native";
+import { haptic } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 import { C, PALETTE, getScheme, setScheme, useScheme, type Scheme } from "@/lib/theme";
 import { useReduceMotion } from "./Points";
@@ -40,15 +41,13 @@ function Veil({ next, onCovered, onDone }: { next: Scheme; onCovered: () => void
             width: 44,
             height: 44,
             borderRadius: 22,
-            borderWidth: 2,
-            borderColor: p.ink,
             backgroundColor: p.gold,
             alignItems: "center",
             justifyContent: "center",
             transform: [{ rotate: pop.interpolate({ inputRange: [0, 1], outputRange: ["-90deg", "0deg"] }) }],
           }}
         >
-          <SymbolView name={next === "dark" ? "moon.stars.fill" : "sun.max.fill"} size={24} tintColor="#2b1520" />
+          <SymbolView name={next === "dark" ? "moon.stars.fill" : "sun.max.fill"} size={24} tintColor="#16203a" />
         </Animated.View>
       </Animated.View>
     </Animated.View>
@@ -85,24 +84,26 @@ export function ThemeToggle() {
   const label = t(dark ? "theme.toLight" : "theme.toDark");
   return (
     <Pressable
-      onPress={() => switchTo(dark ? "light" : "dark")}
+      onPress={() => {
+        haptic.select();
+        switchTo(dark ? "light" : "dark");
+      }}
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={4}
       style={({ pressed }) => ({
         width: 40,
         height: 40,
-        borderRadius: 20,
-        borderWidth: 2,
-        borderColor: C.ink,
-        backgroundColor: C.card,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: C.border,
+        backgroundColor: pressed ? C.card2 : C.card,
         alignItems: "center",
         justifyContent: "center",
-        boxShadow: `0 ${pressed ? 1 : 3}px 0 ${C.ink}`,
-        transform: [{ translateY: pressed ? 2 : 0 }],
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
-      <SymbolView name={dark ? "sun.max.fill" : "moon.fill"} size={19} tintColor={dark ? C.amber : C.text} />
+      <SymbolView name={dark ? "sun.max.fill" : "moon.fill"} size={19} tintColor={dark ? C.gold : C.text} />
     </Pressable>
   );
 }

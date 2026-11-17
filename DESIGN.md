@@ -77,3 +77,31 @@ import PageHeader from "@/components/PageHeader";
 
 - `.theme-fahrschule` (màn làm câu hỏi Lái xe): xanh lá nhạt giống phần mềm thi thật, luôn sáng; nút/chữ/bo góc như hệ chung.
 - `.theme-night` (màn chơi game): giấy than tím đêm; chung chữ, nút, bo góc.
+
+## 8. Ứng dụng iOS (mobile/)
+
+Cùng design system, nhưng dựng theo kiểu native (Human Interface Guidelines) — không bê nguyên trang web vào điện thoại.
+
+**Code thật:** `mobile/src/lib/theme.ts` (token `C`, màu khu vực `SEC`, `R`, `STICKER`, `FLOAT`) · `mobile/src/components/ui.tsx` (thành phần) · `mobile/src/components/Text.tsx` (chữ) · `mobile/src/lib/haptics.ts` (rung).
+
+| Web | iOS |
+|---|---|
+| `--accent`, `--ok`, `--gold`… | `C.accent`, `C.ok`, `C.gold`… — cùng mã màu, sáng & tối |
+| `data-sec="de\|laixe\|lid\|game\|ink"` | `SEC.de` · `SEC.laixe` · `SEC.lid` · `SEC.game` · `SEC.ink` |
+| `<PageHeader>` (bìa + nhãn vở) | `<PageHeader sec icon title sub meta aside>` · `<Nhan>` · `<CoverTag>` |
+| `.card` | `<Card>` / `...STICKER` (viền 1px, không bóng) |
+| `.btn-primary` / `.btn` / `.btn-soft` | `<Button variant="primary\|plain\|soft\|amber\|red">` · `<Cta>` (nút đáy 56pt) |
+| `.tabs` | `<Segmented>` (khay xám, mục chọn nổi trắng) |
+| `.chip` (chọn = nền mực) | Chip lọc ở tab Bài học |
+| `.icon-bubble .tint-*` | `<IconBubble>` · `TONES()` trong QuizParts |
+| `.empty` | `<EmptyState>` · `<Loading>` |
+
+Quy tắc riêng của iOS:
+- **Chữ:** Be Vietnam Pro (thân) + Bricolage Grotesque (tiêu đề), nhúng qua `expo-font`. Theo Dynamic Type, chặn ở 1.6× (`MAX_SCALE`). Chữ thân tự hạ 800→700 như web.
+- **Điều hướng:** tab bar native (`NativeTabs`, Liquid Glass), thanh tiêu đề native, sheet `presentation: "modal"`, `Alert`/`ActionSheet` hệ thống. Không tự vẽ lại những thứ iOS đã có.
+- **Danh sách cài đặt:** ô biểu tượng màu đặc kiểu Cài đặt iOS, nhưng chỉ dùng màu thương hiệu `ICON` (`SettingsList.tsx`); kẻ phân cách thụt vào sau biểu tượng.
+- **Bấm:** co nhẹ (`scale .97`), không lún sticker; vùng chạm ≥ 44pt.
+- **Rung (`haptic`):** `tap` nút chính · `select` đổi lựa chọn · `success`/`error` khi chấm đúng/sai · `firm` ghi âm / nút đáy. Không rung khi cuộn hay khi chỉ xem.
+- **Đăng nhập Apple:** nút đen trên nền sáng, trắng trên nền tối (HIG).
+- **Icon app:** linh vật trên bìa vở xanh lam phẳng có gáy đậm bên trái (`mobile/scripts/make-icons.mjs` sinh cả icon app lẫn favicon / apple-icon của web).
+- **Màn chơi game** (`FallingWords`): bảng màu đêm riêng như `.theme-night`.

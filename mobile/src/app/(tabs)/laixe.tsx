@@ -43,7 +43,8 @@ export default function LaixeTab() {
       }
     >
       <HeroCard
-        emoji="🚗"
+        sec="laixe"
+        icon="car.fill"
         title={L(`Lái xe · Hạng ${cls}`, `Führerschein · Klasse ${cls}`)}
         subtitle={`${info.vi} · ${info.description}`}
         summary={all}
@@ -51,10 +52,10 @@ export default function LaixeTab() {
         settingsLabel={L("Đổi hạng bằng, ngôn ngữ bản dịch", "Klasse und Sprache ändern")}
       />
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <BigTile icon="book.fill" tone={tone.green} title={L("Học theo chủ đề", "Lernen nach Themen")} subtitle={L(`${ids.length} câu`, `${ids.length} Fragen`)} onPress={() => router.push("/laixe/learn")} />
+        <BigTile icon="book.fill" sec="laixe" title={L("Học theo chủ đề", "Lernen nach Themen")} subtitle={L(`${ids.length} câu`, `${ids.length} Fragen`)} onPress={() => router.push("/laixe/learn")} />
         <BigTile
           icon="flag.checkered"
-          tone={tone.red}
+          sec="laixe" tone="ink"
           title={L("Thi thử", "Testprüfung")}
           subtitle={
             lastExam
@@ -65,12 +66,12 @@ export default function LaixeTab() {
         />
       </View>
       <IconRow>
-        {cls === "B" && <IconButton icon="doc.text.fill" tone={tone.blue} label={L("Đề mẫu", "Musterbögen")} count={BOGEN_COUNT} onPress={() => router.push("/laixe/bogen")} />}
-        <IconButton icon="xmark.circle.fill" tone={tone.gold} label={L("Câu sai", "Falsch")} count={all.wrong} onPress={() => openRun("fuehrerschein", "ueben", "wrong")} />
-        <IconButton icon="star.fill" tone={tone.purple} label={L("Đánh dấu", "Markiert")} count={marked} onPress={() => openRun("fuehrerschein", "ueben", "marked")} />
-        <IconButton icon="chart.bar.fill" tone={tone.teal} label={L("Thống kê", "Statistik")} count={mod.exams.length + mod.remote.length} onPress={() => router.push({ pathname: "/quiz/stats", params: { module: "fuehrerschein" } })} />
+        {cls === "B" && <IconButton icon="doc.text.fill" tone={tone.doc} label={L("Đề mẫu", "Musterbögen")} count={BOGEN_COUNT} onPress={() => router.push("/laixe/bogen")} />}
+        <IconButton icon="xmark.circle.fill" tone={tone.wrong} label={L("Câu sai", "Falsch")} count={all.wrong} onPress={() => openRun("fuehrerschein", "ueben", "wrong")} />
+        <IconButton icon="star.fill" tone={tone.marked} label={L("Đánh dấu", "Markiert")} count={marked} onPress={() => openRun("fuehrerschein", "ueben", "marked")} />
+        <IconButton icon="chart.bar.fill" tone={tone.stats} label={L("Thống kê", "Statistik")} count={mod.exams.length + mod.remote.length} onPress={() => router.push({ pathname: "/quiz/stats", params: { module: "fuehrerschein" } })} />
       </IconRow>
-      <MenuRow icon="shuffle" tone={tone.ink} title={L("Luyện tất cả", "Alle Fragen üben")} subtitle={L("Theo thứ tự bộ đề, nhớ câu đang học", "Der Reihe nach, mit Merkposition")} onPress={() => openRun("fuehrerschein", "ueben", "all")} />
+      <MenuRow icon="shuffle" tone={tone.all} title={L("Luyện tất cả", "Alle Fragen üben")} subtitle={L("Theo thứ tự bộ đề, nhớ câu đang học", "Der Reihe nach, mit Merkposition")} onPress={() => openRun("fuehrerschein", "ueben", "all")} />
     </QuizTabScreen>
   );
 }

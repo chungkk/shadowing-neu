@@ -25,7 +25,7 @@ const pct = (r: Rate) => (r.n ? `${Math.round((r.ok / r.n) * 100)}%` : "—");
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER, padding: 16, gap: 12 }}>
+    <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 16, gap: 12 }}>
       <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{title}</Text>
       {children}
     </View>
@@ -34,7 +34,7 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 function Tile({ label, value, icon, color = C.text }: { label: string; value: string; icon?: ReactNode; color?: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 24, ...STICKER, paddingVertical: 14, paddingHorizontal: 12, gap: 4 }}>
+    <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, ...STICKER, paddingVertical: 14, paddingHorizontal: 12, gap: 4 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         {icon}
         <Text style={{ color, fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{value}</Text>

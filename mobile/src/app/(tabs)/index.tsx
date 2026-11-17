@@ -11,10 +11,11 @@ import {
 } from "react-native";
 import { Hero } from "@/components/Hero";
 import { Mascot } from "@/components/Mascot";
-import { Text } from "@/components/Text";
+import { DISPLAY, Text } from "@/components/Text";
+import { haptic } from "@/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandBar } from "@/components/Brand";
-import { LevelBadge, styles } from "@/components/ui";
+import { Button, LevelBadge, styles } from "@/components/ui";
 import {
   api,
   getLessonsVersion,
@@ -105,7 +106,7 @@ function ProgressText({ p }: { p?: ProgressSummary }) {
   return (
     <Text
       style={{
-        color: n >= 100 ? C.accentText : C.amber,
+        color: n >= 100 ? C.okText : C.amber,
         fontSize: 13,
         fontWeight: "800",
       }}
@@ -154,7 +155,7 @@ function ContinueRow({
         padding: 12,
         backgroundColor: pressed ? C.card2 : "transparent",
         borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: C.border,
+        borderBottomColor: C.line,
       })}
     >
       <View style={{ borderRadius: 8, overflow: "hidden" }}>
@@ -207,7 +208,7 @@ function SectionTitle({ title, count }: { title: string; count?: number }) {
       }}
     >
       <Text
-        style={{ color: C.text, fontSize: 20, fontWeight: "700" }}
+        style={{ color: C.text, fontFamily: DISPLAY, fontSize: 21, fontWeight: "700", letterSpacing: -0.3 }}
         accessibilityRole="header"
       >
         {title}
@@ -230,12 +231,12 @@ function NewBadge() {
     <View
       style={{
         backgroundColor: C.gold,
-        borderRadius: 999,
-        paddingHorizontal: 8,
+        borderRadius: 6,
+        paddingHorizontal: 7,
         paddingVertical: 1,
       }}
     >
-      <Text style={{ color: "#000", fontWeight: "700", fontSize: 11 }}>
+      <Text style={{ color: "#16203a", fontWeight: "700", fontSize: 11 }}>
         {t("lessons.newest")}
       </Text>
     </View>
@@ -275,8 +276,8 @@ function AccessBadge({
           position: "absolute",
           top: inset,
           left: inset,
-          backgroundColor: C.accent,
-          borderRadius: 999,
+          backgroundColor: C.ok,
+          borderRadius: 6,
           paddingHorizontal: inset,
           paddingVertical: 2,
         }}
@@ -347,7 +348,7 @@ function LessonRow({ l, p }: { l: LessonSummary; p?: ProgressSummary }) {
           </Text>
           {isNew(l) && !p && <NewBadge />}
           {!l.published && (
-            <Text style={{ color: C.gold, fontSize: 12, fontWeight: "800" }}>
+            <Text style={{ color: C.amber, fontSize: 12, fontWeight: "800" }}>
               {t("lessons.draft")}
             </Text>
           )}
@@ -431,7 +432,7 @@ function Shelf({
             accessibilityRole="button"
             style={({ pressed }) => ({
               width: 120,
-              borderRadius: 24,
+              borderRadius: 16,
               ...STICKER,
               backgroundColor: pressed ? C.card2 : C.card,
               alignItems: "center",
@@ -479,10 +480,10 @@ function LessonCard({
       accessibilityLabel={lessonLabel(l, p, t)}
       style={({ pressed }) => ({
         width,
-        borderRadius: 24,
+        borderRadius: 16,
         backgroundColor: pressed ? C.card2 : C.card,
         ...STICKER,
-        transform: [{ translateY: pressed ? 2 : 0 }],
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
       <View>
@@ -494,8 +495,8 @@ function LessonCard({
             width: "100%",
             aspectRatio: 16 / 9,
             backgroundColor: C.card2,
-            borderTopLeftRadius: 22,
-            borderTopRightRadius: 22,
+            borderTopLeftRadius: 15,
+            borderTopRightRadius: 15,
           }}
           contentFit="cover"
           transition={150}
@@ -513,7 +514,7 @@ function LessonCard({
               paddingHorizontal: 6,
             }}
           >
-            <Text style={{ color: "#000", fontWeight: "800", fontSize: 12 }}>
+            <Text style={{ color: "#16203a", fontWeight: "800", fontSize: 12 }}>
               {t("lessons.draft")}
             </Text>
           </View>
@@ -611,7 +612,7 @@ function EmptyState({
       style={{
         alignItems: "center",
         gap: 10,
-        paddingVertical: 48,
+        paddingVertical: 40,
         paddingHorizontal: 24,
       }}
     >
@@ -619,32 +620,18 @@ function EmptyState({
       <Text
         style={{
           color: C.text,
-          fontWeight: "800",
-          fontSize: 17,
+          fontFamily: DISPLAY,
+          fontWeight: "700",
+          fontSize: 19,
           textAlign: "center",
         }}
       >
         {title}
       </Text>
       {!!text && (
-        <Text style={[styles.muted, { textAlign: "center" }]}>{text}</Text>
+        <Text style={[styles.muted, { textAlign: "center", fontSize: 15, lineHeight: 21 }]}>{text}</Text>
       )}
-      {action && (
-        <Pressable
-          onPress={action.onPress}
-          style={{
-            marginTop: 6,
-            backgroundColor: C.accent,
-            borderRadius: 12,
-            paddingHorizontal: 18,
-            paddingVertical: 10,
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "800" }}>
-            {action.label}
-          </Text>
-        </Pressable>
-      )}
+      {action && <Button title={action.label} variant="primary" onPress={action.onPress} style={{ marginTop: 6 }} />}
     </View>
   );
 }
@@ -660,27 +647,32 @@ function Chip({
   active: boolean;
   onPress: () => void;
 }) {
+  // Như .chip của web: đang chọn = nền mực (đảo màu)
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        if (!active) haptic.select();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={{
+      hitSlop={{ top: 5, bottom: 5 }}
+      style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        height: 34,
+        height: 36,
         paddingHorizontal: 14,
-        borderRadius: 17,
-        borderWidth: 2,
-        borderColor: C.ink,
-        backgroundColor: active ? C.accent : C.card,
-      }}
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: active ? C.text : C.border,
+        backgroundColor: active ? C.text : pressed ? C.card2 : C.card,
+      })}
     >
       <Text
         style={{
-          color: active ? "#fff" : C.text,
-          fontWeight: "800",
+          color: active ? C.background : C.text,
+          fontWeight: "700",
           fontSize: 14,
         }}
       >
@@ -688,9 +680,10 @@ function Chip({
       </Text>
       <Text
         style={{
-          color: active ? "rgba(255,255,255,0.75)" : C.muted,
-          fontWeight: "700",
+          color: active ? alpha(C.background, 0.7) : C.muted,
+          fontWeight: "600",
           fontSize: 13,
+          fontVariant: ["tabular-nums"],
         }}
       >
         {count}
@@ -901,7 +894,7 @@ export default function LessonsScreen() {
 
   const header = (
     <View style={{ gap: 16, paddingTop: tablet ? 20 : 12, paddingBottom: 4 }}>
-      <Hero />
+      <Hero meta={lessons ? t("lessons.count", { n: all.length }) : undefined} />
 
       {/* Tải lại thất bại khi đã có danh sách → báo nhỏ, vẫn giữ danh sách cũ */}
       {!!error && lessons && (
@@ -970,7 +963,7 @@ export default function LessonsScreen() {
         <View style={{ gap: 10 }}>
           <SectionTitle title={t("lessons.continueHeading")} />
           <View
-            style={{ backgroundColor: C.card, borderRadius: 24, ...STICKER }}
+            style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER }}
           >
             {(showAll ? continuing : continuing.slice(0, CONTINUE_SHOWN)).map(
               ({ p, kind, id, lesson, videoId }, i, arr) => (

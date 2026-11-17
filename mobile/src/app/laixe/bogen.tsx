@@ -37,13 +37,14 @@ export default function BogenScreen() {
               style={({ pressed }) => ({
                 width: 64,
                 height: 58,
-                borderRadius: 14,
-                borderWidth: 2,
-                borderColor: C.ink,
-                backgroundColor: r ? alpha(r.passed ? C.accent : C.red, 0.25) : C.card,
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: r ? alpha(r.passed ? C.ok : C.red, 0.45) : C.border,
+                backgroundColor: r ? (r.passed ? C.okSoft : C.redSoft) : C.card,
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: pressed ? 0.7 : 1,
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.96 : 1 }],
               })}
             >
               <Text style={{ color: C.text, fontWeight: "800", fontSize: 17, fontVariant: ["tabular-nums"] }}>{n}</Text>

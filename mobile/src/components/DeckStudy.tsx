@@ -4,6 +4,7 @@ import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Text, TextInput } from "./Text";
+import { haptic } from "@/lib/haptics";
 import { blankExample, checkGuess, fullWord, hintOf, quizOptions, type StudyMode } from "@shared/deck-study";
 import { shuffle } from "@shared/review";
 import { Button } from "@/components/ui";
@@ -17,7 +18,7 @@ export const MODES: Mode[] = ["guess", "flash", "quiz", "reverse", "listen", "li
 export const modeLabel = (m: Mode, t: TFn) => t(`study.${m}`);
 
 /** Màu mạo từ theo giống — như sổ từ: der xanh dương · die đỏ · das xanh lá */
-const GENDER = themed((): Record<string, string> => ({ der: C.phrase, die: C.redText, das: C.accentText }));
+const GENDER = themed((): Record<string, string> => ({ der: C.phrase, die: C.redText, das: C.okText }));
 const say = (w: DeckWord, speed?: number) => speakGerman(fullWord(w), speed ? { speed } : {}).catch(() => {});
 
 function German({ w, size }: { w: DeckWord; size: number }) {
@@ -41,7 +42,7 @@ function SpeakButton({ w }: { w: DeckWord }) {
 
 /** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
 const Icon = ({ icon, image }: { icon: string; image?: string | null }) => (
-  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: alpha(C.gold, 0.8), alignItems: "center", justifyContent: "center" }}>
+  <View style={{ width: 104, height: 104, borderRadius: 26, backgroundColor: C.goldSoft, alignItems: "center", justifyContent: "center" }}>
     {image ? <Image source={{ uri: deckCover(image) }} style={{ width: 76, height: 76 }} contentFit="contain" /> : <Text style={{ fontSize: 48 }}>{icon}</Text>}
   </View>
 );
@@ -57,14 +58,14 @@ function Reveal({ w, ok, title }: { w: DeckWord; ok: boolean; title: string }) {
         gap: 6,
         padding: 16,
         borderRadius: 16,
-        borderWidth: 2,
-        borderColor: ok ? C.accent : C.red,
-        backgroundColor: ok ? alpha(C.accent, 0.12) : alpha(C.red, 0.12),
+        borderWidth: 1,
+        borderColor: alpha(ok ? C.ok : C.red, 0.4),
+        backgroundColor: ok ? C.okSoft : C.redSoft,
       }}
     >
       <Text
         style={{
-          color: ok ? C.accentText : C.redText,
+          color: ok ? C.okText : C.redText,
           fontWeight: "800",
           fontSize: 13,
           letterSpacing: 0.5,
@@ -121,10 +122,11 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
             justifyContent: "center",
             gap: 10,
             padding: 20,
-            borderRadius: 20,
-            borderWidth: 2,
+            borderRadius: 16,
+            borderWidth: 1,
             borderColor: pressed ? C.accent : C.border,
-            backgroundColor: C.card2,
+            backgroundColor: C.card,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
           {!flipped ? (
@@ -169,25 +171,28 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
         <Text style={{ color: C.muted, fontSize: 14, fontWeight: "700" }}>{t(mode === "quiz" ? "study.chooseMeaning" : "study.chooseWord")}</Text>
         <View style={{ alignSelf: "stretch", gap: 10 }}>
           {options.map((o) => {
-            const tone = picked === null ? null : o === right ? C.accent : o === picked ? C.red : null;
+            const tone = picked === null ? null : o === right ? C.ok : o === picked ? C.red : null;
             return (
               <Pressable
                 key={o}
                 disabled={picked !== null}
                 onPress={() => {
+                  if (o === right) haptic.success();
+                  else haptic.error();
                   setPicked(o);
                   if (mode === "reverse" || o === right) say(w);
                 }}
                 style={({ pressed }) => ({
                   padding: 14,
+                  minHeight: 52,
                   borderRadius: 14,
-                  borderWidth: 2,
+                  borderWidth: 1.5,
                   borderColor: tone ?? C.border,
-                  backgroundColor: pressed ? C.border : C.card2,
+                  backgroundColor: tone === C.ok ? C.okSoft : tone === C.red ? C.redSoft : pressed ? C.card2 : C.card,
                   opacity: picked !== null && !tone ? 0.5 : 1,
                 })}
               >
-                <Text style={{ color: tone ?? C.text, fontSize: 16, fontWeight: "600" }}>{o}</Text>
+                <Text style={{ color: tone === C.ok ? C.okText : tone === C.red ? C.redText : C.text, fontSize: 16, fontWeight: "600" }}>{o}</Text>
               </Pressable>
             );
           })}
@@ -269,10 +274,10 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
             autoFocus
             style={{
               height: 52,
-              borderRadius: 14,
-              borderWidth: 2,
+              borderRadius: 12,
+              borderWidth: 1.5,
               borderColor: C.border,
-              backgroundColor: C.background,
+              backgroundColor: C.card,
               color: C.text,
               fontSize: 18,
               textAlign: "center",

@@ -108,7 +108,7 @@ const dropWidth = (variant: Variant, w: number) => (variant === "gold" ? Math.mi
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 /** Màu theo giống — như trang bộ từ: der xanh dương · die đỏ · das xanh lá */
-const GENDER: Record<string, string> = { der: C.phrase, die: C.redText, das: C.accent };
+const GENDER: Record<string, string> = { der: C.phrase, die: C.redText, das: C.ok };
 const emoji = (code: string) => ({ uri: deckCover(`/emoji/${code}.webp`) });
 
 /** Số giả ngẫu nhiên cố định → nền không đổi giữa các lần vẽ */
@@ -335,7 +335,7 @@ function ToneButton({ title, icon, onPress, th, disabled, style }: { title: stri
           backgroundColor: th.button.bg,
           borderBottomWidth: pressed ? 2 : 4,
           borderBottomColor: th.button.shadow,
-          transform: [{ translateY: pressed ? 2 : 0 }],
+          transform: [{ scale: pressed ? 0.97 : 1 }],
           opacity: disabled ? 0.6 : 1,
         },
         style,
@@ -813,7 +813,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
                   d.state === "hit"
                     ? variant === "gold"
                       ? { borderColor: "#fef08a", backgroundColor: "rgba(138,101,20,0.97)", boxShadow: "0 0 24px rgba(250,204,21,0.7)" }
-                      : { borderColor: C.accent, backgroundColor: "rgba(22,163,74,0.25)" }
+                      : { borderColor: C.ok, backgroundColor: "rgba(47,158,94,0.25)" }
                     : d.state === "miss"
                       ? { borderColor: C.red, backgroundColor: "rgba(220,38,38,0.25)" }
                       : d.state === "gone"
@@ -861,7 +861,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
                         </View>
                       )}
                       {done ? (
-                        <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 16, fontWeight: "800", color: d.state === "hit" ? (GENDER[d.w.gender] ?? C.accent) : C.redText }}>
+                        <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 16, fontWeight: "800", color: d.state === "hit" ? (GENDER[d.w.gender] ?? C.ok) : C.redText }}>
                           {fullWord(d.w)}
                         </Text>
                       ) : (
@@ -1000,7 +1000,7 @@ export default function FallingWords({ variant }: { variant: Variant }) {
                           ))}
                         </View>
                         {saved ? (
-                          <Text style={{ color: C.accent, fontWeight: "700", textAlign: "center" }}>{saved}</Text>
+                          <Text style={{ color: C.ok, fontWeight: "700", textAlign: "center" }}>{saved}</Text>
                         ) : user ? (
                           <PlainButton title={t("games.saveMissed")} icon="bookmark.fill" onPress={saveMissed} disabled={saving} />
                         ) : (

@@ -20,7 +20,7 @@ import { speakGerman, stopSpeaking } from "@/lib/speak";
 const GENDER = themed((): Record<string, string> => ({
   der: C.phrase,
   die: C.redText,
-  das: C.accentText,
+  das: C.okText,
 }));
 /** Chế độ học chọn lần trước (giữ khi mở chủ đề khác trong lúc dùng app) */
 let lastMode: Mode = "guess";
@@ -109,7 +109,7 @@ function WordRow({
             {busy ? (
               <ActivityIndicator size="small" color={C.accentText} />
             ) : (
-              <SymbolView name={w.saved ? "checkmark.circle.fill" : "plus.circle"} size={22} tintColor={w.saved ? C.accentText : C.text} />
+              <SymbolView name={w.saved ? "checkmark.circle.fill" : "plus.circle"} size={22} tintColor={w.saved ? C.okText : C.text} />
             )}
           </Pressable>
         )}
@@ -163,7 +163,7 @@ function TopicRow({ topic, first, last, onPress }: { topic: DeckTopic; first: bo
           <Text style={{ color: C.muted, fontSize: 13, fontWeight: "600" }}>
             {t("decks.words", { n: topic.wordCount })}
             {topic.learned > 0 && (
-              <Text style={{ color: done ? C.accentText : C.amber }}>
+              <Text style={{ color: done ? C.okText : C.amber }}>
                 {done ? "  ✓" : `  ·  ${t("decks.progress", { s: topic.learned, n: topic.wordCount })}`}
               </Text>
             )}
@@ -342,7 +342,7 @@ export default function DeckScreen() {
         </View>
       </View>
       <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
-        <View style={{ width: `${(learned * 100) / Math.max(1, words.length)}%`, height: "100%", backgroundColor: C.accent }} />
+        <View style={{ width: `${(learned * 100) / Math.max(1, words.length)}%`, height: "100%", backgroundColor: C.ok }} />
       </View>
       {!user && <Text style={{ color: C.muted, fontSize: 13 }}>{t("study.guest")}</Text>}
       <ModeBar mode={mode} onChange={setMode} />

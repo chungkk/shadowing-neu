@@ -40,7 +40,7 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
         alignItems: "center",
         gap: 14,
         padding: 14,
-        borderRadius: 24,
+        borderRadius: 16,
         ...STICKER,
         backgroundColor: pressed ? C.card2 : C.card,
       })}
@@ -98,7 +98,7 @@ function GameCard({ game, width }: { game: (typeof GAMES)[number]; width: number
       onPress={() => router.push({ pathname: "/game/[variant]", params: { variant: game.variant } })}
       accessibilityRole="button"
       accessibilityLabel={t(`games.${game.variant}.title`)}
-      style={({ pressed }) => ({ width, borderRadius: 24, ...STICKER, backgroundColor: pressed ? C.card2 : C.card, overflow: "hidden" })}
+      style={({ pressed }) => ({ width, borderRadius: 16, ...STICKER, backgroundColor: pressed ? C.card2 : C.card, overflow: "hidden" })}
     >
       <View style={{ height: 84, backgroundImage: game.bg, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
         <Image source={emoji(game.art[0])} style={{ width: 52, height: 52 }} />
@@ -132,7 +132,7 @@ function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
         width,
         padding: 10,
         gap: 10,
-        borderRadius: 24,
+        borderRadius: 16,
         ...STICKER,
         backgroundColor: pressed ? C.card2 : C.card,
       })}
@@ -145,7 +145,7 @@ function DeckCard({ deck, width }: { deck: DeckSummary; width: number }) {
         <SymbolView name="square.stack.3d.up" size={14} tintColor={C.muted} />
         <Text style={{ flex: 1, color: C.muted, fontSize: 14, fontWeight: "600" }}>{deck.wordCount}</Text>
         {saved > 0 && (
-          <Text style={{ color: saved >= deck.wordCount ? C.accentText : C.amber, fontSize: 13, fontWeight: "700" }}>
+          <Text style={{ color: saved >= deck.wordCount ? C.okText : C.amber, fontSize: 13, fontWeight: "700" }}>
             {saved >= deck.wordCount ? "✓" : `${saved}/${deck.wordCount}`}
           </Text>
         )}

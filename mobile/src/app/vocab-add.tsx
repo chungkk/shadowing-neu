@@ -97,9 +97,9 @@ export default function VocabAddScreen() {
         contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 16, gap: 18, paddingBottom: 40 }}
       >
         {!!saved && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12, backgroundColor: alpha(C.accent, 0.14) }}>
-            <SymbolView name="checkmark.circle.fill" size={16} tintColor={C.accentText} />
-            <Text style={{ flex: 1, color: C.accentText, fontWeight: "700" }} numberOfLines={1}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12, backgroundColor: alpha(C.ok, 0.14) }}>
+            <SymbolView name="checkmark.circle.fill" size={16} tintColor={C.okText} />
+            <Text style={{ flex: 1, color: C.okText, fontWeight: "700" }} numberOfLines={1}>
               {t("vocabAdd.saved", { w: saved })}
             </Text>
           </View>

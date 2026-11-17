@@ -35,7 +35,8 @@ export default function QuizStatsScreen() {
     <QuizPage>
       <Stack.Screen options={{ title: L("Thống kê", "Statistik") }} />
       <HeroCard
-        emoji={module === "lid" ? "🇩🇪" : "🚗"}
+        sec={module === "lid" ? "lid" : "laixe"}
+        icon={module === "lid" ? "building.columns.fill" : "car.fill"}
         title={module === "lid" ? "Leben in Deutschland" : L(`Hạng ${prefs.cls}`, `Klasse ${prefs.cls}`)}
         subtitle={history.length ? L(`${history.length} bài thi · đậu ${passed}`, `${history.length} Prüfungen · ${passed} bestanden`) : L("Chưa có bài thi nào", "Noch keine Prüfung")}
         summary={all}
@@ -81,8 +82,8 @@ function ExamRow({ module, e, local, first }: { module: "fuehrerschein" | "lid";
       accessibilityRole={local ? "button" : undefined}
       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderTopWidth: first ? 0 : 1, borderTopColor: C.border, backgroundColor: pressed ? C.card2 : "transparent" })}
     >
-      <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: alpha(e.passed ? C.accent : C.red, 0.2) }}>
-        <SymbolView name={e.passed ? "checkmark" : "xmark"} size={15} weight="bold" tintColor={e.passed ? C.accentText : C.redText} />
+      <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: alpha(e.passed ? C.ok : C.red, 0.2) }}>
+        <SymbolView name={e.passed ? "checkmark" : "xmark"} size={15} weight="bold" tintColor={e.passed ? C.okText : C.redText} />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ color: C.text, fontSize: 15, fontWeight: "700" }} numberOfLines={1}>
@@ -93,7 +94,7 @@ function ExamRow({ module, e, local, first }: { module: "fuehrerschein" | "lid";
           {local ? "" : ` · ${L("làm trên web", "im Web")}`}
         </Text>
       </View>
-      <Text style={{ color: e.passed ? C.accentText : C.redText, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{score}</Text>
+      <Text style={{ color: e.passed ? C.okText : C.redText, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{score}</Text>
       {local && <SymbolView name="chevron.right" size={13} tintColor={C.muted} />}
     </Pressable>
   );
