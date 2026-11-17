@@ -14,7 +14,7 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "bundleIdentifier": "com.chungkk.hallovn",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "config": {
         "usesNonExemptEncryption": false
