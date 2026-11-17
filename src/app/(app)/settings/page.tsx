@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { Settings as SettingsIcon } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { envAdminEmail, requireUser } from "@/lib/auth";
 import { accountStats } from "@/lib/account-stats";
 import AccountStats from "@/components/AccountStats";
@@ -31,7 +33,7 @@ async function Settings() {
 export default function SettingsPage() {
   return (
     <main className="page page-narrow">
-      <h1 className="page-title">Hồ sơ & cài đặt</h1>
+      <PageHeader sec="ink" compact icon={SettingsIcon} title="Hồ sơ & cài đặt" sub="Tên, ảnh đại diện, mật khẩu, hạng bằng lái và dữ liệu của bạn." />
       <Suspense fallback={<SettingsSkeleton />}>
         <Settings />
       </Suspense>

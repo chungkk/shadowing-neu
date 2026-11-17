@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
 import { SERVICES, productPath } from '@/lib/company/services';
 import type { ServiceId } from '@/lib/company/services';
 import { PRODUCT_PAGES } from '@/lib/company/productPages';
@@ -11,7 +11,7 @@ import type { PageSection, ProductPage } from '@/lib/company/productPages';
 import { useLocale, useT } from '@/components/company/LocaleContext';
 import { Shot, StartButton, moreLink } from '@/components/company/ProductParts';
 import { Lightbox } from '@/components/company/Lightbox';
-import Mascot from '@/components/Mascot';
+import PageHeader from '@/components/PageHeader';
 
 const UI = {
     de: {
@@ -91,9 +91,11 @@ function SectionHead({ id, title, children }: { id: string; title: string; child
 function FeatureText({ section, i }: { section: PageSection; i: number }) {
     return (
         <div className="flex min-w-0 flex-col gap-3">
-            <span className="flex items-center gap-3">
-                <span className="icon-bubble tint-accent rounded-full font-display text-lg font-extrabold">{i + 1}</span>
-                <h2 id={`feature-${i}`} className="text-xl leading-snug font-extrabold text-balance sm:text-2xl">
+            <span className="flex items-baseline gap-3">
+                <span className="font-display text-3xl leading-none font-extrabold tracking-[-0.04em] text-sec-text tabular-nums" aria-hidden="true">
+                    {String(i + 1).padStart(2, '0')}
+                </span>
+                <h2 id={`feature-${i}`} className="section-title text-balance">
                     {section.title}
                 </h2>
             </span>
@@ -101,7 +103,7 @@ function FeatureText({ section, i }: { section: PageSection; i: number }) {
             <ul className="flex flex-col gap-1.5 text-sm">
                 {section.points.map((point) => (
                     <li key={point} className="flex gap-2">
-                        <Check className="mt-0.5 size-4 shrink-0 text-accent-text" /> {point}
+                        <Check className="mt-0.5 size-4 shrink-0 text-ok-text" /> {point}
                     </li>
                 ))}
             </ul>
@@ -130,38 +132,40 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
 
     return (
         <div className="page gap-10 md:gap-14">
-            {/* Đầu trang: thẻ .hero (nền gradient nhạt) + linh vật + nhãn vàng, ảnh chụp bên cạnh */}
-            <section aria-labelledby="product-title" className="sticker hero rise-in grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
-                <div className="flex min-w-0 flex-col gap-4">
-                    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm font-bold text-muted">
-                        <Link href="/about" className="hover:text-foreground hover:underline">
-                            {t.about}
-                        </Link>
-                        <ChevronRight className="size-4" aria-hidden="true" />
-                        <span aria-current="page" className="text-foreground">
-                            {t.current}
-                        </span>
-                    </nav>
-                    <div className="flex items-center gap-3 sm:gap-5">
-                        <Mascot animated className="bob size-20 sm:size-28" />
-                        <div className="flex min-w-0 flex-col items-start gap-1.5">
-                            <span className="badge badge-gold text-sm">{t.current}</span>
-                            <h1 id="product-title" className="display">
-                                {service.name}
-                            </h1>
-                        </div>
-                    </div>
-                    <p className="text-lg font-bold text-balance">{sc.tagline}</p>
-                    <p className="lead">{copy.intro}</p>
-                    <StartButton service={service} />
-                    <div className="flex flex-wrap gap-2">
+            <nav aria-label="Breadcrumb" className="-mb-2 flex items-center gap-1 text-sm font-semibold text-muted md:-mb-4">
+                <Link href="/about" className="inline-flex min-h-11 items-center hover:text-foreground hover:underline">
+                    {t.about}
+                </Link>
+                <ChevronRight className="size-4" aria-hidden="true" />
+                <span aria-current="page" className="text-foreground">
+                    {t.current}
+                </span>
+            </nav>
+
+            {/* Đầu trang chữ ký: bìa xanh (khu học) + nhãn vở có linh vật */}
+            <PageHeader
+                sec="de"
+                icon={GraduationCap}
+                mascot
+                title={<span id="product-title">{service.name}</span>}
+                sub={sc.tagline}
+                actions={
+                    <>
                         <Link href={`${productPath(service)}/support`} className="btn btn-sm">
                             {t.support}
                         </Link>
                         <Link href={`${productPath(service)}/privacy`} className="btn btn-sm">
                             {t.privacy}
                         </Link>
-                    </div>
+                    </>
+                }
+            />
+
+            {/* Mở đầu: lời giới thiệu + nút bắt đầu, ảnh chụp thật bên cạnh */}
+            <section aria-labelledby="product-title" className="grid items-center gap-6 lg:grid-cols-2 lg:gap-10">
+                <div className="flex min-w-0 flex-col gap-5">
+                    <p className="lead">{copy.intro}</p>
+                    <StartButton service={service} />
                 </div>
                 {landscape ? (
                     <Shot screen={page.screens[page.hero[0]]} alt={copy.alts[page.hero[0]]} sizes="(min-width: 1024px) 34rem, 100vw" priority />
@@ -174,13 +178,13 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                 )}
             </section>
 
-            {/* Số liệu: thẻ con số như trang chủ app */}
+            {/* Số liệu: một dải chia cột như dải "obi" trên trang chủ app */}
             <section aria-label={t.facts}>
-                <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <dl className="card grid grid-cols-2 gap-y-5 p-0 py-5 lg:grid-cols-4">
                     {copy.facts.map((fact, n) => (
-                        <div key={fact.label} style={{ '--i': n + 1 } as CSSProperties} className="sticker rise-in flex min-w-0 flex-col-reverse gap-1 p-4 text-center">
+                        <div key={fact.label} className={`flex min-w-0 flex-col-reverse gap-1.5 px-4 sm:px-6 ${n % 2 ? 'border-l border-line dark:border-border' : ''} ${n > 0 ? 'lg:border-l lg:border-line lg:dark:border-border' : ''}`}>
                             <dt className="text-sm text-muted hyphens-auto">{fact.label}</dt>
-                            <dd className="font-display text-3xl leading-none font-extrabold text-accent-text tabular-nums">{fact.value}</dd>
+                            <dd className="font-display text-3xl leading-none font-extrabold tracking-[-0.03em] tabular-nums">{fact.value}</dd>
                         </div>
                     ))}
                 </dl>
@@ -188,7 +192,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
 
             {/* Từng phần học */}
             {shotSections.map(({ section, i, shots }, k) => (
-                <section key={section.title} aria-labelledby={`feature-${i}`} className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
+                <section key={section.title} data-sec="de" aria-labelledby={`feature-${i}`} className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
                     <div className={k % 2 ? 'lg:order-2' : ''}>
                         <FeatureText section={section} i={i} />
                     </div>
@@ -200,7 +204,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
             {textSections.length > 0 && (
                 <div className="grid gap-4 md:grid-cols-2">
                     {textSections.map(({ section, i }) => (
-                        <section key={section.title} aria-labelledby={`feature-${i}`} className="sticker p-4 sm:p-6">
+                        <section key={section.title} data-sec="de" aria-labelledby={`feature-${i}`} className="sticker p-4 sm:p-6">
                             <FeatureText section={section} i={i} />
                         </section>
                     ))}
@@ -218,14 +222,14 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                         {copy.plans.columns.map((col, i) => (
-                            <div key={col.title} style={i ? ({ '--hero': 'var(--accent)' } as CSSProperties) : undefined} className={`sticker flex flex-col gap-3 p-5 ${i ? 'hero' : ''}`}>
-                                <h3 className="flex items-center gap-2 text-xl font-extrabold">
-                                    <BadgeCheck className="size-6 text-accent-text" /> {col.title}
+                            <div key={col.title} className={`sticker flex flex-col gap-3 p-5 ${i ? 'border-accent/35 bg-accent-soft' : ''}`}>
+                                <h3 className="flex items-center gap-2 font-display text-xl font-bold">
+                                    <BadgeCheck className={`size-6 ${i ? 'text-accent-text' : 'text-muted'}`} /> {col.title}
                                 </h3>
                                 <ul className="flex flex-col gap-1.5 text-sm">
                                     {col.items.map((item) => (
                                         <li key={item} className="flex gap-2">
-                                            <Check className="mt-0.5 size-4 shrink-0 text-accent-text" /> {item}
+                                            <Check className="mt-0.5 size-4 shrink-0 text-ok-text" /> {item}
                                         </li>
                                     ))}
                                 </ul>
@@ -262,7 +266,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
             </section>
 
             {/* Câu hỏi thường gặp: cùng khuôn với trang Lái xe / LiD */}
-            <section className="card flex flex-col gap-2" aria-labelledby="faq-title">
+            <section className="card flex flex-col gap-3 p-4 sm:p-6" aria-labelledby="faq-title">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                     <h2 id="faq-title" className="section-title">
                         {t.faq}
@@ -271,33 +275,33 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                         {t.moreFaq} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
                     </Link>
                 </div>
-                {copy.faq.map((item) => (
-                    <details key={item.q} className="faq-item group surface p-0 transition-colors open:bg-accent-soft/60">
-                        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-ui px-3.5 py-2.5 font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                            {item.q}
-                            <ChevronDown className="size-5 shrink-0 text-link transition-transform duration-(--dur) group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
-                        </summary>
-                        <p className="px-3.5 pb-3 text-sm text-muted">{item.a}</p>
-                    </details>
-                ))}
+                <div className="flex flex-col divide-y divide-line border-y border-line dark:divide-border dark:border-border">
+                    {copy.faq.map((item) => (
+                        <details key={item.q} className="faq-item group">
+                            <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-ui py-3 font-semibold transition-colors hover:text-link focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent group-open:text-foreground">
+                                {item.q}
+                                <ChevronDown className="size-5 shrink-0 text-muted transition-transform duration-(--dur) group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+                            </summary>
+                            <p className="max-w-[70ch] pb-4 text-[0.95rem] leading-relaxed text-muted">{item.a}</p>
+                        </details>
+                    ))}
+                </div>
             </section>
 
-            {/* Lời mời cuối trang */}
-            <section aria-labelledby="closing-title" style={{ '--hero': 'var(--aqua)' } as CSSProperties} className="sticker hero flex flex-col items-center gap-4 p-6 text-center sm:p-10">
-                <h2 id="closing-title" className="section-title text-2xl text-balance sm:text-3xl">
+            {/* Lời mời cuối trang: trang giấy ô ly như trang chủ */}
+            <section aria-labelledby="closing-title" className="o-ly flex flex-col items-start gap-4 rounded-[var(--radius-xl)] border border-line p-6 sm:p-10 dark:border-border">
+                <h2 id="closing-title" className="font-display text-[clamp(1.75rem,1.3rem+1.6vw,2.4rem)] leading-[1.1] font-extrabold tracking-[-0.03em] text-balance">
                     {t.closing}
                 </h2>
                 <p className="lead max-w-xl">{sc.tagline}</p>
-                <StartButton service={service} center />
+                <StartButton service={service} />
             </section>
 
             {/* HalloVN cũng nhận làm phần mềm theo yêu cầu */}
             <section aria-labelledby="more-title">
-                <Link href="/about#auftrag" className="group sticker sticker-link flex flex-col gap-2 p-5 motion-reduce:hover:translate-y-0">
-                    <span className="icon-bubble tint-link size-12">
-                        <BriefcaseBusiness className="size-6" aria-hidden="true" />
-                    </span>
-                    <h2 id="more-title" className="text-xl font-extrabold">
+                <Link href="/about#auftrag" className="group card card-link flex flex-col gap-2 p-5 sm:p-6 motion-reduce:hover:translate-y-0">
+                    <BriefcaseBusiness className="size-7 text-muted" strokeWidth={2} aria-hidden="true" />
+                    <h2 id="more-title" className="section-title">
                         {t.moreTitle}
                     </h2>
                     <p className="text-muted">{t.moreText}</p>

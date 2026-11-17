@@ -161,7 +161,7 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
         return (
             <div className="alert alert-ok rise-in flex-col items-start gap-3 p-4 text-base sm:p-5" role="status">
                 <p className="flex items-start gap-2.5 font-bold">
-                    <span className="icon-bubble size-8 rounded-full bg-card text-accent-text">
+                    <span className="icon-bubble size-8 rounded-full bg-card text-ok-text">
                         <CircleCheck className="size-5" aria-hidden="true" />
                     </span>
                     <span className="pt-1">
@@ -169,7 +169,7 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
                     </span>
                 </p>
                 <button type="button" onClick={() => setStatus({ state: 'idle' })} className="btn btn-sm">
-                    <PenLine className="size-4 text-link" aria-hidden="true" /> {t.another}
+                    <PenLine className="size-4" aria-hidden="true" /> {t.another}
                 </button>
             </div>
         );

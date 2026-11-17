@@ -42,14 +42,11 @@ function Section({
   return (
     <section className={`sticker overflow-hidden ${danger ? "settings-danger" : ""}`}>
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className={`icon-bubble ${danger ? "tint-red" : "tint-link"}`} aria-hidden>
-            <Icon className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <h2 className={`section-title ${danger ? "text-red-400" : ""}`}>{title}</h2>
-            <p className="mt-0.5 text-sm text-muted">{desc}</p>
-          </div>
+        <div className="min-w-0">
+          <h2 className={`section-title flex items-center gap-2 ${danger ? "text-red-400" : ""}`}>
+            <Icon className={`size-5 shrink-0 ${danger ? "" : "text-muted"}`} aria-hidden /> {title}
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
         </div>
         {children}
       </div>
@@ -257,37 +254,52 @@ export default function SettingsForms({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Hồ sơ */}
-      <section className="card hero settings-profile flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:p-6 sm:text-left">
-        <div>
-          <Avatar user={user} className={`size-24 text-4xl ring-4 ring-card shadow-[var(--shadow-md)] ${avatarPending ? "animate-pulse opacity-60" : ""}`} />
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              pickAvatar(e.target.files?.[0]);
-              e.target.value = ""; // chọn lại cùng 1 ảnh vẫn chạy
-            }}
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2 max-sm:items-center">
-          <div className="min-w-0">
-            <p className="truncate font-display text-2xl leading-tight font-extrabold sm:text-3xl">{user.name}</p>
-            <p className="truncate text-sm text-muted">{user.email}</p>
-          </div>
+      {/* Hồ sơ: ảnh đại diện (bấm để đổi) + tên viết trên dòng kẻ chấm như nhãn vở */}
+      <section className="card flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:items-start sm:gap-6 sm:p-6 sm:text-left">
+        <button
+          type="button"
+          className="settings-avatar group"
+          onClick={() => fileRef.current?.click()}
+          disabled={avatarPending}
+          aria-label={user.avatarAt ? "Đổi ảnh đại diện" : "Tải ảnh đại diện lên"}
+        >
+          <Avatar user={user} className={`size-24 text-4xl transition-opacity sm:size-28 ${avatarPending ? "animate-pulse opacity-60" : "group-hover:opacity-90"}`} />
+          <span className="settings-avatar-cam" aria-hidden>
+            <Camera className="size-4" />
+          </span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            pickAvatar(e.target.files?.[0]);
+            e.target.value = ""; // chọn lại cùng 1 ảnh vẫn chạy
+          }}
+        />
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-3">
+          <dl className="flex flex-col text-left">
+            <div className="nhan-line flex items-baseline gap-3 pb-1.5">
+              <dt className="shrink-0 text-sm text-muted">Họ và tên</dt>
+              <dd className="min-w-0 truncate font-display text-2xl leading-tight font-extrabold tracking-[-0.02em] sm:text-[1.75rem]">{user.name}</dd>
+            </div>
+            <div className="nhan-line flex items-baseline gap-3 pt-2.5 pb-1.5">
+              <dt className="shrink-0 text-sm text-muted">Email</dt>
+              <dd className="min-w-0 truncate text-[0.95rem] font-medium">{user.email}</dd>
+            </div>
+          </dl>
           <div className="flex flex-wrap gap-2 max-sm:justify-center">
-            <span className={`badge ${user.admin ? "badge-gold" : "badge-accent"}`}>{user.admin ? "Quản trị viên" : "Học viên"}</span>
+            <span className={`badge ${user.admin ? "badge-gold" : "badge-link"}`}>{user.admin ? "Quản trị viên" : "Học viên"}</span>
             <span className="badge badge-muted">Tham gia {joined(user.createdAt)}</span>
             {!hasPassword && <span className="badge badge-muted">Đăng nhập bằng Google / Apple</span>}
           </div>
-          <div className="mt-1 flex flex-wrap gap-2 max-sm:justify-center">
-            <button className="btn" onClick={() => fileRef.current?.click()} disabled={avatarPending}>
+          <div className="flex flex-wrap gap-2 max-sm:justify-center max-sm:*:flex-1">
+            <button className="btn btn-sm" onClick={() => fileRef.current?.click()} disabled={avatarPending}>
               <Camera className="size-4" /> {avatarPending ? "Đang tải ảnh…" : user.avatarAt ? "Đổi ảnh" : "Tải ảnh lên"}
             </button>
             {user.avatarAt && (
-              <button className="btn btn-ghost text-red-400" onClick={removeAvatar} disabled={avatarPending}>
+              <button className="btn btn-sm btn-ghost text-red-400" onClick={removeAvatar} disabled={avatarPending}>
                 <Trash2 className="size-4" /> Xoá ảnh
               </button>
             )}

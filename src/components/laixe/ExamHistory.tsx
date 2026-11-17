@@ -32,7 +32,7 @@ export function ExamHistory({ exams, module = "fuehrerschein", stateName }: { ex
               <tr key={e.id} className="relative cursor-pointer">
                 <td>
                   {e.passed ? (
-                    <span className="badge badge-accent">
+                    <span className="badge badge-ok">
                       <Check className="size-3.5" aria-hidden /> Đậu
                     </span>
                   ) : (
@@ -43,7 +43,7 @@ export function ExamHistory({ exams, module = "fuehrerschein", stateName }: { ex
                 </td>
                 <td className="min-w-0">
                   {/* Link phủ cả dòng (after:inset-0) → bấm chỗ nào trên dòng cũng mở bài */}
-                  <Link href={`${base}/thi-thu/${e.id}`} className="font-extrabold after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:rounded-ui focus-visible:after:ring-2 focus-visible:after:ring-accent">
+                  <Link href={`${base}/thi-thu/${e.id}`} className="font-semibold after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:rounded-ui focus-visible:after:ring-2 focus-visible:after:ring-accent">
                     {name}
                   </Link>
                   <span className="block text-xs text-muted">

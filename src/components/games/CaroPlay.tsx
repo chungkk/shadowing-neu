@@ -86,7 +86,7 @@ function ZoomBoard({ v, myTurn, send }: { v: View; myTurn: boolean; send: Send }
     setTimeout(() => (suppressClick.current = false), 50);
   };
 
-  const zoomBtn = "btn size-10 rounded-full p-0";
+  const zoomBtn = "btn size-11 rounded-full p-0";
   return (
     <div className="relative">
       <div className="absolute -top-1 right-1 z-10 flex -translate-y-full gap-1 pb-1">
@@ -162,7 +162,7 @@ export default function CaroPlay({ v, send }: { v: View; send: Send }) {
         : ["think", v.mode === "solo" ? "Máy đang nghĩ…" : `Chờ ${opponent?.name ?? "đối thủ"} đi…`];
 
   return (
-    <div className="mx-auto flex w-full max-w-[36rem] flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-[max(20rem,min(36rem,calc(100dvh-27rem)))] flex-col gap-3">
       {playing && c.mySymbol && <MascotSay mood={mood}>{say}</MascotSay>}
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
         <span className="badge badge-muted gap-2 px-3 py-1 text-sm text-foreground">
@@ -180,7 +180,7 @@ export default function CaroPlay({ v, send }: { v: View; send: Send }) {
           <GameClock v={v} send={send} ms={left} warn={left < 10_000} />
         </div>
       )}
-      <div className="relative mt-10">
+      <div className="relative mt-12">
         <ZoomBoard v={v} myTurn={myTurn} send={send} />
         <PausedCover v={v} send={send} />
       </div>

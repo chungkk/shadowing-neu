@@ -20,15 +20,15 @@ export default function TodayStreak() {
   }, []);
 
   return (
-    <Link href="/stats" className="tile sticker-link flex min-w-0 flex-col gap-0.5">
-      <span className="flex items-center gap-2 text-xs font-bold text-muted">
+    <Link href="/stats" className="tile sticker-link flex min-h-24 min-w-0 flex-col gap-0.5 p-3.5">
+      <span className="flex items-center gap-2 text-xs font-semibold text-muted">
         <span className="icon-bubble tint-gold size-7 rounded-xl">
           <Flame className="size-4" />
         </span>
         Chuỗi ngày
       </span>
-      <span className="mt-1 font-display text-xl leading-tight font-extrabold tabular-nums">{s ? `${s.streak} ngày` : "…"}</span>
-      <span className="flex items-center gap-1 text-xs font-bold text-gem">
+      <span className="mt-1 font-display text-xl leading-tight font-bold tabular-nums">{s ? `${s.streak} ngày` : "…"}</span>
+      <span className="mt-auto flex items-center gap-1 text-xs font-bold text-gem">
         <Gem className="size-4" /> Hôm nay {s ? (s.today > 0 ? `+${s.today}` : s.today) : "…"}
       </span>
     </Link>

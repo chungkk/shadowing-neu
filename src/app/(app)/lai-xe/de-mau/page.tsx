@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check, FileStack } from "lucide-react";
+import { SubHeader } from "@/components/quiz/QuizParts";
 import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
 import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/laixe";
@@ -23,20 +24,20 @@ async function Sheets() {
       {user ? (
         <div className="card flex flex-col gap-2">
           <p className="flex items-baseline justify-between gap-2">
-            <span className="stat-label">Đã đậu</span>
+            <span className="text-sm font-semibold text-muted">Đã đậu</span>
             <span className="stat-value text-xl">
               {passed}/{WEB_BOGEN_LIMIT} đề
             </span>
           </p>
           <div className="progress" aria-hidden>
-            <div className="progress-bar" style={{ width: `${(passed / WEB_BOGEN_LIMIT) * 100}%` }} />
+            <div className="progress-bar bg-ok" style={{ width: `${(passed / WEB_BOGEN_LIMIT) * 100}%` }} />
           </div>
-          <p className="field-hint">Mỗi vạch là 1 lần thi gần nhất (xanh = đậu, đỏ = trượt)</p>
+          <p className="field-hint">Ba vạch dưới mỗi đề là 3 lần thi gần nhất (xanh lá = đậu, đỏ = trượt)</p>
         </div>
       ) : (
         <p className="alert alert-info">
           <span>
-            <Link href="/login?next=/lai-xe/de-mau" className="font-extrabold underline underline-offset-2">
+            <Link href="/login?next=/lai-xe/de-mau" className="font-bold underline underline-offset-2">
               Đăng nhập
             </Link>{" "}
             để lưu kết quả từng đề.
@@ -47,18 +48,18 @@ async function Sheets() {
         {Array.from({ length: Math.min(WEB_BOGEN_LIMIT, BOGEN_COUNT) }, (_, i) => i + 1).map((n) => {
           const p = progress[n];
           return (
-            <li key={n} className={`tile flex flex-col gap-2.5 ${p?.everPassed ? "border-accent/40 bg-accent-soft" : ""}`}>
+            <li key={n} className={`tile flex flex-col gap-3 ${p?.everPassed ? "border-ok/40" : ""}`}>
               <span className="flex items-center justify-between gap-2">
-                <span className="font-display text-lg font-extrabold">Đề {n}</span>
+                <span className="font-display text-xl font-extrabold tracking-[-0.02em]">Đề {n}</span>
                 {p?.everPassed && (
-                  <span className="badge badge-accent" aria-label="Đã đậu">
+                  <span className="badge badge-ok" aria-label="Đã đậu">
                     <Check className="size-3.5" aria-hidden /> Đậu
                   </span>
                 )}
               </span>
               <span className="flex h-2 gap-1" aria-label={p ? `${p.last.length} lần thi gần nhất` : "Chưa làm"}>
                 {[0, 1, 2].map((k) => (
-                  <span key={k} className={`h-2 flex-1 rounded-full ${p?.last[k] === undefined ? "bg-line" : p.last[k] ? "bg-accent" : "bg-red"}`} />
+                  <span key={k} className={`h-2 flex-1 rounded-full ${p?.last[k] === undefined ? "bg-line" : p.last[k] ? "bg-ok" : "bg-red"}`} />
                 ))}
               </span>
               <span className="flex gap-1.5">
@@ -68,7 +69,7 @@ async function Sheets() {
                 <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}?mode=ueben`} className="btn btn-sm flex-1">
                   Luyện
                 </Link>
-                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="btn btn-sm btn-soft flex-1">
+                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="btn btn-sm btn-amber flex-1">
                   Thi
                 </Link>
               </span>
@@ -82,17 +83,9 @@ async function Sheets() {
 
 export default function Page() {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <JsonLd data={breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"], ["Đề mẫu hạng B", "/lai-xe/de-mau"]])} />
-      <div className="flex items-center gap-2">
-        <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
-          <ArrowLeft className="size-5" />
-        </Link>
-        <div className="min-w-0">
-          <h1 className="page-title">Đề mẫu chính thức (Musterbögen)</h1>
-          <p className="text-sm text-muted">Hạng B · mỗi đề 20 câu cơ bản + 10 câu hạng B</p>
-        </div>
-      </div>
+      <SubHeader sec="laixe" back="/lai-xe/thi-thu" backLabel="Thi thử" icon={FileStack} title="Đề mẫu chính thức" sub="Musterbögen hạng B · mỗi đề 20 câu cơ bản + 10 câu hạng B. Đọc, luyện hoặc thi có giờ." />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Sheets />
       </Suspense>

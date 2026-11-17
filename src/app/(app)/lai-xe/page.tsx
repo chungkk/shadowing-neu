@@ -7,7 +7,8 @@ import { quizBookmarks, quizStats } from "@/lib/db";
 import { BOGEN_COUNT, CLASS_ORDER, DEFAULT_CLASS, WEB_BOGEN_LIMIT, classInfo, classQuestionIds, prefs, totalQuestions } from "@/lib/laixe";
 import { JsonLd, breadcrumbLd, faqLd, fmtNum, quizPageMeta } from "@/lib/laixe/seo";
 import { summarize } from "@/lib/quiz/types";
-import { ActionCard, BigCard, ProgressBar } from "@/components/quiz/QuizParts";
+import { ActionCard, BigCard, QuizProgress } from "@/components/quiz/QuizParts";
+import PageHeader from "@/components/PageHeader";
 import { ListSkeleton } from "@/components/Skeleton";
 
 const TOTAL = totalQuestions();
@@ -56,57 +57,38 @@ async function Home() {
 
   return (
     <>
-      {/* Đầu trang: tiêu đề + phụ đề + nút cài đặt (đổi hạng/ngôn ngữ trong Cài đặt) — cùng khuôn với LiD */}
-      <section className="sticker hero p-4 sm:p-6" style={{ ["--hero" as string]: "var(--gold)" }}>
-        <div className="flex items-center gap-3 sm:gap-5">
-          <span className="icon-bubble tint-gold relative size-14 rounded-3xl sm:size-20" aria-hidden>
-            <Car className="size-7 sm:size-10" />
-            <span className="badge badge-accent absolute -right-1.5 -bottom-1.5 border-2 border-card px-1.5 font-display text-sm">{cls}</span>
-          </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <h1 className="page-title">Bằng lái xe Đức</h1>
-            <p className="text-sm text-muted sm:text-base">Ôn thi lý thuyết hạng {cls} · Theorieprüfung</p>
-          </div>
-          <Link href={settingsHref} className="btn-icon self-start" aria-label="Cài đặt lái xe">
-            <Settings className="size-5" />
+      {/* Đầu trang: bìa vở vàng + nhãn — tiến trình nằm ngay trong nhãn (cùng khuôn với LiD) */}
+      <PageHeader
+        sec="laixe"
+        icon={Car}
+        mascot
+        title="Bằng lái xe Đức"
+        sub={`Ôn thi lý thuyết hạng ${cls} · Theorieprüfung · bộ đề từ 01.04.2025`}
+        meta={<span className="rounded-md bg-white/85 max-sm:hidden px-2 py-0.5 font-display text-base font-extrabold text-[#16203a] tabular-nums">Hạng {cls}</span>}
+        actions={
+          <Link href={settingsHref} className="btn btn-sm">
+            <Settings className="size-4" /> {user ? "Cài đặt" : "Đổi hạng"}
           </Link>
-        </div>
-      </section>
+        }
+      >
+        <QuizProgress {...all} />
+      </PageHeader>
 
-      {/* Tiến trình */}
-      <section className="card flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="label text-muted">Tiến trình</h2>
-          <span className="badge badge-muted">Bộ đề từ 01.04.2025</span>
-        </div>
-        <ProgressBar {...all} />
-        <div className="flex items-center gap-4 text-sm font-semibold text-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-accent" /> Đúng <b className="text-foreground tabular-nums">{all.ok}</b>
+      {!user && (
+        <p className="alert alert-info">
+          <span>
+            <Link href="/login?next=/lai-xe" className="font-bold underline underline-offset-2">
+              Đăng nhập
+            </Link>{" "}
+            để lưu tiến trình, câu sai và lịch sử thi.
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-red" /> Sai <b className="text-foreground tabular-nums">{all.wrong}</b>
-          </span>
-          <span className="ml-auto tabular-nums">
-            <b className="text-foreground">{all.done}</b> / {all.total}
-          </span>
-        </div>
-        {!user && (
-          <p className="alert alert-info">
-            <span>
-              <Link href="/login?next=/lai-xe" className="font-extrabold underline underline-offset-2">
-                Đăng nhập
-              </Link>{" "}
-              để lưu tiến trình, câu sai và lịch sử thi.
-            </span>
-          </p>
-        )}
-      </section>
+        </p>
+      )}
 
-      {/* 2 thẻ lớn: Học / Thi thử (thẻ chính) */}
-      <div className="grid grid-cols-2 gap-3">
-        <BigCard href="/lai-xe/hoc" icon={BookOpen} title="Học theo chủ đề" text="Học lý thuyết theo chủ đề" />
-        <BigCard href="/lai-xe/thi-thu" icon={Flag} title="Thi thử" text={cls === "B" ? "Thi thử & bộ đề mẫu" : `${info.exam.questions} câu · ${info.exam.minutes} phút`} primary />
+      {/* 2 cuốn vở lớn: Học / Thi thử (cuốn chính) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-6">
+        <BigCard href="/lai-xe/hoc" icon={BookOpen} title="Học theo chủ đề" text="Theo chương, có giải thích" cta="Học" />
+        <BigCard href="/lai-xe/thi-thu" icon={Flag} title="Thi thử" text={cls === "B" ? "Đề ngẫu nhiên & đề mẫu" : `${info.exam.questions} câu · ${info.exam.minutes} phút`} cta="Vào thi" primary />
       </div>
 
       {/* Menu phụ — cùng 3 mục, cùng thứ tự với LiD */}
@@ -125,25 +107,27 @@ async function Home() {
           title="Đánh dấu"
           locked={!user}
           disabled={!!user && !marked}
-          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ⭐ ở câu hỏi để đánh dấu"}
+          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ngôi sao ở câu hỏi để đánh dấu"}
         />
         <ActionCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Kết quả và tiến trình" : "Đăng nhập để xem thống kê"} />
       </div>
 
       {/* Câu hỏi thường gặp: nội dung cho SEO (FAQPage), xếp sau menu như phần phụ — cùng khuôn với LiD */}
-      <section className="card flex flex-col gap-3 sm:p-6" aria-labelledby="lx-faq">
-        <h2 id="lx-faq" className="section-title">
+      <section className="card flex flex-col gap-1 sm:p-6" aria-labelledby="lx-faq">
+        <h2 id="lx-faq" className="section-title mb-1">
           Câu hỏi thường gặp
         </h2>
-        {FAQ.map((f) => (
-          <details key={f.q} className="quiz-faq group">
-            <summary>
-              <span className="min-w-0 flex-1">{f.q}</span>
-              <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
-            </summary>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{f.a}</p>
-          </details>
-        ))}
+        <div className="flex flex-col">
+          {FAQ.map((f) => (
+            <details key={f.q} className="quiz-faq group">
+              <summary>
+                <span className="min-w-0 flex-1">{f.q}</span>
+                <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+              </summary>
+              <p className="text-sm leading-relaxed text-muted">{f.a}</p>
+            </details>
+          ))}
+        </div>
       </section>
     </>
   );
@@ -151,7 +135,7 @@ async function Home() {
 
 export default function Page() {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <JsonLd data={[faqLd(FAQ), breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"]])]} />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Home />

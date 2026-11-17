@@ -35,6 +35,7 @@ import type { QuizStat } from "@/lib/quiz/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
 import { useConfirm } from "@/components/ConfirmDialog";
+import Mascot from "@/components/Mascot";
 
 /**
  * Màn làm câu hỏi của tab Lái xe và Leben in Deutschland (giống app iOS/Android):
@@ -279,10 +280,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   if (!q) {
     return (
       <div className="card empty">
-        <span className="icon-bubble tint-muted size-14 text-2xl" aria-hidden>
-          🗂️
-        </span>
-        <p className="font-bold text-foreground">Không có câu nào ở đây.</p>
+        <Mascot className="size-20" />
+        <p className="text-base font-semibold text-foreground">Không có câu nào ở đây.</p>
         <Link href={backHref} className="btn">
           <ArrowLeft className="size-4" /> Quay lại
         </Link>
@@ -344,7 +343,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
       {result && <ResultBar module={module} result={result} maxErrorPoints={maxErrorPoints} savedId={savedId} saveError={saveError} />}
 
-      <div className={fs ? "theme-fahrschule laixe-sim flex flex-col overflow-hidden rounded-panel border-2 border-border bg-background shadow-md" : "contents"}>
+      <div className={fs ? "theme-fahrschule laixe-sim flex flex-col overflow-hidden rounded-panel border border-border bg-background" : "contents"}>
       {/* Bảng số câu (thi: chia phần cơ bản / phần riêng) — lái xe: nằm dưới câu hỏi như app */}
       {fs && isExam ? (
         <FsExamBar
@@ -469,7 +468,6 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                         data-state={state || undefined}
                         className={fs ? "sim-option" : "quiz-option"}
                       >
-                        {mistake && <span className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />}
                         {fs ? (
                           <span className="sim-check">
                             {ticked && <Check className="size-6" strokeWidth={3.5} />}
@@ -484,15 +482,18 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={img} alt={`Lựa chọn ${n + 1}`} className="max-h-28 w-auto self-start rounded-lg border border-line bg-white" loading="lazy" />
                           ) : (
-                            <span className={fs ? "text-sm font-bold sm:text-base" : "font-bold"}>{o.text || `Lựa chọn ${o.key} (xem hình)`}</span>
+                            <span className={fs ? "text-[0.95rem] font-semibold sm:text-base" : "font-semibold"}>{o.text || `Lựa chọn ${o.key} (xem hình)`}</span>
                           )}
-                          {showTr && trText && trText !== o.text && <span className="quiz-tr border-l-0 pl-0 text-sm">{trText}</span>}
+                          {showTr && trText && trText !== o.text && <span className="quiz-tr border-l-0 pl-0 text-sm font-normal">{trText}</span>}
                         </span>
                         {reveal && mode !== "lesen" && (
                           <span className="shrink-0" aria-label={correct ? (on ? "Chọn đúng" : "Bỏ sót đáp án đúng") : on ? "Chọn sai" : undefined}>
                             {correct ? (
-                              <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-accent text-white" : "border-2 border-accent bg-card text-accent-text"}`}>
-                                <Check className="size-4" strokeWidth={3} />
+                              <span className="flex items-center gap-1.5">
+                                {mistake && <span className="badge badge-red">Bỏ sót</span>}
+                                <span className={`flex size-6 items-center justify-center rounded-full ${on ? "bg-ok text-white" : "border-2 border-ok bg-card text-ok-text"}`}>
+                                  <Check className="size-4" strokeWidth={3} />
+                                </span>
                               </span>
                             ) : on ? (
                               <span className="flex size-6 items-center justify-center rounded-full bg-red text-white">
@@ -530,7 +531,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
         {reveal && mode !== "lesen" && (
           <p className="quiz-verdict" data-ok={right} role="status">
-            <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${right ? "bg-accent" : "bg-red"}`} aria-hidden>
+            <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${right ? "bg-ok" : "bg-red"}`} aria-hidden>
               {right ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
             </span>
             {right ? "Đúng rồi!" : `${mine.length ? "Chưa đúng" : "Chưa trả lời"}${module === "fuehrerschein" ? ` · ${q.points} điểm lỗi` : ""}`}
@@ -556,7 +557,12 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         </div>
 
         {/* Điều hướng: đầu / −10 / trước · kiểm tra · sau / +10 / cuối */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className={`flex flex-wrap items-center gap-1.5 ${fs ? "max-sm:-mx-4 max-sm:-mb-4 max-sm:flex-nowrap max-sm:justify-between max-sm:gap-2 max-sm:border-t max-sm:border-line max-sm:bg-card max-sm:p-3" : ""}`}>
+          {fs && (
+            <button type="button" className="btn min-h-12 min-w-12 px-3 sm:hidden" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Câu trước">
+              <ChevronLeft className="size-5" />
+            </button>
+          )}
           {!fs && (
             <>
               <NavBtn label="Câu đầu" disabled={idx === 0} onClick={() => go(0)} icon={ChevronFirst} hideSm />
@@ -566,18 +572,18 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
               </button>
             </>
           )}
-          <div className="flex-1" />
+          <div className={`flex-1 ${fs ? "max-sm:hidden" : ""}`} />
           {mode === "ueben" && !reveal && !videoStep && !cfg.single && (
-            <button type="button" className="btn btn-primary" onClick={() => check()} disabled={!mine.length}>
-              Kiểm tra
+            <button type="button" className="btn btn-primary max-sm:min-h-12 max-sm:flex-1" onClick={() => check()} disabled={!mine.length}>
+              <Check className="size-4" /> Kiểm tra
             </button>
           )}
           {mode === "ueben" && reveal && (
-            <button type="button" className="btn" onClick={retry}>
+            <button type="button" className="btn max-sm:min-h-12 max-sm:flex-1" onClick={retry}>
               <RotateCcw className="size-4" /> Làm lại
             </button>
           )}
-          <div className="flex-1" />
+          <div className={`flex-1 ${fs ? "max-sm:hidden" : ""}`} />
           {mode === "exam" && !submitted && !fs && idx === questions.length - 1 ? (
             <button type="button" className="btn btn-primary" onClick={askSubmit}>
               <Flag className="size-4" /> Nộp bài
@@ -585,6 +591,12 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
           ) : fs ? null : (
             <button type="button" className={`btn ${reveal || mode === "exam" ? "btn-primary" : ""}`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1}>
               Tiếp <ChevronRight className="size-4" />
+            </button>
+          )}
+          {fs && (
+            <button type="button" className={`btn min-h-12 min-w-12 px-3 sm:hidden ${reveal && mode !== "lesen" ? "btn-primary" : ""}`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1} aria-label="Câu sau">
+              {reveal && mode !== "lesen" && <span>Tiếp</span>}
+              <ChevronRight className="size-5" />
             </button>
           )}
           {!fs && (
@@ -672,7 +684,7 @@ function FsPager({ idx, total, items, go }: { idx: number; total: number; items:
               aria-current={current ? "true" : undefined}
               aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
               data-state={state}
-              className="sim-cell h-8 max-w-12 min-w-0 flex-1 text-xs lg:h-9 lg:max-w-15 lg:text-sm"
+              className="sim-cell h-10 max-w-12 min-w-0 flex-1 text-xs sm:h-8 lg:h-9 lg:max-w-15 lg:text-sm"
             >
               <CellMarks video={video} num={num} marked={marked} />
               <span className="relative">{i + 1}</span>
@@ -737,7 +749,7 @@ function FsExamBar({
           {warn && <TriangleAlert className="sim-warn size-6 shrink-0" strokeWidth={1.75} aria-hidden />}
           {info}
         </p>
-        <div className="order-1 flex w-full justify-end gap-2 px-2 sm:order-none sm:ml-auto sm:w-auto sm:shrink-0 sm:gap-3 sm:px-3 sm:pb-4">
+        <div className="order-1 flex w-full justify-end gap-2 px-2 max-sm:[&>button:last-child]:flex-1 sm:order-none sm:ml-auto sm:w-auto sm:shrink-0 sm:gap-3 sm:px-3 sm:pb-4">
           {onSubmit && (
             <button type="button" onClick={onSubmit} className="sim-btn" data-tone="submit">
               Auswertung
@@ -753,7 +765,7 @@ function FsExamBar({
           </button>
         </div>
       </div>
-      <nav aria-label="Danh sách câu" className="sim-bar flex flex-wrap gap-2 p-2 sm:gap-3.5 sm:px-2 sm:py-3">
+      <nav aria-label="Danh sách câu" className="sim-bar grid grid-cols-6 gap-2 p-2 min-[420px]:flex min-[420px]:flex-wrap sm:gap-3.5 sm:px-2 sm:py-3">
         {items.map(({ i, state, marked, video, num }) => {
           const current = i === idx;
           return (
@@ -765,7 +777,7 @@ function FsExamBar({
               aria-label={`Câu ${i + 1}${video ? " (video)" : ""}${num ? " (điền số)" : ""}${marked ? " (đã đánh dấu)" : ""}`}
               data-state={cell(state)}
               data-ring
-              className="sim-cell h-7 w-12 text-sm sm:h-8 sm:w-14 sm:text-base"
+              className="sim-cell h-10 w-full text-sm min-[420px]:w-12 sm:h-8 sm:w-14 sm:text-base"
             >
               <CellMarks video={video} num={num} marked={marked} />
               <span className="relative">{i + 1}</span>
@@ -785,7 +797,7 @@ function PagerBtn({ label, disabled, onClick, icon: Icon, hideSm, flip }: { labe
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`sim-key ${hideSm ? "hidden sm:flex" : "flex"} size-9 shrink-0 lg:size-11`}
+      className={`sim-key ${hideSm ? "hidden sm:flex" : "flex"} h-10 w-9 shrink-0 sm:size-9 lg:size-11`}
     >
       <Icon className={`size-5 fill-current ${flip ? "rotate-180" : ""}`} strokeWidth={1.5} />
     </button>
@@ -992,15 +1004,15 @@ function FsNumberAnswer({
           {hint?.unit && <span>{hint.unit}</span>}
         </span>
       </label>
-      {correct !== null && !ok && <p className="text-accent-text">Đáp án đúng: {correct}{hint?.unit ? ` ${hint.unit}` : ""}</p>}
+      {correct !== null && !ok && <p className="text-ok-text">Đáp án đúng: {correct}{hint?.unit ? ` ${hint.unit}` : ""}</p>}
       {!disabled && (
-        <div className="grid w-48 grid-cols-3 gap-1.5" role="group" aria-label="Bàn phím số">
+        <div className="grid w-full max-w-56 grid-cols-3 gap-1.5" role="group" aria-label="Bàn phím số">
           {KEYS.map((k) => (
-            <button key={k} type="button" onClick={() => press(k)} aria-label={k === "C" ? "Xoá 1 ký tự" : k} className="sim-key h-10">
+            <button key={k} type="button" onClick={() => press(k)} aria-label={k === "C" ? "Xoá 1 ký tự" : k} className="sim-key h-11">
               {k}
             </button>
           ))}
-          <button type="button" onClick={() => onChange("")} className="sim-key col-span-3 h-10">
+          <button type="button" onClick={() => onChange("")} className="sim-key col-span-3 h-11">
             Löschen
           </button>
         </div>
@@ -1037,40 +1049,40 @@ function ResultBar({ module, result, maxErrorPoints, savedId, saveError }: { mod
   const lid = module === "lid";
   const pct = result.total ? (result.correct / result.total) * 100 : 0;
   return (
-    <section className="sticker hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--leaf)" : "var(--candy)" }} aria-live="polite">
+    <section className="sticker hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--ok)" : "var(--red)" }} aria-live="polite">
       <div className="flex items-center gap-4">
-        <span className={`icon-bubble size-14 shrink-0 sm:size-16 ${result.passed ? "tint-accent" : "tint-red"}`} aria-hidden>
-          {result.passed ? <PartyPopper className="size-7" /> : <X className="size-7" strokeWidth={3} />}
+        <span className={`flex size-14 shrink-0 items-center justify-center rounded-xl text-white sm:size-16 ${result.passed ? "bg-ok" : "bg-red"}`} aria-hidden>
+          {result.passed ? <PartyPopper className="size-7" /> : <X className="size-8" strokeWidth={3} />}
         </span>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <p className={`font-display text-2xl leading-tight font-extrabold ${result.passed ? "text-accent-text" : "text-red-400"}`}>{result.passed ? "Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
+          <p className={`font-display text-2xl leading-tight font-extrabold tracking-[-0.02em] sm:text-3xl ${result.passed ? "text-ok-text" : "text-red-400"}`}>{result.passed ? "Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
           {!lid && result.failReason && <p className="text-sm font-bold text-red-400">{FAIL_TEXT[result.failReason]}</p>}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {lid ? (
           <>
-            <div className="surface stat">
+            <div className="stat rounded-ui bg-card p-3">
               <span className="stat-value">
                 {result.correct}/{result.total}
               </span>
               <span className="stat-label">câu đúng</span>
             </div>
-            <div className="surface stat">
+            <div className="stat rounded-ui bg-card p-3">
               <span className="stat-value">≥ {result.total - maxErrorPoints}</span>
               <span className="stat-label">câu đúng để đậu</span>
             </div>
           </>
         ) : (
           <>
-            <div className="surface stat">
+            <div className="stat rounded-ui bg-card p-3">
               <span className={`stat-value ${result.errorPoints > maxErrorPoints ? "text-red-400" : ""}`}>
                 {result.errorPoints}
                 <span className="text-base text-muted">/{maxErrorPoints}</span>
               </span>
               <span className="stat-label">điểm lỗi (tối đa {maxErrorPoints})</span>
             </div>
-            <div className="surface stat">
+            <div className="stat rounded-ui bg-card p-3">
               <span className="stat-value">
                 {result.correct}
                 <span className="text-base text-muted">/{result.total}</span>
@@ -1080,11 +1092,11 @@ function ResultBar({ module, result, maxErrorPoints, savedId, saveError }: { mod
           </>
         )}
       </div>
-      <div className="progress" aria-hidden>
-        <div className="progress-bar" style={{ width: `${pct}%` }} />
+      <div className="progress bg-card" aria-hidden>
+        <div className={`progress-bar ${result.passed ? "bg-ok" : "bg-red"}`} style={{ width: `${pct}%` }} />
       </div>
       <p className="text-sm text-muted">
-        Bấm số câu để xem lại từng câu: ✓ xanh = đáp án đúng, ✗ đỏ = chọn sai, vạch đỏ = chỗ sai.
+        Bấm số câu để xem lại từng câu: viền xanh lá = đáp án đúng, viền đỏ = chọn sai, nhãn „Bỏ sót“ = đáp án đúng chưa chọn.
         {savedId ? (
           <>
             {" "}

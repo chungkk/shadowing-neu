@@ -72,8 +72,8 @@ export default function Sprechen({ me }: { me: { id: number; name: string } }) {
       {s.notice && <Notice text={s.notice} />}
       {error && <Notice text={error} tone="red" onClose={() => setError("")} />}
       {invite && (
-        <div className="card hero flex flex-wrap items-center gap-3">
-          <span className="icon-bubble tint-accent">
+        <div className="card hero flex flex-wrap items-center gap-3" data-sec="de">
+          <span className="icon-bubble tint-sec">
             <PhoneCall className="size-5" />
           </span>
           <p className="flex-1 font-bold">Bạn được mời vào một phòng luyện nói riêng.</p>
@@ -100,7 +100,7 @@ export default function Sprechen({ me }: { me: { id: number; name: string } }) {
           <Matcher s={s} busy={busy} run={run} />
           <p className="flex items-center justify-center gap-2 text-sm text-muted">
             <Users className="size-4" />
-            <span className={`size-2 rounded-full ${s.connected ? "bg-accent" : "bg-red"} ${s.connected ? "" : "animate-pulse motion-reduce:animate-none"}`} />
+            <span className={`size-2 rounded-full ${s.connected ? "bg-ok" : "bg-red"} ${s.connected ? "" : "animate-pulse motion-reduce:animate-none"}`} />
             {s.connected ? `${s.online} người đang online` : "Đang kết nối…"}
           </p>
         </div>
@@ -138,7 +138,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
   return (
     <section className="card flex flex-col gap-5 p-5">
       <div className="flex flex-col gap-3">
-        <h2 className="eyebrow">Trình độ của bạn</h2>
+        <h2 className="label">Trình độ của bạn</h2>
         <div className="flex flex-wrap gap-2">
           {LEVELS.map((l) => (
             <button key={l} className={`${chip(l === level)} min-w-12`} onClick={() => setLevel(l)} disabled={s.waiting}>
@@ -148,7 +148,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <h2 className="eyebrow">
+        <h2 className="label">
           Chủ đề muốn nói <span className="font-bold tracking-normal text-muted normal-case">(không bắt buộc)</span>
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -163,7 +163,7 @@ function Matcher({ s, busy, run }: { s: CallState; busy: boolean; run: Run }) {
         </p>
       </div>
       {s.waiting ? (
-        <div role="status" className="alert alert-ok flex-col items-center gap-3 p-5 text-center">
+        <div role="status" className="alert alert-info flex-col items-center gap-3 p-5 text-center">
           <span className="relative flex size-12 items-center justify-center">
             <span className="absolute inset-0 animate-ping rounded-full bg-accent/40 motion-reduce:animate-none" />
             <Mic className="relative size-6 text-accent-text" />
@@ -225,8 +225,8 @@ function CreateRoom({ busy, run, me }: { busy: boolean; run: Run; me: { name: st
             key={o.label}
             onClick={() => setPriv(o.set)}
             aria-pressed={o.on}
-            className={`flex cursor-pointer items-center gap-2.5 rounded-[var(--radius)] border-2 px-3 py-2.5 text-left transition-colors ${
-              o.on ? "border-accent bg-accent-soft" : "border-ink bg-card hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--ink))]"
+            className={`flex cursor-pointer items-center gap-2.5 rounded-[var(--radius)] border-[1.5px] px-3 py-2.5 text-left transition-colors ${
+              o.on ? "border-accent bg-accent-soft" : "border-line bg-card hover:border-line-strong"
             }`}
           >
             <o.icon className={`size-4 ${o.on ? "text-accent-text" : "text-muted"}`} />
@@ -371,15 +371,15 @@ function Room({
           );
         })}
         {room.members.length < 2 && (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-2 border-dashed border-ink p-4 text-center text-sm font-bold text-muted">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-line-strong p-4 text-center text-sm font-bold text-muted">
             <Users className="size-6" />
             Đang chờ người vào…
           </div>
         )}
       </div>
 
-      <section className="card hero flex flex-col gap-2" style={{ "--hero": "var(--candy)" } as React.CSSProperties}>
-        <h3 className="eyebrow">Gợi ý để bắt đầu</h3>
+      <section className="card hero flex flex-col gap-2" data-sec="lid">
+        <h3 className="label">Gợi ý để bắt đầu</h3>
         <p className="font-display text-xl leading-snug font-bold">{list[promptIdx % list.length]}</p>
         <button className="btn self-start" onClick={() => setPromptIdx((i) => i + 1)}>
           Câu khác

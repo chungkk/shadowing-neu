@@ -45,20 +45,17 @@ export function StatePicker({ states, current, chosen = true, variant = "card" }
           type="button"
           onClick={() => setOpen(true)}
           aria-haspopup="dialog"
-          className={`card sticker-link flex w-full cursor-pointer items-center gap-3 text-left ${chosen ? "" : "hero"}`}
-          style={chosen ? undefined : { ["--hero" as string]: "var(--gold)" }}
+          className={`group card card-link flex min-h-[4.5rem] w-full cursor-pointer items-center gap-3 text-left ${chosen ? "" : "hero"}`}
         >
-          <span className={`icon-bubble size-13 overflow-hidden ${chosen ? "" : "tint-gold"}`}>
+          <span className={`icon-bubble size-13 overflow-hidden ${chosen ? "" : "bg-card"}`}>
             <Wappen code={current} />
           </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className={chosen ? "eyebrow text-muted" : "eyebrow text-amber"}>{chosen ? "Bang của bạn" : "Bạn sống ở bang nào?"}</span>
-            <span className={`font-display text-lg font-extrabold ${chosen ? "truncate" : "leading-tight"}`}>{pending ? "Đang đổi…" : chosen ? (cur?.name ?? current) : "Chọn bang để học đúng câu hỏi"}</span>
-            {!chosen && <span className="text-sm text-muted">Bài thi có 3 câu riêng của bang · đang tạm dùng {cur?.name ?? current}</span>}
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className={`font-display text-lg font-extrabold tracking-[-0.02em] ${chosen ? "truncate" : "leading-tight"}`}>{pending ? "Đang đổi…" : chosen ? (cur?.name ?? current) : "Bạn sống ở bang nào?"}</span>
+            <span className="text-sm text-muted">{chosen ? `Bang của bạn · thủ phủ ${cur?.capital ?? ""} · bấm để đổi` : `Chọn bang để học đúng 3 câu riêng của bang trong bài thi · đang tạm dùng ${cur?.name ?? current}`}</span>
           </span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card-2 text-muted" aria-hidden>
-            <ChevronRight className="size-5" />
-          </span>
+          {!chosen && <span className="btn btn-sm pointer-events-none max-sm:hidden">Chọn bang</span>}
+          <ChevronRight className="size-5 shrink-0 text-muted transition-transform duration-300 ease-[var(--ease-out)] group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden />
         </button>
       )}
 
@@ -92,16 +89,16 @@ export function StatePicker({ states, current, chosen = true, variant = "card" }
                         setOpen(false);
                         if (!on) start(() => setLidState(s.code));
                       }}
-                      className={`relative flex w-full cursor-pointer items-center gap-4 rounded-ui border-2 px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-2 sm:py-3.5 sm:text-center ${
-                        on ? "border-accent bg-accent-soft" : "border-transparent hover:bg-card-2 sm:border-line"
+                      className={`relative flex min-h-14 w-full cursor-pointer items-center gap-4 rounded-ui border px-3 py-2.5 text-left transition-colors sm:flex-col sm:gap-2 sm:px-2 sm:py-3.5 sm:text-center ${
+                        on ? "border-sec bg-sec-soft shadow-[inset_0_0_0_1px_var(--sec)]" : "border-transparent hover:bg-card-2 sm:border-line dark:sm:border-border"
                       }`}
                     >
                       <Wappen code={s.code} className="h-11 w-9 sm:h-13 sm:w-11" />
                       <span className="flex min-w-0 flex-1 flex-col">
-                        <span className={on ? "font-extrabold text-accent-text" : "font-bold"}>{s.name}</span>
+                        <span className={on ? "font-bold text-sec-text" : "font-semibold"}>{s.name}</span>
                         <span className="text-sm text-muted">{s.capital}</span>
                       </span>
-                      {on && <CheckCircle2 className="size-6 shrink-0 fill-accent text-card sm:absolute sm:top-1.5 sm:right-1.5 sm:size-5" aria-label="Đang chọn" />}
+                      {on && <CheckCircle2 className="size-6 shrink-0 fill-sec-text text-card sm:absolute sm:top-1.5 sm:right-1.5 sm:size-5" aria-label="Đang chọn" />}
                     </button>
                   </li>
                 );

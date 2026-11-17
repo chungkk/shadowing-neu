@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import { ChevronRight, Mic } from "lucide-react";
+import { ArrowRight, Mic } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 
 // Chưa ra mắt → không cho Google index trang chờ
 export const metadata: Metadata = {
@@ -12,18 +12,20 @@ export const metadata: Metadata = {
 
 export default function SprechenPage() {
   return (
-    <main className="page">
-      <div className="card hero rise-in mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-4 p-8 text-center sm:mt-10" style={{ "--hero": "var(--candy)" } as CSSProperties}>
-        <span className="icon-bubble size-20 rounded-full tint-candy">
-          <Mic className="size-9" />
-        </span>
-        <span className="badge badge-gold">Sprechen</span>
-        <h1 className="page-title">Sắp ra mắt</h1>
-        <p className="lead text-base">Tính năng luyện nói tiếng Đức với người thật đang được hoàn thiện. Trong lúc chờ, bạn có thể luyện nói theo video ngay bây giờ.</p>
-        <Link href="/#lessons" className="btn btn-primary btn-lg w-full">
-          Luyện nói với Shadowing <ChevronRight className="size-5" />
-        </Link>
-      </div>
+    <main className="page page-narrow" data-sec="de">
+      <PageHeader
+        sec="de"
+        icon={Mic}
+        compact
+        title="Sprechen"
+        meta={<span className="badge bg-white/90 text-[#16203a]">Sắp ra mắt</span>}
+        sub="Tính năng luyện nói tiếng Đức với người thật đang được hoàn thiện. Trong lúc chờ, bạn có thể luyện nói theo video ngay bây giờ."
+        actions={
+          <Link href="/#lessons" className="btn btn-primary btn-lg max-sm:w-full">
+            Luyện nói với Shadowing <ArrowRight className="size-5" />
+          </Link>
+        }
+      />
     </main>
   );
 }

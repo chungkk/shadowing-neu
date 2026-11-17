@@ -3,7 +3,7 @@
 @layer components {
   /* Thanh tiến độ 2 màu (đúng / sai) trong .progress */
   .quiz-bar-ok {
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--leaf) 55%, var(--accent)));
+    background: var(--ok);
     transition: width 500ms var(--ease-out);
   }
   .quiz-bar-bad {
@@ -11,71 +11,64 @@
     transition: width 500ms var(--ease-out);
   }
 
-  /* Thẻ lớn chính (Thi thử): nền xanh có gradient + gờ xanh đậm */
-  .quiz-big-primary {
-    --hero: var(--leaf);
-    background:
-      radial-gradient(22rem 12rem at 100% 0%, color-mix(in srgb, var(--leaf) 40%, transparent), transparent 70%),
-      linear-gradient(160deg, color-mix(in srgb, white 8%, var(--accent)), var(--accent));
-    border-color: var(--accent);
-    box-shadow: 0 4px 0 var(--accent-dark), var(--shadow-md);
+  /* Thẻ lớn Học / Thi thử: cuốn vở (bìa .cover + nhãn .nhan, xem .exam-heft trong globals.css).
+     .quiz-heft-soft: cuốn phụ — bìa màu nhạt của khu vực, chữ đậm màu khu vực; cuốn chính giữ bìa màu đặc */
+  .quiz-heft-soft .cover {
+    background-color: var(--sec-soft);
+    color: var(--sec-text);
   }
-  @media (hover: hover) {
-    .quiz-big-primary.sticker-link:hover {
-      border-color: var(--accent);
-      box-shadow: 0 6px 0 var(--accent-dark), var(--shadow-lg);
-    }
+  .quiz-heft-soft .cover::before {
+    background: color-mix(in srgb, var(--sec) 45%, var(--sec-soft));
   }
-  .quiz-big-primary.sticker-link:active {
-    box-shadow: 0 1px 0 var(--accent-dark), var(--shadow-xs);
+  .quiz-heft:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: var(--radius-lg);
   }
 
   /* Phương án trả lời (màn Học / Luyện / Thi — ngoài khung giả lập phần mềm thi) */
   .quiz-option {
-    @apply relative flex w-full items-center gap-3 overflow-hidden p-3 text-left disabled:cursor-default;
+    @apply relative flex min-h-14 w-full items-center gap-3 overflow-hidden p-3 text-left disabled:cursor-default;
     border-radius: var(--radius);
-    border: 2px solid var(--ink);
+    border: 1.5px solid var(--border);
     background-color: var(--card);
-    box-shadow: 0 2px 0 var(--ink);
     transition:
       border-color var(--dur-fast),
       background-color var(--dur-fast),
-      box-shadow var(--dur-fast),
       transform var(--dur-fast) var(--ease-out);
   }
   @media (hover: hover) {
     .quiz-option:not(:disabled):hover {
-      border-color: color-mix(in srgb, var(--accent) 45%, var(--ink));
-      background-color: color-mix(in srgb, var(--accent-soft) 40%, var(--card));
+      border-color: color-mix(in srgb, var(--foreground) 35%, var(--border));
+      background-color: color-mix(in srgb, var(--card-2) 55%, var(--card));
     }
   }
   .quiz-option:not(:disabled):active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 0 var(--ink);
+    transform: scale(0.99);
   }
+  /* Đang chọn (chưa chấm) = xanh lam hành động · Đúng = ok · Sai = đỏ · còn lại mờ đi */
   .quiz-option[data-state="on"] {
     border-color: var(--accent);
     background-color: var(--accent-soft);
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, var(--accent-soft));
+    box-shadow: inset 0 0 0 1px var(--accent);
   }
   .quiz-option[data-state="correct"] {
-    border-color: var(--accent);
-    background-color: var(--accent-soft);
-    box-shadow: none;
+    border-color: var(--ok);
+    background-color: var(--ok-soft);
+    box-shadow: inset 0 0 0 1px var(--ok);
   }
   .quiz-option[data-state="wrong"] {
     border-color: var(--red);
     background-color: var(--red-soft);
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px var(--red);
   }
   .quiz-option[data-state="idle"] {
-    box-shadow: none;
-    opacity: 0.85;
+    color: var(--muted);
   }
 
   /* Ô chọn số / dấu tích ở đầu phương án */
   .quiz-mark {
-    @apply flex size-9 shrink-0 items-center justify-center border-2 text-sm font-extrabold;
+    @apply flex size-9 shrink-0 items-center justify-center border-[1.5px] text-sm font-bold tabular-nums;
     border-color: var(--line-strong);
     background-color: var(--card);
     color: var(--muted);
@@ -89,6 +82,10 @@
     background-color: var(--accent);
     color: #fff;
   }
+  .quiz-option[data-state="correct"] .quiz-mark[data-tick="on"] {
+    border-color: var(--ok);
+    background-color: var(--ok);
+  }
   .quiz-mark[data-tick="bad"] {
     border-color: var(--red);
     background-color: var(--red);
@@ -97,8 +94,8 @@
 
   /* Ô số câu trong bảng câu hỏi */
   .quiz-cell {
-    @apply relative flex size-9 items-center justify-center rounded-xl text-xs font-extrabold tabular-nums sm:size-8 sm:rounded-lg;
-    border: 2px solid var(--line);
+    @apply relative flex size-10 items-center justify-center rounded-lg text-xs font-bold tabular-nums sm:size-9;
+    border: 1.5px solid var(--border);
     background-color: var(--card);
     transition:
       transform var(--dur-fast) var(--ease-out),
@@ -112,8 +109,8 @@
     }
   }
   .quiz-cell[data-state="ok"] {
-    border-color: var(--accent);
-    background-color: var(--accent);
+    border-color: var(--ok);
+    background-color: var(--ok);
     color: #fff;
   }
   .quiz-cell[data-state="bad"] {
@@ -122,9 +119,9 @@
     color: #fff;
   }
   .quiz-cell[data-state="ok-old"] {
-    border-color: color-mix(in srgb, var(--accent) 35%, var(--accent-soft));
-    background-color: var(--accent-soft);
-    color: var(--accent-text);
+    border-color: color-mix(in srgb, var(--ok) 35%, var(--ok-soft));
+    background-color: var(--ok-soft);
+    color: var(--ok-text);
   }
   .quiz-cell[data-state="bad-old"] {
     border-color: color-mix(in srgb, var(--red) 30%, var(--red-soft));
@@ -144,19 +141,19 @@
 
   /* Phản hồi sau khi chấm (Đúng rồi! / Chưa đúng) */
   .quiz-verdict {
-    @apply flex items-center gap-2.5 px-3.5 py-2.5 font-extrabold;
+    @apply flex items-center gap-2.5 px-3.5 py-2.5 font-bold;
     border-radius: var(--radius);
     animation: quiz-pop 260ms var(--ease-spring);
   }
   .quiz-verdict[data-ok="true"] {
-    color: var(--accent-text);
-    background-color: var(--accent-soft);
-    border: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--ok-text);
+    background-color: var(--ok-soft);
+    border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
   }
   .quiz-verdict[data-ok="false"] {
     color: var(--red-400);
     background-color: var(--red-soft);
-    border: 2px solid color-mix(in srgb, var(--red) 35%, transparent);
+    border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
   }
 
   /* Hộp giải thích */
@@ -164,13 +161,13 @@
     @apply p-3.5 text-sm;
     border-radius: var(--radius);
     background-color: var(--gold-soft);
-    border: 1.5px solid color-mix(in srgb, var(--gold) 45%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
   }
 
   /* Bản dịch tiếng Việt dưới câu gốc */
   .quiz-tr {
-    @apply border-l-4 pl-2.5 whitespace-pre-line text-accent-text italic;
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    @apply border-l pl-2.5 whitespace-pre-line text-accent-text;
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   }
 
   /* Ô đồng hồ thi */
@@ -183,34 +180,44 @@
     background-color: var(--red-soft);
     color: var(--red-400);
   }
-  /* Câu hỏi thường gặp (FAQ) ở trang chính Lái xe / LiD: <details class="quiz-faq group"><summary>…</summary><p/></details> */
+  /* Câu hỏi thường gặp (FAQ) ở trang chính Lái xe / LiD: hàng phân cách bằng đường kẻ, không lồng thẻ
+     <details class="quiz-faq group"><summary>…</summary><p/></details> */
   .quiz-faq {
-    @apply px-3.5 py-2.5;
-    border-radius: var(--radius);
-    border: 1px solid var(--line);
-    background-color: color-mix(in srgb, var(--card-2) 50%, transparent);
-    transition: background-color var(--dur-fast);
+    @apply py-1;
+    border-bottom: 1px solid var(--line);
   }
-  .quiz-faq[open] {
-    background-color: var(--card-2);
+  .quiz-faq:last-child {
+    border-bottom: 0;
   }
   .quiz-faq > summary {
-    @apply flex min-h-8 cursor-pointer list-none items-center gap-2 font-bold;
+    @apply flex min-h-12 cursor-pointer list-none items-center gap-3 py-2 font-semibold;
+    border-radius: var(--radius-sm);
+  }
+  @media (hover: hover) {
+    .quiz-faq > summary:hover {
+      color: var(--sec-text);
+    }
   }
   .quiz-faq > summary::-webkit-details-marker {
     display: none;
+  }
+  .quiz-faq > p {
+    @apply mt-0 mb-3 max-w-[70ch];
   }
 
   /* Nhóm thu gọn lồng trong thẻ (chủ đề trong một phần ở Lái xe › Học theo chủ đề) */
   .quiz-group {
     @apply overflow-hidden;
     border-radius: var(--radius);
-    border: 1.5px solid var(--line);
+    border: 1px solid var(--line);
     background-color: var(--card);
     transition: border-color var(--dur-fast);
   }
+  [data-theme="dark"] .quiz-group {
+    border-color: var(--border);
+  }
   .quiz-group[open] {
-    border-color: var(--line-strong);
+    border-color: color-mix(in srgb, var(--foreground) 25%, var(--line));
   }
 
   /* ═════ Màn làm bài Lái xe (.theme-fahrschule .laixe-sim) — giả lập phần mềm thi lý thuyết thật ═════
@@ -260,10 +267,9 @@
   }
   /* Nút lớn kiểu phần mềm thi: Auswertung (đỏ) · ☆ (vàng) · Weiter (xanh) · Video starten (xanh dương) */
   .sim-btn {
-    @apply inline-flex h-10 cursor-pointer items-center justify-center gap-2 px-4 text-lg font-semibold text-white select-none sm:text-xl;
-    border-radius: 6px;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 px-4 text-base font-semibold text-white select-none sm:text-lg;
+    border-radius: var(--radius);
     background-color: var(--sim-go);
-    box-shadow: 0 2px 0 rgb(0 0 0 / 0.18);
     transition:
       filter var(--dur-fast),
       transform var(--dur-fast) var(--ease-out);
@@ -274,7 +280,7 @@
     }
   }
   .sim-btn:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: scale(0.97);
     filter: brightness(0.95);
   }
   .sim-btn:disabled {
@@ -302,8 +308,8 @@
   }
   /* Tab phần thi (Grundstoff / hạng) dính vào thanh số câu */
   .sim-tab {
-    @apply h-10 min-w-14 cursor-pointer px-4 text-lg font-extrabold sm:h-11 sm:px-6 sm:text-xl;
-    border-radius: 6px 6px 0 0;
+    @apply h-11 min-w-14 cursor-pointer px-4 text-base font-bold sm:px-6 sm:text-lg;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     border: 1px solid rgb(0 0 0 / 0.2);
     border-bottom: 0;
     background-color: #f2f2f2;
@@ -320,7 +326,7 @@
   }
   /* Tab phần trong thanh xanh ở chế độ học */
   .sim-subtab {
-    @apply cursor-pointer rounded-b-lg px-3 py-1.5 text-sm font-extrabold;
+    @apply min-h-9 cursor-pointer rounded-b-lg px-3 py-1.5 text-sm font-bold;
     color: rgb(255 255 255 / 0.8);
   }
   .sim-subtab:hover {
@@ -333,6 +339,7 @@
   /* Ô số câu: trắng · vàng = đã trả lời · xanh / đỏ = đúng / sai (nhạt = lần học trước) · đang xem = nổi + chữ xanh dương */
   .sim-cell {
     @apply relative flex cursor-pointer items-center justify-center font-bold tabular-nums;
+    border-radius: 4px;
     border: 1px solid rgb(0 0 0 / 0.55);
     background-color: #fff;
     color: var(--sim-key-ink);
@@ -360,8 +367,9 @@
   }
   .sim-cell[aria-current="true"] {
     border: 2px solid #000;
-    background: linear-gradient(#fff, #c9c9c9);
+    background-color: #fff;
     color: var(--sim-current);
+    box-shadow: inset 0 -3px 0 var(--sim-current);
   }
   .sim-cell[data-ring][aria-current="true"] {
     border-width: 1px;
@@ -387,6 +395,7 @@
   /* Nút vuông trắng viền đen: |◀ ◀◀ ◀ ▶ ▶▶ ▶| và bàn phím số */
   .sim-key {
     @apply cursor-pointer items-center justify-center text-center font-bold;
+    border-radius: var(--radius-sm);
     border: 1px solid rgb(0 0 0 / 0.45);
     background-color: #fff;
     color: var(--sim-key-ink);
@@ -415,23 +424,30 @@
       background-color: rgb(255 255 255 / 0.6);
     }
   }
+  .sim-option[data-state="on"] {
+    background-color: rgb(255 255 255 / 0.7);
+  }
   .sim-option[data-state="correct"] {
-    background-color: color-mix(in srgb, var(--accent) 15%, transparent);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+    background-color: var(--ok-soft);
+    box-shadow: inset 0 0 0 2px var(--ok);
   }
   .sim-option[data-state="wrong"] {
-    background-color: color-mix(in srgb, var(--red) 15%, transparent);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--red) 40%, transparent);
+    background-color: var(--red-soft);
+    box-shadow: inset 0 0 0 2px var(--red);
+  }
+  .sim-option[data-state="idle"] {
+    color: var(--muted);
   }
   .sim-check {
     @apply flex size-9 shrink-0 items-center justify-center;
-    border-radius: 2px;
+    border-radius: 4px;
     border: 2px solid #000;
     background-color: #fff;
     color: #000;
   }
   .sim-input {
     @apply px-2 text-base outline-none;
+    border-radius: var(--radius-sm);
     border: 1px solid rgb(0 0 0 / 0.6);
     background-color: #fff;
     color: #000;
@@ -440,7 +456,7 @@
     border: 2px solid var(--sim-current);
   }
   .sim-input[data-ok="true"] {
-    border: 2px solid var(--accent);
+    border: 2px solid var(--ok);
   }
   .sim-input[data-ok="false"] {
     border: 2px solid var(--red);

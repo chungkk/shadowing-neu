@@ -2,8 +2,12 @@
 
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { KeyRound } from "lucide-react";
-import { requestPasswordReset, resetPasswordAction, type ResetState } from "@/app/(app)/auth-actions";
+import { ArrowLeft, KeyRound, Mail } from "lucide-react";
+import {
+  requestPasswordReset,
+  resetPasswordAction,
+  type ResetState,
+} from "@/app/(app)/auth-actions";
 
 const ErrorBox = ({ children }: { children?: string }) =>
   children ? (
@@ -14,7 +18,10 @@ const ErrorBox = ({ children }: { children?: string }) =>
 
 /** Trang "Quên mật khẩu": nhập email → nhận mã 6 số → nhập mã + mật khẩu mới (đặt xong là đăng nhập luôn) */
 export function ForgotForm() {
-  const [state, action, pending] = useActionState<ResetState, FormData>(resetPasswordAction, {});
+  const [state, action, pending] = useActionState<ResetState, FormData>(
+    resetPasswordAction,
+    {},
+  );
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -43,81 +50,131 @@ export function ForgotForm() {
 
   return (
     <main className="flex flex-1 items-center justify-center p-4 md:p-8">
-      <div className="auth-card max-w-md gap-5 p-5 pt-8 sm:p-8 sm:pt-10 md:p-10">
-        <div className="flex flex-col items-center text-center">
-          <span className="auth-badge" aria-hidden>
-            <KeyRound className="size-7" />
-          </span>
-          <h1 className="page-title">{step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}</h1>
-          <p className="auth-subtitle">
-            {step === "email" ? (
-              "Nhập email đã đăng ký, chúng tôi sẽ gửi mã 6 số để đặt mật khẩu mới."
-            ) : (
-              <>
-                Nếu <b className="text-foreground">{email}</b> đã có tài khoản, mã đã được gửi tới email. Kiểm tra cả thư mục Spam.
-              </>
-            )}
-          </p>
+      <div className="auth-card max-w-md">
+        {/* Dải bìa vở mỏng ở đầu hộp — cùng khuôn với hộp đăng nhập */}
+        <div
+          data-sec="de"
+          className="cover flex h-20 items-center rounded-none pr-5 pl-9"
+          aria-hidden
+        >
+          <KeyRound className="size-8" strokeWidth={2.25} />
         </div>
+        <div className="flex flex-col gap-5 p-5 sm:p-8">
+          <div>
+            <h1 className="page-title">
+              {step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}
+            </h1>
+            <p className="auth-subtitle">
+              {step === "email"
+                ? "Nhập email đã đăng ký, chúng tôi gửi mã 6 số để bạn đặt mật khẩu mới."
+                : "Nhập mã trong email và chọn mật khẩu mới — đặt xong là đăng nhập luôn."}
+            </p>
+          </div>
 
-        {step === "email" ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              send();
-            }}
-            className="flex flex-col gap-3"
+          {step === "email" ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send();
+              }}
+              className="flex flex-col gap-3"
+            >
+              <input
+                type="email"
+                placeholder="Email"
+                aria-label="Email"
+                className="input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                autoFocus
+                required
+              />
+              <ErrorBox>{err}</ErrorBox>
+              <button
+                className="btn btn-primary btn-lg btn-block mt-1"
+                disabled={sending}
+              >
+                {sending ? "Đang gửi…" : "Gửi mã"}
+              </button>
+            </form>
+          ) : (
+            <form action={action} className="flex flex-col gap-3">
+              <input type="hidden" name="email" value={email} />
+              <p className="alert alert-info">
+                <Mail className="mt-px size-4 shrink-0" aria-hidden />
+                <span>
+                  Nếu <b>{email}</b> đã có tài khoản, mã đã được gửi tới đó.
+                  Không thấy thì xem cả thư mục Spam.
+                </span>
+              </p>
+              <input
+                name="code"
+                value={code}
+                onChange={(e) =>
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="______"
+                aria-label="Mã xác nhận 6 số"
+                className="input auth-code"
+                autoFocus
+                required
+              />
+              <input
+                name="password"
+                type="password"
+                placeholder="Mật khẩu mới (ít nhất 8 ký tự)"
+                aria-label="Mật khẩu mới (ít nhất 8 ký tự)"
+                className="input"
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+              <input
+                name="confirm"
+                type="password"
+                placeholder="Nhập lại mật khẩu mới"
+                aria-label="Nhập lại mật khẩu mới"
+                className="input"
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+              <ErrorBox>{err}</ErrorBox>
+              <button
+                className="btn btn-primary btn-lg btn-block mt-1"
+                disabled={pending || code.length !== 6}
+              >
+                {pending ? "Đang lưu…" : "Lưu mật khẩu mới"}
+              </button>
+              <div className="auth-links">
+                <button type="button" onClick={() => setStep("email")}>
+                  <ArrowLeft className="size-4" /> Đổi email
+                </button>
+                <button
+                  type="button"
+                  disabled={cooldown > 0 || sending}
+                  onClick={send}
+                >
+                  {cooldown > 0
+                    ? `Gửi lại mã (${cooldown}s)`
+                    : sending
+                      ? "Đang gửi…"
+                      : "Gửi lại mã"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          <Link
+            href="/login"
+            className="mx-auto inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-link hover:underline"
           >
-            <input
-              type="email"
-              placeholder="Email" aria-label="Email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              autoFocus
-              required
-            />
-            <ErrorBox>{err}</ErrorBox>
-            <button className="btn btn-primary btn-lg btn-block mt-1" disabled={sending}>
-              {sending ? "Đang gửi…" : "Gửi mã"}
-            </button>
-          </form>
-        ) : (
-          <form action={action} className="flex flex-col gap-3">
-            <input type="hidden" name="email" value={email} />
-            <input
-              name="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="______"
-              aria-label="Mã xác nhận 6 số"
-              className="input auth-code"
-              autoFocus
-              required
-            />
-            <input name="password" type="password" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" aria-label="Mật khẩu mới (ít nhất 8 ký tự)" className="input" autoComplete="new-password" minLength={8} required />
-            <input name="confirm" type="password" placeholder="Nhập lại mật khẩu mới" aria-label="Nhập lại mật khẩu mới" className="input" autoComplete="new-password" minLength={8} required />
-            <ErrorBox>{err}</ErrorBox>
-            <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending || code.length !== 6}>
-              {pending ? "Đang lưu…" : "Lưu mật khẩu mới"}
-            </button>
-            <div className="auth-links">
-              <button type="button" onClick={() => setStep("email")}>
-                ← Đổi email
-              </button>
-              <button type="button" disabled={cooldown > 0 || sending} onClick={send}>
-                {cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : sending ? "Đang gửi…" : "Gửi lại mã"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        <Link href="/login" className="mx-auto rounded-lg px-2 py-1 text-center text-sm font-bold text-link hover:underline">
-          ← Quay lại đăng nhập
-        </Link>
+            <ArrowLeft className="size-4" /> Quay lại đăng nhập
+          </Link>
+        </div>
       </div>
     </main>
   );

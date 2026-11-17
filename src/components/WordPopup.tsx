@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import { usePathname } from "next/navigation";
-import { Bookmark, BookmarkMinus, Loader2, Lock, Play, Volume2, X } from "lucide-react";
+import { Bookmark, BookmarkMinus, Loader2, Lock, Play, Volume2, X, Lightbulb } from "lucide-react";
 import { locatePhrase } from "@/lib/phrase-match";
 import { clientApi } from "@/lib/client-api";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
@@ -184,14 +184,14 @@ export default function WordPopup({
         role="dialog"
         aria-modal="true"
         aria-label={word}
-        className="dialog word-sheet max-w-[640px] gap-0 overflow-hidden p-0 outline-none sm:p-0 md:max-h-[80vh]"
+        data-sec="de" className="dialog word-sheet max-w-[640px] gap-0 overflow-hidden p-0 outline-none sm:p-0 md:max-h-[80vh]"
       >
         {/* Từ + loa + đóng, nghĩa ngay bên dưới */}
         <div className="flex flex-col gap-1.5 border-b border-line px-5 pt-2 pb-3.5 md:pt-5">
           <div className="flex items-center gap-2">
             <h2 className="min-w-0 flex-1 truncate font-display text-2xl leading-tight font-extrabold tracking-tight sm:text-[28px]">{word}</h2>
             {saved && (
-              <span className="badge badge-accent">
+              <span className="badge badge-ok">
                 <Bookmark className="size-3 fill-current" /> Đã lưu
               </span>
             )}
@@ -219,7 +219,7 @@ export default function WordPopup({
 
         {!loggedIn ? (
           <div className="surface m-5 mb-[max(1.25rem,env(safe-area-inset-bottom))] flex flex-col gap-3 p-4">
-            <div className="flex items-center gap-2.5 font-extrabold">
+            <div className="flex items-center gap-2.5 font-bold">
               <span className="icon-bubble tint-accent size-8 rounded-xl">
                 <Lock className="size-4" />
               </span>
@@ -307,7 +307,9 @@ export default function WordPopup({
                   {/* 💡 Mẹo nhớ + từ đi kèm → nghĩa */}
                   {(!!d.tip || !!d.cues?.length) && (
                     <div className="surface flex flex-col gap-2 text-[15px] leading-[22px]">
-                      <span className="text-sm font-extrabold">💡 Mẹo nhớ</span>
+                      <span className="flex items-center gap-1.5 text-sm font-bold">
+                        <Lightbulb className="size-4 text-amber" /> Mẹo nhớ
+                      </span>
                       {!!d.tip && <p>{d.tip}</p>}
                       {d.cues?.map((c, i) => (
                         <p key={i}>
@@ -320,7 +322,7 @@ export default function WordPopup({
                   {/* Câu hay gặp với từ này (bấm để nghe) */}
                   {!!d.idiom && (
                     <button {...speakProps(d.idiom.de)} className="word-sense press cursor-pointer text-left">
-                      <span className="text-xs font-extrabold tracking-[0.08em] text-muted uppercase">Câu hay gặp</span>
+                      <span className="label">Câu hay gặp</span>
                       <span className="font-bold">„{d.idiom.de}“</span>
                       {!!d.idiom.note && <span className="text-sm leading-5 text-muted">{d.idiom.note}</span>}
                     </button>
@@ -389,7 +391,7 @@ function Rich({ text, className }: { text: string; className?: string }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="text-xs font-extrabold tracking-[0.08em] text-muted uppercase">{title}</span>
+      <span className="label">{title}</span>
       {children}
     </div>
   );
@@ -403,7 +405,7 @@ function ExampleRow({ label, de, tr, playing, ...press }: { label?: string; de: 
         {playing ? <Volume2 className="size-3.5" /> : <Play className="size-3 translate-x-px fill-current" />}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        {!!label && <span className="text-[11px] font-extrabold tracking-[0.08em] text-muted uppercase">{label}</span>}
+        {!!label && <span className="label text-[11px]">{label}</span>}
         <Rich text={de} className="leading-[22px] font-semibold" />
         {!!tr && <span className="text-sm leading-5 text-muted">{tr}</span>}
       </span>

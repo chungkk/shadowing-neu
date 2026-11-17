@@ -100,13 +100,13 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
         <div className="flex items-center gap-3">
           <Mascot animated className="size-14 shrink-0" />
           <div>
-            <p className="dialog-title">{exam ? "Thi thử cần tài khoản" : "Học tốt lắm! 🎉"}</p>
+            <p className="dialog-title">{exam ? "Thi thử cần tài khoản" : "Học tốt lắm!"}</p>
             <p className="text-sm text-muted">
               {exam ? "Đăng nhập để làm bài thi, xem điểm và lịch sử các lần thi." : `Bạn đã học thử ${quota.limit} ${unit} ${name} hôm nay.`}
             </p>
           </div>
         </div>
-        <p className="text-sm font-bold">Đăng ký miễn phí để học tiếp không giới hạn:</p>
+        <p className="text-sm font-semibold">Đăng ký miễn phí để học tiếp không giới hạn:</p>
         <ul className="flex flex-col gap-1.5 text-sm">
           <li className="flex items-start gap-2">
             <BarChart3 className="mt-0.5 size-4 shrink-0 text-accent-text" /> Lưu tiến độ, mở lại đúng chỗ trên mọi máy

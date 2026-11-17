@@ -22,9 +22,11 @@ async function Transcripts() {
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h1 className="page-title">Phụ đề đã lưu ({list.length} video)</h1>
-        <p className="text-sm leading-relaxed text-muted">
-        Phụ đề của các video YouTube người dùng đã mở, lưu lại để người sau mở cùng video có ngay. Sửa nếu phụ đề sai;
+        <h1 className="page-title">
+          Phụ đề đã lưu <span className="text-muted tabular-nums">{list.length}</span>
+        </h1>
+        <p className="max-w-[65ch] text-sm leading-relaxed text-muted">
+          Phụ đề của các video YouTube người dùng đã mở, lưu lại để người sau mở cùng video có ngay. Sửa nếu phụ đề sai;
           xoá để lần sau lấy lại từ YouTube / Whisper.
         </p>
       </div>

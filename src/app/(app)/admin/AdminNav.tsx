@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Captions, ListVideo, MessageSquare, Users } from "lucide-react";
+import { Captions, ListVideo, MessageSquare, ShieldCheck, Users } from "lucide-react";
 
 const TABS = [
   { href: "/admin", label: "Bài học", icon: ListVideo },
@@ -17,9 +17,12 @@ export default function AdminNav() {
   const current =
     TABS.slice(1).find((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))?.href ?? "/admin";
   return (
-    <nav aria-label="Quản trị" className="flex flex-col gap-1">
-      <span className="eyebrow">Quản trị</span>
-      <div className="tabs-line">
+    <nav aria-label="Quản trị" data-sec="ink" className="flex items-end gap-3">
+      {/* Mẩu nhãn mực đánh dấu khu quản trị — gọn, không trang trí (Operate mode) */}
+      <span className="mb-1.5 inline-flex shrink-0 items-center gap-1.5 rounded-md bg-sec px-2 py-1 text-xs font-semibold text-on-sec max-sm:hidden">
+        <ShieldCheck className="size-3.5" aria-hidden /> Quản trị
+      </span>
+      <div className="tabs-line min-w-0 flex-1">
         {TABS.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} className="tab" aria-current={href === current ? "page" : undefined}>
             <Icon className="size-4" aria-hidden />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
-import { BookmarkPlus, Clock, Flag, Maximize2, Minimize2, Pause, Play, Puzzle, RotateCcw, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { BookmarkPlus, Clock, Flag, Maximize2, Minimize2, PartyPopper, Pause, Play, Puzzle, RotateCcw, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { fullWord } from "@/lib/deck-study";
 import type { GameWord, Topic } from "@/lib/games/falling-words";
@@ -21,7 +21,7 @@ const STORE = "wordmatch"; // tiền tố khoá localStorage
 const PAINT_MS = 100; // đồng hồ chạy theo khung hình, giao diện vẽ lại thưa hơn (bấm thẻ thì vẽ ngay)
 
 const RoundBtn = ({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) => (
-  <button title={title} aria-label={title} onClick={onClick} className="g-round size-9">
+  <button title={title} aria-label={title} onClick={onClick} className="g-round">
     {children}
   </button>
 );
@@ -30,7 +30,7 @@ const RoundBtn = ({ title, onClick, children }: { title: string; onClick: () => 
 function SeenLine({ deck }: { deck: DeckOption }) {
   const [seen] = useLocalStorage<string[]>(`${STORE}-seen-${deck.slug}`, []);
   if (!seen.length) return null;
-  return <span className="text-xs font-bold text-muted">Đã gặp {Math.min(seen.length, deck.wordCount)}/{deck.wordCount} từ</span>;
+  return <span className="text-xs font-semibold text-muted">Đã gặp {Math.min(seen.length, deck.wordCount)}/{deck.wordCount} từ</span>;
 }
 
 export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; loggedIn: boolean }) {
@@ -205,6 +205,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
       title="Nối từ"
       subtitle="Bấm từ tiếng Đức và nghĩa của nó để xoá cặp thẻ"
       onBack={phase === "menu" || phase === "loading" ? undefined : quit}
+      cover={phase === "menu" || phase === "loading"}
       right={
         playing &&
         typeof document !== "undefined" &&
@@ -259,16 +260,18 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
         }`}
       >
         {/* HUD: đồng hồ · điểm · nút */}
-        <div className="flex items-center gap-2 text-white">
+        <div className="flex flex-wrap items-center gap-2">
           <Mascot animated className="pointer-events-none size-9 max-sm:hidden" />
-          <Clock className={`size-5 shrink-0 ${low ? "text-red-400" : "text-[var(--tone-text)]"}`} />
-          <span className="g-hud-bar h-2.5 max-w-sm min-w-8 flex-1">
-            <span className={low ? "bg-red" : ""} style={{ width: `${(v.left / v.limit) * 100}%` }} />
+          <span className="flex min-w-0 flex-1 basis-40 items-center gap-2">
+            <Clock className={`size-5 shrink-0 ${low ? "text-red-400" : "text-[var(--tone-text)]"}`} />
+            <span className="g-hud-bar h-2.5 max-w-sm min-w-8 flex-1">
+              <span className={low ? "bg-red" : ""} style={{ width: `${(v.left / v.limit) * 100}%` }} />
+            </span>
+            <b className={`w-9 shrink-0 text-sm tabular-nums ${low ? "text-red-400" : ""}`}>{Math.ceil(v.left)}s</b>
           </span>
-          <b className={`w-9 shrink-0 text-sm tabular-nums ${low ? "text-red-400" : ""}`}>{Math.ceil(v.left)}s</b>
           <span className="g-hud ml-auto shrink-0">
-            <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
-            {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
+            <Trophy className="size-4 text-gold" /> <span className="tabular-nums">{v.score}</span>
+            {v.combo >= 3 && <span className="text-xs text-gold">×{v.combo}</span>}
           </span>
           <RoundBtn title={sound ? "Tắt đọc từ khi nối đúng" : "Bật đọc từ khi nối đúng"} onClick={() => setSound(!sound)}>
             {sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
@@ -281,9 +284,9 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
           </RoundBtn>
         </div>
 
-        <p className="flex min-w-0 items-center gap-1.5 text-xs text-white/70">
+        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
           <Flag className="size-3.5 shrink-0 text-[var(--tone-text)]" />
-          <b className="shrink-0 text-white">
+          <b className="shrink-0 text-foreground">
             Mốc {v.milestone + 1}/{v.topics.length}
           </b>
           <span className="truncate">
@@ -313,7 +316,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                   {isWord ? "Aa" : "•••"}
                 </span>
                 {isWord ? fullWord(c.w) : c.w.meaning}
-                {c.points > 0 && <span className="absolute top-1 right-2 text-sm font-extrabold text-amber">+{c.points}</span>}
+                {c.points > 0 && <span className="absolute top-1 right-2 text-sm font-extrabold text-gold">+{c.points}</span>}
               </button>
             );
           })}
@@ -332,7 +335,7 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
               {phase === "pause" ? (
                 <>
                   <p className="font-display text-2xl font-extrabold">Tạm dừng</p>
-                  <button className="btn btn-amber btn-lg btn-block" onClick={() => setPhase("play")}>
+                  <button className="btn btn-primary btn-lg btn-block" onClick={() => setPhase("play")}>
                     <Play className="size-5" /> Tiếp tục
                   </button>
                   <button className="btn btn-lg btn-block" onClick={quit}>
@@ -341,7 +344,10 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                 </>
               ) : (
                 <>
-                  <p className="font-display text-2xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.left > 0 ? "Đã thoát ván" : "Hết giờ!"}</p>
+                  <p className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-[-0.02em]">
+                    {phase === "win" && <PartyPopper className="size-6 text-gold" />}
+                    {phase === "win" ? "Vượt hết các mốc!" : v.left > 0 ? "Đã thoát ván" : "Hết giờ!"}
+                  </p>
                   <p className="g-score">{v.score}</p>
                   {v.score > v.best ? (
                     <p className="badge badge-gold px-3 py-1 text-sm">
@@ -364,9 +370,9 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                   {!!missed.length && (
                     <div className="w-full text-left">
                       <p className="label mb-2">Từ bị nhầm</p>
-                      <ul className="card divide-y divide-border p-0">
+                      <ul className="divide-y divide-border border-y border-border">
                         {missed.map((w) => (
-                          <li key={w.key} className="flex items-baseline gap-2 px-3 py-2">
+                          <li key={w.key} className="flex items-baseline gap-2 px-1 py-2">
                             <button className="cursor-pointer font-bold hover:underline" onClick={() => speakGerman(fullWord(w))}>
                               {fullWord(w)}
                             </button>
@@ -392,11 +398,11 @@ export default function WordMatch({ decks, loggedIn }: { decks: DeckOption[]; lo
                       ) : null}
                     </div>
                   )}
-                  <div className="flex w-full gap-2">
+                  <div className="flex w-full flex-col-reverse gap-2 sm:flex-row">
                     <button className="btn btn-lg flex-1" onClick={quit}>
                       Đổi bộ từ
                     </button>
-                    <button className="btn btn-amber btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
+                    <button className="btn btn-primary btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
                       <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
                     </button>
                   </div>

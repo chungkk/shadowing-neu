@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ListVideo, Lock } from "lucide-react";
+import { Circle, CircleCheck, ListVideo, Lock, Plus } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { lessonUnlockStats, listLessons } from "@/lib/db";
 import { earnableFreePoints, lockSettings } from "@/lib/access";
@@ -20,14 +20,12 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
   const earnable = earnableFreePoints();
   const short = earnable < LESSON_PRICE; // bài miễn phí không kiếm đủ kim cương để mở 1 bài
   return (
-    <div className="card flex flex-wrap items-start gap-3">
-      <span className={`icon-bubble ${enabled ? "tint-accent" : "tint-muted"}`}>
-        <Lock className="size-5" aria-hidden />
-      </span>
+    <div className="surface flex flex-wrap items-start gap-3 p-4">
+      <Lock className={`mt-0.5 size-5 shrink-0 ${enabled ? "text-ok-text" : "text-muted"}`} aria-hidden />
       <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-        <p className="flex flex-wrap items-center gap-2 font-bold">
+        <p className="flex flex-wrap items-center gap-2 font-semibold">
           Khoá bài học:{" "}
-          {enabled ? <span className="badge badge-accent">đang bật</span> : <span className="badge badge-muted">đang tắt — mọi bài đều mở</span>}
+          {enabled ? <span className="badge badge-ok">đang bật</span> : <span className="badge badge-muted">đang tắt — mọi bài đều mở</span>}
         </p>
         <p className="text-xs leading-relaxed text-muted">
           Khách chỉ học {freeCount} bài “Miễn phí” (chọn ở từng bài bên dưới). Người đã đăng nhập chọn thêm {FREE_PICKS} bài, sau đó{" "}
@@ -66,9 +64,11 @@ async function Dashboard() {
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="page-title flex-1">Bài học ({lessons.length})</h1>
-        <Link href="/admin/new" className="btn btn-primary">
-          + Bài mới
+        <h1 className="page-title flex-1">
+          Bài học <span className="text-muted tabular-nums">{lessons.length}</span>
+        </h1>
+        <Link href="/admin/new" className="btn btn-primary max-sm:w-full">
+          <Plus className="size-4" /> Bài mới
         </Link>
       </div>
 
@@ -80,16 +80,16 @@ async function Dashboard() {
             {lessons.map((l) => (
               <li
                 key={l.id}
-                className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-card-2/50 sm:px-4"
+                className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-card-2/60 sm:px-4"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`https://i.ytimg.com/vi/${l.videoId}/default.jpg`}
                   alt=""
-                  className="h-12 w-20 shrink-0 rounded-xl bg-card-2 object-cover"
+                  className="h-12 w-20 shrink-0 rounded-lg bg-card-2 object-cover"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="truncate font-bold">{l.title}</div>
+                  <div className="truncate font-semibold">{l.title}</div>
                   <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                     <LevelBadge level={l.level} className="text-xs" />
                     <span className="badge badge-muted">{l.sentenceCount} câu</span>
@@ -102,9 +102,10 @@ async function Dashboard() {
                     <button
                       title={l.published ? "Bấm để chuyển về bản nháp" : "Bấm để đăng công khai"}
                       aria-pressed={l.published}
-                      className="chip hit-44 min-h-8 px-3 py-1 text-xs"
+                      className={`badge hit-44 min-h-7 cursor-pointer gap-1 px-2.5 transition-shadow hover:ring-1 hover:ring-current/40 ${l.published ? "badge-ok" : "badge-muted"}`}
                     >
-                      {l.published ? "● Đã đăng" : "○ Nháp"}
+                      {l.published ? <CircleCheck className="size-3.5" aria-hidden /> : <Circle className="size-3.5" aria-hidden />}
+                      {l.published ? "Đã đăng" : "Nháp"}
                     </button>
                   </form>
                   {/* Bài miễn phí (khoá bài học): khách cũng học được */}
@@ -112,9 +113,10 @@ async function Dashboard() {
                     <button
                       title={free.has(l.id) ? "Bấm để bỏ miễn phí" : "Bấm để cho khách học miễn phí bài này"}
                       aria-pressed={free.has(l.id)}
-                      className="chip hit-44 min-h-8 px-3 py-1 text-xs"
+                      className={`badge hit-44 min-h-7 cursor-pointer gap-1 px-2.5 transition-shadow hover:ring-1 hover:ring-current/40 ${free.has(l.id) ? "badge-gold" : "badge-muted"}`}
                     >
-                      {free.has(l.id) ? "● Miễn phí" : "○ Miễn phí"}
+                      {free.has(l.id) ? <CircleCheck className="size-3.5" aria-hidden /> : <Circle className="size-3.5" aria-hidden />}
+                      Miễn phí
                     </button>
                   </form>
                   <Link href={lessonPath(l.slug)} className="btn btn-ghost btn-sm">
@@ -130,12 +132,12 @@ async function Dashboard() {
           </ul>
         ) : (
           <div className="empty">
-            <span className="icon-bubble tint-accent">
+            <span className="icon-bubble tint-muted">
               <ListVideo className="size-5" aria-hidden />
             </span>
-            <p>Chưa có bài nào. Bấm “+ Bài mới”.</p>
-            <Link href="/admin/new" className="btn btn-soft btn-sm">
-              + Bài mới
+            <p>Chưa có bài học nào.</p>
+            <Link href="/admin/new" className="btn btn-sm">
+              <Plus className="size-4" /> Bài mới
             </Link>
           </div>
         )}

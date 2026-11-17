@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ArrowRight, Flag } from "lucide-react";
+import { ArrowRight, BarChart3, Flag } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
 import { classQuestionIds, isGrund, prefs } from "@/lib/laixe";
@@ -10,6 +10,8 @@ import { summarize } from "@/lib/quiz/types";
 import { ExamHistory } from "@/components/laixe/ExamHistory";
 import { ResetProgress } from "@/components/laixe/Settings";
 import { ListSkeleton } from "@/components/Skeleton";
+import Mascot from "@/components/Mascot";
+import { SubHeader } from "@/components/quiz/QuizParts";
 
 export const metadata: Metadata = { title: "Thống kê · Lý thuyết lái xe", robots: { index: false } };
 
@@ -22,7 +24,7 @@ function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: 
     <figure className="card flex h-full flex-col items-center gap-3">
       <div
         className="relative size-36 rounded-full"
-        style={{ background: `conic-gradient(var(--accent) 0 ${a}%, var(--red) ${a}% ${b}%, color-mix(in srgb, var(--line-strong) 40%, var(--card)) ${b}% 100%)` }}
+        style={{ background: `conic-gradient(var(--ok) 0 ${a}%, var(--red) ${a}% ${b}%, color-mix(in srgb, var(--line-strong) 40%, var(--card)) ${b}% 100%)` }}
         role="img"
         aria-label={`${title}: ${ok} đúng, ${wrong} sai, ${total - ok - wrong} chưa làm trên ${total} câu`}
       >
@@ -32,10 +34,10 @@ function Donut({ title, total, ok, wrong }: { title: string; total: number; ok: 
         </div>
       </div>
       <figcaption className="flex flex-col items-center gap-1 text-center">
-        <span className="font-extrabold">{title}</span>
+        <span className="font-bold">{title}</span>
         <span className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-bold tabular-nums">
-          <span className="flex items-center gap-1 text-accent-text">
-            <span className="size-2 rounded-full bg-accent" aria-hidden /> {ok} đúng
+          <span className="flex items-center gap-1 text-ok-text">
+            <span className="size-2 rounded-full bg-ok" aria-hidden /> {ok} đúng
           </span>
           <span className="flex items-center gap-1 text-red-400">
             <span className="size-2 rounded-full bg-red" aria-hidden /> {wrong} sai
@@ -100,12 +102,11 @@ async function Stats() {
           <ExamHistory exams={exams.slice(0, 10)} />
         ) : (
           <div className="card empty">
-            <span className="icon-bubble tint-accent size-12" aria-hidden>
-              <Flag className="size-6" />
-            </span>
-            <p>Chưa có bài thi nào.</p>
+            <Mascot className="size-20" />
+            <p className="text-base font-semibold text-foreground">Chưa có bài thi nào.</p>
+            <p className="-mt-2">Làm một đề thi thử để xem điểm và ôn lại câu sai ở đây.</p>
             <Link href="/lai-xe/thi-thu" className="btn btn-primary">
-              Thi thử ngay
+              <Flag className="size-4" /> Thi thử ngay
             </Link>
           </div>
         )}
@@ -126,13 +127,8 @@ async function Stats() {
 
 export default function Page() {
   return (
-    <main className="page">
-      <div className="flex items-center gap-2">
-        <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
-          <ArrowLeft className="size-5" />
-        </Link>
-        <h1 className="page-title">Thống kê</h1>
-      </div>
+    <main className="page" data-sec="laixe">
+      <SubHeader sec="laixe" back="/lai-xe" backLabel="Lái xe" icon={BarChart3} title="Thống kê" sub="Tiến độ từng phần và kết quả các lần thi thử." />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <Stats />
       </Suspense>

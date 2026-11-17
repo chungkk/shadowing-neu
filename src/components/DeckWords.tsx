@@ -11,7 +11,7 @@ import { LoginLink } from "./auth/LoginDialog";
 type Word = DeckWord & { saved: boolean; learned: boolean };
 
 /** Màu mạo từ theo giống — như app: der xanh dương · die đỏ · das xanh lá */
-const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
+const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-ok-text" };
 const article = (w: DeckWord) => (w.gender === "der" || w.gender === "die" || w.gender === "das" ? w.gender : "");
 
 // Bộ cả nghìn từ vẽ hết 1 lần thì trang rất nặng → hiện dần
@@ -65,15 +65,15 @@ export default function DeckWords({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         {!loggedIn ? (
-          <LoginLink href={`/login?next=/vocab/decks/${slug}`} className="btn btn-primary btn-lg">
+          <LoginLink href={`/login?next=/vocab/decks/${slug}`} className="btn btn-primary btn-lg max-sm:w-full">
             Đăng nhập để thêm vào sổ và ôn tập
           </LoginLink>
         ) : left.length ? (
-          <button className="btn btn-primary btn-lg" disabled={busy === "all"} onClick={() => add(left.map((w) => w.key), true)}>
+          <button className="btn btn-primary btn-lg max-sm:w-full" disabled={busy === "all"} onClick={() => add(left.map((w) => w.key), true)}>
             {busy === "all" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Thêm {left.length} từ vào sổ
           </button>
         ) : (
-          <Link href="/vocab/notebook" className="btn btn-primary btn-lg">
+          <Link href="/vocab/notebook" className="btn btn-primary btn-lg max-sm:w-full">
             <Layers className="size-4" /> Cả bộ đã ở trong sổ · Ôn tập
           </Link>
         )}
@@ -90,7 +90,7 @@ export default function DeckWords({
           const a = article(w);
           const adding = busy === "all" ? !w.saved : busy.has(w.key);
           return (
-            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-3 transition-colors hover:bg-card-2/50">
+            <li key={i} className="flex items-center gap-2 py-2.5 pr-2 pl-3 transition-colors hover:bg-card-2">
               <span className="icon-bubble size-11 rounded-ui">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {w.image && <img src={w.image} alt="" loading="lazy" className="size-8 object-contain" />}
@@ -116,7 +116,7 @@ export default function DeckWords({
                   type="button"
                   title={w.saved ? "Đã có trong sổ" : "Thêm vào sổ"}
                   disabled={w.saved || adding || busy === "all"}
-                  className={`btn-icon shrink-0 ${w.saved ? "tint-accent" : "text-foreground"}`}
+                  className={`btn-icon shrink-0 ${w.saved ? "tint-ok" : "text-foreground"}`}
                   onClick={() => add([w.key], false)}
                 >
                   {adding ? <Loader2 className="size-4 animate-spin" /> : w.saved ? <Check className="size-5" /> : <Plus className="size-5" />}
@@ -127,7 +127,7 @@ export default function DeckWords({
         })}
       </ul>
       {words.length > limit && (
-        <button className="btn self-center" onClick={() => setLimit((n) => n + PAGE * 3)}>
+        <button className="btn self-center max-sm:w-full" onClick={() => setLimit((n) => n + PAGE * 3)}>
           Xem thêm ({words.length - limit} từ)
         </button>
       )}

@@ -33,12 +33,12 @@ export default function TranscriptList({ videos }: { videos: SavedVideo[] }) {
       </label>
       <div className="card overflow-hidden p-0">
         <ul className="divide-y divide-line">
-        {shown.map((v) => (
-          <li key={v.videoId} className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-card-2/50 sm:px-4">
+          {shown.map((v) => (
+          <li key={v.videoId} className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-card-2/60 sm:px-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`https://i.ytimg.com/vi/${v.videoId}/default.jpg`} alt="" className="h-12 w-20 shrink-0 rounded-xl bg-card-2 object-cover" />
+            <img src={`https://i.ytimg.com/vi/${v.videoId}/default.jpg`} alt="" className="h-12 w-20 shrink-0 rounded-lg bg-card-2 object-cover" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <div className="truncate font-bold">{v.title}</div>
+              <div className="truncate font-semibold">{v.title}</div>
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                 {v.tracks.map((t) => (
                   <span key={t.label} className="badge badge-muted">

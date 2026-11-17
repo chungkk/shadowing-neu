@@ -5,7 +5,7 @@
   /* ───── Chính tả ───── */
   /* Bong bóng thoại của linh vật (đuôi ::before nằm ở globals.css) */
   .dict-bubble {
-    border: 2px solid var(--ink);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     background-color: var(--card);
   }
@@ -27,11 +27,11 @@
     border-color: var(--line-strong);
     color: var(--foreground);
   }
+  /* Đúng = token ok (xanh lá), không dùng accent (xanh lam = hành động) */
   .dict-box[data-state="correct"] {
-    border: 2px solid color-mix(in srgb, var(--accent) 55%, var(--ink));
-    background-color: var(--accent-soft);
-    color: color-mix(in srgb, var(--accent-text) 85%, var(--foreground));
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, var(--ink));
+    border: 2px solid color-mix(in srgb, var(--ok) 45%, var(--card));
+    background-color: var(--ok-soft);
+    color: var(--ok-text);
   }
   .dict-box[data-state="close"] {
     border: 2px solid var(--gold);
@@ -57,19 +57,18 @@
     background-color: var(--card-2);
     color: var(--foreground);
   }
-  /* Ô đang gõ: viền teal, nhấc nhẹ */
+  /* Ô đang gõ: viền xanh + vòng focus mềm (không bóng cứng) */
   .dict-box[data-active] {
-    translate: 0 -2px;
     border-style: solid;
-    border-color: var(--link);
+    border-color: var(--accent);
     background-color: var(--card);
-    box-shadow: 0 3px 0 var(--link);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
   }
   /* Câu xong: bấm từ để tra nghĩa */
   @media (hover: hover) {
     .dict-box[data-tap]:hover {
       translate: 0 -2px;
-      box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, var(--ink));
+      box-shadow: var(--shadow-sm);
     }
   }
   .dict-box[data-tap]:focus-visible {
@@ -80,7 +79,7 @@
   /* Nút mắt nhỏ trên ô (xem từ, bị trừ điểm) — vùng bấm rộng hơn hình */
   .dict-eye {
     @apply flex size-5 cursor-pointer items-center justify-center rounded-full text-foreground;
-    border: 2px solid var(--ink);
+    border: 1.5px solid var(--line-strong);
     background-color: var(--card);
     transition:
       background-color var(--dur-fast),
@@ -100,9 +99,8 @@
 
   /* Điện thoại đang gõ: hàng nút ghim ngay trên bàn phím */
   .dict-dock {
-    border-top: 1.5px solid var(--line);
+    border-top: 1px solid var(--line);
     background-color: var(--card);
-    box-shadow: 0 -6px 18px rgb(var(--shadow-color) / 0.08);
   }
 
   /* ───── Bảng tra từ (WordPopup) ───── */
@@ -133,8 +131,8 @@
   .word-sense {
     @apply flex flex-col gap-1 p-3;
     border-radius: var(--radius);
-    border: 1.5px solid var(--line);
-    background-color: color-mix(in srgb, var(--card-2) 45%, var(--card));
+    border: 1px solid var(--line);
+    background-color: var(--card);
     transition: border-color var(--dur-fast);
   }
   .word-sense[data-current] {

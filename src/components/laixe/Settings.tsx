@@ -46,17 +46,17 @@ export function DrivingSettings({ groups, current }: { groups: { title: string; 
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <div>
           <h2 className="section-title flex items-center gap-2">
-            <Car className="size-5 text-link" /> Lý thuyết lái xe
+            <Car className="size-5 text-amber" /> Lý thuyết lái xe
           </h2>
           <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học. Bản dịch câu hỏi là tiếng Việt.</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="icon-bubble tint-accent h-12 min-w-12 px-2 font-display text-xl font-extrabold" aria-hidden>
+          <span className="icon-bubble tint-gold h-12 min-w-12 px-2 font-display text-xl font-extrabold" aria-hidden>
             {current}
           </span>
           {info && (
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="font-extrabold">
+              <span className="font-bold">
                 Hạng {info.name} · {info.vi}
               </span>
               <span className="text-sm text-muted">
@@ -84,9 +84,9 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
   const [pending, start] = useTransition();
   const [choosing, setChoosing] = useState<string | null>(null);
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       {groups.map((g) => (
-        <section key={g.title} className="flex flex-col gap-2">
+        <section key={g.title} className="flex flex-col gap-3">
           <h2 className="section-title">{g.title}</h2>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {g.classes.map((c) => {
@@ -104,11 +104,11 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
                         router.push("/lai-xe");
                       });
                     }}
-                    className={`tile card-link flex h-full w-full cursor-pointer items-start gap-3 text-left disabled:cursor-wait ${on ? "border-accent bg-accent-soft" : ""}`}
+                    className={`tile card-link flex h-full min-h-[5.5rem] w-full cursor-pointer items-start gap-3 text-left disabled:cursor-wait ${on ? "border-sec bg-sec-soft shadow-[inset_0_0_0_1px_var(--sec)]" : ""}`}
                   >
-                    <span className={`icon-bubble h-11 min-w-11 px-1.5 font-display text-lg font-extrabold ${on ? "bg-accent text-white" : "tint-muted"}`}>{c.id}</span>
+                    <span className={`icon-bubble h-11 min-w-11 px-1.5 font-display text-lg font-extrabold ${on ? "bg-sec text-on-sec" : "tint-muted"}`}>{c.id}</span>
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="font-extrabold">
+                      <span className="font-bold">
                         {c.vi} <span className="text-sm font-bold text-muted">· {c.name}</span>
                       </span>
                       <span className="text-sm text-muted">{c.description}</span>
@@ -116,7 +116,11 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
                         {c.count.toLocaleString("vi-VN")} câu · thi {c.exam}
                       </span>
                     </span>
-                    {on && <Check className="size-5 shrink-0 text-accent-text" aria-label="Đang học" />}
+                    {on && (
+                      <span className="badge badge-gold shrink-0">
+                        <Check className="size-3.5" aria-hidden /> Đang học
+                      </span>
+                    )}
                     {pending && choosing === c.id && <span className="badge badge-muted shrink-0">Đang đổi…</span>}
                   </button>
                 </li>

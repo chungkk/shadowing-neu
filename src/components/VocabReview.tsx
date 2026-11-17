@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Clock, Delete, Flame, Lightbulb, RotateCcw, Snail, Target, Volume2, VolumeX, X } from "lucide-react";
+import { Check, Clock, Delete, Dumbbell, Flame, Lightbulb, PartyPopper, RotateCcw, Snail, Target, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { gradeWord } from "@/app/(app)/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clientApi } from "@/lib/client-api";
@@ -81,14 +81,17 @@ const PROMPT_SENTENCE: Partial<Record<Kind, string>> = {
 
 const PRAISE = ["Tuyệt vời!", "Chính xác!", "Giỏi lắm!", "Xuất sắc!", "Quá chuẩn!"];
 
-/** Ô / nút kiểu "nổi" có viền dưới dày */
+/** Màu mức nhớ: "Thuộc lâu" = đã thuộc → ok (accent giờ là xanh lam của hành động) */
+const stageColor = (stage: number) => (stage >= 5 ? "text-ok-text" : stageInfo(stage).color);
+
+/** Ô / nút đáp án: phẳng, viền 1.5px, bấm = thu nhỏ nhẹ (không gờ dưới) */
 const tile =
-  "cursor-pointer rounded-ui border-2 border-b-4 font-bold transition-[transform,background-color,border-color,color] duration-150 active:translate-y-0.5 active:border-b-2 disabled:cursor-default disabled:active:translate-y-0 disabled:active:border-b-4 motion-reduce:transition-none motion-reduce:active:translate-y-0";
+  "cursor-pointer rounded-ui border-[1.5px] font-bold transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] disabled:cursor-default disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100";
 const tone = (state: "idle" | "sel" | "right" | "wrong" | "dim") =>
   ({
-    idle: "border-ink bg-card hover:bg-card-2",
+    idle: "border-[color-mix(in_srgb,var(--line-strong)_40%,var(--card))] bg-card hover:border-line-strong hover:bg-card-2",
     sel: "border-link bg-link-soft text-link",
-    right: "border-accent bg-accent-soft text-accent-text",
+    right: "border-ok bg-ok-soft text-ok-text",
     wrong: "border-red bg-red-soft text-red-400",
     dim: "border-line bg-card-2 opacity-40",
   })[state];
@@ -474,7 +477,7 @@ export default function VocabReview({
                     }}
                     disabled={!!feedback}
                   >
-                    <span className="hidden size-7 shrink-0 items-center justify-center rounded-lg border-2 border-current text-xs opacity-60 sm:inline-flex">
+                    <span className="hidden size-7 shrink-0 items-center justify-center rounded-lg border border-current text-xs opacity-60 sm:inline-flex">
                       {i + 1}
                     </span>
                     <span className="wrap-anywhere">{opt}</span>
@@ -498,7 +501,7 @@ export default function VocabReview({
             )}
             {/* Hàng chữ đã xếp */}
             <div
-              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-line-strong"}`}
+              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-ok" : "border-red") : "border-line-strong"}`}
             >
               {built.map((i) => (
                 <button
@@ -550,7 +553,7 @@ export default function VocabReview({
             </p>
             <input
               ref={inputRef}
-              className={`input h-14 text-center text-xl font-bold ${feedback ? (feedback.ok ? "border-accent text-accent-text" : "border-red text-red-400 line-through") : ""}`}
+              className={`input h-14 text-center text-xl font-bold ${feedback ? (feedback.ok ? "border-ok text-ok-text" : "border-red text-red-400 line-through") : ""}`}
               placeholder="Gõ bằng tiếng Đức…"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
@@ -632,7 +635,7 @@ export default function VocabReview({
             {kind === "order" ? <p className="text-center text-xl font-extrabold text-amber wrap-anywhere">{v.meaning}</p> : <ListenButtons word={spoken(v.word)} />}
             {/* Hàng từ đã xếp */}
             <div
-              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-accent" : "border-red") : "border-line-strong"}`}
+              className={`flex min-h-18 flex-wrap items-center justify-center gap-1.5 border-b-2 pb-3 ${feedback ? (feedback.ok ? "border-ok" : "border-red") : "border-line-strong"}`}
             >
               {built.map((i) => (
                 <button
@@ -696,13 +699,13 @@ export default function VocabReview({
     if (feedback) {
       const ok = feedback.ok;
       return (
-        <div role="status" className={`border-t-2 ${ok ? "border-accent/30 bg-accent-soft" : "border-red/30 bg-red-soft"}`}>
+        <div role="status" className={`border-t ${ok ? "border-ok/30 bg-ok-soft" : "border-red/30 bg-red-soft"}`}>
           <div className="pb-safe mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:p-6">
-            <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card shadow-soft sm:flex ${ok ? "text-accent-text" : "text-red-400"}`}>
+            <div className={`hidden size-14 shrink-0 items-center justify-center rounded-full bg-card sm:flex ${ok ? "text-ok-text" : "text-red-400"}`}>
               {ok ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className={`font-display text-xl font-extrabold ${ok ? "text-accent-text" : "text-red-400"}`}>
+              <p className={`font-display text-xl font-bold ${ok ? "text-ok-text" : "text-red-400"}`}>
                 {ok ? (feedback.note ?? PRAISE[step.id % PRAISE.length]) : "Đáp án đúng:"}
               </p>
               {feedback.combo >= 3 && feedback.combo % 3 === 0 && (
@@ -712,7 +715,7 @@ export default function VocabReview({
               )}
               {kind !== "match" && (
                 <div className="mt-1 flex items-center gap-1">
-                  <p className={`font-bold wrap-anywhere ${ok ? "text-accent-text" : "text-red-400"}`}>
+                  <p className={`font-bold wrap-anywhere ${ok ? "text-ok-text" : "text-red-400"}`}>
                     {v.word}
                     {v.meaning && <span className="font-normal opacity-80"> — {v.meaning}</span>}
                   </p>
@@ -775,7 +778,7 @@ export default function VocabReview({
 
   const stats = [
     { icon: Check, label: "Đã ôn", value: `${graded.length} từ`, color: "tint-gold" },
-    { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "tint-accent" },
+    { icon: Target, label: "Chính xác", value: graded.length ? `${Math.round((firstTry / graded.length) * 100)}%` : "—", color: "tint-ok" },
     { icon: Clock, label: "Thời gian", value: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, color: "tint-link" },
   ];
 
@@ -786,15 +789,13 @@ export default function VocabReview({
         <button title="Thoát (Esc)" className="btn-icon size-9 shrink-0 text-muted" onClick={() => onClose(changed)}>
           <X className="size-6" />
         </button>
-        <div className="progress h-4 flex-1">
+        <div className="progress h-3 flex-1" data-sec="de">
           <div
-            className="progress-bar relative"
+            className="progress-bar"
             style={{ width: `${queue.length ? (Math.min(pos + (feedback ? 1 : 0), queue.length) / queue.length) * 100 : 100}%` }}
-          >
-            <div className="absolute inset-x-2 top-1 h-1 rounded-full bg-white/30" />
-          </div>
+          />
         </div>
-        <span className={`flex w-12 shrink-0 items-center gap-0.5 font-extrabold ${combo >= 3 ? "text-amber" : "text-muted"}`} title="Số câu đúng liên tiếp">
+        <span className={`flex w-12 shrink-0 items-center gap-0.5 font-bold tabular-nums ${combo >= 3 ? "text-amber" : "text-muted"}`} title="Số câu đúng liên tiếp">
           <Flame className="size-5" /> {combo}
         </span>
         <button title={sound ? "Tắt âm thanh" : "Bật âm thanh"} className="btn-icon size-9 shrink-0" onClick={() => setSound(!sound)}>
@@ -804,21 +805,21 @@ export default function VocabReview({
 
       {!items.length ? (
         <div className="empty flex-1 justify-center gap-4 p-6">
-          <span className="icon-bubble tint-accent size-24 rounded-sheet text-5xl" aria-hidden>
-            🎉
+          <span className="icon-bubble tint-ok size-20 rounded-sheet" aria-hidden>
+            <PartyPopper className="size-10" strokeWidth={2} />
           </span>
-          <p className="font-display text-xl font-extrabold text-foreground">Không có từ nào cần ôn lúc này</p>
-          <button className="btn btn-primary btn-lg" onClick={() => onClose(false)}>
+          <p className="font-display text-xl font-bold text-foreground">Không có từ nào cần ôn lúc này</p>
+          <button className="btn btn-primary btn-lg max-sm:w-full" onClick={() => onClose(false)}>
             Quay lại
           </button>
         </div>
       ) : done ? (
         <div className="pb-safe flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 pt-6 text-center sm:p-6">
-          <span className="icon-bubble tint-gold rise-in size-24 rounded-sheet text-6xl" aria-hidden>
-            {wrong.length ? "💪" : "🏆"}
+          <span className="icon-bubble tint-gold rise-in size-20 rounded-sheet" aria-hidden>
+            {wrong.length ? <Dumbbell className="size-10" strokeWidth={2} /> : <Trophy className="size-10" strokeWidth={2} />}
           </span>
           <div>
-            <p className="display text-amber">{practice ? "Luyện xong!" : "Hoàn thành bài ôn!"}</p>
+            <p className="display">{practice ? "Luyện xong!" : "Hoàn thành bài ôn!"}</p>
             {!practice && streak.count > 0 && (
               <p className="mt-1 flex items-center justify-center gap-1 font-bold text-amber">
                 <Flame className="size-5" /> {streak.count} ngày ôn liên tiếp
@@ -827,7 +828,7 @@ export default function VocabReview({
           </div>
           <div className="grid w-full max-w-md grid-cols-3 gap-3">
             {stats.map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className="tile stat items-center gap-2 py-4">
+              <div key={label} className="tile stat items-center gap-2 px-2 py-4">
                 <span className={`icon-bubble size-9 ${color}`}>
                   <Icon className="size-5" />
                 </span>
@@ -847,7 +848,7 @@ export default function VocabReview({
           )}
           {wrong.length > 0 && (
             <div className="card flex w-full max-w-md flex-col gap-2 text-left">
-              <p className="flex items-center gap-2 font-display font-extrabold text-red-400">
+              <p className="flex items-center gap-2 font-display font-bold text-red-400">
                 <span className="icon-bubble tint-red size-8">
                   <Target className="size-4" />
                 </span>
@@ -858,13 +859,13 @@ export default function VocabReview({
                   <p className="min-w-0 flex-1 wrap-anywhere">
                     <b>{g.item.word}</b> <span className="text-muted">— {g.item.meaning || "chưa ghi nghĩa"}</span>
                   </p>
-                  {g.stage != null && <span className={`text-xs font-bold ${stageInfo(g.stage).color}`}>{stageInfo(g.stage).label}</span>}
+                  {g.stage != null && <span className={`text-xs font-bold ${stageColor(g.stage)}`}>{stageInfo(g.stage).label}</span>}
                   <SpeakButton text={spoken(g.item.word)} tts={tts} />
                 </div>
               ))}
             </div>
           )}
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-3 max-sm:w-full max-sm:flex-col-reverse">
             {wrong.length > 0 && (
               <button className="btn btn-lg" onClick={() => restart(shuffle(wrong.map((g) => ({ ...g.item, stage: g.stage ?? 1 }))))}>
                 <RotateCcw className="size-4" /> Luyện thêm từ sai
@@ -880,10 +881,10 @@ export default function VocabReview({
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-5 px-4 py-3 sm:gap-6 sm:py-8">
               <div className="flex items-center gap-2">
-                <h2 className="flex-1 font-display text-xl font-extrabold sm:text-2xl">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
+                <h2 className="flex-1 font-display text-xl font-bold tracking-[-0.02em] sm:text-2xl">{(sentence && PROMPT_SENTENCE[kind ?? "flash"]) || PROMPT[kind ?? "flash"]}</h2>
                 {step.role === "retry" && <span className="badge badge-red">Hỏi lại</span>}
                 {step.role === "graded" && kind !== "intro" && (
-                  <span className={`text-xs font-bold ${stageInfo(v.stage).color}`}>{stageInfo(v.stage).label}</span>
+                  <span className={`text-xs font-bold ${stageColor(v.stage)}`}>{stageInfo(v.stage).label}</span>
                 )}
               </div>
               <div className="flex flex-1 flex-col justify-center pb-4 sm:pb-6">{renderExercise()}</div>

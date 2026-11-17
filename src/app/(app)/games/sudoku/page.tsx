@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/page-meta";
 import { PlayLobbyPage } from "@/components/games/PlayPage";
-import { VocabSkeleton } from "@/components/Skeleton";
+import { GameSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = pageMeta({
   title: "Chơi Sudoku online miễn phí – Giải đề hoặc đua với bạn bè",
@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMeta({
 export default function SudokuRoute() {
   return (
     <main className="page">
-      <Suspense fallback={<VocabSkeleton />}>
+      <Suspense fallback={<GameSkeleton />}>
         <PlayLobbyPage game="sudoku" />
       </Suspense>
     </main>

@@ -2,13 +2,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft, BarChart3, Info, LogIn, Star } from "lucide-react";
 import { LoginLink } from "../auth/LoginDialog";
+import Mascot from "../Mascot";
 
 /**
  * Khung trang chung của phần Leben in Deutschland — cùng kiểu với tab Lái xe:
  * khung .page (max-w-6xl, thẳng hàng thanh subnav) cho mọi tab để chuyển tab không nhảy khung.
  */
 export function LidShell({ children }: { children: ReactNode }) {
-  return <main className="page">{children}</main>;
+  return (
+    <main className="page" data-sec="lid">
+      {children}
+    </main>
+  );
 }
 
 /** Thanh đầu màn con như Lái xe: [←] Tiêu đề  [nút phải] */
@@ -33,20 +38,22 @@ export function Wappen({ code, className = "h-10 w-8" }: { code: string; classNa
 /** Khách mở trang làm bài thi: mời đăng nhập ngay (không phát đề, không chạy đồng hồ) */
 export function ExamLoginGate({ next }: { next: string }) {
   return (
-    <section className="card flex flex-col gap-4 sm:p-6">
-      <LidTopBar back={next} title="Thi thử cần tài khoản" />
-      <p className="lead">Đăng ký miễn phí để làm bài thi thử 33 câu như thật, xem điểm và ôn lại câu sai sau mỗi lần thi.</p>
-      <ul className="surface flex flex-col gap-2.5 text-sm font-semibold">
-        <li className="flex items-center gap-3">
-          <span className="icon-bubble tint-gold size-8 shrink-0" aria-hidden>
-            <BarChart3 className="size-4" />
-          </span>
+    <section className="card flex flex-col gap-5 sm:p-8">
+      <Link href={next} className="btn btn-ghost btn-sm hit-44 -ml-2 self-start text-muted hover:text-foreground">
+        <ArrowLeft className="size-4" /> Thi thử
+      </Link>
+      <div className="flex items-center gap-4">
+        <Mascot className="size-20 sm:size-24" />
+        <h1 className="page-title">Thi thử cần tài khoản</h1>
+      </div>
+      <p className="lead max-w-[52ch]">Đăng ký miễn phí để làm bài thi thử 33 câu như thật, xem điểm và ôn lại câu sai sau mỗi lần thi.</p>
+      <ul className="flex flex-col text-[0.95rem] font-medium">
+        <li className="flex items-center gap-3 border-b border-line py-3 dark:border-border">
+          <BarChart3 className="size-5 shrink-0 text-sec-text" aria-hidden />
           Lưu lịch sử các lần thi và tiến độ học
         </li>
-        <li className="flex items-center gap-3">
-          <span className="icon-bubble tint-gold size-8 shrink-0" aria-hidden>
-            <Star className="size-4" />
-          </span>
+        <li className="flex items-center gap-3 py-3">
+          <Star className="size-5 shrink-0 text-sec-text" aria-hidden />
           Tự đánh dấu câu làm sai để ôn lại
         </li>
       </ul>

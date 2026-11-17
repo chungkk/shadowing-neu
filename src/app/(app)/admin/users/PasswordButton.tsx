@@ -72,7 +72,7 @@ export default function PasswordButton({ userId, email }: { userId: number; emai
               <Dices className="size-4" />
             </button>
             <button type="button" className="btn" title="Sao chép" aria-label="Sao chép" onClick={copy} disabled={!password}>
-              {copied ? <Check className="size-4 text-accent-text" /> : <Copy className="size-4" />}
+              {copied ? <Check className="size-4 text-ok-text" /> : <Copy className="size-4" />}
             </button>
             <button className="btn btn-primary" disabled={pending || password.length < 8}>
               {pending ? "Đang lưu…" : "Lưu"}

@@ -57,7 +57,7 @@ export default function UnlockDialog({
 
   return (
     <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="unlock-title" className="dialog outline-none">
+      <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="unlock-title" data-sec="de" className="dialog outline-none">
         <div className="dialog-head">
           <h2 id="unlock-title" className="dialog-title line-clamp-2">
             {lesson.title}
@@ -73,7 +73,7 @@ export default function UnlockDialog({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-55 saturate-50" />
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-14 items-center justify-center rounded-full bg-card text-foreground shadow-[var(--shadow-md)]">
+            <span className="flex size-14 items-center justify-center rounded-full border border-line bg-card text-foreground">
               <Lock className="size-7" />
             </span>
           </span>

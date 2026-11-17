@@ -59,14 +59,14 @@ export function PausedCover({ v, send, children }: { v: View; send: Send; childr
   const mine = v.pause.byId === v.meId;
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] bg-card/90 p-4 text-center backdrop-blur-md sheet-fade">
-      <span className="icon-bubble tint-gold size-14 rounded-full">
+      <span className="icon-bubble tint-grape size-14 rounded-full">
         <Pause className="size-6 fill-current" />
       </span>
-      <p className="font-display text-2xl font-extrabold">{mine ? "Bạn đang tạm dừng" : `${v.pause.byName} đang tạm dừng`}</p>
+      <p className="font-display text-2xl font-extrabold tracking-[-0.02em]">{mine ? "Bạn đang tạm dừng" : `${v.pause.byName} đang tạm dừng`}</p>
       <p className="badge badge-muted text-sm tabular-nums">Tự chạy tiếp sau {clock(left)}</p>
       {children}
       {mine && (
-        <button className="btn btn-amber btn-lg" onClick={() => send({ action: "pause", paused: false })}>
+        <button className="btn btn-primary btn-lg" onClick={() => send({ action: "pause", paused: false })}>
           <Play className="size-4 fill-current" /> Chạy tiếp
         </button>
       )}
@@ -99,10 +99,10 @@ export function MascotSay({ mood = "happy", children, className = "" }: { mood?:
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="relative shrink-0">
         <span key={mood} className={`block mascot-${mood}`}>
-          <Mascot animated={mood !== "sleep" && mood !== "sad"} className="size-14 drop-shadow-sm md:size-16" />
+          <Mascot animated={mood !== "sleep" && mood !== "sad"} className="size-14 md:size-16" />
         </span>
         {mood === "sleep" && (
-          <span aria-hidden className="mascot-zzz absolute -top-1 right-0 text-sm font-black text-muted">
+          <span aria-hidden className="mascot-zzz absolute -top-1 right-0 text-sm font-extrabold text-muted">
             z<span className="text-xs">z</span>
           </span>
         )}

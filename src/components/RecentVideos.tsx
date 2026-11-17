@@ -16,7 +16,7 @@ export function RecentVideos() {
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader title="Video bạn đã mở gần đây" count={recent.length} />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4" data-sec="de">
         {recent.map((r) => (
           <Link
             key={r.videoId}
@@ -25,7 +25,7 @@ export function RecentVideos() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`} alt="" className="m-1.5 mb-0 aspect-video w-[calc(100%-0.75rem)] rounded-[calc(var(--radius-lg)-6px)] bg-card-2 object-cover" />
-            <div className="line-clamp-2 p-3 text-sm leading-snug font-bold group-hover:text-accent-text">{r.title}</div>
+            <div className="line-clamp-2 p-3 text-sm leading-snug font-bold transition-colors group-hover:text-accent-text">{r.title}</div>
           </Link>
         ))}
       </div>

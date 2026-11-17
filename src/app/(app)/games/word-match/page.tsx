@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/page-meta";
 import WordMatchPage from "@/components/games/WordMatchPage";
-import { VocabSkeleton } from "@/components/Skeleton";
+import { GameSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = pageMeta({
   title: "Nối từ – Game ghép từ vựng tiếng Đức với nghĩa tiếng Việt",
@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMeta({
 export default function WordMatchRoute() {
   return (
     <main className="page">
-      <Suspense fallback={<VocabSkeleton />}>
+      <Suspense fallback={<GameSkeleton />}>
         <WordMatchPage />
       </Suspense>
     </main>

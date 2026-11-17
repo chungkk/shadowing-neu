@@ -2,8 +2,14 @@
 
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Mail, Sparkles, X } from "lucide-react";
-import { checkEmail, login, register, requestSignupCode, type AuthState } from "@/app/(app)/auth-actions";
+import { ArrowLeft, Mail, X } from "lucide-react";
+import {
+  checkEmail,
+  login,
+  register,
+  requestSignupCode,
+  type AuthState,
+} from "@/app/(app)/auth-actions";
 import SocialLogin from "./SocialLogin";
 import Mascot from "../Mascot";
 
@@ -15,12 +21,22 @@ const ErrorBox = ({ children }: { children?: string }) =>
   ) : null;
 
 /** Email đã nhập ở bước đầu + nút "Đổi" để quay lại sửa */
-function EmailRow({ email, onChange }: { email: string; onChange: () => void }) {
+function EmailRow({
+  email,
+  onChange,
+}: {
+  email: string;
+  onChange: () => void;
+}) {
   return (
     <p className="auth-email">
       <Mail className="size-4 shrink-0 text-muted" aria-hidden />
-      <span className="min-w-0 flex-1 truncate font-bold">{email}</span>
-      <button type="button" className="btn btn-ghost btn-sm shrink-0 text-link" onClick={onChange}>
+      <span className="min-w-0 flex-1 truncate font-semibold">{email}</span>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm shrink-0 text-link"
+        onClick={onChange}
+      >
         Đổi
       </button>
     </p>
@@ -28,7 +44,15 @@ function EmailRow({ email, onChange }: { email: string; onChange: () => void }) 
 }
 
 /** Bước đầu: nhập email → server cho biết đã có tài khoản chưa */
-function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: string) => void; onFound: (exists: boolean) => void }) {
+function EmailStep({
+  email,
+  setEmail,
+  onFound,
+}: {
+  email: string;
+  setEmail: (v: string) => void;
+  onFound: (exists: boolean) => void;
+}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -37,7 +61,9 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
         e.preventDefault();
         setPending(true);
         setError("");
-        const res = await checkEmail(email).catch(() => ({ error: "Không kết nối được, thử lại." }));
+        const res = await checkEmail(email).catch(() => ({
+          error: "Không kết nối được, thử lại.",
+        }));
         setPending(false);
         if ("error" in res) return setError(res.error);
         onFound(res.exists);
@@ -46,7 +72,8 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
     >
       <input
         type="email"
-        placeholder="Nhập email của bạn" aria-label="Nhập email của bạn"
+        placeholder="Nhập email của bạn"
+        aria-label="Nhập email của bạn"
         className="input"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
@@ -55,7 +82,10 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
         required
       />
       <ErrorBox>{error}</ErrorBox>
-      <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending}>
+      <button
+        className="btn btn-primary btn-lg btn-block mt-1"
+        disabled={pending}
+      >
         {pending ? "Đang kiểm tra…" : "Tiếp tục với email"}
       </button>
     </form>
@@ -63,8 +93,21 @@ function EmailStep({ email, setEmail, onFound }: { email: string; setEmail: (v: 
 }
 
 /** Email đã có tài khoản → nhập mật khẩu */
-function LoginForm({ email, next, close, back }: { email: string; next: string; close?: () => void; back: () => void }) {
-  const [state, action, pending] = useActionState<AuthState, FormData>(login, {});
+function LoginForm({
+  email,
+  next,
+  close,
+  back,
+}: {
+  email: string;
+  next: string;
+  close?: () => void;
+  back: () => void;
+}) {
+  const [state, action, pending] = useActionState<AuthState, FormData>(
+    login,
+    {},
+  );
   useEffect(() => {
     if (state.ok) close?.();
   }, [state.ok, close]);
@@ -74,14 +117,36 @@ function LoginForm({ email, next, close, back }: { email: string; next: string; 
       <input type="hidden" name="next" value={next} />
       {close && <input type="hidden" name="stay" value="1" />}
       {/* Ô email ẩn (không phải type=hidden) để trình quản lý mật khẩu biết lưu cho tài khoản nào */}
-      <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
+      <input
+        name="email"
+        value={email}
+        readOnly
+        autoComplete="username"
+        className="hidden"
+      />
       <EmailRow email={email} onChange={back} />
-      <input name="password" type="password" placeholder="Mật khẩu" aria-label="Mật khẩu" className="input" autoComplete="current-password" autoFocus required />
-      <Link href="/forgot-password" onClick={close} className="-mt-1 self-end rounded-lg px-1 text-sm font-bold text-link hover:underline">
+      <input
+        name="password"
+        type="password"
+        placeholder="Mật khẩu"
+        aria-label="Mật khẩu"
+        className="input"
+        autoComplete="current-password"
+        autoFocus
+        required
+      />
+      <Link
+        href="/forgot-password"
+        onClick={close}
+        className="-my-1.5 inline-flex min-h-11 items-center self-end rounded-lg px-1 text-sm font-semibold text-link hover:underline"
+      >
         Quên mật khẩu?
       </Link>
       <ErrorBox>{state.error}</ErrorBox>
-      <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending}>
+      <button
+        className="btn btn-primary btn-lg btn-block mt-1"
+        disabled={pending}
+      >
         {pending ? "Đang xử lý…" : "Đăng nhập"}
       </button>
     </form>
@@ -89,8 +154,21 @@ function LoginForm({ email, next, close, back }: { email: string; next: string; 
 }
 
 /** Email chưa có tài khoản → điền tên + mật khẩu → nhận mã 6 số qua email → nhập mã để tạo tài khoản */
-function RegisterForm({ email, next, close, back }: { email: string; next: string; close?: () => void; back: () => void }) {
-  const [state, action, pending] = useActionState<AuthState, FormData>(register, {});
+function RegisterForm({
+  email,
+  next,
+  close,
+  back,
+}: {
+  email: string;
+  next: string;
+  close?: () => void;
+  back: () => void;
+}) {
+  const [state, action, pending] = useActionState<AuthState, FormData>(
+    register,
+    {},
+  );
   useEffect(() => {
     if (state.ok) close?.();
   }, [state.ok, close]);
@@ -130,12 +208,28 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
         }}
         className="flex flex-col gap-3"
       >
-        <input name="email" value={email} readOnly autoComplete="username" className="hidden" />
+        <input
+          name="email"
+          value={email}
+          readOnly
+          autoComplete="username"
+          className="hidden"
+        />
         <EmailRow email={email} onChange={back} />
-        <input placeholder="Tên của bạn" aria-label="Tên của bạn" className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus required />
+        <input
+          placeholder="Tên của bạn"
+          aria-label="Tên của bạn"
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="name"
+          autoFocus
+          required
+        />
         <input
           type="password"
-          placeholder="Tạo mật khẩu (ít nhất 8 ký tự)" aria-label="Tạo mật khẩu (ít nhất 8 ký tự)"
+          placeholder="Tạo mật khẩu (ít nhất 8 ký tự)"
+          aria-label="Tạo mật khẩu (ít nhất 8 ký tự)"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -144,7 +238,10 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
           required
         />
         <ErrorBox>{err}</ErrorBox>
-        <button className="btn btn-primary btn-lg btn-block mt-1" disabled={sending}>
+        <button
+          className="btn btn-primary btn-lg btn-block mt-1"
+          disabled={sending}
+        >
           {sending ? "Đang gửi mã…" : "Gửi mã xác nhận"}
         </button>
       </form>
@@ -158,9 +255,11 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="password" value={password} />
-      <p className="text-center text-sm text-muted">
-        Đã gửi mã 6 số tới <b className="text-foreground">{email}</b>.<br />
-        Kiểm tra cả thư mục Spam.
+      <p className="alert alert-info">
+        <Mail className="mt-px size-4 shrink-0" aria-hidden />
+        <span>
+          Đã gửi mã 6 số tới <b>{email}</b>. Không thấy thì xem cả thư mục Spam.
+        </span>
       </p>
       <input
         name="code"
@@ -169,21 +268,28 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
         inputMode="numeric"
         autoComplete="one-time-code"
         placeholder="______"
-              aria-label="Mã xác nhận 6 số"
+        aria-label="Mã xác nhận 6 số"
         className="input auth-code"
         autoFocus
         required
       />
       <ErrorBox>{err}</ErrorBox>
-      <button className="btn btn-primary btn-lg btn-block mt-1" disabled={pending || code.length !== 6}>
+      <button
+        className="btn btn-primary btn-lg btn-block mt-1"
+        disabled={pending || code.length !== 6}
+      >
         {pending ? "Đang xử lý…" : "Xác nhận & đăng ký"}
       </button>
       <div className="auth-links">
         <button type="button" onClick={() => setStep("info")}>
-          ← Sửa thông tin
+          <ArrowLeft className="size-4" /> Sửa thông tin
         </button>
         <button type="button" disabled={cooldown > 0 || sending} onClick={send}>
-          {cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : sending ? "Đang gửi…" : "Gửi lại mã"}
+          {cooldown > 0
+            ? `Gửi lại mã (${cooldown}s)`
+            : sending
+              ? "Đang gửi…"
+              : "Gửi lại mã"}
         </button>
       </div>
     </form>
@@ -191,13 +297,20 @@ function RegisterForm({ email, next, close, back }: { email: string; next: strin
 }
 
 const HEADINGS = {
-  email: ["Chào mừng bạn", "Nhập email để đăng nhập — chưa có tài khoản thì tạo mới luôn"],
-  login: ["Chào mừng trở lại", "Nhập mật khẩu để tiếp tục luyện nói tiếng Đức"],
-  register: ["Tạo tài khoản", "Email này chưa có tài khoản — điền tên và mật khẩu để đăng ký miễn phí"],
+  email: [
+    "Chào bạn!",
+    "Nhập email để đăng nhập — chưa có tài khoản thì tạo luôn, miễn phí.",
+  ],
+  login: ["Chào mừng trở lại", "Nhập mật khẩu để học tiếp từ chỗ bạn đã dừng."],
+  register: [
+    "Tạo tài khoản mới",
+    "Email này chưa có tài khoản. Điền tên và mật khẩu, chúng tôi gửi mã xác nhận qua email.",
+  ],
 } as const;
 
 /**
- * Đăng nhập / đăng ký chung 1 form — hộp 2 nửa: form bên trái, hình minh hoạ bên phải.
+ * Đăng nhập / đăng ký chung 1 form — hộp 2 nửa: form bên trái, bìa vở có nhãn + linh vật bên phải
+ * (điện thoại: dải bìa ở trên, form bên dưới).
  * Nhập email trước: đã có tài khoản → hỏi mật khẩu; chưa có → chuyển sang đăng ký.
  */
 export default function AuthForm({
@@ -218,17 +331,16 @@ export default function AuthForm({
     <Frame onClose={onClose}>
       {/* Popup trên điện thoại: phủ kín màn hình (không viền / bo góc) thay cho hộp nhỏ giữa màn */}
       <div
-        className={`auth-card max-w-4xl md:grid-cols-2 ${
-          onClose ? "max-sm:min-h-dvh max-sm:rounded-none max-sm:border-0" : ""
+        className={`auth-card max-w-4xl md:min-h-[34rem] md:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)] ${
+          onClose
+            ? "max-sm:min-h-dvh max-sm:content-start max-sm:rounded-none max-sm:border-0"
+            : ""
         }`}
       >
         <CloseButton onClose={onClose} />
 
-        <div className="flex flex-col gap-4 px-5 pt-[max(3.5rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-5 sm:p-8 md:p-10">
-          <div className="text-center">
-            <span className="auth-badge" aria-hidden>
-              <Sparkles className="size-7" />
-            </span>
+        <div className="flex flex-col gap-5 px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8 md:p-10 md:pt-12">
+          <div>
             <h1 id="auth-title" className="page-title">
               {title}
             </h1>
@@ -238,34 +350,83 @@ export default function AuthForm({
           {step === "email" ? (
             <>
               {/* Google / Apple: chưa có tài khoản thì tự tạo luôn, nên dùng chung cho cả đăng nhập lẫn đăng ký */}
-              <SocialLogin google={social.google} apple={social.apple} next={next} onDone={onClose} />
-              <EmailStep email={email} setEmail={setEmail} onFound={(exists) => setStep(exists ? "login" : "register")} />
+              <SocialLogin
+                google={social.google}
+                apple={social.apple}
+                next={next}
+                onDone={onClose}
+              />
+              <EmailStep
+                email={email}
+                setEmail={setEmail}
+                onFound={(exists) => setStep(exists ? "login" : "register")}
+              />
             </>
           ) : step === "login" ? (
-            <LoginForm email={email.trim().toLowerCase()} next={next} close={onClose} back={back} />
+            <LoginForm
+              email={email.trim().toLowerCase()}
+              next={next}
+              close={onClose}
+              back={back}
+            />
           ) : (
-            <RegisterForm email={email.trim().toLowerCase()} next={next} close={onClose} back={back} />
+            <RegisterForm
+              email={email.trim().toLowerCase()}
+              next={next}
+              close={onClose}
+              back={back}
+            />
           )}
 
-          <p className="text-center text-xs leading-relaxed text-muted">
-            Khi tiếp tục (kể cả đăng nhập bằng Google / Apple), bạn đồng ý với{" "}
-            <Link href="/deutsch-shadowing/terms" target="_blank" className="font-bold text-link underline underline-offset-2">
+          <p className="mt-auto text-xs leading-relaxed text-muted">
+            Khi tiếp tục (kể cả bằng Google / Apple), bạn đồng ý với{" "}
+            <Link
+              href="/deutsch-shadowing/terms"
+              target="_blank"
+              className="font-semibold text-link underline underline-offset-2"
+            >
               Điều khoản sử dụng
             </Link>{" "}
             và{" "}
-            <Link href="/deutsch-shadowing/privacy" target="_blank" className="font-bold text-link underline underline-offset-2">
+            <Link
+              href="/deutsch-shadowing/privacy"
+              target="_blank"
+              className="font-semibold text-link underline underline-offset-2"
+            >
               Chính sách quyền riêng tư
-            </Link>{" "}
-            của chúng tôi. Khách vẫn học được bài miễn phí.
+            </Link>
+            . Chưa có tài khoản vẫn học thử được.
           </p>
         </div>
 
-        {/* Hình minh hoạ */}
-        <div className="auth-art" aria-hidden>
-          <div className="auth-art-ring" />
-          <Mascot className="bob relative size-64" />
-          <div className="auth-bubble auth-bubble-gold top-[24%] right-[12%]">Hallo!</div>
-          <div className="auth-bubble auth-bubble-green bottom-[30%] left-[12%]">Wie geht&apos;s?</div>
+        {/* Bìa vở: điện thoại là dải màu ở trên (linh vật ngồi góc), máy tính là nửa bên phải có nhãn vở */}
+        <div
+          data-sec="de"
+          className="cover auth-art order-first rounded-none md:order-last"
+          aria-hidden
+        >
+          <span className="auth-bubble auth-bubble-hallo top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] left-8 md:top-[16%] md:left-[18%]">
+            Hallo!
+          </span>
+          <span className="auth-bubble auth-bubble-wie bottom-[14%] left-[16%] hidden md:block">
+            Wie geht&apos;s?
+          </span>
+          <Mascot className="auth-mascot md:hidden" />
+          <div className="nhan auth-art-label">
+            <Mascot animated className="auth-mascot max-md:hidden" />
+            <span className="font-display text-2xl leading-tight font-extrabold tracking-[-0.025em]">
+              HalloVN
+            </span>
+            <span className="nhan-line">
+              Môn: <b>Tiếng Đức · Lái xe · LiD</b>
+            </span>
+            <span className="nhan-line">
+              Họ và tên: <b className="flex-1" />
+            </span>
+            <span className="nhan-line">
+              Lớp: <b>A1 → B1</b>
+            </span>
+          </div>
         </div>
       </div>
     </Frame>
@@ -273,7 +434,13 @@ export default function AuthForm({
 }
 
 /** Trang riêng: căn giữa trong vùng nội dung. Popup: nền mờ phủ cả màn hình, bấm ra ngoài / Esc để đóng */
-function Frame({ onClose, children }: { onClose?: () => void; children: ReactNode }) {
+function Frame({
+  onClose,
+  children,
+}: {
+  onClose?: () => void;
+  children: ReactNode;
+}) {
   useEffect(() => {
     if (!onClose) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -286,7 +453,12 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
     };
   }, [onClose]);
 
-  if (!onClose) return <main className="flex flex-1 items-center justify-center p-4 md:p-8">{children}</main>;
+  if (!onClose)
+    return (
+      <main className="flex flex-1 items-center justify-center p-4 md:p-8">
+        {children}
+      </main>
+    );
   return (
     <div
       role="dialog"
@@ -302,16 +474,29 @@ function Frame({ onClose, children }: { onClose?: () => void; children: ReactNod
 }
 
 function CloseButton({ onClose }: { onClose?: () => void }) {
-  const className = "btn-icon absolute top-[max(0.875rem,env(safe-area-inset-top))] right-3 z-10 text-muted hover:text-foreground";
+  // Nằm trên nền bìa vở (dải trên điện thoại / nửa phải máy tính) → chữ trắng
   if (onClose) {
     return (
-      <button type="button" title="Đóng" aria-label="Đóng" className={className} onClick={onClose}>
+      <button
+        type="button"
+        data-sec="de"
+        title="Đóng"
+        aria-label="Đóng"
+        className="auth-close"
+        onClick={onClose}
+      >
         <X className="size-6" />
       </button>
     );
   }
   return (
-    <Link href="/" title="Đóng" aria-label="Đóng" className={className}>
+    <Link
+      href="/"
+      data-sec="de"
+      title="Đóng"
+      aria-label="Đóng"
+      className="auth-close"
+    >
       <X className="size-6" />
     </Link>
   );

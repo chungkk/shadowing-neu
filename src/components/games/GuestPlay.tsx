@@ -51,15 +51,15 @@ export function useGuestGate(loggedIn: boolean, start: (from: number) => void) {
   /** Dòng "Đang chơi với tên …" ở màn chọn bộ từ (khách) */
   const chip =
     !loggedIn && name ? (
-      <div className="surface flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-        <span className="icon-bubble tint-link size-7 rounded-full">
+      <div className="surface flex items-center gap-1.5 px-3 py-2 text-sm sm:gap-2">
+        <span className="icon-bubble tint-grape size-7 rounded-full max-sm:hidden">
           <UserRound className="size-4" />
         </span>
-        <span>
+        <span className="min-w-0 truncate">
           Chơi với tên tạm <b>{name}</b>
         </span>
-        <button className="btn btn-ghost btn-sm text-link" onClick={() => setEditing(true)}>
-          <Pencil className="size-3.5" /> Đổi tên
+        <button className="btn btn-ghost btn-sm hit-44 text-link" title="Đổi tên" onClick={() => setEditing(true)}>
+          <Pencil className="size-3.5" /> <span className="max-sm:sr-only">Đổi tên</span>
         </button>
         <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
           Đăng nhập
@@ -99,7 +99,7 @@ function GuestNameDialog({ initial, editing, onSubmit, onCancel }: { initial: st
               <p className="text-sm text-muted">Nhập tên tạm để chơi ngay, không cần tài khoản.</p>
             </div>
           </div>
-          <button type="button" className="btn-icon -mt-1 -mr-2" onClick={onCancel} aria-label="Đóng">
+          <button type="button" className="btn-icon hit-44 -mt-1 -mr-2" onClick={onCancel} aria-label="Đóng">
             <X className="size-5" />
           </button>
         </div>
@@ -111,9 +111,9 @@ function GuestNameDialog({ initial, editing, onSubmit, onCancel }: { initial: st
           placeholder="Ví dụ: Minh"
           autoComplete="nickname"
           aria-label="Tên tạm"
-          className="input w-full font-bold"
+          className="input min-h-12 w-full text-base font-semibold"
         />
-        <button type="submit" className="btn btn-amber btn-lg btn-block" disabled={!name}>
+        <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={!name}>
           <Play className="size-4 fill-current" /> {editing ? "Lưu tên" : "Vào chơi"}
         </button>
         <p className="-mt-1 text-center text-sm text-muted">
@@ -187,15 +187,15 @@ export function usePlayGuest(loggedIn: boolean) {
     ) : null;
   const chip =
     !loggedIn && name ? (
-      <div className="surface flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-        <span className="icon-bubble tint-link size-7 rounded-full">
+      <div className="surface flex items-center gap-1.5 px-3 py-2 text-sm sm:gap-2">
+        <span className="icon-bubble tint-grape size-7 rounded-full max-sm:hidden">
           <UserRound className="size-4" />
         </span>
-        <span>
+        <span className="min-w-0 truncate">
           Chơi với tên tạm <b>{name}</b>
         </span>
-        <button className="btn btn-ghost btn-sm text-link" onClick={() => setDialog("edit")}>
-          <Pencil className="size-3.5" /> Đổi tên
+        <button className="btn btn-ghost btn-sm hit-44 text-link" title="Đổi tên" onClick={() => setDialog("edit")}>
+          <Pencil className="size-3.5" /> <span className="max-sm:sr-only">Đổi tên</span>
         </button>
         <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
           Đăng nhập
@@ -208,18 +208,18 @@ export function usePlayGuest(loggedIn: boolean) {
 /** Lời chúc + mời đăng ký ở màn kết quả của khách */
 export function GuestResult({ name, score, record }: { name: string; score: number; record: boolean }) {
   const who = name || "bạn";
-  const title = score <= 0 ? `Cố lên ${who}!` : record ? `Chúc mừng ${who}! 🎉` : `Giỏi lắm ${who}!`;
+  const title = score <= 0 ? `Cố lên ${who}!` : record ? `Chúc mừng ${who}!` : `Giỏi lắm ${who}!`;
   const line = score <= 0 ? "Ván sau chắc chắn sẽ tốt hơn." : record ? `Bạn vừa lập kỷ lục mới ${score} điểm.` : `Bạn ghi được ${score} điểm ván này.`;
   return (
-    <div className="hero flex w-full flex-col gap-3 rounded-[var(--radius)] p-4 text-left" style={{ ["--hero" as string]: "var(--gold)" }}>
+    <div className="surface flex w-full flex-col gap-3 p-4 text-left">
       <div className="flex items-center gap-3">
         <Mascot animated className="size-12 shrink-0" />
         <div className="min-w-0">
-          <p className="truncate font-display text-xl font-extrabold">{title}</p>
+          <p className="truncate font-display text-xl font-extrabold tracking-[-0.02em]">{title}</p>
           <p className="text-sm text-muted">{line}</p>
         </div>
       </div>
-      <p className="text-sm font-bold">Đăng ký miễn phí để giữ kết quả cho lần sau:</p>
+      <p className="text-sm font-semibold">Đăng ký miễn phí để giữ kết quả cho lần sau:</p>
       <ul className="flex flex-col gap-1.5 text-sm">
         <li className="flex items-start gap-2">
           <Trophy className="mt-0.5 size-4 shrink-0 text-amber" /> Có tên riêng trong tài khoản, khỏi nhập tên tạm mỗi lần
@@ -231,7 +231,7 @@ export function GuestResult({ name, score, record }: { name: string; score: numb
           <Gem className="mt-0.5 size-4 shrink-0 text-gem" /> Luyện bài nhận kim cương, leo bảng xếp hạng
         </li>
       </ul>
-      <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-soft btn-lg btn-block">
+      <LoginLink href={`/login?next=${location.pathname}`} className="btn btn-lg btn-block">
         <LogIn className="size-4" /> Đăng nhập / Đăng ký
       </LoginLink>
     </div>

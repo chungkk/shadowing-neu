@@ -15,7 +15,9 @@ async function Users() {
 
   return (
     <>
-      <h1 className="page-title">Người dùng ({users.length})</h1>
+      <h1 className="page-title">
+        Người dùng <span className="text-muted tabular-nums">{users.length}</span>
+      </h1>
       <div className="card overflow-hidden p-0">
         <ul className="divide-y divide-line">
         {users.map((u) => {
@@ -25,9 +27,9 @@ async function Users() {
             <li key={u.id} className="flex flex-wrap items-center gap-2 p-3 transition-colors hover:bg-card-2/50 sm:px-4">
               <div className="min-w-0 flex-1 max-sm:basis-full">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate font-bold">{u.name}</span>
+                  <span className="truncate font-semibold">{u.name}</span>
                   {u.id === me.id && <span className="text-xs text-muted">(bạn)</span>}
-                  <span className={`badge ${u.role === "admin" ? "badge-accent" : "badge-muted"}`}>
+                  <span className={`badge ${u.role === "admin" ? "badge-gold" : "badge-muted"}`}>
                     {u.role === "admin" ? "Admin" : "Học viên"}
                   </span>
                 </div>
@@ -52,7 +54,7 @@ async function Users() {
         </ul>
         {!users.length && (
           <div className="empty">
-            <span className="icon-bubble tint-link">
+            <span className="icon-bubble tint-muted">
               <UsersIcon className="size-5" aria-hidden />
             </span>
             <p>Chưa có người dùng nào.</p>

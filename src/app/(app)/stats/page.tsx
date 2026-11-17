@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Settings, Trophy } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth";
 import { accountStats } from "@/lib/account-stats";
 import AccountStats from "@/components/AccountStats";
@@ -15,18 +16,20 @@ async function Stats() {
     <>
       <AccountStats stats={accountStats(user.id)} />
       {/* Điện thoại: Xếp hạng và Cài đặt không có ở thanh dưới đáy khi đã đăng nhập → lối vào ở đây */}
-      <nav aria-label="Liên kết tài khoản" className="grid gap-3 sm:grid-cols-2">
-        <Link href="/leaderboard" className="sticker sticker-link flex items-center gap-3 p-4 font-extrabold">
-          <span className="icon-bubble tint-gold" aria-hidden>
-            <Trophy className="size-5" />
+      <nav aria-label="Liên kết tài khoản" className="card divide-y divide-line p-0">
+        <Link href="/leaderboard" className="group flex min-h-14 items-center gap-3 px-4 py-3 font-semibold transition-colors hover:bg-card-2">
+          <span className="icon-bubble tint-gold size-9" aria-hidden>
+            <Trophy className="size-[18px]" />
           </span>
-          Bảng xếp hạng <ChevronRight className="ml-auto size-5 text-muted" />
+          Bảng xếp hạng
+          <ChevronRight className="ml-auto size-5 text-muted transition-transform group-hover:translate-x-0.5" />
         </Link>
-        <Link href="/settings" className="sticker sticker-link flex items-center gap-3 p-4 font-extrabold">
-          <span className="icon-bubble tint-muted" aria-hidden>
-            <Settings className="size-5" />
+        <Link href="/settings" className="group flex min-h-14 items-center gap-3 px-4 py-3 font-semibold transition-colors hover:bg-card-2">
+          <span className="icon-bubble tint-muted size-9" aria-hidden>
+            <Settings className="size-[18px]" />
           </span>
-          Hồ sơ & cài đặt <ChevronRight className="ml-auto size-5 text-muted" />
+          Hồ sơ & cài đặt
+          <ChevronRight className="ml-auto size-5 text-muted transition-transform group-hover:translate-x-0.5" />
         </Link>
       </nav>
     </>
@@ -36,7 +39,7 @@ async function Stats() {
 export default function StatsPage() {
   return (
     <main className="page page-narrow">
-      <h1 className="page-title">Thành tích</h1>
+      <PageHeader sec="ink" compact icon={Trophy} title="Thành tích" sub="Kim cương, chuỗi ngày ôn và những gì bạn đã học." />
       <Suspense fallback={<SettingsSkeleton />}>
         <Stats />
       </Suspense>

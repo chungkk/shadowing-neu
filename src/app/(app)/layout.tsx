@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Geist_Mono, Nunito } from "next/font/google";
+import { Be_Vietnam_Pro, Bricolage_Grotesque, Geist_Mono } from "next/font/google";
 import { DeutschSubnav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/auth/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
@@ -15,14 +15,18 @@ import { SITE_URL } from "@/lib/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-const nunito = Nunito({
-  variable: "--font-nunito",
+// Chữ thân: Be Vietnam Pro — do người Việt thiết kế, dấu tiếng Việt chuẩn và rõ ở cỡ nhỏ
+const body = Be_Vietnam_Pro({
+  variable: "--font-body",
   subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const baloo = Baloo_2({
-  variable: "--font-baloo",
+// Chữ tiêu đề: Bricolage Grotesque (biến thiên opsz) — tiêu đề lớn có cá tính, cỡ nhỏ vẫn gọn
+const heading = Bricolage_Grotesque({
+  variable: "--font-heading",
   subsets: ["latin", "vietnamese"],
+  axes: ["opsz"],
 });
 
 
@@ -79,12 +83,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#241a1c",
+  themeColor: "#fbfaf7",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" data-theme="dark" className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="vi" className={`${body.variable} ${heading.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Áp giao diện đã chọn trước khi trình duyệt vẽ trang, tránh nháy nền sáng */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
@@ -99,22 +103,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
-          <header className="relative z-30 flex h-14 items-center gap-3 border-b border-line bg-card/85 px-3 shadow-[0_1px_0_rgb(var(--shadow-color)/0.02),0_8px_24px_-18px_rgb(var(--shadow-color)/0.25)] backdrop-blur-xl backdrop-saturate-150 sm:h-16 sm:gap-4 sm:px-4 md:px-6 dark:bg-sidebar/90">
-            <div className="candy-stripe absolute inset-x-0 -bottom-px h-[3px] opacity-80" aria-hidden />
-            <Link href="/" className="group flex min-w-0 items-center gap-2 rounded-full pr-2 font-display text-lg leading-none font-extrabold tracking-tight sm:text-xl">
-              <Mascot className="size-9 shrink-0 transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-rotate-6 group-hover:scale-105 motion-reduce:transition-none md:size-11" />
-              <span className="truncate">
-                Hallo<span className="text-accent-text">VN</span>
-              </span>
-            </Link>
-            <Suspense fallback={<HeaderNavFrame />}>
-              <HeaderNavWithUser />
-            </Suspense>
-            <div className="ml-auto flex items-center gap-2 sm:gap-3">
-              <ThemeToggle />
-              <Suspense>
-                <UserMenu />
+          <header className="site-header relative z-30 border-b border-line bg-card dark:bg-sidebar">
+            <div className="flex h-14 items-center gap-3 px-3 sm:h-16 sm:gap-5 sm:px-4 md:px-6">
+              <Link href="/" aria-label="HalloVN — trang chủ" className="group flex min-w-0 shrink-0 items-center gap-2 rounded-xl pr-1">
+                <Mascot className="size-9 shrink-0 transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-rotate-8 group-hover:scale-110 motion-reduce:transition-none sm:size-10" />
+                <span className="flex items-baseline font-display text-[1.3rem] leading-none font-extrabold tracking-[-0.03em] sm:text-[1.45rem]">
+                  Hallo
+                  <span className="ml-0.5 -rotate-3 rounded-[5px] bg-gold px-1 py-0.5 text-[0.8em] text-[#16203a] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:rotate-3">VN</span>
+                </span>
+              </Link>
+              <Suspense fallback={<HeaderNavFrame />}>
+                <HeaderNavWithUser />
               </Suspense>
+              <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+                <ThemeToggle />
+                <Suspense>
+                  <UserMenu />
+                </Suspense>
+              </div>
             </div>
           </header>
           {/* share-gutter: chừa lề phải khi thanh chia sẻ đang mở (globals.css) */}

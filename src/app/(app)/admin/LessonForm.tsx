@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { TriangleAlert } from "lucide-react";
 import { slugify } from "@/lib/slug";
 import { mergeIntoSentences, parseSubtitleFile } from "@/lib/subtitles";
 import { fetchSubtitles, saveLesson, type FetchResult } from "./actions";
@@ -57,7 +58,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
       <div className="card flex flex-col gap-3">
         <label className="field text-sm">
           Link YouTube
-          <div className="flex gap-2">
+          <div className="flex gap-2 max-sm:flex-col">
             <input
               name="url"
               className="input min-w-0 flex-1 text-foreground"
@@ -88,9 +89,13 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
                 ))}
               </select>
             )}
-            <span>
+            <span className="inline-flex flex-wrap items-center gap-x-1.5">
               {srt.split("-->").length - 1} dòng phụ đề
-              {info.auto && " · ⚠ sub tự động, nên kiểm tra lại chính tả và dấu câu"}
+              {info.auto && (
+                <span className="inline-flex items-center gap-1 font-semibold text-amber">
+                  · <TriangleAlert className="size-3.5" aria-hidden /> sub tự động, nên kiểm tra lại chính tả và dấu câu
+                </span>
+              )}
             </span>
           </div>
         )}
@@ -178,7 +183,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
         </p>
       )}
 
-      <div className="flex gap-2 max-sm:*:flex-1">
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex gap-2 border-t border-line bg-background/95 px-4 py-3 max-sm:*:flex-1 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <button className="btn btn-lg btn-primary" disabled={saving || fetching}>
           {saving ? "Đang lưu…" : "Lưu bài học"}
         </button>

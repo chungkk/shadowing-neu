@@ -1,10 +1,11 @@
 import { Suspense, type ComponentType, type ReactNode } from "react";
-import { BookOpen, Database, MapPin } from "lucide-react";
+import { BookOpen, Database, MapPin, Settings as SettingsIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { STATES, prefs } from "@/lib/lid";
 import { AutoMarkToggle, ResetProgress, VibrateToggle } from "@/components/laixe/Settings";
-import { LidShell, LidTopBar } from "@/components/lid/LidParts";
+import { LidShell } from "@/components/lid/LidParts";
+import { SubHeader } from "@/components/quiz/QuizParts";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -16,7 +17,7 @@ function Group({ icon: Icon, title, text, children }: { icon: ComponentType<{ cl
     <section className="card flex flex-col gap-3">
       <div>
         <h2 className="section-title flex items-center gap-2">
-          <Icon className="size-5 text-link" /> {title}
+          <Icon className="size-5 text-sec-text" /> {title}
         </h2>
         {text && <p className="mt-0.5 text-sm text-muted">{text}</p>}
       </div>
@@ -51,7 +52,7 @@ async function Settings() {
 export default function Page() {
   return (
     <LidShell>
-      <LidTopBar back="/leben-in-deutschland" title="Cài đặt" />
+      <SubHeader sec="lid" back="/leben-in-deutschland" backLabel="Leben in Deutschland" icon={SettingsIcon} title="Cài đặt" sub="Bang đang học, cách đánh dấu câu và dữ liệu tiến độ." />
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Settings />
       </Suspense>

@@ -1,14 +1,14 @@
-import { Suspense, type CSSProperties } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ChevronRight } from "lucide-react";
+import { ArrowRight, Languages } from "lucide-react";
 import { connection } from "next/server";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
 import { LEVELS, listProgress } from "@/lib/db";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
-import Mascot from "@/components/Mascot";
+import PageHeader from "@/components/PageHeader";
 import ContinueLearning from "@/components/ContinueLearning";
 import { percent } from "@/lib/progress";
 import { RecentVideos } from "@/components/RecentVideos";
@@ -69,61 +69,58 @@ const levelRank = (lv: string) => {
 /** Ô dán link YouTube — lựa chọn phụ: người mới nên bắt đầu từ bài có sẵn */
 function OwnVideo() {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-bold text-muted">Hoặc luyện với video YouTube bất kỳ có phụ đề tiếng Đức:</p>
+    <section aria-labelledby="own-video" className="surface flex flex-col gap-3 p-4 sm:p-5">
+      <h2 id="own-video" className="text-sm font-semibold text-muted">
+        Hoặc luyện với video YouTube bất kỳ có phụ đề tiếng Đức
+      </h2>
       <YouTubeUrlForm secondary />
-    </div>
-  );
-}
-
-/** Khách: hero giới thiệu, nút chính = bài dễ nhất học được ngay, chip trình độ lọc thư viện */
-function GuestHero({ first, levels }: { first?: { slug: string; title: string; level: string }; levels: string[] }) {
-  return (
-    <section className="sticker hero rise-in grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-5 sm:gap-x-8 sm:p-8" style={{ "--hero": "var(--aqua)" } as CSSProperties}>
-      <Mascot className="bob size-20 sm:row-span-3 sm:size-40" />
-      <div className="flex flex-col items-start gap-2">
-        <span className="badge badge-gold rounded-bl-sm text-sm">Hallo! Cùng nói nào!</span>
-        <h1 className="page-title">Luyện nói tiếng Đức với video thật</h1>
-      </div>
-      <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
-        <p className="lead">Nghe từng câu, nói theo và ghi âm để so với người bản xứ.</p>
-        {first && (
-          <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg self-start max-sm:w-full">
-            Thử bài {first.level} đầu tiên <ChevronRight className="size-5" />
-          </Link>
-        )}
-        {levels.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-bold text-muted">Trình độ của bạn:</span>
-            {levels.map((lv) => (
-              <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="chip hit-44">
-                {lv}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="col-span-2 border-t-2 border-dashed border-line pt-4 sm:col-span-1">
-        <OwnVideo />
-      </div>
     </section>
   );
 }
 
-/** Đầu trang: đã đăng nhập → "Hôm nay" (Học tiếp · Từ đến hạn · Chuỗi ngày) lên trước, hero thu nhỏ; khách → hero giới thiệu */
+/** Khách: bìa vở giới thiệu, nút chính = bài dễ nhất học được ngay, chip trình độ lọc thư viện */
+function GuestHero({ first, levels }: { first?: { slug: string; title: string; level: string }; levels: string[] }) {
+  return (
+    <PageHeader
+      sec="de"
+      icon={Languages}
+      mascot
+      title="Luyện nói tiếng Đức với video thật"
+      sub="Nghe từng câu, nói theo và ghi âm để so với người bản xứ."
+      meta={<span className="max-sm:hidden">Shadowing · Chính tả · A1 – C2</span>}
+      actions={
+        first && (
+          <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg max-sm:w-full">
+            Thử bài {first.level} đầu tiên <ArrowRight className="size-5" />
+          </Link>
+        )
+      }
+    >
+      {levels.length > 1 && (
+        <div className="nhan-line flex flex-wrap items-center gap-2 pb-2">
+          <span className="text-sm font-semibold text-muted">Trình độ của bạn:</span>
+          {levels.map((lv) => (
+            <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="chip hit-44">
+              {lv}
+            </Link>
+          ))}
+        </div>
+      )}
+    </PageHeader>
+  );
+}
+
+/** Đầu trang: đã đăng nhập → bìa vở chào + dải "Hôm nay" (Học tiếp · Từ đến hạn · Chuỗi ngày); khách → bìa giới thiệu */
 async function Top() {
   await connection();
   const user = await getCurrentUser();
   if (user) {
     return (
       <>
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <Mascot className="bob size-14 shrink-0" />
-            <h1 className="page-title">Hallo, {user.name}! Hôm nay học gì?</h1>
-          </div>
+        <div className="flex flex-col gap-4">
+          <PageHeader sec="de" icon={Languages} mascot title={`Hallo, ${user.name}!`} sub="Hôm nay học gì? Học tiếp bài dở, ôn từ đến hạn hoặc chọn bài mới." />
           <TodayStrip userId={user.id} />
-        </section>
+        </div>
         <ContinueLearning userId={user.id} />
       </>
     );
@@ -139,20 +136,10 @@ async function Top() {
   );
 }
 
-/** Đã đăng nhập: ô dán link nằm dưới thư viện (lựa chọn phụ) */
-async function OwnVideoForUser() {
-  const user = await getCurrentUser();
-  return user ? (
-    <section className="card p-5 sm:p-6">
-      <OwnVideo />
-    </section>
-  ) : null;
-}
-
 export default function Home() {
   return (
     <main className="page gap-8 md:gap-10">
-      <Suspense fallback={<div className="skeleton h-48 rounded-[var(--radius-lg)]" />}>
+      <Suspense fallback={<div className="skeleton h-56 rounded-[var(--radius-lg)]" />}>
         <Top />
       </Suspense>
 
@@ -160,9 +147,8 @@ export default function Home() {
         <Lessons />
       </Suspense>
 
-      <Suspense>
-        <OwnVideoForUser />
-      </Suspense>
+      {/* Ô dán link nằm dưới thư viện (lựa chọn phụ) */}
+      <OwnVideo />
     </main>
   );
 }

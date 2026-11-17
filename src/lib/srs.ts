@@ -11,7 +11,7 @@ export function stageInfo(stage: number): { label: string; color: string } {
   if (stage === 0) return { label: "Mới", color: "text-muted" };
   if (stage <= 2) return { label: "Đang học", color: "text-red-400" };
   if (stage <= 4) return { label: "Khá nhớ", color: "text-amber" };
-  return { label: "Thuộc lâu", color: "text-accent" };
+  return { label: "Thuộc lâu", color: "text-ok-text" };
 }
 
 /**

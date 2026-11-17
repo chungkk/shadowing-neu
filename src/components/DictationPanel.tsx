@@ -210,7 +210,7 @@ export default function DictationPanel({
               </span>
             )}
           </span>
-          <p role="status" className="dict-bubble ml-1 min-w-0 px-3 py-1.5 text-sm leading-snug font-extrabold text-foreground">
+          <p role="status" className="dict-bubble ml-1 min-w-0 px-3 py-1.5 text-sm leading-snug font-bold text-foreground">
             {say}
           </p>
         </div>
@@ -362,7 +362,7 @@ export default function DictationPanel({
         {/* Cảm ứng, đang gõ: Enter trên bàn phím đã là "Kiểm tra" → nút chính thành "Nghe lại" cho dễ bấm */}
         {!result.done && (
           <button
-            className="btn btn-primary btn-lg flex-[2] whitespace-nowrap pointer-fine:hidden"
+            className="btn btn-primary btn-lg min-w-0 flex-[1.4] whitespace-nowrap max-sm:gap-1.5 max-sm:px-2.5 pointer-fine:hidden"
             onMouseDown={keepFocus}
             onClick={() => {
               onReplay();
@@ -382,20 +382,20 @@ export default function DictationPanel({
           )}
         </button>
         {result.done ? (
-          <button className="btn btn-lg flex-1" onClick={retry}>
+          <button className="btn btn-lg min-w-0 flex-1" onClick={retry}>
             <RotateCcw className="size-4" /> Làm lại
           </button>
         ) : (
           <>
           {/* Cảm ứng: mắt trên từng ô quá nhỏ và sát ô gõ (dễ bấm nhầm bị trừ điểm) → nút riêng xem từ đang chọn */}
-          <button className="btn btn-lg flex-1 whitespace-nowrap pointer-fine:hidden" onMouseDown={keepFocus} onClick={() => reveal([active])} title={`Xem từ đang chọn (${hintCost})`}>
+          <button className="btn btn-lg min-w-0 flex-1 whitespace-nowrap max-sm:gap-1.5 max-sm:px-2.5 pointer-fine:hidden" onMouseDown={keepFocus} onClick={() => reveal([active])} title={`Xem từ đang chọn (${hintCost})`}>
             <Eye className="size-4" /> Xem từ
           </button>
           <button className="btn btn-lg flex-1 whitespace-nowrap pointer-coarse:hidden" onMouseDown={keepFocus} onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
             <Eye className="size-4" /> Hiện tất cả
             {onHint && <span className="text-xs font-normal opacity-80">(−{POINTS_HINT}/từ)</span>}
           </button>
-          <button className="btn btn-lg flex-1 whitespace-nowrap pointer-fine:hidden" onMouseDown={keepFocus} onClick={onNextSentence} disabled={!hasNext}>
+          <button className="btn btn-lg min-w-0 flex-1 whitespace-nowrap max-sm:gap-1 max-sm:px-2.5 pointer-fine:hidden" onMouseDown={keepFocus} onClick={onNextSentence} disabled={!hasNext}>
             Câu sau <ChevronRight className="size-5" />
           </button>
           </>

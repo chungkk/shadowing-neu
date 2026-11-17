@@ -20,9 +20,9 @@ const KIND_ICON: Record<Reminder["kind"], LucideIcon> = { streak: Flame, review:
 const KIND_TONE: Record<Reminder["kind"], string> = {
   streak: "text-amber",
   review: "text-red",
-  lesson: "text-accent-text",
-  deck: "text-accent-text",
-  chapter: "text-accent-text",
+  lesson: "text-sec-text",
+  deck: "text-sec-text",
+  chapter: "text-sec-text",
   wrong: "text-red",
 };
 
@@ -41,7 +41,7 @@ const isNew = (r: Reminder, seen: Seen) => {
   return r.level !== undefined && r.level > (s.level ?? 0); // chỉ báo lại khi TĂNG (sửa được câu sai thì không báo)
 };
 
-const link = "font-bold text-link hover:underline";
+const link = "font-semibold text-link hover:underline";
 
 /**
  * Chuông nhắc nhở ở thanh đầu trang: đang học gì, tới đâu, phần nào chưa xong (Tiếng Đức · Lái xe · LiD).
@@ -146,7 +146,7 @@ export default function ReminderBell({ userId }: { userId: number }) {
       >
         <Bell className="size-5" />
         {!!unseen && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 text-[11px] ring-2 ring-card leading-none font-extrabold text-white tabular-nums">
+          <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 text-[11px] leading-none font-bold text-white tabular-nums ring-2 ring-card">
             {unseen > 9 ? "9+" : unseen}
           </span>
         )}
@@ -154,12 +154,12 @@ export default function ReminderBell({ userId }: { userId: number }) {
       {open && (
         <div id={panelId} className="absolute inset-x-2 top-full z-50 pt-1 md:inset-x-auto md:right-0 md:w-96 md:pt-2">
           <div className="popover flex max-h-[min(70vh,34rem)] flex-col overflow-hidden p-0">
-            <div className="hero flex items-center gap-3 border-b border-line px-4 pt-3.5 pb-3">
-              <span className="icon-bubble tint-gold size-9 rounded-xl" aria-hidden>
+            <div className="flex items-center gap-3 border-b border-line px-4 pt-3.5 pb-3 dark:border-border">
+              <span className="icon-bubble tint-gold size-9" aria-hidden>
                 <Bell className="size-[18px]" />
               </span>
               <div className="min-w-0">
-                <h2 className="text-base leading-tight font-extrabold">Nhắc nhở học</h2>
+                <h2 className="font-display text-lg leading-tight font-bold tracking-[-0.01em]">Nhắc nhở học</h2>
                 <p className="text-xs text-muted">Bạn đang học gì và phần nào chưa xong</p>
               </div>
             </div>
@@ -177,12 +177,12 @@ export default function ReminderBell({ userId }: { userId: number }) {
                 <div className="flex flex-col gap-1 p-3 text-sm">
                   {data?.started ? (
                     <>
-                      <p className="font-bold">Không có việc nào đang dở 🎉</p>
+                      <p className="font-semibold">Không còn việc nào đang dở</p>
                       <p className="text-muted">Bạn đã làm xong những gì đang học. Chọn thêm một bài mới khi sẵn sàng.</p>
                     </>
                   ) : (
                     <>
-                      <p className="font-bold">Bạn chưa bắt đầu học</p>
+                      <p className="font-semibold">Bạn chưa bắt đầu học</p>
                       <p className="text-muted">
                         Thử một{" "}
                         <Link href="/tieng-duc" className={link}>
@@ -207,13 +207,13 @@ export default function ReminderBell({ userId }: { userId: number }) {
                   if (!list.length) return null;
                   const headId = `${panelId}-${sec.key}`;
                   return (
-                    <section key={sec.key} aria-labelledby={headId} className="flex flex-col gap-1">
+                    <section key={sec.key} data-sec={sec.key} aria-labelledby={headId} className="flex flex-col gap-1">
                       <div className="flex items-center justify-between gap-2 px-2 pt-1">
                         <h3 id={headId} className="menu-label flex items-center gap-1.5 p-0">
-                          <sec.icon className="size-3.5" /> {sec.label}
+                          <sec.icon className="size-3.5 text-sec-text" /> {sec.label}
                         </h3>
                         <button
-                          className="rounded-full px-2 py-0.5 text-[11px] font-bold text-muted transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+                          className="hit-44 rounded-md px-2 py-0.5 text-[11px] font-semibold text-muted transition-colors hover:bg-card-2 hover:text-foreground"
                           onClick={() => toggleMute(sec.key)}
                           aria-label={`Tắt nhắc phần ${sec.label}`}
                         >
@@ -223,17 +223,17 @@ export default function ReminderBell({ userId }: { userId: number }) {
                       {list.map((r) => {
                         const Icon = KIND_ICON[r.kind];
                         return (
-                          <Link key={r.id} href={r.href} className="flex items-start gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-card-2">
+                          <Link key={r.id} href={r.href} className="flex items-start gap-3 rounded-[10px] px-2 py-2 transition-colors hover:bg-card-2 focus-visible:bg-card-2">
                             <Icon className={`mt-0.5 size-[18px] shrink-0 ${KIND_TONE[r.kind]}`} aria-hidden />
                             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                              <span className="line-clamp-2 text-sm leading-snug font-extrabold">{r.title}</span>
+                              <span className="line-clamp-2 text-sm leading-snug font-semibold">{r.title}</span>
                               <span className="text-xs text-muted">{r.detail}</span>
                               {r.percent !== undefined && (
                                 <span className="mt-1 flex items-center gap-2" aria-hidden>
                                   <span className="progress h-1.5 flex-1">
                                     <span className="progress-bar block" style={{ width: `${r.percent}%` }} />
                                   </span>
-                                  <span className="text-[11px] font-bold text-accent-text tabular-nums">{r.percent}%</span>
+                                  <span className="text-[11px] font-semibold text-sec-text tabular-nums">{r.percent}%</span>
                                 </span>
                               )}
                             </span>
@@ -246,10 +246,10 @@ export default function ReminderBell({ userId }: { userId: number }) {
               )}
             </div>
             {!!muted.length && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line bg-card-2/60 px-4 py-2 text-xs text-muted">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line bg-card-2 px-4 py-2 text-xs text-muted dark:border-border">
                 <BellOff className="size-3.5" aria-hidden /> Đã tắt nhắc:
                 {SECTIONS.filter((s) => muted.includes(s.key)).map((s) => (
-                  <button key={s.key} className="font-bold text-link hover:underline" onClick={() => toggleMute(s.key)} aria-label={`Bật lại nhắc phần ${s.label}`}>
+                  <button key={s.key} className="font-semibold text-link hover:underline" onClick={() => toggleMute(s.key)} aria-label={`Bật lại nhắc phần ${s.label}`}>
                     {s.label} · bật lại
                   </button>
                 ))}

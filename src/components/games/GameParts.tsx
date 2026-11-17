@@ -2,8 +2,10 @@
 
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
+import Mascot from "../Mascot";
 import { Check, ChevronLeft, Delete, Play, RotateCcw } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import PageHeader from "../PageHeader";
 export { sameLetter, type GameWord, type Topic } from "@/lib/games/falling-words";
 
 /** Phần dùng chung của các game từ vựng (/games): tiêu đề, màn chọn bộ từ, bàn phím trên màn hình */
@@ -21,7 +23,11 @@ export function LevelTile({ level }: { level: string }) {
   return <span className={`g-level ${LEVEL_TILE[level[0]] ?? LEVEL_TILE.A}`}>{level || "Aa"}</span>;
 }
 
-/** Tiêu đề game: nút quay lại (link về /games, hoặc onBack khi đang chơi) · biểu tượng · tên · mô tả · nút bên phải */
+/**
+ * Tiêu đề game, hai dạng:
+ * - cover (sảnh / chọn bộ từ): link "Tất cả game" + PageHeader compact bìa tím — đầu trang chữ ký của khu game
+ * - mặc định (đang chơi): thanh mảnh — nút quay lại (link về /games, hoặc onBack khi đang chơi) · biểu tượng · tên · nút bên phải
+ */
 export function GameHeader({
   icon: Icon,
   tone,
@@ -29,6 +35,7 @@ export function GameHeader({
   subtitle,
   onBack,
   right,
+  cover = false,
 }: {
   icon: ComponentType<{ className?: string }>;
   tone: Tone;
@@ -36,16 +43,27 @@ export function GameHeader({
   subtitle: string;
   onBack?: () => void;
   right?: ReactNode;
+  cover?: boolean;
 }) {
+  if (cover) {
+    return (
+      <div className={`flex flex-col gap-2 ${TONE_CLASS[tone]}`}>
+        <Link href="/games" className="btn btn-ghost btn-sm -ml-2 self-start text-muted">
+          <ChevronLeft className="size-4" /> Tất cả game
+        </Link>
+        <PageHeader sec="game" compact icon={Icon} title={title} sub={subtitle} meta={right} />
+      </div>
+    );
+  }
   const back = <ChevronLeft className="size-6" />;
   return (
-    <header className={`flex items-center gap-3 ${TONE_CLASS[tone]}`}>
+    <header className={`flex min-h-12 items-center gap-2.5 ${TONE_CLASS[tone]}`}>
       {onBack ? (
-        <button title="Chọn bộ từ" aria-label="Chọn bộ từ" className="btn-icon -ml-2" onClick={onBack}>
+        <button title="Chọn bộ từ" aria-label="Chọn bộ từ" className="btn-icon hit-44 -ml-2" onClick={onBack}>
           {back}
         </button>
       ) : (
-        <Link href="/games" title="Game" aria-label="Game" className="btn-icon -ml-2">
+        <Link href="/games" title="Tất cả game" aria-label="Tất cả game" className="btn-icon hit-44 -ml-2">
           {back}
         </Link>
       )}
@@ -53,8 +71,8 @@ export function GameHeader({
         <Icon className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <h1 className="page-title truncate">{title}</h1>
-        <p className="truncate text-xs font-semibold text-muted md:text-sm">{subtitle}</p>
+        <h1 className="truncate font-display text-xl leading-tight font-extrabold tracking-[-0.02em] sm:text-2xl">{title}</h1>
+        <p className="truncate text-xs font-medium text-muted md:text-sm">{subtitle}</p>
       </div>
       {right}
     </header>
@@ -75,14 +93,14 @@ function DeckCard({ deck, progressKey, selected, disabled, extra, onSelect }: { 
       <span className="flex items-center gap-3">
         <LevelTile level={deck.level} />
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-extrabold leading-snug">{deck.title}</span>
-          <span className="text-sm font-semibold text-muted">
+          <span className="pr-7 font-bold leading-snug">{deck.title}</span>
+          <span className="text-sm text-muted">
             {deck.wordCount} từ · {total} mốc
           </span>
         </span>
       </span>
       {cleared > 0 && (
-        <span className="flex items-center gap-2 text-xs font-bold text-muted tabular-nums">
+        <span className="flex items-center gap-2 text-xs font-semibold text-muted tabular-nums">
           <span className="g-bar">
             <span style={{ width: `${Math.min(cleared / total, 1) * 100}%` }} />
           </span>
@@ -100,7 +118,6 @@ function DeckCard({ deck, progressKey, selected, disabled, extra, onSelect }: { 
  */
 export function DeckMenu({
   tone,
-  icon: Icon,
   intro,
   decks,
   current,
@@ -133,14 +150,9 @@ export function DeckMenu({
   const from = cleared < total ? cleared : 0;
   return (
     <div className={`flex flex-col gap-5 ${TONE_CLASS[tone]}`}>
-      <div className="card hero flex items-start gap-4" style={{ ["--hero" as string]: tone === "amber" ? "var(--gold)" : "var(--aqua)" }}>
-        <span className="g-icon size-12">
-          <Icon className="size-6" />
-        </span>
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="section-title">Chọn bộ từ</p>
-          <p className="text-sm leading-relaxed text-muted">{intro}</p>
-        </div>
+      <div className="flex flex-col gap-1">
+        <h2 className="section-title">Chọn bộ từ</h2>
+        <p className="max-w-[72ch] text-sm leading-relaxed text-muted">{intro}</p>
       </div>
       {notice}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -148,7 +160,13 @@ export function DeckMenu({
           <DeckCard key={d.slug} deck={d} progressKey={progressKey(d.slug)} selected={d.slug === current?.slug} disabled={loading} extra={deckExtra?.(d)} onSelect={() => onSelect(d.slug)} />
         ))}
       </div>
-      {!decks.length && <p className="card empty">Chưa có bộ từ nào.</p>}
+      {!decks.length && (
+        <div className="card empty flex flex-col items-center gap-2">
+          <Mascot className="size-16" />
+          <p className="font-semibold">Chưa có bộ từ nào.</p>
+          <p className="text-sm text-muted">Quay lại sau nhé — bộ từ mới sẽ hiện ở đây.</p>
+        </div>
+      )}
       {error && (
         <p role="alert" className="alert alert-err">
           {error}
@@ -160,18 +178,18 @@ export function DeckMenu({
         <div className="g-startbar">
           <LevelTile level={current.level} />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-extrabold">{current.title}</p>
-            <p className="truncate text-xs font-semibold text-muted">
+            <p className="truncate font-bold">{current.title}</p>
+            <p className="truncate text-xs text-muted">
               {current.wordCount} từ · {from ? `tiếp tục mốc ${from + 1}/${total}` : `${total} mốc`}
-              {best > 0 && <span className="text-amber"> · kỷ lục {best}</span>}
+              {best > 0 && <span className="font-semibold text-amber"> · kỷ lục {best}</span>}
             </p>
           </div>
           {from > 0 && (
-            <button className="btn btn-lg max-sm:px-3" title="Từ đầu" aria-label="Từ đầu" disabled={loading} onClick={() => onStart(0)}>
-              <RotateCcw className="size-4" /> <span className="max-sm:hidden">Từ đầu</span>
+            <button className="btn btn-lg max-sm:flex-1" title="Từ đầu" aria-label="Từ đầu" disabled={loading} onClick={() => onStart(0)}>
+              <RotateCcw className="size-4" /> Từ đầu
             </button>
           )}
-          <button className="btn btn-amber btn-lg max-sm:px-4" disabled={loading} onClick={() => onStart(from)}>
+          <button className="btn btn-primary btn-lg g-startbar-go" disabled={loading} onClick={() => onStart(from)}>
             <Play className="size-4 fill-current" /> {loading ? "Đang tải…" : "Bắt đầu"}
           </button>
         </div>

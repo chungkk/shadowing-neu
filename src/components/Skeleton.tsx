@@ -128,16 +128,19 @@ export function VocabSkeleton() {
   );
 }
 
-/** Trang cài đặt — khớp SettingsForms (hồ sơ + các khung) */
+/** Trang cài đặt / thành tích — khớp SettingsForms (hồ sơ + các khung) */
 export function SettingsSkeleton() {
   return (
-    <div className="flex flex-col gap-5" aria-busy="true">
-      <section className="card flex flex-col items-center gap-5 p-5 sm:flex-row sm:p-6">
-        <Bone className="size-24 rounded-full" />
-        <div className="flex flex-col items-center gap-2 sm:items-start">
-          <Bone className="h-6 w-40" />
-          <Bone className="h-4 w-52" />
-          <Bone className="h-10 w-28 rounded-2xl" />
+    <div className="flex flex-col gap-5" aria-busy="true" aria-label="Đang tải">
+      <section className="card flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
+        <Bone className="size-24 shrink-0 rounded-full sm:size-28" />
+        <div className="flex w-full flex-col gap-3">
+          <Bone className="h-8 w-full max-w-sm" />
+          <Bone className="h-5 w-full max-w-xs" />
+          <div className="flex gap-2">
+            <Bone className="h-6 w-20 rounded-md" />
+            <Bone className="h-6 w-28 rounded-md" />
+          </div>
         </div>
       </section>
       {Array.from({ length: 2 }, (_, i) => (
@@ -158,8 +161,8 @@ export function SettingsSkeleton() {
 export function ListSkeleton({ rows = 6, thumb = false, title = true }: { rows?: number; thumb?: boolean; title?: boolean }) {
   return (
     <div className="flex flex-col gap-5" aria-busy="true">
-      {title && <Bone className="h-8 w-48 sm:h-9" />}
-      <div className="card divide-y divide-border p-0">
+      {title && <Bone className="h-9 w-56 sm:h-10" />}
+      <div className="card divide-y divide-line p-0">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="flex items-center gap-3 p-3">
             {thumb && <Bone className="h-12 w-20" />}
@@ -167,8 +170,8 @@ export function ListSkeleton({ rows = 6, thumb = false, title = true }: { rows?:
               <Bone className={`h-4 ${i % 2 ? "w-1/2" : "w-2/3"}`} />
               <Bone className="h-3 w-32" />
             </div>
-            <Bone className="h-10 w-16 rounded-2xl max-sm:hidden" />
-            <Bone className="h-10 w-16 rounded-2xl" />
+            <Bone className="h-8 w-14 rounded-xl max-sm:hidden" />
+            <Bone className="h-8 w-14 rounded-xl" />
           </div>
         ))}
       </div>
@@ -187,7 +190,10 @@ export function FormSkeleton({ fields = 4 }: { fields?: number }) {
         </div>
       ))}
       <Bone className="h-60 rounded-xl" />
-      <Bone className="h-12 w-32 self-end rounded-2xl" />
+      <div className="flex gap-2">
+        <Bone className="h-12 w-36 rounded-xl" />
+        <Bone className="h-12 w-20 rounded-xl" />
+      </div>
     </div>
   );
 }
@@ -227,6 +233,27 @@ export function LeaderboardSkeleton() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Sảnh từng game (chọn bộ từ / phòng chơi) — bìa tím compact + lưới ô bộ từ + thanh Bắt đầu */
+export function GameSkeleton() {
+  return (
+    <div data-sec="game" className="flex flex-col gap-6" aria-busy="true" aria-label="Đang tải game">
+      <div className="relative">
+        <div className="cover min-h-20 opacity-60" />
+        <div className="nhan relative z-10 mx-3 -mt-10 flex flex-col gap-2 sm:mx-6 sm:max-w-md">
+          <Bone className="h-7 w-48" />
+          <Bone className="h-4 w-64 max-w-full" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Bone key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+      <Bone className="h-12 w-full rounded-xl sm:ml-auto sm:w-48" />
     </div>
   );
 }

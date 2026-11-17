@@ -1,14 +1,14 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BookOpen, ChevronDown, RotateCcw, Star } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, RotateCcw, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { CATEGORIES, generalIds, getSet, hasTopics, listSets, prefs, stateIds } from "@/lib/lid";
 import { summarize } from "@/lib/quiz/types";
 import type { QuizStat } from "@/lib/quiz/types";
-import { ActionCard, ProgressBar } from "@/components/quiz/QuizParts";
-import { LidShell, LidTopBar, Wappen } from "@/components/lid/LidParts";
+import { ActionCard, ProgressBar, SubHeader } from "@/components/quiz/QuizParts";
+import { LidShell, Wappen } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 import { JsonLd, breadcrumbLd, quizPageMeta } from "@/lib/laixe/seo";
 
@@ -23,11 +23,11 @@ function SetCard({ id, title, sub, ids, stats, user, icon }: { id: string; title
   const s = summarize(ids, stats);
   const href = `/leben-in-deutschland/${id}`;
   return (
-    <li className="tile flex flex-col gap-2.5">
+    <li className="tile flex flex-col gap-3">
       <Link href={href} prefetch={false} className="flex items-center gap-2 underline-offset-2 hover:underline">
         {icon}
         <span className="flex min-w-0 flex-col">
-          <span className="truncate font-bold">{title}</span>
+          <span className="truncate font-semibold">{title}</span>
           {sub && <span className="truncate text-xs text-muted">{sub}</span>}
         </span>
       </Link>
@@ -48,27 +48,27 @@ function SetCard({ id, title, sub, ids, stats, user, icon }: { id: string; title
   );
 }
 
-/** Một nhóm bộ câu, thu gọn như "phần" ở Lái xe */
+/** Một nhóm bộ câu, thu gọn được như "phần" ở Lái xe — tiêu đề mục + lưới ô, không bọc thêm thẻ */
 function Part({ title, subtitle, ids, stats, user, open, children }: { title: string; subtitle: string; ids: string[]; stats: Record<string, QuizStat>; user: boolean; open?: boolean; children: ReactNode }) {
   const ps = summarize(ids, stats);
   return (
-    <details className="sticker group/part overflow-hidden" open={open}>
-      <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center gap-3">
+    <details className="group/part flex flex-col" open={open}>
+      <summary className="flex cursor-pointer list-none flex-col gap-2 rounded-ui py-1 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-h-11 items-center gap-3">
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-xl font-extrabold">{title}</span>
+            <span className="section-title block">{title}</span>
             <span className="block text-sm text-muted">
               {subtitle} · {user ? `${ps.done}/` : ""}
               {ps.total} câu
             </span>
           </span>
-          <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card-2 text-muted transition-transform group-open/part:rotate-180 motion-reduce:transition-none">
+          <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-card-2 text-muted transition-transform group-open/part:rotate-180 motion-reduce:transition-none">
             <ChevronDown className="size-4" />
           </span>
         </span>
         {user && <ProgressBar {...ps} />}
       </summary>
-      <div className="border-t border-line p-3">{children}</div>
+      <div className="pt-3">{children}</div>
     </details>
   );
 }
@@ -94,7 +94,7 @@ async function Topics() {
           title="Câu đánh dấu"
           locked={!user}
           disabled={!!user && !marked}
-          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ⭐ ở câu hỏi để đánh dấu"}
+          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ngôi sao ở câu hỏi để đánh dấu"}
         />
         <ActionCard
           href="/leben-in-deutschland/cau-sai"
@@ -108,24 +108,26 @@ async function Topics() {
       </div>
 
       {/* Học tất cả: 300 câu chung + câu của bang, như nút Đọc / Luyện của từng phần ở Lái xe */}
-      <section className="sticker hero flex flex-col gap-3 p-4 sm:p-5" style={{ ["--hero" as string]: "var(--leaf)" }}>
+      <section className="card flex flex-col gap-3 sm:p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="icon-bubble tint-accent size-11" aria-hidden>
+          <span className="icon-bubble tint-sec size-11" aria-hidden>
             <BookOpen className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-xl font-extrabold">Học tất cả</span>
+            <span className="block font-display text-xl font-extrabold tracking-[-0.02em]">Học tất cả</span>
             <span className="block text-sm text-muted">
               300 câu chung + 10 câu của {state.name} · {user ? `${all.done}/` : ""}
               {all.total} câu
             </span>
           </span>
-          <Link href="/leben-in-deutschland/hoc?mode=lesen" prefetch={false} className="btn btn-sm">
-            Đọc
-          </Link>
-          <Link href="/leben-in-deutschland/hoc" prefetch={false} className="btn btn-sm btn-primary">
-            Luyện
-          </Link>
+          <span className="flex gap-2 max-sm:w-full">
+            <Link href="/leben-in-deutschland/hoc?mode=lesen" prefetch={false} className="btn max-sm:flex-1">
+              Đọc
+            </Link>
+            <Link href="/leben-in-deutschland/hoc" prefetch={false} className="btn btn-primary max-sm:flex-1">
+              Luyện <ArrowRight className="size-4" />
+            </Link>
+          </span>
         </div>
         {user && <ProgressBar {...all} />}
       </section>
@@ -161,7 +163,7 @@ export default function Page() {
   return (
     <LidShell>
       <JsonLd data={breadcrumbLd([["Leben in Deutschland", "/leben-in-deutschland"], ["Học theo chủ đề", "/leben-in-deutschland/chu-de"]])} />
-      <LidTopBar back="/leben-in-deutschland" title="Học theo chủ đề" />
+      <SubHeader sec="lid" back="/leben-in-deutschland" backLabel="Leben in Deutschland" icon={BookOpen} title="Học theo chủ đề" sub="300 câu chung theo chủ đề và theo bộ 30 câu, cộng 10 câu của bang. Đọc lướt đáp án hoặc luyện chấm ngay." />
       <Suspense fallback={<ListSkeleton rows={8} />}>
         <Topics />
       </Suspense>

@@ -1,7 +1,8 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Clock, FileStack, Play } from "lucide-react";
+import { CircleCheck, Clock, FileStack, Flag, ListChecks, Play, TriangleAlert } from "lucide-react";
+import { SubHeader } from "@/components/quiz/QuizParts";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
 import { DEFAULT_CLASS, classInfo, prefs } from "@/lib/laixe";
@@ -24,32 +25,33 @@ async function Start() {
   const user = await getCurrentUser();
   const history = user ? listQuizExams(user.id, "fuehrerschein", 10) : [];
   const zusatz = info.exam.questions - info.exam.grundstoff;
+  const rules: { icon: typeof Clock; text: ReactNode }[] = [
+    { icon: ListChecks, text: <><b>{info.exam.questions} câu</b>: {info.exam.grundstoff} câu phần cơ bản + {zusatz} câu phần riêng hạng {cls}</> },
+    { icon: Clock, text: <><b>{info.exam.minutes} phút</b>, hết giờ tự nộp bài</> },
+    { icon: CircleCheck, text: <>Đậu khi <b>≤ {info.exam.maxErrorPoints} điểm lỗi</b> (mỗi câu sai 2–5 điểm, câu bỏ trống tính là sai)</> },
+    { icon: TriangleAlert, text: <>Trượt nếu <b>sai từ 2 câu 5 điểm</b>, kể cả khi tổng chỉ 10 điểm</> },
+  ];
   return (
     <>
-      <section className="card flex flex-col gap-4 sm:p-6">
+      <section className="card flex flex-col gap-5 sm:p-6" aria-labelledby="lx-rules">
         <div className="flex items-center gap-3">
-          <span className="icon-bubble tint-accent h-14 min-w-14 px-2 font-display text-2xl font-extrabold" aria-hidden>
+          <span className="icon-bubble tint-sec h-12 min-w-12 px-2 font-display text-xl font-extrabold" aria-hidden>
             {cls}
           </span>
           <div className="min-w-0">
-            <h2 className="section-title">Prüfungssimulation · hạng {info.name}</h2>
+            <h2 id="lx-rules" className="section-title">
+              Prüfungssimulation · hạng {info.name}
+            </h2>
             <p className="text-sm text-muted">{info.vi}</p>
           </div>
         </div>
-        <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          <li className="surface">
-            <b>{info.exam.questions} câu</b>: {info.exam.grundstoff} câu phần cơ bản + {zusatz} câu phần riêng hạng {cls}
-          </li>
-          <li className="surface">
-            <Clock className="mr-1 inline size-4 align-[-2px] text-muted" aria-hidden />
-            <b>{info.exam.minutes} phút</b>, hết giờ tự nộp bài
-          </li>
-          <li className="surface">
-            Đậu khi <b>≤ {info.exam.maxErrorPoints} điểm lỗi</b> (mỗi câu sai 2–5 điểm, câu bỏ trống tính là sai)
-          </li>
-          <li className="surface">
-            Trượt nếu <b>sai từ 2 câu 5 điểm</b>, kể cả khi tổng chỉ 10 điểm
-          </li>
+        <ul className="grid gap-x-6 sm:grid-cols-2">
+          {rules.map((r, i) => (
+            <li key={i} className="flex items-start gap-3 border-b border-line py-3 text-[0.95rem] leading-snug last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0 dark:border-border">
+              <r.icon className="mt-0.5 size-5 shrink-0 text-sec-text" aria-hidden />
+              <span>{r.text}</span>
+            </li>
+          ))}
         </ul>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Link href="/lai-xe/thi-thu/lam-bai" className="btn btn-lg btn-primary">
@@ -60,7 +62,7 @@ async function Start() {
               <FileStack className="size-4" /> Làm đề mẫu chính thức
             </Link>
           )}
-          <Link href="/lai-xe/hang" className="btn btn-lg">
+          <Link href="/lai-xe/hang" className="btn btn-lg btn-ghost">
             Đổi hạng
           </Link>
         </div>
@@ -77,14 +79,9 @@ async function Start() {
 
 export default function Page() {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <JsonLd data={breadcrumbLd([["Lý thuyết lái xe", "/lai-xe"], ["Thi thử", "/lai-xe/thi-thu"]])} />
-      <div className="flex items-center gap-2">
-        <Link href="/lai-xe" className="btn-icon" aria-label="Quay lại">
-          <ArrowLeft className="size-5" />
-        </Link>
-        <h1 className="page-title">Thi thử lý thuyết lái xe</h1>
-      </div>
+      <SubHeader sec="laixe" back="/lai-xe" backLabel="Lái xe" icon={Flag} title="Thi thử lý thuyết lái xe" sub="Đề ngẫu nhiên theo hạng, chấm điểm lỗi như phần mềm thi thật." />
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Start />
       </Suspense>

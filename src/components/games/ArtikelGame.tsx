@@ -24,7 +24,7 @@ const fmt = (n: number) => n.toLocaleString("vi-VN");
 /** Nút mạo từ (styles/games.css): der xanh dương · die đỏ hồng · das xanh lá */
 const COLOR: Record<Artikel, string> = { der: "g-der", die: "g-die", das: "g-das" };
 /** Chữ mạo từ — như trang bộ từ / Mưa từ vựng */
-const TEXT: Record<Artikel, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
+const TEXT: Record<Artikel, string> = { der: "text-phrase", die: "text-red-400", das: "text-ok-text" };
 
 function shuffle<T>(a: T[]): T[] {
   const b = [...a];
@@ -142,8 +142,9 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
       tone="cyan"
       title="Der Die Das"
       subtitle="Chọn đúng mạo từ, đúng liên tiếp càng lâu càng giỏi"
+      cover={phase !== "word" && phase !== "flash"}
       right={
-        <button className="btn-icon" title={sound ? "Tắt tiếng" : "Bật tiếng"} onClick={() => setSound(!sound)}>
+        <button className={`btn-icon hit-44 ${phase !== "word" && phase !== "flash" ? "text-white hover:bg-white/15" : ""}`} title={sound ? "Tắt tiếng" : "Bật tiếng"} aria-label={sound ? "Tắt tiếng" : "Bật tiếng"} onClick={() => setSound(!sound)}>
           {sound ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
         </button>
       }
@@ -159,13 +160,13 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
     return (
       <>
         {header}
-        <div className="card mx-auto flex w-full max-w-3xl flex-col gap-4">
+        <div className="theme-night g-night mx-auto w-full max-w-3xl">
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
-            <span className="badge badge-gold px-3 py-1 text-sm">
-              <Flame className="size-4" /> <span className="tabular-nums">{streak}</span> từ liên tiếp
-              {best > 0 && <span className="font-bold opacity-75"> · kỷ lục {fmt(best)}</span>}
+            <span className="g-hud">
+              <Flame className="size-4 text-gold" /> <span className="tabular-nums">{streak}</span> từ liên tiếp
+              {best > 0 && <span className="font-medium text-muted"> · kỷ lục {fmt(best)}</span>}
             </span>
-            <span className={`badge px-3 py-1 text-sm tabular-nums ${phase === "word" && left < 2000 ? "badge-red" : "badge-muted"}`}>
+            <span className={`g-hud tabular-nums ${phase === "word" && left < 2000 ? "border-red text-red-400" : ""}`}>
               <Clock className="size-4" /> {phase === "flash" ? ARTIKEL_SECONDS : Math.ceil(left / 1000)}s
             </span>
           </div>
@@ -173,21 +174,21 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
             <span style={{ width: `${phase === "flash" ? 100 : (left / (ARTIKEL_SECONDS * 1000)) * 100}%` }} />
           </div>
           <div className="g-word-stage">
-            {phase === "flash" ? (
-              <p role="status" className="badge badge-accent">
-                <Check className="size-4" strokeWidth={3} /> Chính xác
+            <div className="nhan flex w-full max-w-md -rotate-1 flex-col items-center gap-1 px-5 py-5">
+              <p className="font-display text-3xl font-extrabold tracking-[-0.02em] break-words md:text-4xl" lang="de">
+                {phase === "flash" ? <span className={TEXT[word.gender]}>{word.gender} </span> : <span className="text-muted">___ </span>}
+                {word.word}
               </p>
-            ) : null}
-            <p className="font-display text-3xl font-extrabold break-words md:text-4xl">
-              {phase === "flash" && <span className={TEXT[word.gender]}>{word.gender} </span>}
-              {word.word}
+              <p className="nhan-line w-full pb-1 text-muted">{word.meaning}</p>
+            </div>
+            <p role="status" className={`badge badge-ok mt-3 ${phase === "flash" ? "" : "invisible"}`}>
+              <Check className="size-4" strokeWidth={3} /> Chính xác
             </p>
-            <p className="mt-1 text-muted">{word.meaning}</p>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {ARTIKELS.map((a, i) => (
               <button key={a} className={`g-artikel ${COLOR[a]}`} disabled={phase !== "word"} onClick={() => answer(a)}>
-                {a} <span className="font-sans text-xs font-bold opacity-75 max-md:hidden">({i + 1})</span>
+                {a} <span className="font-sans text-xs font-semibold opacity-75 max-md:hidden">phím {i + 1}</span>
               </button>
             ))}
           </div>
@@ -200,45 +201,45 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
     <>
       {header}
       {phase === "over" && last && (
-        <div className="card rise-in flex flex-col items-center gap-2 text-center">
+        <section aria-label="Kết quả ván" className="card rise-in mx-auto flex w-full max-w-2xl flex-col items-center gap-3 p-5 text-center sm:p-6">
           {last.miss && (
             <>
               <p className="badge badge-red">
                 <X className="size-4" strokeWidth={3} /> {last.miss.timedOut ? "Hết giờ" : "Chưa đúng"}
               </p>
-              <p className="font-display text-2xl font-extrabold break-words">
+              <p className="font-display text-3xl font-extrabold tracking-[-0.02em] break-words" lang="de">
                 <span className={TEXT[last.miss.gender]}>{last.miss.gender}</span> {last.miss.word}
               </p>
-              <p className="text-muted">{last.miss.meaning}</p>
+              <p className="-mt-1 text-muted">{last.miss.meaning}</p>
             </>
           )}
-          <p className="mt-1 inline-flex flex-wrap items-center justify-center gap-1.5 font-bold">
-            <Trophy className="size-4 text-amber" /> Đúng <span className="font-display text-xl font-extrabold text-amber tabular-nums">{fmt(last.score)}</span> từ liên tiếp
+          <p className="inline-flex flex-wrap items-center justify-center gap-1.5 border-t border-line pt-3 font-semibold dark:border-border">
+            <Trophy className="size-4 text-amber" /> Đúng <span className="font-display text-2xl font-extrabold text-amber tabular-nums">{fmt(last.score)}</span> từ liên tiếp
             {last.score > last.best && last.score > 0 ? " · kỷ lục mới!" : last.best > 0 ? ` · kỷ lục ${fmt(last.best)}` : ""}
           </p>
           {!loggedIn && <GuestResult name={guest.name} score={last.score} record={last.score > last.best} />}
-        </div>
+        </section>
       )}
-      <div className="card g-tone-cyan flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         {guest.chip}
         <div>
-          <p className="label mb-2">Bộ từ</p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <h2 className="section-title mb-3">Chọn bộ từ</h2>
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {decks.map((d) => (
               <button
                 key={d.slug}
                 aria-pressed={d.slug === current?.slug}
                 onClick={() => setDeck(d.slug)}
-                className="g-deck flex-row items-center gap-3 p-2.5"
+                className="g-deck flex-row items-center gap-3 p-2.5 pr-10"
               >
                 {d.slug === current?.slug && (
-                  <span className="g-check" aria-hidden>
+                  <span className="g-check top-1/2 -translate-y-1/2" aria-hidden>
                     <Check className="size-4" strokeWidth={3} />
                   </span>
                 )}
                 <LevelTile level={d.level} />
                 <span className="min-w-0">
-                  <span className="block truncate font-extrabold">{d.title}</span>
+                  <span className="block truncate font-bold">{d.title}</span>
                   <span className="text-xs text-muted">
                     {fmt(d.wordCount)} danh từ{bests[d.slug] ? ` · kỷ lục ${fmt(bests[d.slug])}` : ""}
                   </span>
@@ -246,10 +247,14 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
               </button>
             ))}
           </div>
+          {!decks.length && <p className="empty">Chưa có bộ từ nào.</p>}
         </div>
-        <Rules />
+        <div className="surface">
+          <p className="label mb-2">Luật chơi</p>
+          <Rules />
+        </div>
         {errorLine}
-        <button className="btn btn-amber btn-lg" disabled={!current || phase === "loading"} onClick={() => guest.gate(0)}>
+        <button className="btn btn-primary btn-lg sm:self-start sm:px-8" disabled={!current || phase === "loading"} onClick={() => guest.gate(0)}>
           <Play className="size-4 fill-current" /> {phase === "over" ? "Chơi lại" : phase === "loading" ? "Đang tải…" : "Bắt đầu"}
         </button>
       </div>

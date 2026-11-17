@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { Play } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getCached, savedTranscriptKeys } from "@/lib/db";
@@ -29,7 +30,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
     <>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={`/watch/${videoId}`} className="btn btn-sm">
-          Xem video
+          <Play className="size-4" /> Xem video
         </Link>
         {entries.length > 1 &&
           entries.map((e) => (

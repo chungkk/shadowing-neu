@@ -140,14 +140,11 @@ function faqInline(text: string): ReactNode[] {
 const topicsFor = (product: LegalProduct): SupportTopic[] =>
     product.slug === HALLOVN_SLUG ? ['account', 'bug', 'idea', 'content', 'privacy', 'other'] : ['bug', 'idea', 'privacy', 'other'];
 
-/** Tiêu đề của một thẻ: ô icon (.icon-bubble.tint-link) + chữ Baloo như mục trong /settings */
+/** Tiêu đề của một khung: icon nhỏ màu mực nhạt + chữ tiêu đề, như các mục trong /settings */
 function CardTitle({ id, icon: Icon, children }: { id: string; icon: typeof Mail; children: ReactNode }) {
     return (
         <h2 id={id} className="section-title flex scroll-mt-24 items-center gap-2">
-            <span className="icon-bubble tint-link size-9 rounded-xl">
-                <Icon className="size-5" aria-hidden="true" />
-            </span>{' '}
-            {children}
+            <Icon className="size-5 shrink-0 text-muted" aria-hidden="true" /> {children}
         </h2>
     );
 }
@@ -159,8 +156,8 @@ function ContactSection({ id, title, locale, product }: { id: string; title: str
             <div className="flex flex-col gap-2">
                 <CardTitle id={id} icon={Mail}>{title}</CardTitle>
                 <p className="max-w-[65ch] text-sm text-muted">{t.contactDesc}</p>
-                <a href={`mailto:${SITE.contactEmail}`} className="btn btn-sm self-start">
-                    <Mail className="size-4 text-link" /> {SITE.contactEmail}
+                <a href={`mailto:${SITE.contactEmail}`} className="btn btn-sm max-w-full self-start break-all">
+                    <Mail className="size-4 shrink-0 text-link" /> {SITE.contactEmail}
                 </a>
             </div>
             <SupportForm product={product?.name} topics={product ? topicsFor(product) : undefined} />
@@ -168,20 +165,17 @@ function ContactSection({ id, title, locale, product }: { id: string; title: str
     );
 }
 
-/** Câu hỏi thường gặp: mỗi câu là một thẻ mềm (viền mảnh), mở ra thì nổi nhẹ + viền xanh nhạt */
+/** Câu hỏi thường gặp: các dòng ngăn bằng đường kẻ (không lồng thẻ trong thẻ), mở ra thì câu hỏi in đậm hơn */
 function FaqList({ items }: { items: { q: string; a: string }[] }) {
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col divide-y divide-line border-y border-line dark:divide-border dark:border-border">
             {items.map((item) => (
-                <details
-                    key={item.q}
-                    className="faq-item group rounded-ui border-2 border-line bg-card transition-[border-color,box-shadow] duration-(--dur) open:border-accent/40 open:shadow-soft motion-reduce:transition-none"
-                >
-                    <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-ui px-3.5 py-2.5 font-bold transition-colors hover:bg-card-2/60 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                <details key={item.q} className="faq-item group">
+                    <summary className="flex min-h-13 cursor-pointer items-center justify-between gap-3 rounded-ui py-3 font-semibold transition-colors hover:text-link focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent group-open:text-foreground">
                         {item.q}
-                        <ChevronDown className="size-5 shrink-0 text-link transition-transform duration-(--dur) group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+                        <ChevronDown className="size-5 shrink-0 text-muted transition-transform duration-(--dur) group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
                     </summary>
-                    <p className="legal-links max-w-[70ch] px-3.5 pb-3.5 text-[0.95rem] leading-relaxed text-muted">{faqInline(item.a)}</p>
+                    <p className="legal-links max-w-[70ch] pb-4 text-[0.95rem] leading-relaxed text-muted">{faqInline(item.a)}</p>
                 </details>
             ))}
         </div>
@@ -220,7 +214,7 @@ export function ProductSupport({ slug }: { slug: string }) {
 const consentAfter = (locale: Locale) => ({
     ads: (
         <p>
-            <ConsentSettings label={COPY[locale].consent} className="btn" icon={<Cookie className="size-4 text-link" />} />
+            <ConsentSettings label={COPY[locale].consent} className="btn" icon={<Cookie className="size-4 text-muted" />} />
         </p>
     ),
 });
@@ -238,8 +232,8 @@ export function ProductPrivacy({ slug }: { slug: string }) {
 }
 
 const QUICK_ICONS = [CircleHelp, KeyRound, Settings, ShieldCheck];
-/** Màu ô icon của từng thẻ trợ giúp nhanh (cùng thứ tự QUICK_ICONS) */
-const QUICK_TINTS = ['tint-link', 'tint-gold', 'tint-accent', 'tint-gem'];
+/** Màu ô icon của từng thẻ trợ giúp nhanh (cùng thứ tự QUICK_ICONS): xanh = trợ giúp, vàng = mật khẩu, xám = cài đặt, ngọc = quyền riêng tư */
+const QUICK_TINTS = ['tint-link', 'tint-gold', 'tint-muted', 'tint-gem'];
 
 export function SupportHub() {
     return (
@@ -257,12 +251,12 @@ export function SupportHub() {
                             {COPY[l].quickLinks.map((item, i) => {
                                 const Icon = QUICK_ICONS[i] ?? CircleHelp;
                                 return (
-                                    <Link key={item.href} href={item.href} className="group sticker sticker-link flex items-center gap-3 p-3">
-                                        <span className={`icon-bubble size-11 ${QUICK_TINTS[i] ?? 'tint-link'}`}>
+                                    <Link key={item.href} href={item.href} className="group card card-link flex items-center gap-3 p-3 sm:p-4">
+                                        <span className={`icon-bubble ${QUICK_TINTS[i] ?? 'tint-link'}`}>
                                             <Icon className="size-5" aria-hidden="true" />
                                         </span>
                                         <span className="flex min-w-0 flex-1 flex-col">
-                                            <span className="font-extrabold">{item.label}</span>
+                                            <span className="font-semibold">{item.label}</span>
                                             <span className="text-sm text-muted">{item.desc}</span>
                                         </span>
                                         <ArrowRight className="size-4 shrink-0 text-link transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
@@ -273,19 +267,19 @@ export function SupportHub() {
                     </section>
                     <section aria-labelledby="products" className="card flex flex-col gap-3 sm:p-6">
                         <CardTitle id="products" icon={FileText}>{COPY[l].products}</CardTitle>
-                        <ul className="grid gap-2.5">
+                        <ul className="flex flex-col divide-y divide-line border-t border-line dark:divide-border dark:border-border">
                             {LEGAL_PRODUCTS.map((product) => (
-                                <li key={product.slug} className="tile flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <li key={product.slug} className="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="min-w-0">
-                                        <strong className="block font-display text-lg leading-snug font-extrabold">{product.name}</strong>
+                                        <strong className="block font-display text-lg leading-snug font-bold">{product.name}</strong>
                                         <span className="text-sm text-muted">{product.summary[l]}</span>
                                     </div>
                                     <div className="flex shrink-0 gap-2">
                                         <Link href={`/${product.slug}/support`} className="btn btn-sm">
-                                            <CircleHelp className="size-4 text-link" /> {COPY[l].support}
+                                            <CircleHelp className="size-4 text-muted" /> {COPY[l].support}
                                         </Link>
                                         <Link href={`/${product.slug}/privacy`} className="btn btn-sm">
-                                            <ShieldCheck className="size-4 text-link" /> {COPY[l].privacy}
+                                            <ShieldCheck className="size-4 text-muted" /> {COPY[l].privacy}
                                         </Link>
                                     </div>
                                 </li>

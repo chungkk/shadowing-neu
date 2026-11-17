@@ -60,7 +60,10 @@ function downloadCsv(items: VocabItem[]) {
 
 /** Mức nhớ + lần ôn tới ("ôn lại sau 3 ngày" / "đến hạn ôn") */
 function Stage({ v, now }: { v: VocabItem; now: number | null }) {
-  const { label, color } = stageInfo(v.stage);
+  const info = stageInfo(v.stage);
+  const label = info.label;
+  // "Thuộc lâu" = đã thuộc → màu ok (xanh lá); accent giờ là xanh lam của hành động
+  const color = v.stage >= 5 ? "text-ok-text" : info.color;
   let when = "";
   if (now != null && v.stage > 0 && v.dueAt != null) {
     const days = Math.ceil((v.dueAt - now) / 86_400_000);
@@ -68,7 +71,9 @@ function Stage({ v, now }: { v: VocabItem; now: number | null }) {
   }
   return (
     <p className="text-xs text-muted">
-      <span className={`font-bold ${color}`}>● {label}</span>
+      <span className={`inline-flex items-center gap-1 font-bold ${color}`}>
+        <span aria-hidden className="size-1.5 rounded-full bg-current" /> {label}
+      </span>
       {when && <span> · {when}</span>}
     </p>
   );
@@ -109,7 +114,7 @@ function VocabRow({ v, now }: { v: VocabItem; now: number | null }) {
   return (
     <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 px-4 py-3 lg:grid-cols-[13rem_15rem_minmax(0,1fr)_auto] lg:items-start">
       <div className="min-w-0">
-        <h3 className="font-display text-lg leading-tight font-extrabold wrap-anywhere">{v.word}</h3>
+        <h3 className="font-display text-lg leading-tight font-bold tracking-[-0.015em] wrap-anywhere">{v.word}</h3>
         <Stage v={v} now={now} />
       </div>
       <div className="col-start-2 row-start-1 flex items-center text-muted lg:col-start-4">
@@ -291,12 +296,12 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
   if (!items.length) {
     return (
       <div className="card empty">
-        <span className="icon-bubble tint-link size-16 rounded-panel">
+        <span className="icon-bubble tint-sec size-16 rounded-panel">
           <BookOpen className="size-8" />
         </span>
-        <p className="font-display text-lg font-extrabold text-foreground">Chưa có từ nào</p>
+        <p className="font-display text-lg font-bold text-foreground">Chưa có từ nào</p>
         <p className="max-w-sm">Khi luyện một bài, bấm vào từ trong câu rồi chọn “Lưu từ” — hoặc tự thêm từ.</p>
-        <button className="btn btn-primary btn-lg mt-1" onClick={() => setAdding(true)}>
+        <button className="btn btn-primary btn-lg mt-1 max-sm:w-full" onClick={() => setAdding(true)}>
           <Plus className="size-4" /> Thêm từ
         </button>
         {adding && <AddWordDialog onClose={() => setAdding(false)} />}
@@ -307,11 +312,12 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap gap-2">
-        <label className="input flex h-11 w-full items-center gap-2 py-0 sm:w-auto sm:flex-1">
+        <label className="input-group h-11 w-full sm:w-auto sm:flex-1">
           <Search className="size-4 text-muted" />
           <input
-            className="min-w-0 flex-1 bg-transparent outline-none"
+            className="py-0"
             placeholder="Tìm từ hoặc nghĩa…"
+            aria-label="Tìm từ hoặc nghĩa"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -328,7 +334,7 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
           <CalendarCheck className="size-4" /> Ôn hôm nay ({today.length})
         </button>
         <button className="btn h-11" onClick={() => setAdding(true)}>
-          <Plus className="size-4 text-accent-text" /> Thêm từ
+          <Plus className="size-4 text-sec-text" /> Thêm từ
         </button>
         <button className="btn h-11" onClick={() => setReview({ title: "Tất cả", items })}>
           <Brain className="size-4 text-amber" /> Ôn tất cả
@@ -344,7 +350,7 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
         return (
           <section key={day} className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-lg font-extrabold">{dayLabel(day, local)}</h2>
+              <h2 className="font-display text-lg font-bold tracking-[-0.015em]">{dayLabel(day, local)}</h2>
               <span className="badge badge-muted">{list.length} từ</span>
               <button
                 className="btn btn-ghost btn-sm ml-auto text-muted hover:text-foreground"
@@ -362,7 +368,7 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
         );
       })}
       {shown.length > limit && (
-        <button className="btn self-center" onClick={() => setLimit((n) => n + PAGE * 5)}>
+        <button className="btn self-center max-sm:w-full" onClick={() => setLimit((n) => n + PAGE * 5)}>
           Xem thêm ({shown.length - limit} từ)
         </button>
       )}

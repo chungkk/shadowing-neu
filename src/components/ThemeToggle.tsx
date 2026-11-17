@@ -9,9 +9,9 @@ const listeners = new Set<() => void>();
 function readStored(): Theme {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    return t === "light" ? t : "dark"; // giá trị cũ "candy" (giao diện Kẹo đã gỡ) → tối
+    return t === "dark" ? t : "light"; // chưa chọn (hoặc giá trị cũ) → sáng
   } catch {
-    return "dark"; // Trình duyệt chặn lưu trữ: vẫn đổi được trong lần xem này
+    return "light"; // Trình duyệt chặn lưu trữ: vẫn đổi được trong lần xem này
   }
 }
 
@@ -41,12 +41,12 @@ const current = (): Theme => {
 
 const LABEL: Record<Theme, string> = {
   light: "Chuyển sang giao diện sáng",
-  dark: "Chuyển sang giao diện tối ấm",
+  dark: "Chuyển sang giao diện tối",
 };
 
-/** Nút chọn giao diện tối ấm ↔ sáng ở thanh trên cùng; lựa chọn được ghi nhớ trên thiết bị này */
+/** Nút chọn giao diện sáng ↔ tối ở thanh trên cùng; lựa chọn được ghi nhớ trên thiết bị này */
 export default function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, current, (): Theme => "dark");
+  const theme = useSyncExternalStore(subscribe, current, (): Theme => "light");
   const next = THEME_NEXT[theme];
 
   // Script trong <head> không đặt được màu thanh trình duyệt; bản dev của React còn xoá data-theme khi remount
@@ -69,7 +69,7 @@ export default function ThemeToggle() {
   const label = LABEL[next];
   return (
     <button type="button" onClick={toggle} title={label} aria-label={label} className="btn btn-ghost size-10 shrink-0 rounded-full p-0">
-      {next === "light" ? <Sun className="size-5 text-amber" /> : <Moon className="size-5 text-muted" />}
+      {next === "light" ? <Sun className="size-5 text-amber" /> : <Moon className="size-5 text-foreground/70" />}
     </button>
   );
 }

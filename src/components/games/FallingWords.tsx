@@ -12,6 +12,7 @@ import {
   Minimize2,
   Pause,
   Pickaxe,
+  PartyPopper,
   Play,
   RotateCcw,
   Trophy,
@@ -92,29 +93,29 @@ const DROP_H = 60;
 /** Tranh minh hoạ của từng biến thể (nền sân, giọt, ô chữ) — cố ý giữ màu riêng cho nền đêm; HUD / lớp phủ dùng class .g-* */
 const THEME = {
   rain: {
-    field: "bg-gradient-to-b from-[#0a1622] via-[#0c2033] to-[#0b2a40]",
-    drop: "border-cyan-400/50 bg-[#0e2a3d]/90",
-    dropTarget: "border-cyan-300 bg-[#0f3550]/95 shadow-[0_0_18px_rgba(34,211,238,0.45)]",
-    gone: "rain-miss border-cyan-400/40 bg-[#0e2a3d]/90",
-    cursor: "text-cyan-200",
-    empty: "text-sky-300/50",
+    field: "",
+    drop: "g-drop",
+    dropTarget: "g-drop-target",
+    gone: "rain-miss g-drop",
+    cursor: "text-gem",
+    empty: "text-gem/45",
     tone: "g-field-rain", // --tone: thanh mốc, nút bật, lời báo (styles/games.css)
   },
   gold: {
-    // trời chạng vạng ở trên, mặt đất ở 7rem, càng xuống sâu đất càng tối
-    field: "bg-[linear-gradient(to_bottom,#0e1a26_0,#2a3442_7rem,#6b4520_7rem,#4a2e14_35%,#2e1c0b_70%,#120a04_100%)]",
-    drop: "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-400/60 bg-gradient-to-br from-[#5c4314]/95 to-[#2e1f0b]/95",
-    dropTarget: "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-300 bg-gradient-to-br from-[#7a5a18]/95 to-[#3d2a0e]/95 shadow-[0_0_18px_rgba(250,204,21,0.5)]",
-    gone: "rain-miss rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-400/40 bg-[#3a2a10]/90",
-    cursor: "text-amber-200",
-    empty: "text-amber-200/40",
+    // trời đêm ở trên, mặt đất ở 7rem, các dải đất phẳng tối dần (g-field-gold)
+    field: "",
+    drop: "g-nugget",
+    dropTarget: "g-nugget g-nugget-target",
+    gone: "rain-miss g-nugget opacity-70",
+    cursor: "text-[#fff0b8]",
+    empty: "text-gold/40",
     tone: "g-field-gold",
   },
 } satisfies Record<Variant, Record<string, string>>;
 type Theme = (typeof THEME)[Variant];
 
 /** Màu theo giống — như trang bộ từ: der xanh dương · die đỏ · das xanh lá */
-const GENDER_TEXT: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
+const GENDER_TEXT: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-ok-text" };
 
 /** Số giả ngẫu nhiên cố định để server & trình duyệt vẽ nền giống nhau */
 const rand = (i: number, n: number) => (((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1) + 1) % 1;
@@ -177,18 +178,19 @@ function RainScenery({ label }: { label: ReactNode }) {
   return (
     <>
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-16 left-[5%] h-36 w-[45%] rounded-full bg-black/30 blur-2xl" />
-        <div className="absolute -top-20 right-[0%] h-40 w-[50%] rounded-full bg-black/25 blur-2xl" />
-        <div className="absolute -top-12 left-[35%] h-28 w-[30%] rounded-full bg-slate-700/20 blur-2xl" />
+        {/* Mây cắt giấy: vài mảng tròn phẳng chồng lên nhau */}
+        <div className="absolute -top-14 left-[4%] h-24 w-[40%] rounded-full bg-[#1d1840]" />
+        <div className="absolute -top-16 right-[-4%] h-28 w-[46%] rounded-full bg-[#1d1840]" />
+        <div className="absolute -top-12 left-[30%] h-20 w-[34%] rounded-full bg-[#231d4a]" />
         {STREAKS.map((s, i) => (
           <span
             key={i}
-            className="rain-streak absolute -top-10 w-px bg-sky-200"
+            className="rain-streak absolute -top-10 w-px bg-[#7fd3f0]"
             style={{ left: `${s.left}%`, height: s.h, opacity: s.op, animationDuration: `${s.dur}s`, animationDelay: `${s.delay}s` }}
           />
         ))}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 border-t-2 border-cyan-300/80 bg-gradient-to-b from-cyan-500/30 to-[#05233a] shadow-[0_-6px_24px_rgba(34,211,238,0.35)]" />
+      <div className="g-water pointer-events-none absolute inset-x-0 bottom-0 h-12" />
       <Mascot animated className="pointer-events-none absolute bottom-8 left-3 size-14" />
       <div className="pointer-events-none absolute bottom-1.5 left-1/2 flex -translate-x-1/2 flex-col items-center">
         <Emoji code="26f5" className="bob size-12 [animation-delay:-1s]" />
@@ -218,10 +220,9 @@ function GoldScenery({ label, reeling }: { label: ReactNode; reeling: boolean })
         {GEMS.map((g, i) => (
           <Emoji key={i} code={g.code} className="absolute size-5 opacity-40" style={{ left: `${g.left}%`, top: `${g.top}%` }} />
         ))}
-        <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-b from-transparent to-black/70" />
       </div>
       {/* Mặt đất (7rem) + giàn ròng rọc ở giữa (ròng rọc ở 4.25rem) + thợ mỏ đứng cạnh */}
-      <div className="pointer-events-none absolute inset-x-0 top-28 h-1.5 border-t-2 border-lime-700/70 bg-[#8b6a3a]" />
+      <div className="pointer-events-none absolute inset-x-0 top-28 h-1.5 bg-[#8b6a3a]" />
       <div className="pointer-events-none absolute top-[4.25rem] left-1/2 h-[2.9rem] w-1.5 origin-top -translate-x-1/2 rotate-[22deg] rounded-full bg-[#7a4e25]" />
       <div className="pointer-events-none absolute top-[4.25rem] left-1/2 h-[2.9rem] w-1.5 origin-top -translate-x-1/2 -rotate-[22deg] rounded-full bg-[#7a4e25]" />
       <div className="pointer-events-none absolute top-[3.85rem] left-1/2 size-3.5 -translate-x-1/2 rounded-full border-2 border-[#3b2410] bg-amber-200" />
@@ -499,6 +500,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
       title={cfg.title}
       subtitle={cfg.subtitle}
       onBack={phase === "menu" || phase === "loading" ? undefined : quit}
+      cover={phase === "menu" || phase === "loading"}
       right={
         playing &&
         typeof document !== "undefined" &&
@@ -561,8 +563,14 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
       : [];
   const reelOf = new Map(reels.map((r) => [r.id, r]));
   const label = (
-    <span className="-mt-1 max-w-48 truncate rounded-full border border-white/10 bg-black/60 px-2.5 py-0.5 text-[11px] font-bold text-white">
-      {bad ? <span className="text-red-300">✕ {bad.key}</span> : current?.title}
+    <span className="-mt-1 max-w-48 truncate rounded-md border border-border bg-card px-2.5 py-0.5 text-[11px] font-bold text-foreground">
+      {bad ? (
+        <span className="inline-flex items-center gap-1 text-red-400">
+          <X className="size-3" strokeWidth={3} /> {bad.key}
+        </span>
+      ) : (
+        current?.title
+      )}
     </span>
   );
 
@@ -574,7 +582,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
         <div
           onPointerDown={() => phase === "play" && nativeKeyboard && focusInput()}
           className={`theme-night ${theme.tone} relative overflow-hidden select-none ${theme.field} ${
-            full ? "min-h-0 flex-1 rounded-xl" : `g-stage ${keyboard ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
+            full ? "min-h-0 flex-1 rounded-xl" : `g-stage ${keyboard && playing ? "h-[calc(100dvh-24rem)] md:h-[calc(100dvh-20rem)]" : "h-[calc(100dvh-14rem)] md:h-[calc(100dvh-10rem)]"} min-h-[420px]`
           }`}
         >
           {variant === "gold" ? <GoldScenery label={label} reeling={!!reels.length} /> : <RainScenery label={label} />}
@@ -600,13 +608,13 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                     onClick={cfg.listen && d.state === "fall" ? () => sayDrop(d) : undefined} // "gold": bấm vào cục vàng → nghe lại
                     onPointerDown={cfg.listen ? (e) => e.stopPropagation() : undefined}
                     title={cfg.listen && d.state === "fall" ? "Bấm để nghe lại" : undefined}
-                    className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} ${cfg.listen && d.state === "fall" ? "cursor-pointer hover:brightness-125" : ""} px-2.5 py-1.5 text-center shadow-lg shadow-black/40 backdrop-blur-sm ${
+                    className={`relative flex flex-col items-center gap-0.5 rounded-xl border ${isTarget && bad ? "shake" : ""} ${cfg.listen && d.state === "fall" ? "cursor-pointer hover:brightness-125" : ""} px-2.5 py-1.5 text-center ${
                       d.state === "hit"
                         ? variant === "gold"
-                          ? "rounded-[0.9rem_1.4rem_1rem_1.5rem] border-yellow-200 bg-gradient-to-br from-[#8a6514]/95 to-[#4a3310]/95 shadow-[0_0_24px_rgba(250,204,21,0.7)]"
-                          : "rain-hit border-accent bg-accent/20"
+                          ? "g-nugget g-nugget-hit"
+                          : "rain-hit border-ok bg-ok-soft"
                         : d.state === "miss"
-                          ? "rain-miss border-red bg-red/20"
+                          ? "rain-miss border-red bg-red-soft"
                           : d.state === "gone"
                             ? theme.gone
                             : isTarget
@@ -621,18 +629,18 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                         {d.w.meaning}
                       </span>
                     ) : done ? (
-                      <span className="w-full truncate text-xs text-amber-100/80">{d.w.meaning}</span>
+                      <span className="w-full truncate text-xs text-[#fff0b8]/80">{d.w.meaning}</span>
                     ) : (
-                      <span className={`flex h-6 w-full items-center justify-center rounded-md bg-black/25 ${speakingId === d.id ? "text-amber" : "text-amber-100/80"}`}>
+                      <span className={`flex h-6 w-full items-center justify-center rounded-md bg-black/25 ${speakingId === d.id ? "text-gold" : "text-[#fff0b8]/80"}`}>
                         <Volume2 className={`size-4 ${speakingId === d.id ? "animate-pulse" : ""}`} />
                       </span>
                     )}
                     {done ? (
-                      <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-accent-text" : "text-red-400"}`}>{fullWord(d.w)}</span>
+                      <span className={`w-full font-extrabold [overflow-wrap:anywhere] ${d.state === "hit" ? GENDER_TEXT[d.w.gender] ?? "text-ok-text" : "text-red-400"}`}>{fullWord(d.w)}</span>
                     ) : (
                       <Slots word={d.w.word} typed={isTarget ? v.typed : null} hint={isTarget && v.wrong >= 2} theme={theme} />
                     )}
-                    {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-amber">+{d.points}</span>}
+                    {d.state === "hit" && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-base font-extrabold text-gold">+{d.points}</span>}
                   </div>
                 </div>
               );
@@ -658,17 +666,17 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
           {/* pointer-events-none: khung HUD rộng cả sân, không được chặn cú bấm vào giọt bên dưới */}
           <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 *:pointer-events-auto">
             <span className="g-hud">
-              <Trophy className="size-4 text-amber" /> <span className="tabular-nums">{v.score}</span>
-              {v.combo >= 3 && <span className="text-xs text-amber">×{v.combo}</span>}
+              <Trophy className="size-4 text-gold" /> <span className="tabular-nums">{v.score}</span>
+              {v.combo >= 3 && <span className="text-xs text-gold">×{v.combo}</span>}
             </span>
-            <span className="g-hud min-w-0 flex-col gap-1 rounded-2xl font-normal">
+            <span className="g-hud min-w-0 flex-col items-stretch gap-1 rounded-xl font-normal">
               <span className="flex min-w-0 items-center gap-1.5">
                 <Flag className="size-4 shrink-0 text-[var(--tone-text)]" />
                 <b className="shrink-0">
                   Mốc {v.milestone + 1}/{v.topics.length}
                 </b>
-                <span className="shrink-0 font-bold text-white/70">· Cấp {levelOf(v.hits)}</span>
-                <span className="truncate text-white/70 max-sm:hidden">
+                <span className="shrink-0 font-semibold text-muted">· Cấp {levelOf(v.hits)}</span>
+                <span className="truncate text-muted max-sm:hidden">
                   · {topic.icon} {topic.title}
                 </span>
               </span>
@@ -679,7 +687,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
             <div className="flex flex-col items-end gap-2">
               <span className="g-hud gap-0.5 px-2.5 py-1.5" aria-label={`${v.lives} mạng`}>
                 {Array.from({ length: cfg.lives }, (_, i) => (
-                  <Heart key={i} className={`size-4 ${i < v.lives ? "fill-red text-red" : "text-white/20"}`} />
+                  <Heart key={i} className={`size-4 ${i < v.lives ? "fill-red text-red" : "text-foreground/20"}`} />
                 ))}
               </span>
               {playing && (
@@ -719,7 +727,7 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                 {phase === "pause" ? (
                   <>
                     <p className="font-display text-2xl font-extrabold">Tạm dừng</p>
-                    <button className="btn btn-amber btn-lg btn-block" onClick={resume}>
+                    <button className="btn btn-primary btn-lg btn-block" onClick={resume}>
                       <Play className="size-5" /> Tiếp tục
                     </button>
                     <button className="btn btn-lg btn-block" onClick={quit}>
@@ -728,7 +736,10 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                   </>
                 ) : (
                   <>
-                    <p className="font-display text-2xl font-extrabold">{phase === "win" ? "🎉 Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}</p>
+                    <p className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-[-0.02em]">
+                      {phase === "win" && <PartyPopper className="size-6 text-gold" />}
+                      {phase === "win" ? "Vượt hết các mốc!" : v.lives > 0 ? "Đã thoát ván" : "Hết mạng!"}
+                    </p>
                     <p className="g-score">{v.score}</p>
                     {v.score > v.best ? (
                       <p className="badge badge-gold px-3 py-1 text-sm">
@@ -745,9 +756,9 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                     {!!missed.length && (
                       <div className="w-full text-left">
                         <p className="label mb-2">Từ bị trượt</p>
-                        <ul className="card divide-y divide-border p-0">
+                        <ul className="divide-y divide-border border-y border-border">
                           {missed.map((w) => (
-                            <li key={w.key} className="flex items-baseline gap-2 px-3 py-2">
+                            <li key={w.key} className="flex items-baseline gap-2 px-1 py-2">
                               <button className="cursor-pointer font-bold hover:underline" onClick={() => speakGerman(fullWord(w))}>
                                 {GENDER_TEXT[w.gender] ? <span className={GENDER_TEXT[w.gender]}>{w.gender} </span> : null}
                                 {w.word}
@@ -758,8 +769,8 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                         </ul>
                         {saved ? (
                           <p role="status" className="alert alert-ok mt-2 justify-center">
-                          {saved}
-                        </p>
+                            {saved}
+                          </p>
                         ) : loggedIn ? (
                           <button className="btn btn-soft btn-lg btn-block mt-3" disabled={saving} onClick={saveMissed}>
                             <BookmarkPlus className="size-4" /> Lưu vào sổ để ôn
@@ -767,11 +778,11 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
                         ) : null}
                       </div>
                     )}
-                    <div className="flex w-full gap-2">
+                    <div className="flex w-full flex-col-reverse gap-2 sm:flex-row">
                       <button className="btn btn-lg flex-1" onClick={quit}>
                         Đổi bộ từ
                       </button>
-                      <button className="btn btn-amber btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
+                      <button className="btn btn-primary btn-lg flex-1" onClick={() => start(phase === "win" ? 0 : v.milestone)}>
                         <RotateCcw className="size-4" /> {phase === "win" ? "Chơi lại" : `Chơi lại mốc ${v.milestone + 1}`}
                       </button>
                     </div>
@@ -802,7 +813,8 @@ export default function FallingWords({ variant, decks, loggedIn }: { variant: Va
         </div>
 
         {/* Bàn phím trên màn hình (QWERTZ) */}
-        {keyboard && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: variant === "gold" ? "Chọn cục vàng khác" : "Chọn giọt khác" }} />}
+        {/* hết ván thì cất bàn phím đi để lớp kết quả có đủ chỗ */}
+        {keyboard && playing && <ScreenKeyboard onKey={handleKey} disabled={phase !== "play"} enter={{ label: "Bỏ chọn", title: variant === "gold" ? "Chọn cục vàng khác" : "Chọn giọt khác" }} />}
       </div>
     </div>
   );

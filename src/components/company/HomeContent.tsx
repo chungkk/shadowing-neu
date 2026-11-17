@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import type { ComponentType, CSSProperties } from 'react';
-import { ArrowRight, BookMarked, Car, Check, Database, Landmark, Languages, Mail, MapPin, MonitorSmartphone, UsersRound } from 'lucide-react';
+import type { ComponentType } from 'react';
+import { ArrowRight, BookMarked, Car, Check, Database, Info, Landmark, Languages, Mail, MapPin, MonitorSmartphone, UsersRound } from 'lucide-react';
 import { COMPANY, SITE } from '@/lib/company/site';
 import { LEARN_AREAS, PLATFORM, productPath } from '@/lib/company/services';
 import type { LearnArea } from '@/lib/company/services';
@@ -10,9 +10,9 @@ import { PRODUCT_PAGES } from '@/lib/company/productPages';
 import { useLocale, useT } from '@/components/company/LocaleContext';
 import { Shot, StartButton } from '@/components/company/ProductParts';
 import ProjectForm from '@/components/company/ProjectForm';
-import Mascot from '@/components/Mascot';
+import PageHeader from '@/components/PageHeader';
 
-type Icon = ComponentType<{ className?: string }>;
+type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
 
 const COPY = {
     de: {
@@ -92,12 +92,12 @@ const COPY = {
     },
 };
 
-/** Icon và màu ô icon (.icon-bubble + .tint-*) của từng phần — cùng tông màu với các thẻ trên trang chủ app */
-const AREA_LOOK: Record<LearnArea['id'], { icon: Icon; tone: string }> = {
-    deutsch: { icon: Languages, tone: 'tint-accent' },
-    vocab: { icon: BookMarked, tone: 'tint-gem' },
-    fuehrerschein: { icon: Car, tone: 'tint-gold' },
-    lid: { icon: Landmark, tone: 'tint-candy' },
+/** Icon và màu khu vực (data-sec → màu bìa vở) của từng phần — cùng màu với ba cuốn vở trên trang chủ app */
+const AREA_LOOK: Record<LearnArea['id'], { icon: Icon; sec: string }> = {
+    deutsch: { icon: Languages, sec: 'de' },
+    vocab: { icon: BookMarked, sec: 'de' },
+    fuehrerschein: { icon: Car, sec: 'laixe' },
+    lid: { icon: Landmark, sec: 'lid' },
 };
 
 /** Icon cho 3 việc làm theo yêu cầu (t.proof, cùng thứ tự) */
@@ -115,26 +115,22 @@ function SectionHead({ id, title, text }: { id: string; title: string; text?: st
     );
 }
 
-/** Thẻ một phần học: icon, tên, con số và mô tả — bấm vào là tới phần đó */
-function AreaCard({ area, index }: { area: LearnArea; index: number }) {
+/** Thẻ một phần học: dải bìa màu của khu (icon), tên, con số và mô tả — bấm vào là tới phần đó */
+function AreaCard({ area }: { area: LearnArea }) {
     const { locale } = useLocale();
     const copy = area.copy[locale];
     const look = AREA_LOOK[area.id];
     return (
-        <Link
-            href={area.href}
-            style={{ '--i': index } as CSSProperties}
-            className="group sticker sticker-link rise-in flex flex-col gap-2 p-3 sm:gap-3 sm:p-4 motion-reduce:hover:translate-y-0"
-        >
-            <span className="flex items-center justify-between gap-2">
-                <span className={`icon-bubble size-12 ${look.tone}`}>
-                    <look.icon className="size-6" aria-hidden="true" />
-                </span>
-                <ArrowRight className="size-5 text-link transition-transform duration-(--dur) group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
+        <Link href={area.href} data-sec={look.sec} className="group sticker card-link flex flex-col overflow-hidden motion-reduce:hover:translate-y-0">
+            <span className="cover flex h-14 items-center justify-between rounded-none pr-3 pl-7 sm:h-16 sm:pr-4">
+                <look.icon className="size-6 sm:size-7" strokeWidth={2.25} aria-hidden="true" />
+                <ArrowRight className="size-5 transition-transform duration-(--dur) group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
             </span>
-            <span className="leading-snug font-extrabold sm:text-lg">{copy.title}</span>
-            <span className="font-display text-3xl leading-none font-extrabold text-accent-text tabular-nums">{copy.fact}</span>
-            <span className="text-sm text-muted">{copy.text}</span>
+            <span className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
+                <span className="leading-snug font-semibold sm:text-lg">{copy.title}</span>
+                <span className="font-display text-[1.75rem] leading-none font-extrabold tracking-[-0.03em] tabular-nums sm:text-3xl">{copy.fact}</span>
+                <span className="text-sm text-muted">{copy.text}</span>
+            </span>
         </Link>
     );
 }
@@ -154,7 +150,7 @@ function PlatformSection() {
                     <ul className="flex flex-col gap-2">
                         {service.copy[locale].features.map((feature) => (
                             <li key={feature} className="flex gap-2">
-                                <Check className="mt-0.5 size-5 shrink-0 text-accent-text" /> {feature}
+                                <Check className="mt-0.5 size-5 shrink-0 text-ok-text" /> {feature}
                             </li>
                         ))}
                     </ul>
@@ -182,33 +178,40 @@ export default function HomeContent() {
     const t = useT(COPY);
     return (
         <div className="page gap-10 md:gap-14">
-            {/* Mở đầu: thẻ .hero (nền gradient nhạt) + linh vật + nhãn vàng */}
-            <section id="start" aria-labelledby="home-title" className="sticker hero rise-in flex scroll-mt-20 flex-col items-center gap-5 p-6 text-center sm:p-10 md:flex-row md:gap-10 md:text-left">
-                <Mascot animated className="bob size-32 md:order-last md:size-56" />
-                <div className="flex min-w-0 flex-col items-center gap-4 md:items-start">
-                    <span className="badge badge-gold text-sm">{SITE.name}</span>
-                    <h1 id="home-title" className="display text-balance">
-                        <span className="block">{t.h1a}</span>
-                        <span className="block text-accent-text">{t.h1b}</span>
-                    </h1>
-                    <p className="lead max-w-xl">{t.lead}</p>
-                    <div className="flex flex-wrap justify-center gap-3 md:justify-start">
-                        <Link href={PLATFORM.href} className="btn btn-primary btn-lg">
-                            {t.cta} <ArrowRight className="size-5" />
-                        </Link>
-                        <a href="#auftrag" className="btn btn-lg">
-                            {t.ctaProject}
-                        </a>
-                    </div>
-                    <span className="badge badge-accent">{t.sheetNote}</span>
-                </div>
+            {/* Mở đầu: bìa vở mực + nhãn vở (PageHeader) có linh vật — trang tổng quan của khu thông tin */}
+            <section id="start" className="scroll-mt-20">
+                <PageHeader
+                    sec="ink"
+                    icon={Info}
+                    mascot
+                    title={
+                        <span id="home-title" className="text-balance">
+                            {t.h1a} <span className="highlight">{t.h1b}</span>
+                        </span>
+                    }
+                    sub={
+                        <>
+                            {t.lead} <span className="mt-1 block text-sm">{t.sheetNote}</span>
+                        </>
+                    }
+                    actions={
+                        <>
+                            <Link href={PLATFORM.href} className="btn btn-primary btn-lg max-sm:w-full">
+                                {t.cta} <ArrowRight className="size-5" />
+                            </Link>
+                            <a href="#auftrag" className="btn btn-lg max-sm:w-full">
+                                {t.ctaProject}
+                            </a>
+                        </>
+                    }
+                />
             </section>
 
             {/* Các phần học: thẻ số liệu bấm được */}
             <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                {LEARN_AREAS.map((area, i) => (
+                {LEARN_AREAS.map((area) => (
                     <li key={area.id} className="flex *:flex-1">
-                        <AreaCard area={area} index={i + 1} />
+                        <AreaCard area={area} />
                     </li>
                 ))}
             </ul>
@@ -219,16 +222,16 @@ export default function HomeContent() {
             <section id="auftrag" aria-labelledby="auftrag-title" className="flex scroll-mt-20 flex-col gap-4">
                 <SectionHead id="auftrag-title" title={t.projectTitle} text={t.projectDesc} />
                 <div className="grid items-start gap-4 lg:grid-cols-2">
-                    <ul className="flex flex-col gap-3">
+                    <ul className="card flex flex-col divide-y divide-line p-0 dark:divide-border">
                         {t.proof.map((item, i) => {
                             const ProofIcon = PROOF_ICONS[i] ?? Check;
                             return (
-                                <li key={item.title} className="sticker flex items-center gap-3 p-4">
-                                    <span className="icon-bubble tint-accent size-11">
+                                <li key={item.title} className="flex items-center gap-3 p-4 sm:px-5">
+                                    <span className="icon-bubble tint-muted">
                                         <ProofIcon className="size-5" aria-hidden="true" />
                                     </span>
                                     <span className="flex min-w-0 flex-col">
-                                        <span className="font-extrabold">{item.title}</span>
+                                        <span className="font-semibold">{item.title}</span>
                                         <span className="text-sm text-muted">{item.from}</span>
                                     </span>
                                 </li>
@@ -241,16 +244,18 @@ export default function HomeContent() {
                 </div>
             </section>
 
-            {/* Liên hệ: khối kêu gọi cuối trang như trang chủ */}
-            <section id="contact" aria-labelledby="contact-title" style={{ '--hero': 'var(--aqua)' } as CSSProperties}
-                className="sticker hero flex scroll-mt-20 flex-col items-center gap-4 p-6 text-center sm:p-10"
+            {/* Liên hệ: trang giấy ô ly như khối kêu gọi cuối trang chủ */}
+            <section
+                id="contact"
+                aria-labelledby="contact-title"
+                className="o-ly flex scroll-mt-20 flex-col items-start gap-4 rounded-[var(--radius-xl)] border border-line p-6 sm:p-10 dark:border-border"
             >
-                <h2 id="contact-title" className="section-title text-2xl text-balance sm:text-3xl">
+                <h2 id="contact-title" className="font-display text-[clamp(1.75rem,1.3rem+1.6vw,2.4rem)] leading-[1.1] font-extrabold tracking-[-0.03em] text-balance">
                     {t.contactTitle}
                 </h2>
                 <p className="lead max-w-xl">{t.contactDesc}</p>
-                <div className="flex max-w-full flex-wrap justify-center gap-3">
-                    <a href={`mailto:${SITE.contactEmail}`} className="btn btn-soft btn-lg max-w-full break-all">
+                <div className="flex w-full max-w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
+                    <a href={`mailto:${SITE.contactEmail}`} className="btn btn-primary btn-lg max-w-full break-all">
                         <Mail className="size-5 shrink-0" /> {SITE.contactEmail}
                     </a>
                     <Link href="/support" className="btn btn-lg">

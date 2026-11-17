@@ -22,7 +22,7 @@ async function Marked({ searchParams }: P) {
       key={mode}
       mode={mode}
       title="Câu đánh dấu"
-      subtitle={`${ids.length} câu · bấm ⭐ để bỏ đánh dấu`}
+      subtitle={`${ids.length} câu · bấm ngôi sao để bỏ đánh dấu`}
       backHref="/lai-xe"
       questions={await forClient(ids, lang)}
       loggedIn

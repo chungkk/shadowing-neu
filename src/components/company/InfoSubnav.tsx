@@ -65,14 +65,14 @@ export default function InfoSubnav() {
     }, [current]);
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl items-end gap-3 px-4 pt-3 md:px-6">
-            {/* Điều hướng phụ của khu vực: .tabs-line + .tab (gạch chân xanh ở tab aria-current="page") */}
+        <div data-sec="ink" className="mx-auto flex w-full max-w-6xl items-end gap-3 px-4 pt-3 md:px-6">
+            {/* Điều hướng phụ của khu vực: .tabs-line + .tab (gạch chân màu mực — data-sec="ink" — ở tab aria-current="page") */}
             <nav ref={navRef} aria-label={t.aria} className="tabs-line relative min-w-0 flex-1">
                 {t.nav.map((it, i) => {
                     const Icon = ICONS[i];
                     return (
                         <Link key={it.href} href={it.href} aria-current={it.href === current ? 'page' : undefined} className="tab min-h-11 focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-accent">
-                            {Icon && <Icon className={`size-4 max-sm:hidden ${it.href === current ? 'text-accent-text' : ''}`} aria-hidden="true" />}
+                            {Icon && <Icon className="size-4 max-sm:hidden" aria-hidden="true" />}
                             {it.label}
                         </Link>
                     );

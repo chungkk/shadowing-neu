@@ -21,6 +21,7 @@ import { clientApi } from "@/lib/client-api";
 import { GameHeader } from "./GameParts";
 import { usePlayGuest } from "./GuestPlay";
 import { LoginLink } from "../auth/LoginDialog";
+import Mascot from "../Mascot";
 import { GAME_TITLE } from "./PlayLobby";
 import CaroPlay from "./CaroPlay";
 import {
@@ -121,7 +122,7 @@ function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; logged
         >
           <Trophy className="size-4" /> {title}
         </button>
-        <Link href={onAgain} className="btn btn-amber">
+        <Link href={onAgain} className="btn btn-primary">
           <Play className="size-4 fill-current" /> Chơi ván mới
         </Link>
       </div>
@@ -130,19 +131,19 @@ function ResultCard({ v, onAgain, loggedIn }: { v: View; onAgain: string; logged
   return (
     <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
       <div role="dialog" aria-modal="true" aria-label={title} className="dialog max-w-sm items-center gap-2 text-center">
-        <button type="button" onClick={() => setOpen(false)} className="btn-icon absolute top-3 right-3" aria-label="Đóng">
+        <button type="button" onClick={() => setOpen(false)} className="btn-icon hit-44 absolute top-3 right-3" aria-label="Đóng">
           <X className="size-5" />
         </button>
         <MascotSay mood={mood} className="mb-1 w-full pr-8 text-left">
           {say}
         </MascotSay>
-        <p className={`dialog-title text-2xl ${won ? "text-amber" : ""}`}>
+        <p className={`dialog-title font-display text-3xl tracking-[-0.025em] ${won ? "text-amber" : ""}`}>
           {won && <Trophy className="mr-1.5 inline size-6 align-[-0.15em]" />}
           {title}
         </p>
         <p className="text-sm text-muted">{line}</p>
         <div className="mt-2 flex w-full flex-col gap-2">
-          <Link href={onAgain} className="btn btn-amber btn-lg btn-block">
+          <Link href={onAgain} className="btn btn-primary btn-lg btn-block">
             <Play className="size-4 fill-current" /> Chơi ván mới
           </Link>
           <button type="button" onClick={() => setOpen(false)} className="btn btn-lg btn-block">
@@ -196,20 +197,25 @@ function Waiting({
         ? "Sẵn sàng rồi! Chờ chủ phòng bắt đầu nhé."
         : "Chuẩn bị xong thì bấm Sẵn sàng nhé!";
   return (
-    <div className="card flex flex-col gap-4">
+    <div className="card flex flex-col gap-5 p-4 sm:p-6">
       <MascotSay mood={everyoneReady || me?.ready ? "cheer" : "happy"}>
         {say}
       </MascotSay>
-      <div className="g-ticket">
-        <p className="label text-muted">Mã phòng</p>
-        <p className="g-code select-all">{v.code}</p>
-        <p className="mt-1 text-sm font-semibold text-muted">
-          {GAME_TITLE[v.game]}
-          {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · {v.capacity} người
-        </p>
+      {/* Mã phòng: bìa tím + nhãn vở ghi mã (như vé dán) */}
+      <div data-sec="game" className="flex flex-col">
+        <div className="cover flex items-start justify-between gap-3 pt-3 pr-4 pb-10 pl-8 text-sm font-semibold">
+          <span>Mã phòng</span>
+          <span className="text-right opacity-90">
+            {GAME_TITLE[v.game]}
+            {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · {v.capacity} người
+          </span>
+        </div>
+        <div className="nhan relative z-10 mx-3 -mt-8 flex flex-col items-center gap-1 py-4 sm:mx-6">
+          <p className="g-code select-all">{v.code}</p>
+        </div>
       </div>
       {me && (
-        <button className="btn mx-auto" onClick={share}>
+        <button className="btn btn-lg mx-auto max-sm:w-full" onClick={share}>
           {copied ? (
             <Check className="size-4" />
           ) : canShare ? (
@@ -220,7 +226,7 @@ function Waiting({
           {copied ? "Đã chép link" : "Gửi link cho bạn"}
         </button>
       )}
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col divide-y divide-line dark:divide-border">
         {Array.from({ length: v.capacity }, (_, k) => {
           const p = v.players[k];
           return (
@@ -228,24 +234,27 @@ function Waiting({
               {p ? (
                 <>
                   <span className="g-avatar">{p.id === v.hostId ? <Crown className="size-4 text-amber" /> : <Users className="size-4 text-muted" />}</span>
-                  <span className="flex-1 truncate font-bold">
+                  <span className="min-w-0 flex-1 truncate font-semibold">
                     {p.name}
                     {p.me && " (bạn)"}
-                    {p.guest && <span className="ml-1 text-xs font-bold text-muted">· khách</span>}
+                    {p.guest && <span className="ml-1 text-xs font-medium text-muted">· khách</span>}
                   </span>
                   {p.ready ? (
-                    <span className="badge badge-accent">
+                    <span className="badge badge-ok">
                       <Check className="size-3.5" strokeWidth={3} />{" "}
                       {p.id === v.hostId ? "Chủ phòng" : "Sẵn sàng"}
                     </span>
                   ) : (
-                    <span className="badge bg-card">
+                    <span className="badge badge-muted">
                       <Hourglass className="size-3.5" /> Chưa sẵn sàng
                     </span>
                   )}
                 </>
               ) : (
-                "Đang chờ người vào…"
+                <>
+                  <span className="g-avatar" aria-hidden />
+                  Đang chờ người vào…
+                </>
               )}
             </li>
           );
@@ -255,7 +264,7 @@ function Waiting({
         <div className="flex flex-col gap-2">
           {host ? (
             <button
-              className="btn btn-amber btn-lg"
+              className="btn btn-primary btn-lg"
               disabled={!everyoneReady}
               onClick={() => send({ action: "start" })}
             >
@@ -264,7 +273,7 @@ function Waiting({
             </button>
           ) : (
             <button
-              className={`btn btn-lg ${me.ready ? "" : "btn-amber"}`}
+              className={`btn btn-lg ${me.ready ? "" : "btn-primary"}`}
               onClick={() => send({ action: "ready", ready: !me.ready })}
             >
               {me.ready ? (
@@ -283,7 +292,7 @@ function Waiting({
             Phòng tự huỷ sau {clock(left)} nếu chưa bắt đầu.
           </p>
           <button
-            className={`btn btn-ghost mx-auto ${host ? "text-red-400" : ""}`}
+            className={`btn btn-ghost hit-44 mx-auto ${host ? "text-red-400" : ""}`}
             onClick={() => send({ action: "leave" })}
           >
             <LogOut className="size-4" />{" "}
@@ -292,7 +301,7 @@ function Waiting({
         </div>
       ) : (
         <button
-          className="btn btn-amber btn-lg"
+          className="btn btn-primary btn-lg"
           onClick={() => send({ action: "join" })}
         >
           <Users className="size-4" /> Vào phòng
@@ -398,7 +407,7 @@ export default function PlayRoom({
           : `Phòng ${code}`
       }
       right={
-        <Link href={lobby} className="btn-icon" title="Sảnh" aria-label="Sảnh">
+        <Link href={lobby} className="btn-icon hit-44" title="Về sảnh" aria-label="Về sảnh">
           <LogOut className="size-5" />
         </Link>
       }
@@ -414,13 +423,16 @@ export default function PlayRoom({
     return (
       <>
         {header}
-        <div className="card flex flex-col gap-3 text-center">
-          <p className="section-title">Vào phòng <span className="font-mono tracking-[0.15em]">{code}</span></p>
+        <div className="card empty flex flex-col items-center gap-3 text-center">
+          <Mascot animated className="size-20" />
+          <h2 className="section-title">
+            Vào phòng <span className="font-mono tracking-[0.15em]">{code}</span>
+          </h2>
           <p className="text-sm text-muted">Không cần tài khoản — nhập tên tạm là vào chơi được.</p>
           {guest.name ? (
             <p className="text-sm text-muted">{guest.error || "Đang vào phòng…"}</p>
           ) : (
-            <button className="btn btn-amber btn-lg mx-auto" onClick={() => guest.ask()}>
+            <button className="btn btn-primary btn-lg mx-auto max-sm:w-full" onClick={() => guest.ask()}>
               <Users className="size-4" /> Nhập tên để vào phòng
             </button>
           )}
@@ -433,18 +445,22 @@ export default function PlayRoom({
     return (
       <>
         {header}
-        {errorLine || (
+        {error ? (
+          <div className="card empty flex flex-col items-center gap-3 text-center">
+            <Mascot className="size-20 rotate-[-6deg]" />
+            <h2 className="section-title">Không mở được phòng {code}</h2>
+            {errorLine}
+            <Link href={lobby} className="btn btn-lg">
+              Về sảnh {GAME_TITLE[game]}
+            </Link>
+          </div>
+        ) : (
           <div className="card flex flex-col gap-3" aria-busy="true">
             <span className="sr-only">Đang tải…</span>
             <div className="skeleton h-14 w-2/3" />
-            <div className="skeleton h-24 w-full" />
+            <div className="skeleton aspect-square w-full max-w-[32rem] self-center" />
             <div className="skeleton h-12 w-full" />
           </div>
-        )}
-        {error && (
-          <Link href={lobby} className="btn mx-auto">
-            Về sảnh {GAME_TITLE[game]}
-          </Link>
         )}
       </>
     );
@@ -453,18 +469,20 @@ export default function PlayRoom({
   return (
     <>
       {header}
-      {v.status === "waiting" && guest.chip}
-      {v.status === "waiting" && <Waiting v={v} send={send} />}
+      {v.status === "waiting" && (
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+          {guest.chip}
+          <Waiting v={v} send={send} />
+        </div>
+      )}
       {(v.status === "ended" || v.status === "canceled") && (
         <ResultCard v={v} onAgain={lobby} loggedIn={loggedIn} />
       )}
-      {v.status !== "waiting" &&
-        v.status !== "canceled" &&
-        (v.game === "sudoku" ? (
-          <SudokuPlay key={v.code} v={v} send={send} apply={apply} />
-        ) : (
-          <CaroPlay v={v} send={send} />
-        ))}
+      {v.status !== "waiting" && v.status !== "canceled" && (
+        <div className="theme-night g-night">
+          {v.game === "sudoku" ? <SudokuPlay key={v.code} v={v} send={send} apply={apply} /> : <CaroPlay v={v} send={send} />}
+        </div>
+      )}
       {errorLine}
       {guest.dialog}
     </>

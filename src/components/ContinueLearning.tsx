@@ -31,13 +31,13 @@ export default function ContinueLearning({ userId }: { userId: number }) {
                   <div className="progress-bar rounded-none" style={{ width: `${n}%` }} />
                 </div>
                 <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100 motion-reduce:transition-none">
-                  <span className="flex size-9 items-center justify-center rounded-full bg-card text-accent-text shadow-[var(--shadow-md)]">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-card text-accent-text">
                     <Play className="size-4 translate-x-px fill-current" />
                   </span>
                 </span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <h3 className="line-clamp-2 text-sm leading-snug font-extrabold group-hover:text-accent-text">{title}</h3>
+                <h3 className="line-clamp-2 text-sm leading-snug font-bold transition-colors group-hover:text-accent-text">{title}</h3>
                 <p className="flex items-center gap-2 text-xs text-muted">
                   {at}
                   {!!n && <span className="badge badge-accent tabular-nums">{n}%</span>}

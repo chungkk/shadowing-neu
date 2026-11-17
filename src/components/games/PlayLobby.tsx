@@ -103,11 +103,12 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
         tone="cyan"
         title={GAME_TITLE[game]}
         subtitle={game === "sudoku" ? "Giải đề một mình hoặc đua với bạn" : "5 quân liền nhau là thắng, đấu máy hoặc đấu bạn"}
+        cover
       />
       {guest.chip}
       {active && (
-        <button className="card card-link flex cursor-pointer items-center gap-3 text-left font-bold" onClick={() => router.push(`/games/${active.game}/${active.code}`)}>
-          <span className="icon-bubble tint-gold">
+        <button className="card card-link flex min-h-14 cursor-pointer items-center gap-3 p-3 text-left font-semibold sm:p-4" onClick={() => router.push(`/games/${active.game}/${active.code}`)}>
+          <span className="icon-bubble tint-grape">
             <Play className="size-5 fill-current" />
           </span>
           <span className="flex-1">Bạn đang có ván {GAME_TITLE[active.game]} chưa xong (phòng {active.code})</span>
@@ -116,26 +117,27 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
       )}
 
       {game === "sudoku" && (
-        <div className="card">
+        <div className="max-w-md">
           <Choice label="Độ khó" options={SUDOKU_LEVELS.map((l) => ({ value: l, label: SUDOKU_LEVEL_LABEL[l] }))} value={level} onChange={setLevel} />
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <section className="card flex flex-col gap-3">
+      {/* Hai cách chơi: một khung, chia đôi bằng đường kẻ (không lồng card) */}
+      <div className="card grid grid-cols-1 overflow-hidden p-0 md:grid-cols-2 md:divide-x md:divide-line max-md:divide-y max-md:divide-line dark:divide-border">
+        <section className="flex flex-col gap-3 p-5 sm:p-6">
           <h2 className="section-title flex items-center gap-2.5">
-            <span className="icon-bubble tint-gold size-9 rounded-xl">{game === "sudoku" ? <User className="size-[1.1rem]" /> : <Bot className="size-[1.1rem]" />}</span>
+            <span className="icon-bubble tint-grape size-9 rounded-xl">{game === "sudoku" ? <User className="size-[1.1rem]" /> : <Bot className="size-[1.1rem]" />}</span>
             {game === "sudoku" ? "Chơi một mình" : "Đấu với máy"}
           </h2>
-          <p className="flex-1 text-sm text-muted">{game === "sudoku" ? "Giải 1 đề trong thời gian cho phép." : "Bạn cầm X đi trước, thử xem có thắng nổi máy không."}</p>
-          <button className="btn btn-amber btn-lg" disabled={busy || !!active} onClick={() => go({ mode: "solo" })}>
+          <p className="flex-1 text-sm text-muted">{game === "sudoku" ? "Giải một đề trong thời gian cho phép." : "Bạn cầm X đi trước, thử xem có thắng nổi máy không."}</p>
+          <button className="btn btn-primary btn-lg" disabled={busy || !!active} onClick={() => go({ mode: "solo" })}>
             <Play className="size-4 fill-current" /> Bắt đầu
           </button>
         </section>
 
-        <section className="card flex flex-col gap-3">
+        <section className="flex flex-col gap-3 p-5 sm:p-6">
           <h2 className="section-title flex items-center gap-2.5">
-            <span className="icon-bubble tint-link size-9 rounded-xl">
+            <span className="icon-bubble tint-grape size-9 rounded-xl">
               <Users className="size-[1.1rem]" />
             </span>
             Chơi với bạn
@@ -160,7 +162,7 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
             }}
           >
             <input
-              className="input min-w-0 flex-1 font-mono font-bold tracking-[0.3em] uppercase"
+              className="input min-h-12 min-w-0 flex-1 font-mono font-bold tracking-[0.3em] uppercase"
               aria-label="Mã phòng"
               placeholder="MÃ PHÒNG"
               maxLength={6}
@@ -180,7 +182,8 @@ export default function PlayLobby({ game, loggedIn }: { game: PlayGame; loggedIn
         </p>
       )}
 
-      <div className="card">
+      <div className="surface p-4">
+        <p className="label mb-2">Luật chơi</p>
         <Rules game={game} />
       </div>
       {guest.dialog}

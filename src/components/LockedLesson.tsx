@@ -57,7 +57,9 @@ export function UnlockBox({
     <div className="flex flex-col gap-3">
       {!lock.loggedIn ? (
         <>
-          <p className="section-title">Đăng nhập để mở khoá bài này</p>
+          <p className="section-title flex items-center gap-2">
+            <Lock className="size-5 shrink-0 text-sec-text" /> Đăng nhập để mở khoá bài này
+          </p>
           <p className="text-sm text-muted">Tài khoản mới được tự chọn thêm {FREE_PICKS} bài bất kỳ để học miễn phí.</p>
           <LoginLink href="/login" onClick={onLogin} className="btn btn-primary btn-lg self-start max-sm:w-full">
             Đăng nhập / Đăng ký
@@ -101,34 +103,34 @@ export default function LockedLesson({
   freeLessons: { title: string; slug: string }[];
 }) {
   return (
-    <main className="page page-narrow">
+    <main className="page page-narrow" data-sec="de">
       <div className="sticker relative aspect-video overflow-hidden bg-card-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-50 blur-[3px] saturate-50" />
         <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex size-16 items-center justify-center rounded-full bg-card text-foreground shadow-[var(--shadow-md)]">
+          <span className="flex size-16 items-center justify-center rounded-full border border-line bg-card text-foreground">
             <Lock className="size-8" />
           </span>
         </span>
       </div>
 
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3">
         <h1 className="page-title flex-1">{lesson.title}</h1>
-        <LevelBadge level={lesson.level} className="mt-1 shrink-0" />
+        <LevelBadge level={lesson.level} className="mt-1.5 shrink-0" />
       </div>
       {lesson.description && <p className="whitespace-pre-line text-sm text-muted">{lesson.description}</p>}
 
-      <section className="card hero sm:p-6" style={{ "--hero": "var(--aqua)" } as React.CSSProperties}>
+      <section className="card hero p-5 sm:p-6">
         <UnlockBox lesson={lesson} lock={lock} confirmFirst />
       </section>
 
       {freeLessons.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="eyebrow">Học thử miễn phí</h2>
+          <h2 className="label">Học thử miễn phí</h2>
           <div className="flex flex-wrap gap-2">
             {freeLessons.map((l) => (
-              <Link key={l.slug} href={lessonPath(l.slug)} className="chip">
-                {l.title}
+              <Link key={l.slug} href={lessonPath(l.slug)} className="chip hit-44 max-w-full">
+                <span className="truncate">{l.title}</span>
               </Link>
             ))}
           </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Eye, Lightbulb, List, RotateCcw, Volume2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Eye, Lightbulb, List, PartyPopper, RotateCcw, Volume2, X } from "lucide-react";
 import { addDeck } from "@/app/(app)/account-actions";
 import { blankExample, checkGuess, fullWord, hintOf, quizOptions, STUDY_MODES, type StudyMode } from "@/lib/deck-study";
 import type { DeckTopic, DeckWord } from "@/lib/decks";
@@ -19,7 +19,7 @@ const noop = () => () => {};
 /** Đáp án trắc nghiệm / thứ tự ôn lại là ngẫu nhiên → chỉ vẽ trên trình duyệt (khỏi lệch hydrate) */
 const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
 
-const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-accent-text" };
+const GENDER: Record<string, string> = { der: "text-phrase", die: "text-red-400", das: "text-ok-text" };
 
 /** Hình minh hoạ của từ (emoji 3D), không có thì biểu tượng chủ đề */
 function Picture({ w, icon, className = "size-28" }: { w: DeckWord; icon: string; className?: string }) {
@@ -27,7 +27,7 @@ function Picture({ w, icon, className = "size-28" }: { w: DeckWord; icon: string
     <span className={`flex shrink-0 items-center justify-center rounded-sheet bg-gold-soft ${className}`}>
       {w.image ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={w.image} alt="" className="size-3/4 object-contain drop-shadow-lg" />
+        <img src={w.image} alt="" className="size-3/4 object-contain" />
       ) : (
         <span className="text-5xl">{icon}</span>
       )}
@@ -61,9 +61,9 @@ function Reveal({ w, tone, title }: { w: DeckWord; tone: "ok" | "bad"; title: st
   return (
     <div
       role="status"
-      className={`rise-in flex w-full max-w-xl flex-col items-center gap-1.5 rounded-panel border-2 p-4 text-center ${tone === "ok" ? "border-accent/30 bg-accent-soft" : "border-red/30 bg-red-soft"}`}
+      className={`rise-in flex w-full max-w-xl flex-col items-center gap-1.5 rounded-panel border p-4 text-center ${tone === "ok" ? "border-ok/30 bg-ok-soft" : "border-red/30 bg-red-soft"}`}
     >
-      <p className={`flex items-center gap-1.5 font-display text-base font-extrabold ${tone === "ok" ? "text-accent-text" : "text-red-400"}`}>
+      <p className={`flex items-center gap-1.5 font-display text-base font-bold ${tone === "ok" ? "text-ok-text" : "text-red-400"}`}>
         {tone === "ok" ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
         {title}
       </p>
@@ -116,7 +116,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <button
           type="button"
           onClick={() => setFlipped((f) => !f)}
-          className="flex min-h-56 w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border-2 border-line bg-card-2 p-6 text-center transition-colors hover:border-accent/50 motion-reduce:transition-none"
+          className="o-ly flex min-h-56 w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border border-line p-6 text-center transition-[border-color,transform] duration-200 hover:border-accent/50 active:scale-[0.99] motion-reduce:transition-none"
         >
           {!flipped ? (
             <>
@@ -167,7 +167,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <p className="text-sm font-bold text-muted">{mode === "quiz" ? "Chọn nghĩa đúng" : "Chọn từ tiếng Đức đúng"}</p>
         <div className="grid w-full max-w-xl gap-2.5 sm:grid-cols-2">
           {options.map((o) => {
-            const state = picked === null ? "" : o === right ? "border-accent bg-accent-soft text-accent-text" : o === picked ? "border-red bg-red-soft text-red-400" : "disabled:opacity-50";
+            const state = picked === null ? "" : o === right ? "border-ok bg-ok-soft text-ok-text" : o === picked ? "border-red bg-red-soft text-red-400" : "disabled:opacity-50";
             return (
               <button
                 key={o}
@@ -312,12 +312,12 @@ function Session({
   if (!w)
     return (
       <div className="empty rise-in gap-4 py-8">
-        <span className="icon-bubble tint-gold size-24 rounded-sheet text-5xl" aria-hidden>
-          🎉
+        <span className="icon-bubble tint-ok size-20 rounded-sheet" aria-hidden>
+          <PartyPopper className="size-10" strokeWidth={2} />
         </span>
-        <p className="font-display text-2xl font-extrabold text-foreground">{practice ? "Đã ôn xong chủ đề này" : "Bạn đã học hết chủ đề này"}</p>
+        <p className="font-display text-2xl font-bold text-foreground">{practice ? "Đã ôn xong chủ đề này" : "Bạn đã học hết chủ đề này"}</p>
         <p className="max-w-md">Các từ đã nằm trong Sổ từ vựng và sẽ được nhắc ôn đúng lúc để nhớ lâu.</p>
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-3 max-sm:w-full max-sm:flex-col">
           <button className="btn btn-lg" onClick={onPractice}>
             <RotateCcw className="size-4" /> Ôn lại chủ đề
           </button>
@@ -331,7 +331,7 @@ function Session({
     );
   return (
     <div className="flex flex-col gap-3">
-      {w.saved && !practice && <p className="badge badge-accent self-center">Đã có trong sổ</p>}
+      {w.saved && !practice && <p className="badge badge-ok self-center">Đã có trong sổ</p>}
       <StudyCard
         key={seq}
         w={w}
@@ -423,9 +423,9 @@ export default function DeckStudy({
         <Link href="/vocab" className="btn btn-ghost btn-sm" title="Từ vựng">
           <ChevronLeft className="size-4" /> Quay lại
         </Link>
-        <h1 className="page-title min-w-0 flex-1">{title}</h1>
+        <h1 className="page-title min-w-0 flex-1 max-sm:basis-full max-sm:text-2xl">{title}</h1>
         {/* Chế độ học */}
-        <div role="tablist" aria-label="Chế độ học" className="tabs">
+        <div role="tablist" aria-label="Chế độ học" className="tabs scroll-row max-sm:w-full max-sm:overflow-x-auto">
           {[...modes, { mode: "list" as const, label: "Danh sách" }].map((m) => (
             <button
               key={m.mode}
@@ -433,7 +433,7 @@ export default function DeckStudy({
               role="tab"
               aria-selected={study === m.mode}
               onClick={() => pickMode(m.mode)}
-              className="tab pointer-coarse:min-h-11"
+              className="tab shrink-0 pointer-coarse:min-h-11 max-sm:flex-1"
             >
               {m.mode === "list" && <List className="size-4" />}
               {m.label}
@@ -442,16 +442,16 @@ export default function DeckStudy({
         </div>
         {study === "flash" && learned > 0 && (
           <button type="button" className="btn btn-ghost btn-sm text-link" onClick={() => pickMode("quiz")}>
-            Tiếp theo: Trắc nghiệm →
+            Tiếp theo: Trắc nghiệm <ArrowRight className="size-4" />
           </button>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         {/* Danh sách chủ đề: cột trái (máy tính) · hàng cuộn ngang (điện thoại) */}
-        <aside className="card flex flex-col gap-2 p-3 max-lg:p-2 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-6rem)] lg:self-start">
+        <aside className="card flex flex-col gap-2 p-3 max-lg:-mx-4 max-lg:rounded-none max-lg:border-x-0 max-lg:border-y-0 max-lg:bg-transparent max-lg:p-0 max-lg:px-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-6rem)] lg:self-start">
           <p className="label px-1 max-lg:hidden">Chủ đề</p>
-          <div className="flex gap-2 overflow-auto max-lg:pb-1 lg:flex-col">
+          <div className="scroll-row flex gap-2 overflow-auto max-lg:pb-1 lg:flex-col">
             {topics.map((t) => {
               const { n, s } = countOf(t.id);
               const on = t.id === topic.id;
@@ -460,15 +460,15 @@ export default function DeckStudy({
                   key={t.id}
                   onClick={() => pick(t.id)}
                   aria-current={on ? "true" : undefined}
-                  className={`flex shrink-0 cursor-pointer items-center gap-3 rounded-ui border-2 p-2 text-left transition-colors max-lg:pr-3 motion-reduce:transition-none ${
-                    on ? "border-accent/40 bg-accent-soft" : "border-transparent hover:bg-card-2"
+                  className={`flex shrink-0 cursor-pointer items-center gap-3 rounded-ui border p-2 text-left transition-colors max-lg:pr-3 motion-reduce:transition-none ${
+                    on ? "border-accent/40 bg-accent-soft" : "border-transparent hover:bg-card-2 max-lg:border-line max-lg:bg-card"
                   }`}
                 >
                   <span className={`icon-bubble text-xl ${on ? "bg-card" : ""}`}>{t.icon}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-extrabold">{t.title}</span>
-                    <span className={`text-xs font-bold ${s >= n ? "text-accent-text" : "text-muted"}`}>
-                      {s}/{n} từ{s >= n && " ✓"}
+                    <span className="truncate text-sm font-bold">{t.title}</span>
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${s >= n ? "text-ok-text" : "text-muted"}`}>
+                      {s}/{n} từ{s >= n && <Check className="size-3.5" strokeWidth={2.5} />}
                     </span>
                   </span>
                 </button>
@@ -478,7 +478,7 @@ export default function DeckStudy({
         </aside>
 
         <section className="flex min-w-0 flex-col gap-3">
-          <div className="flex items-center justify-between gap-3 text-sm font-extrabold">
+          <div className="flex items-center justify-between gap-3 text-sm font-bold">
             <span className="truncate text-foreground">
               {topic.icon} Tiến độ — {topic.title}
             </span>
@@ -492,7 +492,7 @@ export default function DeckStudy({
           {error && <p role="alert" className="alert alert-err">{error}</p>}
           {!loggedIn && <GuestTrialNote area="deck" quota={quota} extra="lưu tiến độ và ôn lại theo lịch" />}
           <GuestWall area="deck" quota={quota} backHref="/vocab" />
-          <div className="card min-h-96 p-5 md:p-8">
+          <div className={study === "list" ? "min-h-96" : "card min-h-96 p-4 max-sm:min-h-0 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 sm:p-5 md:p-8"}>
             {!mounted ? null : study === "list" ? (
               <DeckWords key={topic.id} slug={slug} words={topicWords} loggedIn={loggedIn} onSaved={markSaved} />
             ) : (

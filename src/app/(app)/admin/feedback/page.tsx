@@ -8,7 +8,7 @@ import { MessageSquare } from "lucide-react";
 import AdminNav from "../AdminNav";
 
 const KIND: Record<FeedbackKind, { label: string; className: string }> = {
-  idea: { label: "Góp ý", className: "badge-accent" },
+  idea: { label: "Góp ý", className: "badge-link" },
   bug: { label: "Báo lỗi", className: "badge-red" },
   content: { label: "Nội dung", className: "badge-gold" },
   other: { label: "Khác", className: "badge-muted" },
@@ -20,7 +20,9 @@ async function FeedbackList() {
   const items = listFeedback();
   return (
     <>
-      <h1 className="page-title">Góp ý ({items.length})</h1>
+      <h1 className="page-title">
+        Góp ý <span className="text-muted tabular-nums">{items.length}</span>
+      </h1>
       <div className="card overflow-hidden p-0">
         <ul className="divide-y divide-line">
         {items.map((f) => (
@@ -38,14 +40,14 @@ async function FeedbackList() {
                 <DeleteButton action={removeFeedback.bind(null, f.id)} confirmText="Xoá góp ý này?" />
               </span>
             </div>
-            <p className="text-sm leading-relaxed whitespace-pre-line">{f.message}</p>
+            <p className="max-w-[70ch] text-[0.95rem] leading-relaxed whitespace-pre-line">{f.message}</p>
             {f.device && <p className="text-xs text-muted">{f.device}</p>}
           </li>
         ))}
         </ul>
         {!items.length && (
           <div className="empty">
-            <span className="icon-bubble tint-accent">
+            <span className="icon-bubble tint-muted">
               <MessageSquare className="size-5" aria-hidden />
             </span>
             <p>Chưa có góp ý nào.</p>

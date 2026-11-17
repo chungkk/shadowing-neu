@@ -68,37 +68,37 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
           loading="lazy"
           className={`size-full object-cover transition duration-300 group-hover:scale-105 motion-reduce:transition-none ${l.access === "locked" ? "opacity-75 saturate-50" : ""}`}
         />
-        {l.access === "free" && <span className="badge absolute top-2 left-2 bg-accent text-white shadow-[var(--shadow-sm)]">Miễn phí</span>}
+        {l.access === "free" && <span className="badge absolute top-2 left-2 border border-line bg-card text-ok-text">Miễn phí</span>}
         <LevelBadge level={l.level} className="absolute top-2 right-2" />
         {l.access === "locked" && (
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-md)] backdrop-blur-sm">
+            <span className="flex size-12 items-center justify-center rounded-full border border-line bg-card text-foreground">
               <Lock className="size-5" />
               <span className="sr-only">Khoá</span>
             </span>
           </span>
         )}
+        {l.isNew && <span className="badge absolute bottom-2 left-2 bg-gold text-[#16203a]">Mới</span>}
         {l.duration > 0 && (
-          <span className="pill absolute right-2 bottom-2 bg-black/70 text-white tabular-nums backdrop-blur-sm">
+          <span className="pill absolute right-2 bottom-2 bg-black/75 text-white tabular-nums">
             <Clock className="size-3.5" /> {formatDuration(l.duration)}
           </span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <h3 className="line-clamp-2 min-h-[2.75em] leading-snug font-extrabold group-hover:text-accent-text">{l.title}</h3>
+        <h3 className="line-clamp-2 min-h-[2.75em] font-display leading-snug font-bold tracking-[-0.01em] transition-colors group-hover:text-accent-text">{l.title}</h3>
         {l.description && <p className="line-clamp-2 text-xs text-muted">{l.description}</p>}
         <div className="mt-auto flex flex-col gap-2">
-          <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold text-muted">
-            {l.isNew && <span className="badge badge-gold">Mới</span>}
+          <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-muted">
             Shadowing{l.dictation && " · Dictation"} · {l.sentences} câu
           </p>
           {l.percent >= 100 ? (
-            <p className="flex items-center gap-1 text-xs font-bold text-accent-text">
+            <p className="flex items-center gap-1 text-xs font-bold text-ok-text">
               <CircleCheck className="size-4" /> Đã học xong
             </p>
           ) : (
             l.percent > 0 && (
-              <div className="flex items-center gap-2 text-xs font-bold text-accent-text tabular-nums">
+              <div className="flex items-center gap-2 text-xs font-bold text-sec-text tabular-nums">
                 <div className="progress h-2 flex-1">
                   <div className="progress-bar" style={{ width: `${l.percent}%` }} />
                 </div>
@@ -120,7 +120,7 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
     </span>
   );
   return (
-    <p className="alert alert-info flex-wrap items-center gap-x-1 text-muted">
+    <p className="alert alert-info flex-wrap items-center gap-x-1">
       <Lock className="size-4 shrink-0 text-gem" />
       {admin ? (
         <>Khoá bài đang bật — nhãn bên dưới là những gì khách thấy. Admin vẫn mở được mọi bài.</>
@@ -150,7 +150,8 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
     return (
       <div className="card empty">
         <Mascot className="size-28" />
-        <p className="font-bold">Chưa có bài học nào.</p>
+        <p className="font-display text-lg font-bold">Chưa có bài học nào.</p>
+        <p className="text-sm text-muted">Bài mới sẽ hiện ở đây ngay khi được đăng.</p>
       </div>
     );
 
@@ -183,7 +184,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   );
 
   return (
-    <section id="lessons" ref={top} className="flex scroll-mt-4 flex-col gap-4 sm:gap-5">
+    <section id="lessons" ref={top} data-sec="de" className="flex scroll-mt-4 flex-col gap-4 sm:gap-5">
       <SectionHeader title="Thư viện bài học" count={lessons.length}>
         {/* Điện thoại: 1 hàng cuộn ngang sát mép màn hình thay vì xuống nhiều dòng */}
         <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
@@ -198,14 +199,14 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
           {levels.map((g) => (
             <div key={g.level} className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-display text-lg font-extrabold">Trình độ {g.level}</h3>
+                <h3 className="font-display text-lg font-bold tracking-[-0.015em]">Trình độ {g.level}</h3>
                 {g.count > 1 && (
                   <button
                     onClick={() => {
                       top.current?.scrollIntoView();
                       setLevel(g.level);
                     }}
-                    className="btn btn-sm btn-ghost text-link"
+                    className="btn btn-sm btn-ghost hit-44 text-link"
                   >
                     Xem tất cả ({g.count})
                   </button>

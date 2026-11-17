@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { redirect } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import Mascot from "@/components/Mascot";
@@ -35,12 +36,13 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
     data = await getYouTubeTranscript(videoId, undefined, opts);
   } catch (e) {
     return (
-      <main className="page page-narrow max-w-xl items-center pt-16 text-center">
+      <main className="page page-narrow max-w-xl items-center pt-10 text-center sm:pt-16" data-sec="de">
         <div className="card empty w-full gap-4 py-10">
           <Mascot className="size-24" />
+          <h1 className="section-title">Không mở được video này</h1>
           <p role="alert" className="alert alert-err w-full justify-center">{(e as Error).message}</p>
-          <Link href="/tieng-duc" className="btn btn-soft">
-            ← Về trang học
+          <Link href="/tieng-duc" className="btn btn-soft max-sm:w-full">
+            <ArrowLeft className="size-4" /> Về trang học
           </Link>
         </div>
       </main>
@@ -58,8 +60,10 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
         sourceUrl={`/watch/${data.videoId}`}
       >
         <div className="flex flex-wrap items-end gap-2 text-xs">
-          {data.track.auto && <span className="badge badge-gold">⚠ Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.</span>}
-          {data.track.languageCode === WHISPER && <span className="badge badge-gem">Phụ đề do Whisper (AI) tạo.</span>}
+          {data.track.auto && <span className="badge badge-gold whitespace-normal">
+              <TriangleAlert className="size-3.5" /> Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.
+            </span>}
+          {data.track.languageCode === WHISPER && <span className="badge badge-gem whitespace-normal">Phụ đề do Whisper (AI) tạo.</span>}
         </div>
       </ShadowPlayer>
     </>

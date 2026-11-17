@@ -9,6 +9,16 @@ import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
 
 type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
+
+/** Màu bìa vở của từng khu (data-sec → --sec trong globals.css) */
+export function secOf(href: string): string | undefined {
+  if (href.startsWith("/lai-xe")) return "laixe";
+  if (href.startsWith("/leben-in-deutschland")) return "lid";
+  if (href.startsWith("/games")) return "game";
+  if (href.startsWith("/admin") || href === "/stats" || href === "/settings") return "ink";
+  if (href === "/") return undefined;
+  return "de";
+}
 type NavUser = AvatarUser & { role: string };
 
 // Các phần lớn của HalloVN (tab trên cùng / thanh dưới đáy). "/" = Trang chủ (trang giới thiệu tĩnh — chỉ khớp đúng "/");
@@ -70,7 +80,7 @@ function useCurrent(items: Item[]) {
 function DueBadge({ due, className = "" }: { due: number; className?: string }) {
   if (!due) return null;
   return (
-    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 text-[11px] ring-2 ring-card leading-none font-extrabold text-white tabular-nums ${className}`}>
+    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 text-[11px] leading-none font-bold text-white tabular-nums ring-2 ring-card ${className}`}>
       {due > 99 ? "99+" : due}
     </span>
   );
@@ -87,20 +97,21 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
         <Link
           key={it.href}
           href={reviewHref(it.href, due)}
+          data-sec={secOf(it.href)}
           aria-label={`${it.short && it.short !== it.label ? `${it.short} – ${it.label}` : it.label}${it.href === REVIEW.href && due ? ` — ${due} từ đến hạn ôn` : ""}`}
           aria-current={it.href === current ? "page" : undefined}
           className={`group relative flex h-14 min-w-15 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 transition-colors ${
-            it.href === current ? "text-accent-text" : "text-muted active:text-foreground"
+            it.href === current ? "text-foreground" : "text-muted active:text-foreground"
           }`}
         >
           <span
-            className={`flex h-8 w-14 items-center justify-center rounded-full transition-all duration-200 ease-[var(--ease-spring)] motion-reduce:transition-none ${
-              it.href === current ? "bg-accent-soft scale-100" : "scale-90 group-active:scale-95 group-active:bg-foreground/5"
+            className={`flex h-8 w-14 items-center justify-center rounded-[10px] transition-all duration-300 ease-[var(--ease-spring)] motion-reduce:transition-none ${
+              it.href === current ? "scale-100 bg-sec text-on-sec" : "scale-90 group-active:scale-95 group-active:bg-foreground/5"
             }`}
           >
             <it.icon className="size-[22px]" />
           </span>
-          <span className={`text-[11px] leading-none ${it.href === current ? "font-extrabold" : "font-bold"}`}>{it.short ?? it.label}</span>
+          <span className={`text-[11px] leading-none ${it.href === current ? "font-bold" : "font-medium"}`}>{it.short ?? it.label}</span>
           {it.href === REVIEW.href && <DueBadge due={due} className="absolute top-0 left-1/2 ml-2" />}
         </Link>
       ))}
@@ -111,7 +122,7 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
     // bottom-nav: màn học (.lesson) ẩn thanh này, thay bằng thanh điều khiển của trình phát (globals.css)
-    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-card/90 px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-12px_rgb(var(--shadow-color)/0.18)] backdrop-blur-xl backdrop-saturate-150 *:shrink-0 md:hidden">
+    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-card px-1.5 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden dark:bg-sidebar">
       {children}
     </nav>
   );
@@ -152,20 +163,26 @@ export function DeutschOnly({ children }: { children: ReactNode }) {
 /** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
 export function HeaderNavFrame({ current }: { current?: string }) {
   return (
-    <nav aria-label="Các phần chính" className="flex items-center gap-1 max-md:hidden">
-      {HEADER_ITEMS.map((it) => (
-        <Link
-          key={it.href}
-          href={it.href}
-          aria-current={it.href === current ? "page" : undefined}
-          className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-colors lg:px-4 ${
-            it.href === current ? "bg-accent-soft text-accent-text" : "text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground"
-          }`}
-        >
-          <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
-          {it.label}
-        </Link>
-      ))}
+    // Tab mục lục vở: dính vào mép dưới thanh trên cùng, tab đang mở tô màu bìa của khu đó
+    <nav aria-label="Các phần chính" className="flex items-stretch gap-1 self-stretch max-md:hidden">
+      {HEADER_ITEMS.map((it) => {
+        const on = it.href === current;
+        return (
+          <Link
+            key={it.href}
+            href={it.href}
+            data-sec={secOf(it.href)}
+            aria-current={on ? "page" : undefined}
+            // Nền tab là lớp ::before (từ cách mép trên 10px xuống sát mép dưới) → chữ vẫn căn giữa thanh
+            className={`group relative isolate -mb-px flex h-full items-center gap-2 px-3.5 text-sm font-semibold transition-colors duration-200 before:absolute before:inset-x-0 before:top-2.5 before:bottom-0 before:-z-10 before:rounded-t-xl before:transition-[background-color,top] before:duration-300 before:ease-[var(--ease-out)] lg:px-4 ${
+              on ? "text-on-sec before:top-2 before:bg-sec" : "text-foreground/75 hover:text-foreground hover:before:bg-sec-soft"
+            }`}
+          >
+            <it.icon className={`size-[18px] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-rotate-6 ${on ? "" : "text-sec-text"}`} />
+            {it.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
@@ -231,8 +248,8 @@ export function UserDropdown({ user }: { user: NavUser }) {
   const trigger = (
     <>
       <span className="flex flex-col items-end leading-tight max-sm:hidden">
-        <span className="text-xs font-semibold text-muted">{greeting}</span>
-        <span className="max-w-40 truncate font-bold">{user.name}</span>
+        <span className="text-xs text-muted">{greeting}</span>
+        <span className="max-w-40 truncate font-semibold">{user.name}</span>
       </span>
       <Avatar user={user} className="size-9 text-lg sm:size-10" />
     </>
@@ -270,10 +287,10 @@ export function UserDropdown({ user }: { user: NavUser }) {
           // pt-2: khe trong suốt vẫn thuộc vùng rê chuột
           <div className="absolute top-full right-0 z-50 w-64 pt-2">
             <div role="menu" className="popover flex max-h-[calc(100dvh-6rem)] flex-col gap-0.5 overflow-y-auto">
-              <div className="hero mb-1 flex items-center gap-3 rounded-ui px-3 py-3">
+              <div className="mb-1 flex items-center gap-3 rounded-ui bg-card-2 px-3 py-3">
                 <Avatar user={user} className="size-11 text-lg ring-2 ring-card" />
                 <div className="min-w-0">
-                  <p className="truncate font-display text-base leading-tight font-extrabold">{user.name}</p>
+                  <p className="truncate font-display text-base leading-tight font-bold">{user.name}</p>
                   <p className={`badge mt-1 ${admin ? "badge-gold" : "badge-accent"}`}>{admin ? "Quản trị viên" : "Học viên"}</p>
                 </div>
               </div>

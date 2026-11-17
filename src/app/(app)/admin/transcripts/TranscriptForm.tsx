@@ -34,7 +34,7 @@ export default function TranscriptForm({
           {state.error}
         </p>
       )}
-      <div className="flex gap-2 max-sm:*:flex-1">
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex gap-2 border-t border-line bg-background/95 px-4 py-3 max-sm:*:flex-1 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <button className="btn btn-lg btn-primary" disabled={saving}>
           {saving ? "Đang lưu…" : "Lưu phụ đề"}
         </button>

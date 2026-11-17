@@ -1,4 +1,4 @@
-/** dark: tối ấm (mặc định) · light: sáng */
+/** light: giấy trắng (mặc định) · dark: mực đêm */
 export type Theme = "light" | "dark";
 
 export const THEME_KEY = "ds-theme";
@@ -7,7 +7,7 @@ export const THEME_KEY = "ds-theme";
 export const THEME_NEXT: Record<Theme, Theme> = { dark: "light", light: "dark" };
 
 /** Màu thanh trình duyệt trên điện thoại, khớp --background của từng giao diện */
-export const THEME_COLOR: Record<Theme, string> = { light: "#fff6e9", dark: "#241a1c" };
+export const THEME_COLOR: Record<Theme, string> = { light: "#fbfaf7", dark: "#0e1424" };
 
-/** Chạy trong <head> trước khi vẽ trang. Mặc định là giao diện tối (đã đặt sẵn trên <html>); không theo cài đặt hệ điều hành */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)}),d=document.documentElement;if(t==="light")d.removeAttribute("data-theme")}catch(e){}})()`;
+/** Chạy trong <head> trước khi vẽ trang. Mặc định giao diện sáng; chỉ bật tối khi người dùng đã chọn (không theo hệ điều hành) */
+export const THEME_INIT_SCRIPT = `(function(){try{if(localStorage.getItem(${JSON.stringify(THEME_KEY)})==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})()`;

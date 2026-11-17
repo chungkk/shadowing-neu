@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/page-meta";
 import FallingWordsPage from "@/components/games/FallingWordsPage";
-import { VocabSkeleton } from "@/components/Skeleton";
+import { GameSkeleton } from "@/components/Skeleton";
 
 export const metadata: Metadata = pageMeta({
   title: "Mưa từ vựng – Game gõ từ vựng tiếng Đức theo Goethe A1–B1",
@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMeta({
 export default function WordRainPage() {
   return (
     <main className="page">
-      <Suspense fallback={<VocabSkeleton />}>
+      <Suspense fallback={<GameSkeleton />}>
         <FallingWordsPage variant="rain" />
       </Suspense>
     </main>
