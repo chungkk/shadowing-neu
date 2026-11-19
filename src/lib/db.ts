@@ -20,6 +20,8 @@ export type Lesson = {
   segments: Segment[];
   published: boolean;
   dictation: boolean; // luyện Chính tả cho bài này (bài mới mặc định bật, admin có thể tắt)
+  channel: string | null; // tên kênh YouTube của video (lấy dần qua oEmbed — lib/channels.ts) · null = chưa biết
+  channelUrl: string | null; // https://www.youtube.com/@ten-kenh
   ownerId: number | null; // bài học riêng người dùng tự tạo từ video YouTube (trả kim cương) — null = bài của site
   createdAt: string;
 };
@@ -352,6 +354,11 @@ function open() {
   // Bài học riêng: người dùng trả kim cương để lưu video YouTube tự dán thành bài của riêng mình (luôn ẩn, chỉ chủ bài xem)
   if (!lessonCols.some((c) => c.name === "owner_id")) db.exec("ALTER TABLE lessons ADD COLUMN owner_id INTEGER");
   db.exec("CREATE INDEX IF NOT EXISTS lessons_owner ON lessons (owner_id, video_id)");
+  // Kênh YouTube của video (để chia thư viện bài theo kênh) — NULL = chưa lấy, lấy dần lúc có người mở danh sách bài
+  if (!lessonCols.some((c) => c.name === "channel_title")) {
+    db.exec("ALTER TABLE lessons ADD COLUMN channel_title TEXT");
+    db.exec("ALTER TABLE lessons ADD COLUMN channel_url TEXT");
+  }
   // Tiến độ: các câu đã thực sự nghe (% tính theo số này, không theo câu đang mở).
   // Tiến độ cũ chỉ có câu đang học → coi mọi câu tới đó là đã nghe, để % đang hiện không bị tụt
   const progressCols = db.prepare("PRAGMA table_info(progress)").all() as { name: string }[];
@@ -449,6 +456,8 @@ type Row = {
   published: number;
   dictation: number;
   owner_id: number | null;
+  channel_title: string | null;
+  channel_url: string | null;
   created_at: string;
 };
 
@@ -461,6 +470,8 @@ const toSummary = (r: Row): LessonSummary => ({
   level: r.level,
   published: !!r.published,
   dictation: !!r.dictation,
+  channel: r.channel_title ?? null,
+  channelUrl: r.channel_url ?? null,
   ownerId: r.owner_id ?? null,
   createdAt: r.created_at,
   segmentCount: r.segment_count ?? 0,
@@ -469,7 +480,7 @@ const toSummary = (r: Row): LessonSummary => ({
 export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
   const rows = conn()
     .prepare(
-      `SELECT id, title, slug, video_id, description, level, published, dictation, owner_id, created_at,
+      `SELECT id, title, slug, video_id, description, level, published, dictation, owner_id, channel_title, channel_url, created_at,
               json_array_length(segments) AS segment_count
        FROM lessons WHERE owner_id IS NULL ${includeDrafts ? "" : "AND published = 1"}
        ORDER BY created_at DESC, id DESC`,
@@ -514,7 +525,7 @@ export function getLessonBySlug(slug: string): Lesson | null {
 }
 
 /** slug: admin tự đặt (chuẩn hoá lại + tránh trùng); bỏ trống → tạo bài mới thì lấy từ tiêu đề, sửa bài thì giữ slug cũ */
-export type LessonInput = Omit<Lesson, "id" | "createdAt" | "slug" | "ownerId"> & { slug?: string };
+export type LessonInput = Omit<Lesson, "id" | "createdAt" | "slug" | "ownerId" | "channel" | "channelUrl"> & { slug?: string };
 
 export function createLesson(l: LessonInput): number {
   const db = conn();
@@ -528,9 +539,11 @@ export function createLesson(l: LessonInput): number {
 
 export function updateLesson(id: number, l: LessonInput) {
   const db = conn();
+  // Đổi video → kênh cũ không còn đúng, lấy lại (SET dùng giá trị cũ của dòng nên so được video_id cũ)
   db.prepare(
-    "UPDATE lessons SET title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ?, dictation = ? WHERE id = ?",
-  ).run(l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0, id);
+    `UPDATE lessons SET channel_title = CASE WHEN video_id = ? THEN channel_title END, channel_url = CASE WHEN video_id = ? THEN channel_url END,
+       title = ?, video_id = ?, description = ?, level = ?, segments = ?, published = ?, dictation = ? WHERE id = ?`,
+  ).run(l.videoId, l.videoId, l.title, l.videoId, l.description, l.level, JSON.stringify(l.segments), l.published ? 1 : 0, l.dictation ? 1 : 0, id);
   if (l.slug) db.prepare("UPDATE lessons SET slug = ? WHERE id = ?").run(uniqueSlug(db, l.slug, id), id);
   statsCache.delete(id);
 }
@@ -543,13 +556,25 @@ export function deleteLesson(id: number) {
   conn().prepare("DELETE FROM lesson_unlocks WHERE lesson_id = ?").run(id); // ai đã trả điểm mở bài này được hoàn lại
 }
 
+/** Video của các bài (của site) chưa biết kênh YouTube */
+export function videosMissingChannel(limit: number): string[] {
+  return (
+    conn().prepare("SELECT DISTINCT video_id FROM lessons WHERE channel_title IS NULL AND owner_id IS NULL LIMIT ?").all(limit) as { video_id: string }[]
+  ).map((r) => r.video_id);
+}
+
+/** Ghi kênh YouTube cho mọi bài dùng video này */
+export function setVideoChannel(videoId: string, title: string, url: string) {
+  conn().prepare("UPDATE lessons SET channel_title = ?, channel_url = ? WHERE video_id = ?").run(title, url, videoId);
+}
+
 // ---- Bài học riêng (người dùng tự tạo từ video YouTube) ----
 
 /** Các bài riêng của 1 người, mới nhất trước */
 export function listOwnLessons(userId: number): LessonSummary[] {
   const rows = conn()
     .prepare(
-      `SELECT id, title, slug, video_id, description, level, published, dictation, owner_id, created_at,
+      `SELECT id, title, slug, video_id, description, level, published, dictation, owner_id, channel_title, channel_url, created_at,
               json_array_length(segments) AS segment_count
        FROM lessons WHERE owner_id = ? ORDER BY created_at DESC, id DESC`,
     )

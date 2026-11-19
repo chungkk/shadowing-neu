@@ -5,7 +5,8 @@ import { ArrowRight, Languages } from "lucide-react";
 import { connection } from "next/server";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
-import { LEVELS, listProgress } from "@/lib/db";
+import { LEVELS, listChannels, listProgress } from "@/lib/db";
+import { fillLessonChannels } from "@/lib/channels";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
 import PageHeader from "@/components/PageHeader";
@@ -34,6 +35,8 @@ function lessonItems(user: User | null) {
   // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
   const access = accessOf(user?.role === "admin" ? null : user);
   const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
+  // Ảnh kênh: chỉ kênh admin đã lưu (khớp theo @handle trong link kênh)
+  const avatars = new Map(listChannels().flatMap((c) => (c.handle && c.avatar ? [[c.handle.toLowerCase(), c.avatar] as const] : [])));
   const items = lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
     const p = progress.get(`/lesson/${l.id}`); // khoá tiến độ của bài vẫn theo id
     return {
@@ -49,6 +52,9 @@ function lessonItems(user: User | null) {
       percent: p ? percent(p) : 0,
       isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
       access: access(l.id),
+      channel: l.channel,
+      channelUrl: l.channelUrl || null,
+      channelAvatar: avatars.get(l.channelUrl?.match(/\/(@[^/?#]+)/)?.[1]?.toLowerCase() ?? "") ?? null,
     };
   });
   // Bài học được ngay (miễn phí / đã mở) lên đầu, trong mỗi nhóm vẫn mới nhất trước
@@ -59,6 +65,7 @@ async function Lessons() {
   await connection(); // đọc DB lúc request, không prerender
   const user = await getCurrentUser();
   const admin = user?.role === "admin";
+  fillLessonChannels(); // bài chưa biết kênh → lấy nền sau khi trả trang
   return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
 }
 

@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CircleCheck, Clock, Lock } from "lucide-react";
+import { ChevronDown, CircleCheck, Clock, ExternalLink, Lock } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
@@ -24,6 +24,9 @@ type Item = {
   percent: number; // % đã học — 0: chưa học
   isNew: boolean;
   access: LessonAccess;
+  channel: string | null; // tên kênh YouTube (null / rỗng = chưa biết)
+  channelUrl: string | null;
+  channelAvatar: string | null; // ảnh kênh — chỉ có với kênh admin đã lưu
 };
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -137,7 +140,80 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
   );
 }
 
-/** Bài học admin đăng (mới nhất trước) trong 1 lưới liền, lọc theo cấp độ (lưu trên URL: ?level=B1 → chia sẻ link / tải lại trang vẫn giữ) */
+type Group = { key: string; name: string; url: string | null; avatar: string | null; lessons: Item[] };
+const OTHER = "Kênh khác";
+
+/** Chia bài theo kênh YouTube: kênh nhiều bài trước (bằng nhau thì theo tên), bài chưa biết kênh gom vào "Kênh khác" ở cuối. Thứ tự bài trong kênh giữ nguyên */
+function byChannel(lessons: Item[]): Group[] {
+  const map = new Map<string, Group>();
+  for (const l of lessons) {
+    const name = l.channel?.trim() || OTHER;
+    const g = map.get(name) ?? { key: name, name, url: name === OTHER ? null : l.channelUrl, avatar: name === OTHER ? null : l.channelAvatar, lessons: [] };
+    g.lessons.push(l);
+    map.set(name, g);
+  }
+  return [...map.values()].sort(
+    (a, b) => +(a.name === OTHER) - +(b.name === OTHER) || b.lessons.length - a.lessons.length || a.name.localeCompare(b.name, "de"),
+  );
+}
+
+const anchor = (name: string) => `kenh-${name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x"}`;
+const DESKTOP_SHOWN = 8; // máy tính: mỗi kênh hiện 2 hàng đầu, bấm "Xem thêm" mới mở hết
+
+function ChannelAvatar({ g }: { g: Group }) {
+  if (g.avatar)
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={g.avatar} alt="" loading="lazy" className="size-9 shrink-0 rounded-full border border-line bg-card-2 object-cover" />;
+  return (
+    <span className="icon-bubble tint-muted size-9 shrink-0 rounded-full font-display text-base font-extrabold" aria-hidden>
+      {g.name === OTHER ? "?" : g.name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+/** 1 kênh: tiêu đề (ảnh, tên, số bài, link YouTube) + bài — điện thoại: 1 hàng vuốt ngang · máy tính: lưới, quá 2 hàng thì thu gọn */
+function ChannelSection({ g, onLocked }: { g: Group; onLocked?: (l: Item) => void }) {
+  const [open, setOpen] = useState(false);
+  const more = g.lessons.length - DESKTOP_SHOWN;
+  return (
+    <section id={anchor(g.key)} aria-labelledby={`${anchor(g.key)}-h`} className="flex scroll-mt-20 flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <ChannelAvatar g={g} />
+        <h3 id={`${anchor(g.key)}-h`} className="min-w-0 truncate font-display text-lg font-bold tracking-[-0.015em]">
+          {g.name}
+        </h3>
+        <span className="badge badge-muted shrink-0 tabular-nums">{g.lessons.length} bài</span>
+        {g.url && (
+          <a href={g.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost ml-auto shrink-0 text-muted max-sm:px-2" title={`Kênh ${g.name} trên YouTube`}>
+            <ExternalLink className="size-4" /> <span className="max-sm:sr-only">YouTube</span>
+          </a>
+        )}
+      </div>
+      {/* Điện thoại: hàng vuốt ngang, thẻ kế tiếp ló ra ở mép để biết còn bài */}
+      <div className="scroll-row -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 px-4 pt-1.5 pb-2.5 sm:hidden">
+        {g.lessons.map((l) => (
+          <LessonCard key={l.id} l={l} onLocked={onLocked} className={`snap-start ${g.lessons.length > 1 ? "w-[78vw]" : "w-full"}`} />
+        ))}
+      </div>
+      <div className="grid gap-4 max-sm:hidden sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {(open ? g.lessons : g.lessons.slice(0, DESKTOP_SHOWN)).map((l) => (
+          <LessonCard key={l.id} l={l} onLocked={onLocked} />
+        ))}
+      </div>
+      {more > 0 && (
+        <button className="btn btn-sm self-center max-sm:hidden" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Thu gọn" : `Xem thêm ${more} bài của ${g.name}`}
+          <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Thư viện bài học chia theo kênh YouTube, lọc theo cấp độ (lưu trên URL: ?level=B1 → chia sẻ link / tải lại trang vẫn giữ).
+ * Nhiều kênh → hàng chip nhảy tới từng kênh.
+ */
 export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
   const searchParams = useSearchParams();
   const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
@@ -168,16 +244,13 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
     window.history.pushState(null, "", query ? `?${query}` : window.location.pathname);
   };
   const shown = level ? lessons.filter((l) => l.level === level) : lessons;
+  const groups = byChannel(shown);
+  const flat = groups.length === 1 && groups[0].name === OTHER; // chưa biết kênh nào → 1 lưới liền như trước
   // Admin học được mọi bài → bấm thẻ khoá vẫn vào thẳng bài
   const onLocked = lock?.enabled && !admin ? setOpening : undefined;
 
   const chip = (lv: string | null, count: number) => (
-    <button
-      key={lv ?? "all"}
-      onClick={() => setLevel(lv)}
-      aria-pressed={level === lv}
-      className="chip"
-    >
+    <button key={lv ?? "all"} onClick={() => setLevel(lv)} aria-pressed={level === lv} className="chip">
       {lv ?? "Tất cả"}
       <span className={`tabular-nums ${level === lv ? "opacity-80" : "text-muted"}`}>{count}</span>
     </button>
@@ -193,41 +266,30 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
         </div>
       </SectionHeader>
       {lock?.enabled && <LockNote lock={lock} admin={admin} />}
-      {/* Điện thoại, chưa lọc: mỗi cấp độ 1 hàng vuốt ngang, thẻ kế tiếp ló ra ở mép để biết còn bài */}
-      {!level && (
-        <div className="flex flex-col gap-5 sm:hidden">
-          {levels.map((g) => (
-            <div key={g.level} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-display text-lg font-bold tracking-[-0.015em]">Trình độ {g.level}</h3>
-                {g.count > 1 && (
-                  <button
-                    onClick={() => {
-                      top.current?.scrollIntoView();
-                      setLevel(g.level);
-                    }}
-                    className="btn btn-sm btn-ghost hit-44 text-link"
-                  >
-                    Xem tất cả ({g.count})
-                  </button>
-                )}
-              </div>
-              <div className="scroll-row -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 px-4 pt-1.5 pb-2.5">
-                {lessons
-                  .filter((l) => l.level === g.level)
-                  .map((l) => (
-                    <LessonCard key={l.id} l={l} onLocked={onLocked} className="w-[78vw] snap-start" />
-                  ))}
-              </div>
-            </div>
+      {!flat && groups.length > 1 && (
+        <nav aria-label="Nhảy tới kênh" className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+          <span className="label shrink-0">Kênh</span>
+          {groups.map((g) => (
+            <a key={g.key} href={`#${anchor(g.key)}`} className="chip">
+              {g.name}
+              <span className="text-muted tabular-nums">{g.lessons.length}</span>
+            </a>
+          ))}
+        </nav>
+      )}
+      {flat ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {shown.map((l) => (
+            <LessonCard key={l.id} l={l} onLocked={onLocked} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-8 sm:gap-10">
+          {groups.map((g) => (
+            <ChannelSection key={`${level}-${g.key}`} g={g} onLocked={onLocked} />
           ))}
         </div>
       )}
-      <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${level ? "" : "max-sm:hidden"}`}>
-        {shown.map((l) => (
-          <LessonCard key={l.id} l={l} onLocked={onLocked} />
-        ))}
-      </div>
       {opening && lock && <UnlockDialog lesson={opening} lock={lock} onClose={() => setOpening(null)} />}
     </section>
   );
