@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { extractVideoId, getSavedTranscript, getYouTubeTranscript, saveUploadedTranscript } from "@/lib/youtube";
+import { extractVideoId, getSavedTranscript, getYouTubeTranscript, MAX_VIDEO_SECONDS, saveUploadedTranscript } from "@/lib/youtube";
 import { apiUser, body, fail } from "@/lib/api";
 import { clientIp } from "@/lib/rate-limit";
 import { lockedLessonOfVideo } from "@/lib/access";
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/youtube/[
     return Response.json(await getYouTubeTranscript(videoId, undefined, {
         whisper: !!user,
         quotaKey: user ? `u:${user.id}` : `ip:${await clientIp()}`,
+        maxSeconds: user?.role === "admin" ? undefined : MAX_VIDEO_SECONDS,
       }));
   } catch (e) {
     return fail((e as Error).message, 502);

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import Mascot from "@/components/Mascot";
 import { RememberVideo } from "@/components/RecentVideos";
-import { extractVideoId, getYouTubeTranscript, WHISPER } from "@/lib/youtube";
+import { extractVideoId, getYouTubeTranscript, MAX_VIDEO_SECONDS, WHISPER } from "@/lib/youtube";
 import { getCurrentUser } from "@/lib/auth";
 import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
@@ -28,7 +28,12 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
   const { videoId: rawId } = await params;
   const user = await getCurrentUser();
   // chỉ người đã đăng nhập mới được chạy Whisper (tốn tiền API); hạn mức lấy phụ đề mới theo người / IP khách
-  const opts = { whisper: !!user, quotaKey: user ? `u:${user.id}` : `ip:${await clientIp()}` };
+  // Khách chỉ lấy video tối đa 30 phút; admin không giới hạn
+  const opts = {
+    whisper: !!user,
+    quotaKey: user ? `u:${user.id}` : `ip:${await clientIp()}`,
+    maxSeconds: user?.role === "admin" ? undefined : MAX_VIDEO_SECONDS,
+  };
   // Video của bài đang khoá → sang trang bài (màn mở khoá), không cho học lách qua link YouTube
   const locked = lockedLessonOfVideo(user, extractVideoId(rawId) ?? "");
   if (locked) redirect(lessonPath(locked.slug));

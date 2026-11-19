@@ -31,6 +31,9 @@ function germanOnly(t: Transcript | null): Transcript | null {
   if (!t || (t.track.languageCode !== WHISPER && !isGerman(t.track))) return null;
   return { ...t, tracks: t.tracks.filter((x) => x.languageCode === WHISPER || isGerman(x)) };
 }
+/** Khách (không phải admin) chỉ lấy được phụ đề mới cho video tối đa 30 phút (video dài: tải audio / Whisper hay lỗi, tốn tiền) */
+export const MAX_VIDEO_SECONDS = 30 * 60;
+
 const WHISPER_TRACK: Track = { languageCode: WHISPER, name: "🤖 Whisper (AI)", auto: false };
 
 type PlayerResponse = {
@@ -147,6 +150,16 @@ async function fetchPlayer(videoId: string): Promise<PlayerResponse> {
   throw new Error(reason || `Video không khả dụng (${status})`);
 }
 
+/** Video dài quá giới hạn cho khách — báo trước khi tải gì (thông báo hiện thẳng cho người dùng) */
+export class VideoTooLongError extends Error {
+  constructor(duration: number, max: number) {
+    super(
+      `Video này dài ${Math.round(duration / 60)} phút — hiện chỉ hỗ trợ video tối đa ${Math.round(max / 60)} phút. ` +
+        "Bạn chọn video ngắn hơn nhé.",
+    );
+  }
+}
+
 /** Video bị chủ kênh giới hạn quốc gia (vd. ARD/WDR chỉ cho xem ở Đức) — yt-dlp cũng không tải được */
 class GeoBlockedError extends Error {
   constructor() {
@@ -260,6 +273,7 @@ async function orYtdlp<T>(primary: () => Promise<T>, fallback: () => Promise<T>)
 
 type Source = {
   title: string;
+  duration?: number; // giây (YouTube có thể không trả về)
   tracks: { track: Track; load: () => Promise<Segment[]> }[];
   audio: () => Promise<{ blob: Blob; filename: string }>;
 };
@@ -268,6 +282,7 @@ async function fromInnertube(videoId: string): Promise<Source> {
   const player = await fetchPlayer(videoId);
   return {
     title: player.videoDetails?.title ?? videoId,
+    duration: Number(player.videoDetails?.lengthSeconds) || undefined,
     tracks: (player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []).map((t) => {
       const track: Track = {
         languageCode: t.languageCode,
@@ -292,9 +307,10 @@ async function fromInnertube(videoId: string): Promise<Source> {
 }
 
 async function fromYtdlp(videoId: string): Promise<Source> {
-  const { title, tracks } = await ytdlpVideo(videoId);
+  const { title, duration, tracks } = await ytdlpVideo(videoId);
   return {
     title,
+    duration,
     tracks: tracks.map(({ languageCode, name, auto }) => {
       const track: Track = { languageCode, name, auto };
       return { track, load: () => ytdlpCaptions(videoId, track) };
@@ -313,11 +329,12 @@ async function fromYtdlp(videoId: string): Promise<Source> {
  * ai lấy phụ đề video nào thì người sau mở cùng video có ngay.
  * `whisper: false` (khách chưa đăng nhập) → không được chạy Whisper mới (tốn tiền API),
  * nhưng vẫn dùng được kết quả Whisper đã có trong cache.
+ * `maxSeconds`: video dài hơn → báo lỗi trước khi tải phụ đề / audio (phụ đề đã lưu sẵn vẫn mở được).
  */
 export async function getYouTubeTranscript(
   videoId: string,
   lang?: string,
-  { whisper = false, quotaKey }: { whisper?: boolean; quotaKey?: string } = {},
+  { whisper = false, quotaKey, maxSeconds }: { whisper?: boolean; quotaKey?: string; maxSeconds?: number } = {},
 ): Promise<Transcript> {
   await connection(); // luôn chạy lúc request (đọc cache có hạn dùng Date.now())
   // "ytp:" — bản có thêm dấu câu cho phụ đề tự động (đổi tiền tố để không dùng lại cache cũ chưa có dấu câu)
@@ -332,7 +349,7 @@ export async function getYouTubeTranscript(
   }
 
   // Cùng video đang được lấy (người khác vừa mở) → chờ chung một lần, không gọi YouTube/LLM/Whisper lặp lại
-  const flightKey = `${videoId}:${lang || "default"}:${whisper ? 1 : 0}`;
+  const flightKey = `${videoId}:${lang || "default"}:${whisper ? 1 : 0}:${maxSeconds ?? 0}`;
   const pending = inflight.get(flightKey);
   if (pending) return pending;
 
@@ -344,7 +361,7 @@ export async function getYouTubeTranscript(
     throw new Error("Máy chủ đang bận lấy phụ đề cho video khác. Thử lại sau ít phút nhé.");
   }
   active.n++;
-  const p = fetchTranscript(videoId, cacheKey, lang, whisper, quotaKey).finally(() => {
+  const p = fetchTranscript(videoId, cacheKey, lang, whisper, quotaKey, maxSeconds).finally(() => {
     active.n--;
     inflight.delete(flightKey);
   });
@@ -372,13 +389,15 @@ async function fetchTranscript(
   lang: string | undefined,
   whisper: boolean,
   quotaKey: string | undefined,
+  maxSeconds?: number,
 ): Promise<Transcript> {
 
   // IP server (VPS) bị YouTube chặn ("…kein Bot…") → dùng yt-dlp + PO token
-  const { title, tracks: allTracks, audio } = await orYtdlp(
+  const { title, duration, tracks: allTracks, audio } = await orYtdlp(
     () => fromInnertube(videoId),
     () => fromYtdlp(videoId),
   );
+  if (maxSeconds && duration && duration > maxSeconds) throw new VideoTooLongError(duration, maxSeconds);
   const canWhisper = whisper && whisperEnabled();
   // App học tiếng Đức → chỉ dùng phụ đề tiếng Đức (bỏ các track ngôn ngữ khác)
   const de = allTracks.filter((t) => isGerman(t.track));

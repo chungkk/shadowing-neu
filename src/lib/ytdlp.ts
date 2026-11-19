@@ -67,6 +67,7 @@ function run(args: string[], timeout: number): Promise<string> {
 type SubFormat = { ext: string; url?: string; name?: string };
 type Info = {
   title?: string;
+  duration?: number;
   subtitles?: Record<string, SubFormat[]>;
   automatic_captions?: Record<string, SubFormat[]>;
 };
@@ -123,9 +124,9 @@ function listTracks(info: Info): YtdlpTrack[] {
 }
 
 /** Tiêu đề + danh sách phụ đề của video, lấy bằng yt-dlp */
-export async function ytdlpVideo(videoId: string): Promise<{ title: string; tracks: YtdlpTrack[] }> {
+export async function ytdlpVideo(videoId: string): Promise<{ title: string; duration?: number; tracks: YtdlpTrack[] }> {
   const { info } = await getInfo(videoId);
-  return { title: info.title ?? videoId, tracks: listTracks(info) };
+  return { title: info.title ?? videoId, duration: info.duration, tracks: listTracks(info) };
 }
 
 /** Tải 1 track phụ đề bằng yt-dlp */
