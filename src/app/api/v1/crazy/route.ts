@@ -29,6 +29,8 @@ export async function POST(req: Request) {
   const b = await body<{ source: string; idx: number; passed: boolean }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
+  // Video tự dán học thử được nhưng không lưu (muốn lưu → tạo bài học riêng)
+  if (source.startsWith("/watch/")) return fail("Video tự dán không lưu tiến độ — lưu thành bài học riêng để học tiếp lần sau.", 403);
   if (lockedSource(user, source)) return fail("Bài này chưa mở khoá", 403);
   if (typeof b.idx !== "number" || !Number.isInteger(b.idx) || b.idx < 0 || b.idx >= 10000) return fail("idx không hợp lệ");
   return Response.json({ rep: addCrazyRep(user.id, source, b.idx, b.passed === true) });

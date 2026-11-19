@@ -1,6 +1,6 @@
 import "server-only";
 import { lessonsFor } from "./access";
-import { listProgress, type Progress } from "./db";
+import { listOwnLessons, listProgress, type Progress } from "./db";
 import { lessonPath } from "./slug";
 
 /**
@@ -15,9 +15,10 @@ export const percent = (p: Progress) => {
 
 /** Bài / video đang học dở, mới nhất trước — dùng chung cho "Tiếp tục học", dải "Hôm nay" và chuông nhắc nhở */
 export function unfinished(userId: number, limit = 4) {
-  const lessons = new Map(lessonsFor(userId).map((l) => [String(l.id), l]));
+  const lessons = new Map([...lessonsFor(userId), ...listOwnLessons(userId)].map((l) => [String(l.id), l]));
   return listProgress(userId)
-    .filter((p) => percent(p) < 100)
+    // Video tự dán không còn lưu tiến độ (chỉ bài riêng mới lưu) → bỏ tiến độ /watch cũ, mở lại cũng không học tiếp được
+    .filter((p) => percent(p) < 100 && !p.source.startsWith("/watch/"))
     .map((p) => {
       const [, kind, id] = p.source.split("/");
       const lesson = kind === "lesson" ? lessons.get(id) : undefined;

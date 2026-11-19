@@ -5,6 +5,7 @@
 
 export const FREE_PICKS = 2; // số bài người dùng mới được tự chọn mở miễn phí
 export const LESSON_PRICE = 1000; // kim cương / bài sau khi hết lượt chọn
+export const OWN_LESSON_PRICE = 1000; // kim cương để lưu 1 video YouTube tự dán thành bài học riêng (lib/own-lesson.ts)
 
 /** open = không khoá (chưa bật khoá / admin) · free = bài miễn phí · unlocked = người này đã mở · locked = chưa mở */
 export type LessonAccess = "open" | "free" | "unlocked" | "locked";

@@ -16,6 +16,7 @@ import { pageMeta } from "@/lib/page-meta";
 import { LessonGridSkeleton } from "@/components/Skeleton";
 import TodayStrip from "@/components/TodayStrip";
 import { lessonPath } from "@/lib/slug";
+import OwnLessons from "@/components/OwnLessons";
 
 // Link đã lọc (/tieng-duc?level=B1) vẫn là trang học tiếng Đức với Google
 export const metadata: Metadata = pageMeta({
@@ -74,6 +75,7 @@ function OwnVideo() {
         Hoặc luyện với video YouTube bất kỳ có phụ đề tiếng Đức
       </h2>
       <YouTubeUrlForm secondary />
+      <p className="text-xs text-muted">Học thử miễn phí, không lưu tiến độ — muốn lưu thì đổi kim cương để tạo bài học riêng.</p>
     </section>
   );
 }
@@ -122,6 +124,7 @@ async function Top() {
           <TodayStrip userId={user.id} />
         </div>
         <ContinueLearning userId={user.id} />
+        <OwnLessons userId={user.id} />
       </>
     );
   }

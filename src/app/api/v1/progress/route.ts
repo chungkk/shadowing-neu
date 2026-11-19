@@ -6,7 +6,9 @@ import { lockedSource } from "@/lib/access";
 /**
  * Tiến độ học của người đang đăng nhập — đồng bộ giữa web và app.
  * source: "/lesson/<id>" hoặc "/watch/<videoId>" (giống link lưu kèm từ vựng).
+ * Video YouTube tự dán (/watch) học thử được nhưng KHÔNG lưu tiến độ — muốn lưu thì tạo bài học riêng (tốn kim cương).
  */
+const NOT_SAVED = "Video tự dán không lưu tiến độ — lưu thành bài học riêng để học tiếp lần sau.";
 
 const SOURCE_RE = /^\/(lesson|watch)\/[\w-]{1,64}$/;
 const LEVELS = ["easy", "normal", "hard"];
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
   if (user instanceof Response) return user;
   const source = req.nextUrl.searchParams.get("source");
   if (source) {
-    const p = SOURCE_RE.test(source) ? getProgress(user.id, source) : null;
+    const p = SOURCE_RE.test(source) && !source.startsWith("/watch/") ? getProgress(user.id, source) : null;
     return Response.json({ progress: p && { ...p, ...getRoundPoints(user.id, source, p) } });
   }
   // Danh sách: bỏ chi tiết từng câu, chỉ trả số câu chính tả đã làm / số câu đã nghe
@@ -39,6 +41,7 @@ export async function PUT(req: Request) {
   const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown; dictPick: unknown }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
+  if (source.startsWith("/watch/")) return fail(NOT_SAVED, 403);
   if (lockedSource(user, source)) return fail("Bài này chưa mở khoá", 403);
   const total = int(b.total);
   const idx = int(b.idx);

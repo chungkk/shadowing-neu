@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { awardDictWords, chargeDictHints, getOpenPoints, getPointIdx, getPoints } from "@/lib/db";
 import { checkDictation, POINTS_CORRECT } from "@/lib/dictation";
 import { apiUser, body, fail, str } from "@/lib/api";
-import { dictationSentenceFor, lockedSource } from "@/lib/access";
+import { dictationSentenceFor, lockedSource, sourceEarnsPoints } from "@/lib/access";
 import { allow } from "@/lib/rate-limit";
 
 /**
@@ -43,6 +43,7 @@ export async function POST(req: Request) {
   if (typeof b.idx !== "number" || !Number.isInteger(b.idx) || b.idx < 0 || b.idx >= 10000) return fail("idx không hợp lệ");
   if (b.hints !== undefined) {
     if (typeof b.hints !== "number" || !Number.isInteger(b.hints) || b.hints < 1 || b.hints > 200) return fail("hints không hợp lệ");
+    if (!sourceEarnsPoints(source)) return Response.json(getPoints(user.id, tzOf(b.tz))); // bài riêng / video tự dán: xem từ không mất điểm
     return Response.json(chargeDictHints(user.id, source, b.idx, b.hints, tzOf(b.tz)));
   }
   const [, kind, id] = source.split("/");

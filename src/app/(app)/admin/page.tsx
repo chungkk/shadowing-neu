@@ -38,7 +38,7 @@ function LockPanel({ enabled, freeCount }: { enabled: boolean; freeCount: number
         )}
         {s.users > 0 && (
           <p className="text-xs text-muted">
-            Đã mở khoá: {fmt(s.pick)} lượt miễn phí · {fmt(s.buy)} lượt mua ({fmt(s.spent)} kim cương) · {fmt(s.legacy)} bài học dở · {fmt(s.users)} người
+            Đã mở khoá: {fmt(s.pick)} lượt miễn phí · {fmt(s.buy)} lượt mua ({fmt(s.spent)} kim cương) · {fmt(s.legacy)} bài học dở · {fmt(s.own)} bài riêng tự tạo · {fmt(s.users)} người
           </p>
         )}
       </div>

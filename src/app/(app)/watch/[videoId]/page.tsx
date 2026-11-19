@@ -12,6 +12,10 @@ import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 import { clientIp } from "@/lib/rate-limit";
 import { lessonPath } from "@/lib/slug";
+import SaveOwnLesson from "@/components/SaveOwnLesson";
+import { getPoints, ownLessonOfVideo } from "@/lib/db";
+import { ownLessonPrice } from "@/lib/own-lesson";
+import { OWN_LESSON_PRICE } from "@/lib/lesson-lock";
 
 // Video YouTube bất kỳ người dùng dán vào: không phải nội dung của site (và tạo phụ đề tốn API) → không cho index
 export const metadata: Metadata = {
@@ -49,6 +53,7 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
     );
   }
 
+  const own = user ? ownLessonOfVideo(user.id, data.videoId) : null;
   return (
     <>
       <RememberVideo videoId={data.videoId} title={data.title} />
@@ -57,8 +62,17 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
         videoId={data.videoId}
         segments={data.segments}
         loggedIn={!!user}
-        sourceUrl={`/watch/${data.videoId}`}
+        sourceUrl={`/watch/${data.videoId}`} // chỉ để lưu kèm từ vựng — video tự dán không lưu tiến độ
+        saveProgress={false}
       >
+        <SaveOwnLesson
+          videoId={data.videoId}
+          title={data.title}
+          loggedIn={!!user}
+          price={user ? ownLessonPrice(user) : OWN_LESSON_PRICE}
+          points={user ? getPoints(user.id).total : 0}
+          own={own?.slug ?? null}
+        />
         <div className="flex flex-wrap items-end gap-2 text-xs">
           {data.track.auto && <span className="badge badge-gold whitespace-normal">
               <TriangleAlert className="size-3.5" /> Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.

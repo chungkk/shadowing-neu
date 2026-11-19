@@ -69,23 +69,28 @@ async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
     );
   }
 
-  const draft = !lesson.published && user?.role === "admin";
+  const own = !!lesson.ownerId; // bài học riêng người dùng tự tạo (chỉ chủ bài xem)
+  const draft = !lesson.published && !own && user?.role === "admin";
   return (
     <>
       {lesson.published && <LessonJsonLd lesson={lesson} />}
       <ShadowPlayer
         title={lesson.title}
-        level={lesson.level}
+        level={own ? undefined : lesson.level}
         videoId={lesson.videoId}
         segments={lesson.segments}
         loggedIn={!!user}
         // Khoá tiến độ / nguồn từ vựng vẫn theo id (dữ liệu cũ + app dùng) — không đổi theo slug
         sourceUrl={`/lesson/${lesson.id}`}
         allowDictation={lesson.dictation}
+        earnPoints={!own}
       >
-        {(draft || lesson.description) && (
+        {(draft || own || lesson.description) && (
           <div className="surface flex flex-col gap-1.5 text-sm">
             {draft && <span className="badge badge-gold self-start">Bản nháp — chỉ admin xem được</span>}
+            {own && (
+              <span className="badge badge-gem self-start whitespace-normal">Bài học riêng của bạn — chỉ bạn thấy · lưu tiến độ, không tính kim cương</span>
+            )}
             {lesson.description && <p className="whitespace-pre-line text-muted">{lesson.description}</p>}
           </div>
         )}
@@ -98,6 +103,7 @@ export async function generateMetadata({ params }: PageProps<"/tieng-duc/[slug]"
   const lesson = getLessonBySlug((await params).slug);
   // Trang stream nên notFound() vẫn trả HTTP 200 → báo noindex để Google không lưu trang 404 này
   if (!lesson) return { title: "Không tìm thấy bài học", robots: { index: false, follow: false } };
+  if (lesson.ownerId) return { title: "Bài học riêng", robots: { index: false, follow: false } }; // không lộ tên bài riêng của người khác
   const meta = pageMeta({
     title: `${lesson.title} – Luyện nghe nói tiếng Đức ${lesson.level}`,
     description: lessonDescription(lesson),

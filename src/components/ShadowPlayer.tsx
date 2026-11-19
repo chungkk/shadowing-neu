@@ -229,6 +229,8 @@ export default function ShadowPlayer({
   loggedIn = false,
   sourceUrl = null,
   allowDictation = false,
+  saveProgress = true,
+  earnPoints = true,
   children,
 }: {
   title: string;
@@ -236,6 +238,8 @@ export default function ShadowPlayer({
   loggedIn?: boolean; // đã đăng nhập → tra từ, cụm từ, lưu từ / đánh dấu câu, đồng bộ tiến độ
   sourceUrl?: string | null; // trang hiện tại (/lesson/1, /watch/…), lưu kèm từ vựng để mở lại
   allowDictation?: boolean; // bài admin bật Chính tả; video tự dán chỉ Shadowing
+  saveProgress?: boolean; // false: video tự dán — học thử, không lưu tiến độ (muốn lưu → tạo bài học riêng)
+  earnPoints?: boolean; // false: bài riêng — chép chính tả không được / không mất kim cương
   videoId: string;
   segments: Segment[];
   backHref?: string;
@@ -692,7 +696,8 @@ export default function ShadowPlayer({
   };
 
   // ---- Tiến độ học: lưu theo tài khoản, đồng bộ với app (chỉ khi gộp câu — app luôn gộp nên số câu mới khớp) ----
-  const syncProgress = loggedIn && !!sourceUrl;
+  const syncProgress = loggedIn && !!sourceUrl && saveProgress;
+  const syncPoints = syncProgress && earnPoints;
   const [resumed, setResumed] = useState<number | null>(null);
   const progressLoaded = useRef(false);
   const pendingSave = useRef<object | null>(null);
@@ -742,7 +747,7 @@ export default function ShadowPlayer({
 
   // ---- Điểm chính tả: gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 (cần tài khoản, như tiến độ) ----
   useEffect(() => {
-    if (!syncProgress) return;
+    if (!syncPoints) return;
     let alive = true;
     clientApi<{ idx: number[]; open: Record<number, number> }>(`/points?source=${encodeURIComponent(sourceUrl!)}`)
       .then((r) => {
@@ -754,11 +759,11 @@ export default function ShadowPlayer({
     return () => {
       alive = false;
     };
-  }, [syncProgress, sourceUrl]);
+  }, [syncPoints, sourceUrl]);
   /** Số từ đúng của câu i vừa tăng quá số đã được điểm → cộng phần chênh (hiện ngay, gửi server sau), trả về số điểm vừa được */
   const dictEarn = (i: number, correct: number, total: number, input: string, revealed: number[]) => {
     const gain = correct * POINTS_CORRECT - (awarded.current[i] ?? 0);
-    if (!syncProgress || gain <= 0 || pointIdx.has(i)) return 0;
+    if (!syncPoints || gain <= 0 || pointIdx.has(i)) return 0;
     awarded.current[i] = correct * POINTS_CORRECT;
     setEarned((e) => ({ ...e, [i]: (e[i] ?? 0) + gain }));
     if (correct === total) setPointIdx((s) => new Set(s).add(i));
@@ -1195,7 +1200,7 @@ export default function ShadowPlayer({
                 onNextSentence={next}
                 onDone={(correct, total) => dictFinished(idx, correct, total)}
                 onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
-                onHint={syncProgress ? (n) => dictHint(idx, n) : undefined}
+                onHint={syncPoints ? (n) => dictHint(idx, n) : undefined}
                 hasNext={dictNextIdx !== undefined}
                 draft={dictDrafts[idx]}
                 saved={dictDone[idx]}

@@ -47,7 +47,8 @@ export function earnableFreePoints(): number {
  * Bài ẩn (bản nháp) chỉ admin xem được, trừ người đã trả để mở: họ vẫn học tiếp và thấy bài trong danh sách.
  * Hoàn kim cương / lượt chọn chỉ khi xoá bài (deleteLesson) — ẩn bài, đổi sang miễn phí, tắt khoá đều không hoàn.
  */
-export function canViewLesson(user: User | null, lesson: { id: number; published: boolean }): boolean {
+export function canViewLesson(user: User | null, lesson: { id: number; published: boolean; ownerId?: number | null }): boolean {
+  if (lesson.ownerId) return !!user && (user.id === lesson.ownerId || user.role === "admin"); // bài riêng: chỉ chủ bài (và admin)
   return lesson.published || user?.role === "admin" || (!!user && paidLessonIds(user.id).has(lesson.id));
 }
 
@@ -57,10 +58,21 @@ export function lessonsFor(userId: number | null) {
   return listLessons({ includeDrafts: true }).filter((l) => l.published || paid.has(l.id));
 }
 
-/** Câu idx (sau khi gộp, như màn học) của bài có bật Chính tả mà người này được xem — null = không có. Để server chấm lại trước khi cộng điểm */
+/**
+ * Câu idx (sau khi gộp, như màn học) của bài có bật Chính tả mà người này được xem — null = không có. Để server chấm lại trước khi cộng điểm.
+ * Bài riêng (tự tạo) không có kim cương: không thì tạo bài từ video dài là "đổi" 1000 kim cương lấy nhiều hơn.
+ */
 export function dictationSentenceFor(user: User, lessonId: number, idx: number): string | null {
   const l = getLesson(lessonId);
-  return l?.dictation && canViewLesson(user, l) ? (mergeIntoSentences(l.segments)[idx]?.text ?? null) : null;
+  return l?.dictation && !l.ownerId && canViewLesson(user, l) ? (mergeIntoSentences(l.segments)[idx]?.text ?? null) : null;
+}
+
+/** Nguồn này có tính kim cương chính tả không (chỉ bài của site có bật Chính tả — video tự dán / bài riêng thì không) */
+export function sourceEarnsPoints(source: string): boolean {
+  const [, kind, id] = source.split("/");
+  if (kind !== "lesson" || !/^\d+$/.test(id)) return false;
+  const l = getLesson(Number(id));
+  return !!l?.dictation && !l.ownerId;
 }
 
 /** Hàm tra quyền từng bài của 1 người (đọc DB 1 lần — dùng cho cả danh sách bài) */

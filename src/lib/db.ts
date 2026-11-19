@@ -20,6 +20,7 @@ export type Lesson = {
   segments: Segment[];
   published: boolean;
   dictation: boolean; // luyện Chính tả cho bài này (bài mới mặc định bật, admin có thể tắt)
+  ownerId: number | null; // bài học riêng người dùng tự tạo từ video YouTube (trả kim cương) — null = bài của site
   createdAt: string;
 };
 
@@ -348,6 +349,9 @@ function open() {
   for (const r of db.prepare("SELECT id, title FROM lessons WHERE slug IS NULL OR slug = '' ORDER BY id").all() as { id: number; title: string }[])
     setSlug.run(uniqueSlug(db, r.title, r.id), r.id);
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS lessons_slug ON lessons (slug)");
+  // Bài học riêng: người dùng trả kim cương để lưu video YouTube tự dán thành bài của riêng mình (luôn ẩn, chỉ chủ bài xem)
+  if (!lessonCols.some((c) => c.name === "owner_id")) db.exec("ALTER TABLE lessons ADD COLUMN owner_id INTEGER");
+  db.exec("CREATE INDEX IF NOT EXISTS lessons_owner ON lessons (owner_id, video_id)");
   // Tiến độ: các câu đã thực sự nghe (% tính theo số này, không theo câu đang mở).
   // Tiến độ cũ chỉ có câu đang học → coi mọi câu tới đó là đã nghe, để % đang hiện không bị tụt
   const progressCols = db.prepare("PRAGMA table_info(progress)").all() as { name: string }[];
@@ -444,6 +448,7 @@ type Row = {
   segment_count?: number;
   published: number;
   dictation: number;
+  owner_id: number | null;
   created_at: string;
 };
 
@@ -456,6 +461,7 @@ const toSummary = (r: Row): LessonSummary => ({
   level: r.level,
   published: !!r.published,
   dictation: !!r.dictation,
+  ownerId: r.owner_id ?? null,
   createdAt: r.created_at,
   segmentCount: r.segment_count ?? 0,
 });
@@ -463,9 +469,9 @@ const toSummary = (r: Row): LessonSummary => ({
 export function listLessons({ includeDrafts = false } = {}): LessonSummary[] {
   const rows = conn()
     .prepare(
-      `SELECT id, title, slug, video_id, description, level, published, dictation, created_at,
+      `SELECT id, title, slug, video_id, description, level, published, dictation, owner_id, created_at,
               json_array_length(segments) AS segment_count
-       FROM lessons ${includeDrafts ? "" : "WHERE published = 1"}
+       FROM lessons WHERE owner_id IS NULL ${includeDrafts ? "" : "AND published = 1"}
        ORDER BY created_at DESC, id DESC`,
     )
     .all() as Row[];
@@ -508,7 +514,7 @@ export function getLessonBySlug(slug: string): Lesson | null {
 }
 
 /** slug: admin tự đặt (chuẩn hoá lại + tránh trùng); bỏ trống → tạo bài mới thì lấy từ tiêu đề, sửa bài thì giữ slug cũ */
-export type LessonInput = Omit<Lesson, "id" | "createdAt" | "slug"> & { slug?: string };
+export type LessonInput = Omit<Lesson, "id" | "createdAt" | "slug" | "ownerId"> & { slug?: string };
 
 export function createLesson(l: LessonInput): number {
   const db = conn();
@@ -535,6 +541,64 @@ export function deleteLesson(id: number) {
   conn().prepare("DELETE FROM progress WHERE source = ?").run(`/lesson/${id}`);
   conn().prepare("DELETE FROM crazy_reps WHERE source = ?").run(`/lesson/${id}`);
   conn().prepare("DELETE FROM lesson_unlocks WHERE lesson_id = ?").run(id); // ai đã trả điểm mở bài này được hoàn lại
+}
+
+// ---- Bài học riêng (người dùng tự tạo từ video YouTube) ----
+
+/** Các bài riêng của 1 người, mới nhất trước */
+export function listOwnLessons(userId: number): LessonSummary[] {
+  const rows = conn()
+    .prepare(
+      `SELECT id, title, slug, video_id, description, level, published, dictation, owner_id, created_at,
+              json_array_length(segments) AS segment_count
+       FROM lessons WHERE owner_id = ? ORDER BY created_at DESC, id DESC`,
+    )
+    .all(userId) as Row[];
+  return rows.map((r) => ({ ...toSummary(r), ...lessonStats(r.id) }));
+}
+
+/** Bài riêng của người này làm từ video này (mỗi video 1 bài) */
+export function ownLessonOfVideo(userId: number, videoId: string): { id: number; slug: string } | null {
+  return (conn().prepare("SELECT id, slug FROM lessons WHERE owner_id = ? AND video_id = ? ORDER BY id LIMIT 1").get(userId, videoId) as
+    | { id: number; slug: string }
+    | undefined) ?? null;
+}
+
+/**
+ * Tạo bài riêng + trừ `cost` kim cương (ghi vào lesson_unlocks kind 'own', như tiền mở bài) trong 1 giao dịch:
+ * đọc điểm và ghi cùng lúc nên 2 request song song không tạo 2 bài / không trừ quá số đang có.
+ * Bài luôn ẩn (published = 0) và có Chính tả. Không đủ điểm → "points", đã có bài của video này → bài đó.
+ */
+export function createOwnLesson(
+  userId: number,
+  l: { title: string; videoId: string; segments: Segment[] },
+  cost: number,
+): { id: number; slug: string; created: boolean } | "points" {
+  const db = conn();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const existing = ownLessonOfVideo(userId, l.videoId);
+    if (existing) {
+      db.exec("COMMIT");
+      return { ...existing, created: false };
+    }
+    if (getPoints(userId).total < cost) {
+      db.exec("COMMIT");
+      return "points";
+    }
+    const slug = uniqueSlug(db, `rieng ${l.title}`.slice(0, 80), null);
+    const id = Number(
+      db
+        .prepare("INSERT INTO lessons (title, slug, video_id, description, level, segments, published, dictation, owner_id) VALUES (?, ?, ?, '', 'B1', ?, 0, 1, ?)")
+        .run(l.title, slug, l.videoId, JSON.stringify(l.segments), userId).lastInsertRowid,
+    );
+    db.prepare("INSERT INTO lesson_unlocks (user_id, lesson_id, kind, cost, at) VALUES (?, ?, 'own', ?, ?)").run(userId, id, cost, Date.now());
+    db.exec("COMMIT");
+    return { id, slug, created: true };
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
 }
 
 export function getCached<T>(key: string): T | null {
@@ -585,7 +649,7 @@ export function lessonsByVideoIds(videoIds: string[]): Map<string, { id: number;
   const out = new Map<string, { id: number; published: boolean }>();
   if (!videoIds.length) return out;
   const rows = conn()
-    .prepare(`SELECT id, video_id, published FROM lessons WHERE video_id IN (${videoIds.map(() => "?").join(",")}) ORDER BY id`)
+    .prepare(`SELECT id, video_id, published FROM lessons WHERE owner_id IS NULL AND video_id IN (${videoIds.map(() => "?").join(",")}) ORDER BY id`)
     .all(...videoIds) as { id: number; video_id: string; published: number }[];
   for (const r of rows) if (!out.has(r.video_id)) out.set(r.video_id, { id: r.id, published: !!r.published });
   return out;
@@ -792,6 +856,7 @@ export function deleteUser(id: number) {
   conn().prepare("DELETE FROM dict_hints WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM review_events WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM lesson_unlocks WHERE user_id = ?").run(id);
+  for (const r of conn().prepare("SELECT id FROM lessons WHERE owner_id = ?").all(id) as { id: number }[]) deleteLesson(r.id); // bài riêng của người này
   conn().prepare("DELETE FROM artikel_rounds WHERE user_id = ?").run(id);
   conn().prepare("DELETE FROM play_seats WHERE user_id = ?").run(id); // phòng của người khác vẫn còn, chỉ mất ghế của người này
   conn().prepare("UPDATE feedback SET user_id = NULL, email = '' WHERE user_id = ?").run(id); // giữ nội dung góp ý, bỏ liên kết người gửi
@@ -1317,7 +1382,7 @@ export function setSetting(key: string, value: unknown) {
 
 // ---- Bài đã mở khoá ----
 
-export type UnlockKind = "pick" | "buy" | "legacy";
+export type UnlockKind = "pick" | "buy" | "legacy" | "own"; // own: tiền tạo bài riêng (createOwnLesson)
 
 /** Các bài người này đã mở khoá */
 export function unlockedLessonIds(userId: number): Set<number> {
@@ -1348,13 +1413,14 @@ export function addLessonUnlock(userId: number, lessonId: number, kind: UnlockKi
 }
 
 /** Thống kê cho trang admin Khoá bài học: số lượt mở theo loại, số người đã mở, tổng điểm đã tiêu */
-export function lessonUnlockStats(): { pick: number; buy: number; legacy: number; users: number; spent: number } {
+export function lessonUnlockStats(): { pick: number; buy: number; legacy: number; own: number; users: number; spent: number } {
   return conn()
     .prepare(
       `SELECT COALESCE(SUM(kind = 'pick'), 0) AS pick, COALESCE(SUM(kind = 'buy'), 0) AS buy, COALESCE(SUM(kind = 'legacy'), 0) AS legacy,
+              COALESCE(SUM(kind = 'own'), 0) AS own,
               COUNT(DISTINCT user_id) AS users, COALESCE(SUM(cost), 0) AS spent FROM lesson_unlocks`,
     )
-    .get() as { pick: number; buy: number; legacy: number; users: number; spent: number };
+    .get() as { pick: number; buy: number; legacy: number; own: number; users: number; spent: number };
 }
 
 /** Bật khoá bài / bỏ miễn phí bài lessonId: ai đã có tiến độ bài nào thì giữ quyền học tiếp bài đó (không tốn lượt chọn / điểm) */
