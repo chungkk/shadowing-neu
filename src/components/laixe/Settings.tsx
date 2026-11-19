@@ -3,18 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Car, Check, Trash2 } from "lucide-react";
+import { Car, Check, Trash2 } from "lucide-react";
+import { Row } from "@/components/SettingsForms";
 import { setLicenseClass, setLidState } from "@/app/(app)/lai-xe/actions";
 import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 /** Chọn hạng bằng dạng danh sách thả xuống (trang Cài đặt) */
-export function ClassSelect({ groups, current }: { groups: { title: string; classes: ClassOption[] }[]; current: string }) {
+export function ClassSelect({ groups, current, compact }: { groups: { title: string; classes: ClassOption[] }[]; current: string; compact?: boolean }) {
   const [pending, start] = useTransition();
   return (
-    <label className="field w-full max-w-sm">
-      Hạng bằng
+    <label className={`field w-full ${compact ? "sm:w-56" : "max-w-sm"}`}>
+      <span className={compact ? "sr-only" : undefined}>Hạng bằng</span>
       <select
         value={current}
         disabled={pending}
@@ -38,41 +39,27 @@ export function ClassSelect({ groups, current }: { groups: { title: string; clas
   );
 }
 
-/** Mục "Lý thuyết lái xe" trong trang Cài đặt: hạng bằng đang học */
+/** Hàng "Lý thuyết lái xe" trong nhóm Học tập của trang Cài đặt: hạng bằng đang học + chọn hạng khác */
 export function DrivingSettings({ groups, current }: { groups: { title: string; classes: ClassOption[] }[]; current: string }) {
   const info = groups.flatMap((g) => g.classes).find((c) => c.id === current);
   return (
-    <section id="lai-xe" className="sticker scroll-mt-20 overflow-hidden">
-      <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <div>
-          <h2 className="section-title flex items-center gap-2">
-            <Car className="size-5 text-amber" /> Lý thuyết lái xe
-          </h2>
-          <p className="mt-0.5 text-sm text-muted">Hạng bằng đang học. Bản dịch câu hỏi là tiếng Việt.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="icon-bubble tint-gold h-12 min-w-12 px-2 font-display text-xl font-extrabold" aria-hidden>
-            {current}
-          </span>
-          {info && (
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="font-bold">
-                Hạng {info.name} · {info.vi}
-              </span>
-              <span className="text-sm text-muted">
-                {info.count.toLocaleString("vi-VN")} câu · thi {info.exam}
-              </span>
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-          <ClassSelect groups={groups} current={current} />
-        </div>
-        <Link href="/lai-xe/hang" className="btn btn-sm btn-ghost self-start text-link">
-          Xem mô tả từng hạng <ArrowRight className="size-3.5" aria-hidden />
-        </Link>
-      </div>
-    </section>
+    <Row
+      icon={Car}
+      title="Lý thuyết lái xe"
+      desc={
+        info ? (
+          <>
+            Đang học hạng <b className="text-foreground">{info.name}</b> · {info.vi} — {info.count.toLocaleString("vi-VN")} câu, thi {info.exam}.{" "}
+            <Link href="/lai-xe/hang" className="font-bold text-link hover:underline">
+              Mô tả từng hạng
+            </Link>
+          </>
+        ) : (
+          "Chọn hạng bằng bạn đang học. Bản dịch câu hỏi là tiếng Việt."
+        )
+      }
+      action={<ClassSelect groups={groups} current={current} compact />}
+    />
   );
 }
 

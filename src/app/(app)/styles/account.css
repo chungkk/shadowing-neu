@@ -159,6 +159,96 @@
     background: var(--foreground);
     border: 3px solid var(--card);
   }
+  /* Bố cục: menu mục bên trái (máy tính, dính khi cuộn) · điện thoại: hàng chip cuộn ngang trên cùng */
+  .settings-layout {
+    @apply grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-10;
+  }
+  .settings-nav {
+    @apply min-w-0 lg:sticky lg:top-24;
+  }
+  .settings-nav-link {
+    @apply flex min-h-10 items-center gap-2.5 rounded-full px-3.5 text-sm font-semibold whitespace-nowrap text-muted lg:rounded-[var(--radius)] lg:px-3;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    transition:
+      background-color var(--dur-fast),
+      color var(--dur-fast);
+  }
+  @media (min-width: 64rem) {
+    .settings-nav-link {
+      border-color: transparent;
+      background: transparent;
+    }
+  }
+  @media (hover: hover) {
+    .settings-nav-link:hover {
+      color: var(--foreground);
+      background: var(--card-2);
+    }
+  }
+  .settings-nav-link[aria-current="true"] {
+    color: var(--foreground);
+    background: var(--card-2);
+    border-color: var(--foreground);
+  }
+  @media (min-width: 64rem) {
+    .settings-nav-link[aria-current="true"] {
+      border-color: transparent;
+      box-shadow: inset 3px 0 0 var(--foreground);
+    }
+  }
+  .settings-nav-danger[aria-current="true"],
+  .settings-nav-danger:hover {
+    color: var(--red-400) !important;
+  }
+
+  /* Khung nhóm: các hàng ngăn bằng đường kẻ */
+  .settings-card {
+    @apply overflow-hidden;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+  }
+  .settings-row + .settings-row {
+    border-top: 1px solid var(--line);
+  }
+  .settings-row {
+    @apply flex flex-col gap-3 px-4 py-4 sm:px-5;
+  }
+  .settings-row-head {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-2 sm:flex-nowrap;
+  }
+  .settings-row-icon {
+    @apply inline-flex size-9 shrink-0 items-center justify-center self-start rounded-[var(--radius)] text-muted;
+    background: var(--card-2);
+  }
+  /* Giá trị hiện tại: cạnh tên trên máy tính, xuống dòng dưới trên điện thoại (thẳng hàng chữ, không thẳng icon) */
+  .settings-row-value {
+    @apply flex min-w-0 text-sm font-semibold max-sm:order-3 max-sm:basis-full max-sm:pl-[3.25rem] sm:max-w-[45%] sm:justify-end;
+  }
+  .settings-row-action {
+    @apply shrink-0 max-sm:ml-auto;
+  }
+  .settings-row-action-wide {
+    @apply max-sm:order-4 max-sm:ml-0 max-sm:basis-full max-sm:pl-[3.25rem];
+  }
+  .settings-row-body {
+    @apply flex flex-col gap-3 sm:pl-[3.25rem];
+  }
+  .settings-inline {
+    @apply flex flex-wrap items-end gap-2;
+  }
+  /* Kim cương trong khung hồ sơ — bấm để xem thống kê */
+  .settings-gem {
+    @apply flex shrink-0 items-center gap-3 px-4 py-3;
+    border-radius: var(--radius-lg);
+    color: var(--gem-dark);
+    background: var(--gem-soft);
+  }
+  [data-theme="dark"] .settings-gem {
+    color: var(--gem);
+  }
+
   .settings-foot {
     @apply flex flex-wrap items-center justify-end gap-2 px-4 py-3 sm:px-6;
     border-top: 1px solid var(--line);

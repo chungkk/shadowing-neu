@@ -131,28 +131,35 @@ export function VocabSkeleton() {
 /** Trang cài đặt / thành tích — khớp SettingsForms (hồ sơ + các khung) */
 export function SettingsSkeleton() {
   return (
-    <div className="flex flex-col gap-5" aria-busy="true" aria-label="Đang tải">
-      <section className="card flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
-        <Bone className="size-24 shrink-0 rounded-full sm:size-28" />
-        <div className="flex w-full flex-col gap-3">
-          <Bone className="h-8 w-full max-w-sm" />
-          <Bone className="h-5 w-full max-w-xs" />
-          <div className="flex gap-2">
-            <Bone className="h-6 w-20 rounded-md" />
-            <Bone className="h-6 w-28 rounded-md" />
+    <div className="settings-layout" aria-busy="true" aria-label="Đang tải">
+      <div className="flex gap-2 overflow-hidden lg:flex-col">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Bone key={i} className="h-10 w-28 shrink-0 rounded-full lg:w-full lg:rounded-xl" />
+        ))}
+      </div>
+      <div className="flex flex-col gap-8">
+        <section className="card flex flex-col items-center gap-5 p-5 sm:flex-row sm:gap-6 sm:p-6">
+          <Bone className="size-24 shrink-0 rounded-full" />
+          <div className="flex w-full flex-col gap-3">
+            <Bone className="h-8 w-full max-w-sm" />
+            <Bone className="h-5 w-full max-w-xs" />
+            <div className="flex gap-2">
+              <Bone className="h-6 w-20 rounded-md" />
+              <Bone className="h-6 w-28 rounded-md" />
+            </div>
           </div>
-        </div>
-      </section>
-      {Array.from({ length: 2 }, (_, i) => (
-        <section key={i} className="card flex flex-col gap-4 p-4 sm:p-6">
-          <div className="flex flex-col gap-1.5">
-            <Bone className="h-6 w-40" />
-            <Bone className="h-4 w-64 max-w-full" />
-          </div>
-          <Bone className="h-12 rounded-xl" />
-          <Bone className="h-12 rounded-xl" />
         </section>
-      ))}
+        {Array.from({ length: 2 }, (_, i) => (
+          <section key={i} className="flex flex-col gap-3">
+            <Bone className="h-6 w-40" />
+            <div className="settings-card flex flex-col gap-4 p-5">
+              <Bone className="h-10 rounded-xl" />
+              <Bone className="h-10 rounded-xl" />
+              <Bone className="h-10 rounded-xl" />
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

@@ -53,7 +53,7 @@ async function Home() {
   const ids = classQuestionIds(cls);
   const all = summarize(ids, stats);
   const marked = user ? quizBookmarks(user.id, "fuehrerschein").length : 0;
-  const settingsHref = user ? "/settings#lai-xe" : "/lai-xe/hang";
+  const settingsHref = user ? "/settings#hoc-tap" : "/lai-xe/hang";
 
   return (
     <>

@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import { Settings as SettingsIcon } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { envAdminEmail, requireUser } from "@/lib/auth";
-import { accountStats } from "@/lib/account-stats";
-import AccountStats from "@/components/AccountStats";
+import { getPoints } from "@/lib/db";
 import SettingsForms from "@/components/SettingsForms";
 import { SettingsSkeleton } from "@/components/Skeleton";
 import { DrivingSettings } from "@/components/laixe/Settings";
@@ -24,7 +23,7 @@ async function Settings() {
         hasPassword: user.hasPassword,
       }}
       fixedAdmin={user.email === envAdminEmail()}
-      stats={<AccountStats stats={accountStats(user.id)} />}
+      points={getPoints(user.id).total}
       learning={<DrivingSettings groups={classGroups()} current={cls} />}
     />
   );
@@ -32,8 +31,8 @@ async function Settings() {
 
 export default function SettingsPage() {
   return (
-    <main className="page page-narrow">
-      <PageHeader sec="ink" compact icon={SettingsIcon} title="Hồ sơ & cài đặt" sub="Tên, ảnh đại diện, mật khẩu, hạng bằng lái và dữ liệu của bạn." />
+    <main className="page max-w-5xl">
+      <PageHeader sec="ink" compact icon={SettingsIcon} title="Hồ sơ & cài đặt" sub="Hồ sơ, việc học, bảo mật tài khoản và dữ liệu của bạn." />
       <Suspense fallback={<SettingsSkeleton />}>
         <Settings />
       </Suspense>
