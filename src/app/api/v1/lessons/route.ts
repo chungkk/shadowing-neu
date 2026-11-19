@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     description: str(b.description).trim().slice(0, 2000),
     level,
     published: b.published !== false,
-    dictation: b.dictation === true,
+    dictation: b.dictation !== false, // mặc định bật, chỉ tắt khi gửi false
     segments,
   });
   prewarmPhrases(segments); // phân tích sẵn cụm từ → mở bài là có tô sáng ngay

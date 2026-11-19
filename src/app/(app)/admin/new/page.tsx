@@ -4,20 +4,21 @@ import LessonForm from "../LessonForm";
 import AdminNav from "../AdminNav";
 import { FormSkeleton } from "@/components/Skeleton";
 
-async function Guard({ children }: { children: React.ReactNode }) {
+/** ?v=<videoId> (bấm "Thêm bài" ở trang kênh) → điền sẵn link và tự lấy phụ đề */
+async function New({ searchParams }: PageProps<"/admin/new">) {
   await requireAdmin();
-  return children;
+  const v = (await searchParams).v;
+  const videoId = typeof v === "string" && /^[\w-]{11}$/.test(v) ? v : null;
+  return <LessonForm presetUrl={videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined} />;
 }
 
-export default function NewLessonPage() {
+export default function NewLessonPage(props: PageProps<"/admin/new">) {
   return (
     <main className="page page-narrow">
       <AdminNav />
       <h1 className="page-title">Bài học mới</h1>
       <Suspense fallback={<FormSkeleton />}>
-        <Guard>
-          <LessonForm />
-        </Guard>
+        <New {...props} />
       </Suspense>
     </main>
   );

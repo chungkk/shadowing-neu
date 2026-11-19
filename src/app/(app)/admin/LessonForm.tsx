@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import { slugify } from "@/lib/slug";
@@ -21,10 +21,11 @@ export type LessonFormValues = {
   srt: string;
 };
 
-export default function LessonForm({ initial }: { initial?: LessonFormValues }) {
+/** presetUrl: bài mới từ trang kênh YouTube — điền sẵn link và tự lấy phụ đề khi mở */
+export default function LessonForm({ initial, presetUrl }: { initial?: LessonFormValues; presetUrl?: string }) {
   const [state, formAction, saving] = useActionState(saveLesson, {});
   const [fetching, startFetch] = useTransition();
-  const [url, setUrl] = useState(initial?.url ?? "");
+  const [url, setUrl] = useState(initial?.url ?? presetUrl ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [srt, setSrt] = useState(initial?.srt ?? "");
@@ -32,7 +33,7 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
   const [level, setLevel] = useState(initial?.level ?? "A1");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [published, setPublished] = useState(initial?.published ?? true);
-  const [dictation, setDictation] = useState(initial?.dictation ?? false);
+  const [dictation, setDictation] = useState(initial?.dictation ?? true);
   // Số câu người học sẽ thấy (người học xem bản đã gộp câu của các dòng này)
   const counts = useMemo(() => {
     const lines = parseSubtitleFile(srt);
@@ -50,6 +51,14 @@ export default function LessonForm({ initial }: { initial?: LessonFormValues }) 
       setSrt(res.srt);
       if (!title || title === info?.title) setTitle(res.title);
     });
+
+  const autoLoaded = useRef(false);
+  useEffect(() => {
+    if (!presetUrl || autoLoaded.current) return;
+    autoLoaded.current = true;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy 1 lần khi mở form
+  }, [presetUrl]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

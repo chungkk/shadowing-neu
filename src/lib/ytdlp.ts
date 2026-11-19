@@ -165,3 +165,64 @@ export async function ytdlpAudio(videoId: string, maxBytes: number): Promise<{ b
     filename: webm ? "audio.webm" : "audio.m4a",
   };
 }
+
+// ---- Kênh YouTube (trang admin "Kênh") ----
+
+export type ChannelVideo = { id: string; title: string; duration: number | null };
+export type ChannelListing = { channelId: string; title: string; handle: string; avatar: string; videos: ChannelVideo[] };
+
+/**
+ * Link / @handle / mã kênh → URL tab "Video" của kênh. Không nhận ra → null.
+ * Nhận: "@EasyGerman", "UCbxb2…", "https://www.youtube.com/@x/featured", "…/channel/UC…", "…/c/x", "…/user/x"
+ */
+export function channelVideosUrl(input: string): string | null {
+  const s = input.trim();
+  if (/^@[\w.-]{2,}$/.test(s)) return `https://www.youtube.com/${s}/videos`;
+  if (/^UC[\w-]{22}$/.test(s)) return `https://www.youtube.com/channel/${s}/videos`;
+  let u: URL;
+  try {
+    u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
+  } catch {
+    return null;
+  }
+  if (!/(^|\.)youtube\.com$/i.test(u.hostname)) return null;
+  const m = u.pathname.match(/^\/(@[^/]+|channel\/UC[\w-]{22}|c\/[^/]+|user\/[^/]+)/);
+  return m ? `https://www.youtube.com/${m[1]}/videos` : null;
+}
+
+// Danh sách video của kênh dùng lại 15 phút (mở lại trang kênh không phải gọi YouTube)
+const CHANNEL_TTL = 15 * 60_000;
+const channelCache = new Map<string, { data: ChannelListing; exp: number }>();
+
+/** Thông tin kênh + `limit` video mới nhất (tab "Video", không gồm Shorts / livestream) */
+export async function ytdlpChannel(url: string, limit: number, { fresh = false } = {}): Promise<ChannelListing> {
+  const key = `${url}|${limit}`;
+  const now = Date.now();
+  for (const [k, v] of channelCache) if (v.exp <= now) channelCache.delete(k);
+  const hit = channelCache.get(key);
+  if (hit && !fresh) return hit.data;
+  const json = await run(["--flat-playlist", "-J", "--playlist-end", String(limit), url], 90_000);
+  const d = JSON.parse(json) as {
+    channel_id?: string;
+    id?: string;
+    channel?: string;
+    uploader?: string;
+    uploader_id?: string;
+    thumbnails?: { url: string; id?: string }[];
+    entries?: { id?: string; title?: string; duration?: number | null }[];
+  };
+  const channelId = d.channel_id ?? d.id ?? "";
+  if (!/^UC[\w-]{22}$/.test(channelId)) throw new Error("Không đọc được thông tin kênh.");
+  const thumbs = d.thumbnails ?? [];
+  const data: ChannelListing = {
+    channelId,
+    title: d.channel ?? d.uploader ?? channelId,
+    handle: d.uploader_id?.startsWith("@") ? d.uploader_id : "",
+    avatar: (thumbs.find((t) => t.id === "avatar_uncropped") ?? thumbs.find((t) => /yt3\./.test(t.url)))?.url ?? "",
+    videos: (d.entries ?? [])
+      .filter((e): e is { id: string; title?: string; duration?: number | null } => !!e.id && /^[\w-]{11}$/.test(e.id))
+      .map((e) => ({ id: e.id, title: e.title ?? e.id, duration: e.duration ?? null })),
+  };
+  channelCache.set(key, { data, exp: now + CHANNEL_TTL });
+  return data;
+}

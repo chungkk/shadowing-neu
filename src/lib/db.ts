@@ -19,7 +19,7 @@ export type Lesson = {
   level: Level;
   segments: Segment[];
   published: boolean;
-  dictation: boolean; // admin bật luyện Chính tả cho bài này (mặc định chỉ Shadowing)
+  dictation: boolean; // luyện Chính tả cho bài này (bài mới mặc định bật, admin có thể tắt)
   createdAt: string;
 };
 
@@ -311,6 +311,15 @@ function open() {
       device TEXT NOT NULL DEFAULT '', -- "iOS 26.1 · iPhone 16 · app 1.0.1"
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Kênh YouTube admin lưu sẵn để chọn video làm bài học
+    CREATE TABLE IF NOT EXISTS yt_channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_id TEXT NOT NULL UNIQUE, -- UC…
+      title TEXT NOT NULL,
+      handle TEXT NOT NULL DEFAULT '', -- @EasyGerman (có thể trống)
+      avatar TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL
+    );
   `);
   // Phụ đề YouTube trước đây chỉ lưu 7 ngày → giờ lưu vĩnh viễn
   db.exec("UPDATE transcript_cache SET expires_at = NULL WHERE key LIKE 'ytp:%' AND expires_at IS NOT NULL");
@@ -540,6 +549,46 @@ export function setCached(key: string, data: unknown, ttlMs: number | null) {
   conn()
     .prepare("INSERT OR REPLACE INTO transcript_cache (key, data, expires_at, updated_at) VALUES (?, ?, ?, ?)")
     .run(key, JSON.stringify(data), ttlMs === null ? null : Date.now() + ttlMs, Date.now());
+}
+
+// ---- Kênh YouTube đã lưu (trang admin "Kênh") ----
+
+export type YtChannel = { id: number; channelId: string; title: string; handle: string; avatar: string; createdAt: number };
+type ChannelRow = { id: number; channel_id: string; title: string; handle: string; avatar: string; created_at: number };
+const toChannel = (r: ChannelRow): YtChannel => ({ id: r.id, channelId: r.channel_id, title: r.title, handle: r.handle, avatar: r.avatar, createdAt: r.created_at });
+
+export function listChannels(): YtChannel[] {
+  return (conn().prepare("SELECT * FROM yt_channels ORDER BY title COLLATE NOCASE").all() as ChannelRow[]).map(toChannel);
+}
+
+export function getChannel(id: number): YtChannel | null {
+  const r = conn().prepare("SELECT * FROM yt_channels WHERE id = ?").get(id) as ChannelRow | undefined;
+  return r ? toChannel(r) : null;
+}
+
+/** Thêm kênh; đã có (cùng mã UC…) thì cập nhật tên / ảnh. Trả về id */
+export function saveChannel(c: { channelId: string; title: string; handle: string; avatar: string }): number {
+  const db = conn();
+  db.prepare(
+    `INSERT INTO yt_channels (channel_id, title, handle, avatar, created_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(channel_id) DO UPDATE SET title = excluded.title, handle = excluded.handle, avatar = excluded.avatar`,
+  ).run(c.channelId, c.title, c.handle, c.avatar, Date.now());
+  return (db.prepare("SELECT id FROM yt_channels WHERE channel_id = ?").get(c.channelId) as { id: number }).id;
+}
+
+export function deleteChannel(id: number) {
+  conn().prepare("DELETE FROM yt_channels WHERE id = ?").run(id);
+}
+
+/** videoId → bài đã có (kể cả nháp), để trang kênh đánh dấu video đã làm bài */
+export function lessonsByVideoIds(videoIds: string[]): Map<string, { id: number; published: boolean }> {
+  const out = new Map<string, { id: number; published: boolean }>();
+  if (!videoIds.length) return out;
+  const rows = conn()
+    .prepare(`SELECT id, video_id, published FROM lessons WHERE video_id IN (${videoIds.map(() => "?").join(",")}) ORDER BY id`)
+    .all(...videoIds) as { id: number; video_id: string; published: number }[];
+  for (const r of rows) if (!out.has(r.video_id)) out.set(r.video_id, { id: r.id, published: !!r.published });
+  return out;
 }
 
 // ---- Phụ đề video YouTube đã lưu (trang admin) ----

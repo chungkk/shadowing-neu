@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Captions, ListVideo, MessageSquare, ShieldCheck, Users } from "lucide-react";
+import { Captions, ListVideo, MessageSquare, ShieldCheck, Tv, Users } from "lucide-react";
 
 const TABS = [
   { href: "/admin", label: "Bài học", icon: ListVideo },
+  { href: "/admin/channels", label: "Kênh YouTube", icon: Tv },
   { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },

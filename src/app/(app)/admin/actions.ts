@@ -11,6 +11,8 @@ import { removeAccount, validEmail } from "@/lib/account";
 import { slugify } from "@/lib/slug";
 import { earnableFreePoints, lockSettings, saveLockSettings } from "@/lib/access";
 import { LESSON_PRICE } from "@/lib/lesson-lock";
+import { saveChannel, deleteChannel } from "@/lib/db";
+import { channelVideosUrl, ytdlpChannel, YtdlpMissingError } from "@/lib/ytdlp";
 
 export type FormState = { error?: string };
 
@@ -223,5 +225,29 @@ export async function saveTranscript(videoId: string, key: string, _: FormState,
 export async function removeTranscripts(videoId: string) {
   await requireAdmin();
   deleteSavedTranscripts(videoId);
+  refresh();
+}
+
+/** Admin dán link / @handle kênh YouTube → lưu kênh (tên, ảnh lấy từ YouTube) rồi mở trang video của kênh */
+export async function addChannel(_: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const url = channelVideosUrl(String(formData.get("channel") ?? ""));
+  if (!url) return { error: "Link kênh không hợp lệ — dán link kênh (youtube.com/@ten-kenh) hoặc @ten-kenh." };
+  let id: number;
+  try {
+    const c = await ytdlpChannel(url, 30);
+    id = saveChannel(c);
+  } catch (e) {
+    if (e instanceof YtdlpMissingError) return { error: e.message };
+    return { error: `Không lấy được kênh: ${(e as Error).message}` };
+  }
+  redirect(`/admin/channels/${id}`);
+}
+
+/** back: đang ở trang của chính kênh đó → về danh sách kênh */
+export async function removeChannel(id: number, back = false) {
+  await requireAdmin();
+  deleteChannel(id);
+  if (back) redirect("/admin/channels");
   refresh();
 }

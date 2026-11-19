@@ -36,7 +36,7 @@ export function LessonSheet({
   const [level, setLevel] = useState<string>(lesson?.level ?? "B1");
   const [description, setDescription] = useState(lesson?.description ?? "");
   const [published, setPublished] = useState(lesson?.published ?? true);
-  const [dictation, setDictation] = useState(lesson?.dictation ?? false);
+  const [dictation, setDictation] = useState(lesson?.dictation ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
