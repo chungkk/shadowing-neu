@@ -128,7 +128,7 @@ function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
         <>Khách học thử được các bài “Miễn phí” — đăng nhập để tự chọn thêm {FREE_PICKS} bài.</>
       ) : lock.picksLeft > 0 ? (
         <>
-          Bạn còn <b className="text-foreground">{lock.picksLeft}</b> lượt chọn bài miễn phí — bấm vào bài có ổ khoá để mở. Sau đó mỗi bài {price}.
+          Bạn còn <b className="text-foreground">{lock.picksLeft}</b> lượt chọn bài miễn phí — bấm vào bài có ổ khoá để mở. Sau đó mỗi bài <span className="whitespace-nowrap">{price}.</span>
         </>
       ) : (
         <>Mở thêm bài: mỗi bài {price} (bạn có {lock.points.toLocaleString("vi-VN")}).</>
