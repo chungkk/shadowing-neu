@@ -3,11 +3,11 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { adminSetPassword, envAdminEmail, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteFeedback, deleteLesson, getLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, type Level, type Role } from "@/lib/db";
+import { createLesson, deleteFeedback, deleteLesson, getLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, bumpSessionVersion, emailTaken, resetQuiz, setUserEmailVerified, setVerifiedEmail, updateUserName, QUIZ_MODULES, type Level, type QuizModule, type Role } from "@/lib/db";
 import { extractVideoId, getSavedTranscript, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
 import { keepWordTimings, parseSubtitleFile, toSrt } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
-import { removeAccount } from "@/lib/account";
+import { removeAccount, validEmail } from "@/lib/account";
 import { slugify } from "@/lib/slug";
 import { earnableFreePoints, lockSettings, saveLockSettings } from "@/lib/access";
 import { LESSON_PRICE } from "@/lib/lesson-lock";
@@ -121,6 +121,47 @@ export async function resetUserPassword(id: number, _: FormState & { ok?: string
 
 export async function removeUser(id: number) {
   if (await editableUser(id)) await removeAccount(id);
+  refresh();
+}
+
+/** Xoá tài khoản từ trang chi tiết → quay về danh sách */
+export async function removeUserAndBack(id: number) {
+  if (await editableUser(id)) await removeAccount(id);
+  redirect("/admin/users");
+}
+
+/** Sửa tên / email của người dùng (đổi email không cần mã xác nhận — coi như đã xác minh) */
+export async function editUser(id: number, _: FormState & { ok?: string }, formData: FormData): Promise<FormState & { ok?: string }> {
+  const target = await editableUser(id);
+  if (!target) return { error: "Không thể sửa tài khoản này" };
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!name) return { error: "Nhập tên" };
+  if (name.length > 60) return { error: "Tên tối đa 60 ký tự" };
+  if (!validEmail(email)) return { error: "Email không hợp lệ" };
+  if (email !== target.email && emailTaken(email, target.id)) return { error: "Email này đã có tài khoản khác dùng" };
+  updateUserName(target.id, name);
+  if (email !== target.email) setVerifiedEmail(target.id, email);
+  refresh();
+  return { ok: "Đã lưu" };
+}
+
+/** Đánh dấu email đã / chưa xác minh */
+export async function setEmailVerified(id: number, verified: boolean) {
+  if (await editableUser(id)) setUserEmailVerified(id, verified);
+  refresh();
+}
+
+/** Đăng xuất người dùng khỏi mọi thiết bị (mọi token / cookie cũ hết hiệu lực) */
+export async function logoutUser(id: number) {
+  if (await editableUser(id)) bumpSessionVersion(id);
+  refresh();
+}
+
+/** Xoá tiến độ Lái xe / LiD của người dùng (all: cả câu đánh dấu và lịch sử thi) */
+export async function resetUserQuiz(id: number, module: QuizModule, all: boolean) {
+  if (!QUIZ_MODULES.includes(module)) return;
+  if (await editableUser(id)) resetQuiz(id, module, all);
   refresh();
 }
 

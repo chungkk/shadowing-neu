@@ -42,7 +42,7 @@ import { translateWord } from "./word";
 // Không nhận ký tự đặc biệt của cú pháp địa chỉ email (",", ":", "<"…): nodemailer sẽ đọc "a@evil.com,.gmail.com" thành
 // a@evil.com, tức mã xác nhận đi tới một địa chỉ khác với địa chỉ được lưu
 const EMAIL_RE = /^[^\s@,;:<>()[\]"\\]+@[^\s@,;:<>()[\]"\\]+\.[^\s@,;:<>()[\]"\\]+$/;
-const validEmail = (email: string) => email.length <= 254 && EMAIL_RE.test(email);
+export const validEmail = (email: string) => email.length <= 254 && EMAIL_RE.test(email);
 
 export const authConfigured = () => !!(process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD);
 

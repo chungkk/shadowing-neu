@@ -1960,3 +1960,148 @@ export function bogenProgress(userId: number, module: QuizModule): Record<string
   }
   return out;
 }
+
+// ---- Admin: quản lý người dùng ----
+
+/** Mốc hoạt động gần nhất (ms) của 1 người = lần ghi dữ liệu học / chơi mới nhất ở mọi bảng (không có bảng nhật ký đăng nhập) */
+const LAST_ACTIVE_SQL = `(SELECT MAX(t) FROM (
+  SELECT MAX(updated_at) AS t FROM progress WHERE user_id = u.id
+  UNION ALL SELECT MAX(at) FROM review_events WHERE user_id = u.id
+  UNION ALL SELECT MAX(at) FROM dict_points WHERE user_id = u.id
+  UNION ALL SELECT MAX(at) FROM deck_learned WHERE user_id = u.id
+  UNION ALL SELECT MAX(at) FROM quiz_answers WHERE user_id = u.id
+  UNION ALL SELECT MAX(at) FROM quiz_exams WHERE user_id = u.id
+  UNION ALL SELECT MAX(updated_at) FROM crazy_reps WHERE user_id = u.id
+  UNION ALL SELECT MAX(joined_at) FROM play_seats WHERE user_id = u.id
+))`;
+
+export type AdminUserRow = User & {
+  providers: OAuthProvider[]; // đăng nhập bằng Google / Apple
+  lastActive: number | null; // ms, null = chưa học gì
+  points: number; // kim cương hiện có (như huy hiệu)
+  vocab: number; // số từ trong sổ
+  lessons: number; // số bài / video đã học
+  quiz: number; // số câu Lái xe + LiD đã trả lời
+  exams: number; // số bài thi thử đã nộp
+  feedback: number; // số góp ý đã gửi
+};
+
+/** Danh sách người dùng kèm số liệu tóm tắt (1 truy vấn) — cho trang admin */
+export function adminListUsers(): AdminUserRow[] {
+  const rows = conn()
+    .prepare(
+      `SELECT u.*,
+         (SELECT group_concat(provider) FROM oauth_accounts WHERE user_id = u.id) AS providers,
+         ${LAST_ACTIVE_SQL} AS last_active,
+         (SELECT COALESCE(SUM(p), 0) FROM (
+            SELECT pts AS p FROM dict_points WHERE user_id = u.id
+            UNION ALL SELECT -n * pts FROM dict_hints WHERE user_id = u.id
+            UNION ALL SELECT -cost FROM lesson_unlocks WHERE user_id = u.id)) AS points,
+         (SELECT COUNT(*) FROM vocab WHERE user_id = u.id) AS vocab_n,
+         (SELECT COUNT(*) FROM progress WHERE user_id = u.id) AS lessons_n,
+         (SELECT COUNT(*) FROM quiz_answers WHERE user_id = u.id) AS quiz_n,
+         (SELECT COUNT(*) FROM quiz_exams WHERE user_id = u.id) AS exams_n,
+         (SELECT COUNT(*) FROM feedback WHERE user_id = u.id) AS feedback_n
+       FROM users u ORDER BY u.created_at DESC, u.id DESC`,
+    )
+    .all() as (UserRow & {
+    providers: string | null;
+    last_active: number | null;
+    points: number;
+    vocab_n: number;
+    lessons_n: number;
+    quiz_n: number;
+    exams_n: number;
+    feedback_n: number;
+  })[];
+  return rows.map((r) => ({
+    ...toUser(r),
+    providers: (r.providers?.split(",") ?? []) as OAuthProvider[],
+    lastActive: r.last_active,
+    points: r.points,
+    vocab: r.vocab_n,
+    lessons: r.lessons_n,
+    quiz: r.quiz_n,
+    exams: r.exams_n,
+    feedback: r.feedback_n,
+  }));
+}
+
+/** Tài khoản Google / Apple đã liên kết của 1 người */
+export function userOAuthAccounts(userId: number): { provider: OAuthProvider; email: string; createdAt: string }[] {
+  return (
+    conn().prepare("SELECT provider, email, created_at FROM oauth_accounts WHERE user_id = ? ORDER BY created_at").all(userId) as {
+      provider: OAuthProvider;
+      email: string;
+      created_at: string;
+    }[]
+  ).map((r) => ({ provider: r.provider, email: r.email, createdAt: r.created_at }));
+}
+
+/** Số lượt hoạt động mỗi ngày (UTC) trong `days` ngày gần nhất: ôn từ, chép chính tả được điểm, học bộ từ, thi thử */
+export function userActivityDays(userId: number, days = 30, now = Date.now()): { day: string; n: number }[] {
+  const since = now - days * DAY;
+  const rows = conn()
+    .prepare(
+      `SELECT date(at / 1000, 'unixepoch') AS day, COUNT(*) AS n FROM (
+         SELECT at FROM review_events WHERE user_id = ? AND at >= ?
+         UNION ALL SELECT at FROM dict_points WHERE user_id = ? AND at >= ?
+         UNION ALL SELECT at FROM deck_learned WHERE user_id = ? AND at >= ?
+         UNION ALL SELECT at FROM quiz_exams WHERE user_id = ? AND at >= ?
+       ) GROUP BY day`,
+    )
+    .all(userId, since, userId, since, userId, since, userId, since) as { day: string; n: number }[];
+  const map = new Map(rows.map((r) => [r.day, r.n]));
+  return Array.from({ length: days }, (_, i) => {
+    const day = new Date(now - (days - 1 - i) * DAY).toISOString().slice(0, 10);
+    return { day, n: map.get(day) ?? 0 };
+  });
+}
+
+/** Lái xe / LiD của 1 người: số câu đã làm, đang đúng, số bài thi, số bài đậu */
+export function userQuizSummary(userId: number): Record<QuizModule, { answered: number; ok: number; exams: number; passed: number; bookmarks: number; lastAt: number | null }> {
+  const out = {} as Record<QuizModule, { answered: number; ok: number; exams: number; passed: number; bookmarks: number; lastAt: number | null }>;
+  for (const m of QUIZ_MODULES) {
+    const a = conn()
+      .prepare("SELECT COUNT(*) AS answered, COALESCE(SUM(last_ok), 0) AS ok, MAX(at) AS last FROM quiz_answers WHERE user_id = ? AND module = ?")
+      .get(userId, m) as { answered: number; ok: number; last: number | null };
+    const e = conn()
+      .prepare("SELECT COUNT(*) AS exams, COALESCE(SUM(passed), 0) AS passed FROM quiz_exams WHERE user_id = ? AND module = ?")
+      .get(userId, m) as { exams: number; passed: number };
+    const b = conn().prepare("SELECT COUNT(*) AS n FROM quiz_bookmarks WHERE user_id = ? AND module = ?").get(userId, m) as { n: number };
+    out[m] = { answered: a.answered, ok: a.ok, exams: e.exams, passed: e.passed, bookmarks: b.n, lastAt: a.last };
+  }
+  return out;
+}
+
+/** Góp ý của 1 người (mới nhất trước) */
+export function userFeedback(userId: number): { id: number; kind: FeedbackKind; message: string; device: string; createdAt: string }[] {
+  return (
+    conn().prepare("SELECT id, kind, message, device, created_at FROM feedback WHERE user_id = ? ORDER BY id DESC").all(userId) as {
+      id: number;
+      kind: FeedbackKind;
+      message: string;
+      device: string;
+      created_at: string;
+    }[]
+  ).map((r) => ({ id: r.id, kind: r.kind, message: r.message, device: r.device, createdAt: r.created_at }));
+}
+
+/** Số bài đã mở khoá + kim cương đã trả */
+export function userUnlockSummary(userId: number): { count: number; spent: number } {
+  return conn().prepare("SELECT COUNT(*) AS count, COALESCE(SUM(cost), 0) AS spent FROM lesson_unlocks WHERE user_id = ?").get(userId) as {
+    count: number;
+    spent: number;
+  };
+}
+
+/** Admin đánh dấu email đã / chưa xác minh */
+export function setUserEmailVerified(id: number, verified: boolean) {
+  conn().prepare("UPDATE users SET email_verified = ? WHERE id = ?").run(verified ? 1 : 0, id);
+}
+
+
+/** Mốc hoạt động gần nhất (ms) của 1 người, null = chưa học gì */
+export function userLastActive(userId: number): number | null {
+  return (conn().prepare(`SELECT ${LAST_ACTIVE_SQL} AS t FROM users u WHERE u.id = ?`).get(userId) as { t: number | null } | undefined)?.t ?? null;
+}
