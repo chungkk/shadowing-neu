@@ -12,12 +12,54 @@ export const WHISPER_MAX_BYTES = 24 * 1024 * 1024;
 // Có key (OpenAI/Groq) hoặc tự đặt URL (server Whisper offline, không cần key) → bật Whisper
 export const whisperEnabled = () => !!(API_KEY || process.env.TRANSCRIBE_API_URL);
 
+// Đuôi file Whisper API (Groq/OpenAI) chấp nhận. Groq chỉ xét ĐUÔI TÊN FILE: tên "blob" / không đuôi → lỗi 400
+// "file must be one of the following types", dù nội dung là m4a hợp lệ.
+const EXTS = ["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "opus", "wav", "webm"];
+const MIME_EXT: Record<string, string> = {
+  "audio/mp4": "m4a", "audio/m4a": "m4a", "audio/x-m4a": "m4a", "audio/aac": "m4a", "video/mp4": "mp4",
+  "audio/webm": "webm", "video/webm": "webm", "audio/ogg": "ogg", "audio/opus": "opus",
+  "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav",
+  "audio/flac": "flac", "audio/x-flac": "flac",
+};
+
+/** Nhận định dạng thật từ vài byte đầu file (không tin tên file / MIME do client gửi). */
+export function sniffAudioExt(b: Uint8Array): string | null {
+  const ascii = (from: number, len: number) => String.fromCharCode(...b.subarray(from, from + len));
+  if (b.length < 12) return null;
+  if (ascii(4, 4) === "ftyp") return "m4a"; // MP4 / M4A (cả bản DASH của YouTube)
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return "webm"; // Matroska / WebM
+  if (ascii(0, 4) === "OggS") return "ogg";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 4) === "WAVE") return "wav";
+  if (ascii(0, 4) === "fLaC") return "flac";
+  if (ascii(0, 3) === "ID3" || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return "mp3";
+  return null;
+}
+
+/** Tên file gửi Whisper: đuôi theo nội dung thật → theo đuôi tên gốc → theo MIME. Không xác định được → null. */
+export function whisperFilename(head: Uint8Array, filename: string, mime: string): string | null {
+  const fromName = filename.split(".").pop()?.toLowerCase() ?? "";
+  const ext =
+    sniffAudioExt(head) ??
+    (filename.includes(".") && EXTS.includes(fromName) ? fromName : null) ??
+    MIME_EXT[mime.split(";")[0].trim().toLowerCase()] ??
+    null;
+  return ext ? `audio.${ext}` : null;
+}
+
 /** Gửi 1 file audio lên Whisper, trả về segment có timestamp (đã cộng offset giây). */
 export async function transcribeAudio(audio: Blob, filename: string, offset = 0): Promise<Segment[]> {
   if (!whisperEnabled()) throw new Error("Chưa cấu hình Whisper trong .env.local (xem README).");
 
+  const head = new Uint8Array(await audio.slice(0, 16).arrayBuffer());
+  const name = whisperFilename(head, filename, audio.type);
+  if (!name) {
+    const hex = Buffer.from(head).toString("hex");
+    console.error("[whisper] định dạng audio không nhận ra:", { filename, type: audio.type, size: audio.size, head: hex });
+    throw new Error(`File ghi âm không đúng định dạng audio hỗ trợ (${filename || "không tên"}, ${audio.type || "không rõ kiểu"}).`);
+  }
+
   const body = new FormData();
-  body.append("file", audio, filename);
+  body.append("file", audio, name);
   body.append("model", MODEL);
   body.append("language", "de");
   body.append("response_format", "verbose_json");
@@ -28,7 +70,11 @@ export async function transcribeAudio(audio: Blob, filename: string, offset = 0)
     headers: API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {},
     body,
   });
-  if (!res.ok) throw new Error(`Lỗi API nhận dạng giọng nói (${res.status}): ${await res.text()}`);
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error("[whisper]", res.status, { sent: name, filename, type: audio.type, size: audio.size }, detail.slice(0, 300));
+    throw new Error(`Lỗi API nhận dạng giọng nói (${res.status}): ${detail}`);
+  }
 
   const data: { segments?: RawSegment[] } = await res.json();
   return filterHallucinations(data.segments ?? []).map((s) => ({
