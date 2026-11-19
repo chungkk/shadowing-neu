@@ -11,13 +11,15 @@ async function Exam() {
   const { cls, lang } = await prefs(); // đọc cookie → trang động, đề ngẫu nhiên mỗi lần mở
   const info = classInfo(cls);
   const user = await getCurrentUser();
+  const ids = examQuestionIds(cls);
   return (
     <DrivingRunner
+      key={ids.join()} // đề mới = màn mới (Activity giữ state — đáp án, đồng hồ — của lượt thi trước)
       mode="exam"
       title={`Thi thử hạng ${cls}`}
       subtitle={`${info.exam.questions} câu · ${info.exam.minutes} phút · ≤ ${info.exam.maxErrorPoints} điểm lỗi`}
       backHref="/lai-xe/thi-thu"
-      questions={await forClient(examQuestionIds(cls), lang)}
+      questions={await forClient(ids, lang)}
       loggedIn={!!user}
       lang={lang}
       exam={{ kind: "random", ref: cls, cls, minutes: info.exam.minutes, maxErrorPoints: info.exam.maxErrorPoints }}

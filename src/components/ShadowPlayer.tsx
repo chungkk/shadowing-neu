@@ -225,7 +225,7 @@ export default function ShadowPlayer({
   level,
   videoId,
   segments: rawSegments,
-  backHref = "/",
+  backHref = "/tieng-duc", // danh sách bài học (trang chủ "/" chỉ là trang giới thiệu)
   loggedIn = false,
   sourceUrl = null,
   allowDictation = false,

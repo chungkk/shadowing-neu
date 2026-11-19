@@ -489,6 +489,8 @@ function CloseButton({ onClose }: { onClose?: () => void }) {
       </button>
     );
   }
+  // Trang /login riêng (thường do bị chuyển từ trang cần đăng nhập, ?next=…): đóng = về trang vừa xem trong web.
+  // Mở thẳng từ ngoài vào (không có trang trước cùng web) → về trang chủ
   return (
     <Link
       href="/"
@@ -496,6 +498,12 @@ function CloseButton({ onClose }: { onClose?: () => void }) {
       title="Đóng"
       aria-label="Đóng"
       className="auth-close"
+      onClick={(e) => {
+        const nav = (window as { navigation?: { canGoBack?: boolean } }).navigation;
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !nav?.canGoBack) return;
+        e.preventDefault();
+        history.back();
+      }}
     >
       <X className="size-6" />
     </Link>

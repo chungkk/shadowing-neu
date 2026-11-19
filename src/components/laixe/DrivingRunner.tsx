@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Flag,
-  LogOut,
   PartyPopper,
   Check,
   ChevronFirst,
@@ -25,6 +24,7 @@ import {
   SkipBack,
   SkipForward,
   RotateCcw,
+  RotateCw,
   TriangleAlert,
   Star,
   X,
@@ -35,6 +35,7 @@ import type { QuizStat } from "@/lib/quiz/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useExamLeaveGuard } from "@/hooks/useExamLeaveGuard";
 import Mascot from "@/components/Mascot";
 
 /**
@@ -105,10 +106,29 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
   const showTr = isExam ? trExam : trLearn;
   const setShowTr = isExam ? setTrExam : setTrLearn;
   const top = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const [ask, confirmDialog] = useConfirm();
+  const router = useRouter();
+  const [abandoned, setAbandoned] = useState(false); // rời bài thi rồi quay lại → đang tạo đề mới
 
   const submitted = mode === "review" || (mode === "exam" && !!result);
+
+  // Như LiD: trang bị <Activity> ẩn khi chuyển trang và được giữ lại. Hiện lại (vd. bấm Back) sau khi đã rời bài thi đang làm
+  // → bỏ lượt đó, lấy đề mới (không thì đáp án + đồng hồ cũ chạy tiếp ngầm, hết giờ tự nộp bài người học đã bỏ).
+  // Đã nộp bài thì giữ nguyên trang kết quả. >1 giây: bỏ qua lần chạy kép của StrictMode lúc mount.
+  const hiddenAt = useRef(0);
+  const onShown = useEffectEvent(() => {
+    if (mode === "exam" && !result && hiddenAt.current && Date.now() - hiddenAt.current > 1000) {
+      setAbandoned(true);
+      router.refresh(); // đề mới có key mới (xem trang lam-bai / de-mau) → màn mới
+    }
+    hiddenAt.current = 0;
+  });
+  useLayoutEffect(() => {
+    onShown();
+    return () => {
+      hiddenAt.current = Date.now();
+    };
+  }, []);
   const q = questions[idx];
   // Khách: học thử có giới hạn số câu mỗi ngày · thi thử cần tài khoản
   const quota = useGuestQuota(module, loggedIn);
@@ -145,14 +165,6 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
       localStorage.setItem(`pos:${resumeKey}`, questions[idx].id);
     } catch {}
   }, [resumeKey, idx, questions]);
-
-  // Thi thử đang làm: hỏi trước khi rời trang
-  useEffect(() => {
-    if (mode !== "exam" || submitted) return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [mode, submitted]);
 
   const toggle = (key: string) => {
     if (reveal || !q || blocked) return;
@@ -201,8 +213,12 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
 
   const answeredCount = questions.filter((x) => picked[x.id]?.length).length;
 
+  // Đang thi và đã làm câu nào (khách không thi được): hỏi trước khi rời trang bằng link, nút Back trình duyệt hay đóng tab.
+  // Chưa làm câu nào thì cho đi thẳng, không hỏi thừa
+  useExamLeaveGuard(mode === "exam" && !submitted && !abandoned && loggedIn && answeredCount > 0, ask, backHref);
+
   const submit = useCallback(() => {
-    if (!exam || result) return;
+    if (!exam || result || abandoned) return;
     const r = grade(questions, picked, exam.maxErrorPoints);
     setResult(r);
     setIdx(0);
@@ -223,7 +239,7 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
     })
       .then((d) => setSavedId(d.id))
       .catch((e: Error) => setSaveError(e.message));
-  }, [exam, result, questions, picked, loggedIn, startedAt, module, autoMark, marked]); // eslint-disable-line react-hooks/exhaustive-deps -- setMark chỉ gọi API
+  }, [exam, result, abandoned, questions, picked, loggedIn, startedAt, module, autoMark, marked]); // eslint-disable-line react-hooks/exhaustive-deps -- setMark chỉ gọi API
 
   const askSubmit = async () => {
     const left = questions.length - answeredCount;
@@ -235,10 +251,6 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
     if (yes) submit();
   };
 
-  const askLeave = async () => {
-    const yes = await ask({ title: "Thoát bài thi?", text: "Thoát bài thi? Bài đang làm sẽ không được lưu.", ok: "Thoát", cancel: "Làm tiếp", tone: "red", icon: <LogOut className="size-5" /> });
-    if (yes) router.push(backHref);
-  };
 
   const toggleMark = (id: string) => {
     const on = !marked.has(id);
@@ -277,6 +289,17 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  if (abandoned) {
+    return (
+      <div className="card empty" role="status">
+        <span className="icon-bubble tint-sec size-14" aria-hidden>
+          <RotateCw className="size-7 animate-spin motion-reduce:animate-none" />
+        </span>
+        <p className="font-bold text-foreground">Đang tạo đề thi mới…</p>
+      </div>
+    );
+  }
+
   if (!q) {
     return (
       <div className="card empty">
@@ -308,13 +331,8 @@ export default function DrivingRunner({ module = "fuehrerschein", mode, title, s
         <Link
           href={backHref}
           className="btn-icon"
-          aria-label="Quay lại"
-          onClick={(e) => {
-            if (mode === "exam" && !submitted && answeredCount) {
-              e.preventDefault();
-              askLeave();
-            }
-          }}
+          aria-label={mode === "exam" && !submitted ? "Thoát bài thi" : "Quay lại"}
+          title={mode === "exam" && !submitted ? "Thoát" : "Quay lại"}
         >
           <ArrowLeft className="size-5" />
         </Link>

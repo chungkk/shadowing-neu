@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, Flag, Languages, LayoutGrid, Lightbulb, LogOut, RotateCw, Star, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, Flag, Languages, LayoutGrid, Lightbulb, RotateCw, Star, X } from "lucide-react";
 import Mascot from "../Mascot";
 import { clientApi } from "@/lib/client-api";
 import { isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/laixe/rules";
@@ -14,6 +14,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
 import { ProgressBar } from "../quiz/QuizParts";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useExamLeaveGuard } from "@/hooks/useExamLeaveGuard";
 
 /**
  * Màn câu hỏi Leben in Deutschland — cách chơi như app LiD, giao diện chung với tab Lái xe:
@@ -141,30 +142,9 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
     };
   }, [mode, router]);
 
-  // Đang thi: hỏi trước khi đóng / tải lại tab, và trước khi bấm bất kỳ link nào trong trang (thanh dưới, đầu trang, nút ←)
-  useEffect(() => {
-    if (!testing) return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-    const onClick = (e: globalThis.MouseEvent) => {
-      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!a || !answeredCount || e.defaultPrevented || a.target === "_blank" || e.metaKey || e.ctrlKey || e.shiftKey) return;
-      // Hộp xác nhận chạy bất đồng bộ → chặn link trước, đồng ý thì tự chuyển trang
-      e.preventDefault();
-      e.stopPropagation();
-      const url = new URL(a.href, location.href);
-      void ask({ title: "Thoát bài thi?", text: "Các câu trả lời hiện tại sẽ bị mất.", ok: "Thoát", cancel: "Làm tiếp", tone: "red", icon: <LogOut className="size-5" /> }).then((yes) => {
-        if (!yes) return;
-        if (url.origin === location.origin) router.push(url.pathname + url.search + url.hash);
-        else location.assign(url.href);
-      });
-    };
-    window.addEventListener("beforeunload", warn);
-    window.addEventListener("click", onClick, true);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-      window.removeEventListener("click", onClick, true);
-    };
-  }, [testing, answeredCount, ask, router]);
+  // Đang thi và đã làm câu nào: hỏi trước khi rời trang bằng link (thanh dưới, đầu trang, nút ←), nút Back trình duyệt
+  // hay đóng / tải lại tab. Chưa làm câu nào → rời trang không cần hỏi
+  const leave = useExamLeaveGuard(testing && answeredCount > 0, ask, backHref);
 
   // Đánh dấu: gửi lần lượt theo thứ tự bấm (bấm nhanh 2 lần không bị server nhận ngược thứ tự)
   const setMark = (id: string, on: boolean) => {
@@ -227,13 +207,13 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
       // Tự đánh dấu câu làm sai / bỏ đánh dấu câu làm đúng — chỉ câu đã trả lời (câu bỏ trống không phải câu "khó")
       if (autoMark) await Promise.allSettled((d.results ?? []).filter((r) => marked.has(r.qid) === r.ok).map((r) => setMark(r.qid, !r.ok)));
       setAbandoned(true); // tắt cảnh báo rời trang trước khi chuyển trang
-      router.push(`/leben-in-deutschland/thi-thu/${d.id}`);
+      leave(`/leben-in-deutschland/thi-thu/${d.id}`); // trang kết quả thay chỗ mục chặn Back
     } catch (e) {
       setSaveError((e as Error).message);
       setSaving(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setMark/buzz chỉ đọc state hiện tại
-  }, [exam, saving, abandoned, questions, picked, startedAt, autoMark, marked, router]);
+  }, [exam, saving, abandoned, questions, picked, startedAt, autoMark, marked, leave]);
 
   // Phím tắt: ←/→ chuyển câu, 1–4 chọn đáp án (không chạy khi đang mở hộp thoại nào)
   useEffect(() => {

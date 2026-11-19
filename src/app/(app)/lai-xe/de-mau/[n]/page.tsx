@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -28,7 +29,8 @@ async function Sheet({ params, searchParams }: P) {
   const exam = classInfo("B").exam;
   return (
     <DrivingRunner
-      key={mode}
+      // Thi: mỗi lần mở = lượt thi mới (Activity giữ state — đáp án, đồng hồ — của lượt trước); Back/Forward lấy lại từ cache nên vẫn giữ bài
+      key={mode === "exam" ? `exam-${randomUUID()}` : mode}
       mode={mode}
       title={`Đề mẫu ${num}`}
       subtitle={mode === "exam" ? `Hạng B · 30 câu · ${exam.minutes} phút · ≤ ${exam.maxErrorPoints} điểm lỗi` : "Hạng B · 30 câu"}

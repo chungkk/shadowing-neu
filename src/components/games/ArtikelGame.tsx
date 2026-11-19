@@ -83,12 +83,18 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
   }
   const guest = useGuestGate(loggedIn, () => void start()); // khách: hỏi tên tạm trước khi vào ván
 
-  function end(miss: Miss | null) {
+  // `score` riêng cho lúc thoát giữa nhịp "Chính xác" (từ vừa đúng chưa kịp cộng vào streak)
+  function end(miss: Miss | null, score = streak) {
     const prev = best;
-    if (current && streak > prev) setBests({ ...bests, [current.slug]: streak });
-    setLast({ score: streak, best: prev, miss });
+    if (current && score > prev) setBests({ ...bests, [current.slug]: score });
+    setLast({ score, best: prev, miss });
     setPhase("over");
   }
+  /** Nút ← lúc đang chơi: dừng ván, lưu kỷ lục, hiện kết quả (như Nối từ / Mưa từ) — không văng thẳng ra danh sách game */
+  const quit = () => {
+    stopSpeaking();
+    end(null, phase === "flash" ? streak + 1 : streak);
+  };
 
   function answer(a: Artikel | null) {
     if (phase !== "word" || !word) return;
@@ -143,6 +149,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
       title="Der Die Das"
       subtitle="Chọn đúng mạo từ, đúng liên tiếp càng lâu càng giỏi"
       cover={phase !== "word" && phase !== "flash"}
+      onBack={phase === "word" || phase === "flash" ? quit : undefined}
       right={
         <button className={`btn-icon hit-44 ${phase !== "word" && phase !== "flash" ? "text-white hover:bg-white/15" : ""}`} title={sound ? "Tắt tiếng" : "Bật tiếng"} aria-label={sound ? "Tắt tiếng" : "Bật tiếng"} onClick={() => setSound(!sound)}>
           {sound ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
