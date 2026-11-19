@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { slugify } from "@/lib/slug";
 import { mergeIntoSentences, parseSubtitleFile } from "@/lib/subtitles";
@@ -21,8 +22,19 @@ export type LessonFormValues = {
   srt: string;
 };
 
-/** presetUrl: bài mới từ trang kênh YouTube — điền sẵn link và tự lấy phụ đề khi mở */
-export default function LessonForm({ initial, presetUrl }: { initial?: LessonFormValues; presetUrl?: string }) {
+type Props = { initial?: LessonFormValues; presetUrl?: string };
+
+/**
+ * presetUrl: bài mới từ trang kênh YouTube — điền sẵn link và tự lấy phụ đề khi mở.
+ * cacheComponents bật → Next giữ state trang cũ (React Activity): mở lại /admin/new?v=… sẽ còn dữ liệu bài trước
+ * và không tự lấy phụ đề. Key theo video + bfcacheId → mỗi lần bấm link là form mới; Back/Forward vẫn giữ bản đang soạn.
+ */
+export default function LessonForm(props: Props) {
+  const { bfcacheId } = useRouter();
+  return <LessonFormInner key={`${bfcacheId}:${props.initial?.id ?? ""}:${props.presetUrl ?? ""}`} {...props} />;
+}
+
+function LessonFormInner({ initial, presetUrl }: Props) {
   const [state, formAction, saving] = useActionState(saveLesson, {});
   const [fetching, startFetch] = useTransition();
   const [url, setUrl] = useState(initial?.url ?? presetUrl ?? "");
