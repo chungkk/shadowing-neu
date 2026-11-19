@@ -1,0 +1,9 @@
+---
+url: https://www.gesetze-im-internet.de/zkg/__33.html
+title: "§ 33   Antrag auf Abschluss eines Basiskontovertrags Gesetz über die Vergleichbarkeit von Zahlungskontoentgelten, den Wechsel von Zahlungskonten sowie den Zugang zu Zahlungskonten mit grundlegenden Funktionen (Zahlungskontengesetz - ZKG)"
+fetched: 2026-11-18
+---
+
+(1) Der Antrag des Berechtigten auf Abschluss eines Basiskontovertrags muss alle Angaben enthalten, die für den Abschluss dieses Vertrags erforderlich sind. Dies schließt Angaben darüber ein, ob und gegebenenfalls bei welchem Institut für den Berechtigten bereits ein Zahlungskonto geführt wird, das die Voraussetzungen des § 35 Absatz 1 Satz 2 erfüllt. Der Berechtigte kann bereits bei Stellung des Antrags auf Abschluss eines Basiskontovertrags verlangen, dass der Verpflichtete das Basiskonto als Pfändungsschutzkonto nach § 850k der Zivilprozessordnung führt.
+
+(2) Teilt ein Berechtigter dem Verpflichteten mit, dass er mit diesem einen Basiskontovertrag abschließen möchte, so hat der Verpflichtete dem Berechtigten das Formular nach Anlage 3 unentgeltlich zu übermitteln. Der Berechtigte soll dieses Formular zur Antragstellung nutzen. Hat er es vollständig ausgefüllt, so kann sich der Verpflichtete nicht darauf berufen, dass der Antrag unvollständig sei. Verfügt der Verpflichtete über einen Internetauftritt, so ist das Formular nach Anlage 3 auch dort zur Verfügung zu stellen.

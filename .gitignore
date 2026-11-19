@@ -49,3 +49,8 @@ data/
 
 # bản dịch catalog lái xe (tools/laixe-catalog/translate-vi.mjs)
 /.translation-cache/
+
+# Trợ lý HalloVN (tools/tro-ly): thư viện riêng, trang chính thức tải về (của bên thứ ba, tải lại bằng `npm run fetch`), index sinh tự động
+/tools/tro-ly/node_modules/
+/content/tro-ly/official/
+/content/tro-ly/index.json

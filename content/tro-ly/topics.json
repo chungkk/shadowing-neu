@@ -1,0 +1,4978 @@
+[
+  {
+    "id": "abmeldung-beitragserstattung",
+    "kind": "guide",
+    "hint": "Rời Đức hẳn: Abmeldung và hoàn tiền hưu trí",
+    "laws": [
+      "§ 17 Abs. 2 BMG",
+      "§ 24 Abs. 2 BMG",
+      "§ 51 Abs. 1 Nr. 6 und 7 AufenthG",
+      "§ 210 Abs. 1 Nr. 1 und Abs. 2 SGB VI",
+      "§ 210 Abs. 3 und 6 SGB VI"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__17.html",
+        "title": "§ 17 BMG – Anmeldung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__24.html",
+        "title": "§ 24 BMG – Meldebestätigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__51.html",
+        "title": "§ 51 AufenthG – Beendigung der Rechtmäßigkeit des Aufenthalts; Fortgeltung von Beschränkungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_6/__210.html",
+        "title": "§ 210 SGB VI – Beitragserstattung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.deutsche-rentenversicherung.de/SharedDocs/Downloads/DE/Broschueren/national/beitragserstattung.pdf?__blob=publicationFile&v=3",
+        "title": "Deutsche Rentenversicherung – Broschüre Beitragserstattung (21. Auflage 6/2026)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.deutsche-rentenversicherung.de/DRV/DE/Rente/Ausland/Sozialversicherungsabkommen/sozialversicherungsabkommen_node.html",
+        "title": "Deutsche Rentenversicherung – Deutschlands Sozialversicherungsabkommen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.deutsche-rentenversicherung.de/DRV/DE/Rente/Allgemeine-Informationen/Wissenswertes-zur-Rente/FAQs/International/Erstattung.html",
+        "title": "Deutsche Rentenversicherung – FAQ International: Erstattung",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "anerkennung-abschluss",
+    "kind": "guide",
+    "hint": "Công nhận bằng cấp nước ngoài",
+    "laws": [
+      "§ 3 Abs. 5 BQFG",
+      "§ 5 Abs. 1 und 2 BQFG",
+      "§ 6 Abs. 2 und 3 BQFG",
+      "§ 11 Abs. 1 und 3 BQFG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/anerkennungs-finder.php",
+        "title": "Anerkennungs-Finder – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/anerkennung-bekommen.php",
+        "title": "Wie bekomme ich die Anerkennung – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/hochschule.php",
+        "title": "Hochschulabschlüsse – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/finanzielle-foerderung.php",
+        "title": "Finanzielle Förderung – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/en/pro/recognition-grant.php",
+        "title": "Recognition grant (Anerkennungszuschuss) – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/dokumente-antragstellung.php",
+        "title": "Dokumente für die Antragstellung – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/nach-dem-bescheid.php",
+        "title": "Wie geht es nach dem Bescheid weiter – Anerkennung in Deutschland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bqfg/__3.html",
+        "title": "§ 3 BQFG – Begriffsbestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bqfg/__5.html",
+        "title": "§ 5 BQFG – Vorzulegende Unterlagen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bqfg/__6.html",
+        "title": "§ 6 BQFG – Verfahren",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bqfg/__11.html",
+        "title": "§ 11 BQFG – Ausgleichsmaßnahmen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/beschv_2013/__8.html",
+        "title": "§ 8 BeschV – Betriebliche Aus- und Weiterbildung; Anerkennung ausländischer Berufsqualifikationen",
+        "tier": "law"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "anmeldung",
+    "kind": "guide",
+    "hint": "Đăng ký cư trú",
+    "laws": [
+      "§ 19 Abs. 1 und 2 BMG",
+      "§ 17 Abs. 1 BMG; § 54 Abs. 2 Nr. 1 und Abs. 3 BMG; § 23a BMG",
+      "§ 23 Abs. 1 BMG",
+      "§ 24 Abs. 2 BMG",
+      "§ 139a Abs. 1 Satz 4 AO"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__17.html",
+        "title": "§ 17 BMG – Anmeldung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__19.html",
+        "title": "§ 19 BMG – Wohnungsgeberbestätigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__23.html",
+        "title": "§ 23 BMG – Erfüllung der allgemeinen Meldepflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__23a.html",
+        "title": "§ 23a BMG – Elektronische Anmeldung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__24.html",
+        "title": "§ 24 BMG – Meldebestätigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__54.html",
+        "title": "§ 54 BMG – Bußgeldvorschriften",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__139a.html",
+        "title": "§ 139a AO – Identifikationsmerkmal",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bzst.de/",
+        "title": "Bundeszentralamt für Steuern – Steuer-ID",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bzst.de/DE/Privatpersonen/SteuerlicheIdentifikationsnummer/FAQ/faq_node.html",
+        "title": "BZSt – Fragen und Antworten zur Steuer-ID",
+        "tier": "official"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/120686/",
+        "title": "Service-Portal Berlin – Anmeldung einer Wohnung",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "arbeiten-studium-16b",
+    "kind": "guide",
+    "hint": "Làm thêm khi du học (§ 16b)",
+    "laws": [
+      "§ 16b Abs. 3 Satz 1 AufenthG",
+      "§ 16b Abs. 3 Satz 3 und 4 AufenthG",
+      "§ 16b Abs. 3 Satz 2 und Abs. 1 Satz 2 AufenthG",
+      "§ 6 Abs. 1 Nr. 3 SGB V; § 27 Abs. 4 Satz 1 Nr. 2 SGB III",
+      "§ 8 Abs. 1 Nr. 1 und Abs. 1a SGB IV",
+      "§ 4a Abs. 1 Satz 3 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16b.html",
+        "title": "§ 16b AufenthG – Studium",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/datei/dok_ba033210.pdf",
+        "title": "Fachliche Weisungen Aufenthaltsgesetz und Beschäftigungsverordnung (BA, Stand 12/2024)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.daad.de/de/in-deutschland-studieren/arbeit-karriere/nebenjobs/",
+        "title": "Der Nebenjob – DAAD",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.daad.de/de/in-deutschland-studieren/arbeit-karriere/praktikum/",
+        "title": "Das Praktikum – DAAD",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/bildung/studium/jobben-neben-dem-studium",
+        "title": "Jobben neben dem Studium – Bundesagentur für Arbeit",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__6.html",
+        "title": "§ 6 SGB V (Abs. 1 Nr. 3: Versicherungsfreiheit Studierender)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__27.html",
+        "title": "§ 27 SGB III (Abs. 4: Versicherungsfreiheit Studierender)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_4/__8.html",
+        "title": "§ 8 SGB IV – Geringfügige Beschäftigung; Geringfügigkeitsgrenze",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.minijob-zentrale.de/DE/die-minijobs/minijob-mit-verdienstgrenze",
+        "title": "Minijob mit Verdienstgrenze – Minijob-Zentrale",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "arbeitsrechte-grundlagen",
+    "kind": "guide",
+    "hint": "Quyền cơ bản khi đi làm và học nghề: lương, giờ làm, ngày phép",
+    "laws": [
+      "§ 2 Abs. 1 NachwG; § 11 Abs. 1 BBiG",
+      "§ 1 Abs. 1 MiLoG; § 1 MiLoV5",
+      "§ 22 Abs. 3 MiLoG; § 17 Abs. 2 und 3 BBiG",
+      "§ 3 ArbZG; § 17 Abs. 7 BBiG",
+      "§ 3 Abs. 1, § 4, § 7 Abs. 3 BUrlG",
+      "§ 45b Abs. 1 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/nachwg/__2.html",
+        "title": "§ 2 NachwG – Nachweispflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__11.html",
+        "title": "§ 11 BBiG – Vertragsniederschrift",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__1.html",
+        "title": "§ 1 MiLoG – Mindestlohn",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milov5/__1.html",
+        "title": "§ 1 MiLoV5 – Fünfte Mindestlohnanpassungsverordnung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__22.html",
+        "title": "§ 22 MiLoG – Persönlicher Anwendungsbereich",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__17.html",
+        "title": "§ 17 BBiG – Vergütungsanspruch und Mindestvergütung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bibb.de/de/pressemitteilung_212952.php",
+        "title": "BIBB Pressemitteilung 28/2025 – Mindestausbildungsvergütung 2026",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/",
+        "title": "Arbeitszeitgesetz (ArbZG)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/burlg/__3.html",
+        "title": "§ 3 BUrlG – Dauer des Urlaubs",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/burlg/__4.html",
+        "title": "§ 4 BUrlG – Wartezeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/burlg/__7.html",
+        "title": "§ 7 BUrlG – Zeitpunkt, Übertragbarkeit und Abgeltung des Urlaubs",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundestag.de/resource/blob/953308/08eb86111edc40fab10e41486a274855/WD-6-039-23-pdf-data.pdf",
+        "title": "Deutscher Bundestag, Wissenschaftliche Dienste WD 6 - 3000 - 039/23 – Urlaubsanspruch",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__45b.html",
+        "title": "§ 45b AufenthG – Beratungsangebot für Drittstaatsangehörige",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.faire-integration.de/",
+        "title": "Faire Integration – Beratung zu Arbeits- und Sozialrecht (BMAS-gefördert)",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.ihk.de/bodensee-oberschwaben/recht/arbeitsrecht/auslaendische-arbeitnehmer/faire-integration-neue-pflicht-fuer-arbeitgeber-6961516",
+        "title": "IHK Bodensee-Oberschwaben – Faire Integration: Neue Pflicht für Arbeitgeber",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "arztbesuch",
+    "kind": "guide",
+    "hint": "Đi khám bác sĩ: Hausarzt, Facharzt, 116117, 112",
+    "laws": [
+      "§ 76 Abs. 1, 3 SGB V",
+      "§ 15 Abs. 2 SGB V",
+      "§ 75 Abs. 1a SGB V",
+      "§ 61 Satz 1, 2 SGB V; § 31 Abs. 3 SGB V; § 39 Abs. 4 SGB V",
+      "§ 62 Abs. 1 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__2.html",
+        "title": "§ 2 SGB V – Leistungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__15.html",
+        "title": "§ 15 SGB V – Ärztliche Behandlung, elektronische Gesundheitskarte",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__31.html",
+        "title": "§ 31 SGB V – Arznei- und Verbandmittel",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__39.html",
+        "title": "§ 39 SGB V – Krankenhausbehandlung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__61.html",
+        "title": "§ 61 SGB V – Zuzahlungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__62.html",
+        "title": "§ 62 SGB V – Belastungsgrenze",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__75.html",
+        "title": "§ 75 SGB V – Terminservicestellen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__76.html",
+        "title": "§ 76 SGB V – Freie Arztwahl",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.116117.de/de/index.php",
+        "title": "116117 – Patientenservice (KBV)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.116117.de/de/aerztlicher-bereitschaftsdienst.php",
+        "title": "116117 – Ärztlicher Bereitschaftsdienst",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.116117.de/de/haeufige-fragen.php",
+        "title": "116117 – Häufige Fragen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/themen/krankenversicherung/online-ratgeber-krankenversicherung/staerkung-der-patientenrechte",
+        "title": "BMG – Stärkung der Patientenrechte (Terminservicestellen)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/zuzahlung-krankenversicherung",
+        "title": "BMG – Zuzahlung und Erstattung von Arzneimitteln",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "aufenthaltszweck-wechsel",
+    "kind": "guide",
+    "hint": "Đổi mục đích cư trú sau Ausbildung hoặc đại học",
+    "laws": [
+      "§ 81 Abs. 4 AufenthG",
+      "§ 18 Abs. 2 und 4, §§ 18a, 18b AufenthG",
+      "§ 20 Abs. 1 Nr. 1 und 3, Abs. 2 AufenthG; § 4a Abs. 1 Satz 1 AufenthG",
+      "§ 20a Abs. 2, Abs. 4 Satz 1 und 2, Abs. 5 Satz 1 AufenthG",
+      "§ 81 Abs. 5 und 5a AufenthG; § 47 Abs. 1 Nr. 8 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__18.html",
+        "title": "§ 18 AufenthG – Grundsatz der Fachkräfteeinwanderung; allgemeine Bestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__18a.html",
+        "title": "§ 18a AufenthG – Fachkräfte mit Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__18b.html",
+        "title": "§ 18b AufenthG – Fachkräfte mit akademischer Ausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__20.html",
+        "title": "§ 20 AufenthG – Arbeitsplatzsuche im Anschluss an Aufenthalte im Bundesgebiet",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__20a.html",
+        "title": "§ 20a AufenthG – Chancenkarte",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45.html",
+        "title": "§ 45 AufenthV – Gebühren für die Aufenthaltserlaubnis, Blaue Karte EU u. a.",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__47.html",
+        "title": "§ 47 AufenthV – Gebühren für sonstige aufenthaltsrechtliche Amtshandlungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bmi.bund.de/SharedDocs/faqs/DE/themen/migration/aufenthaltsrecht/aufenthaltsrecht-liste.html",
+        "title": "BMI – Häufig gestellte Fragen zum Thema Aufenthaltsrecht",
+        "tier": "official"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "bab-bafoeg",
+    "kind": "guide",
+    "hint": "Trợ cấp học nghề (BAB) và BAföG",
+    "laws": [
+      "§ 57 Abs. 1 und 2 SGB III",
+      "§ 60 SGB III",
+      "§ 8 BAföG",
+      "§ 46 Abs. 2 BAföG",
+      "§ 325 Abs. 1 SGB III; § 15 Abs. 1 BAföG",
+      "§ 2 Abs. 3 Satz 2 Nr. 5 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__57.html",
+        "title": "§ 57 SGB III – Förderungsfähige Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__60.html",
+        "title": "§ 60 SGB III – Förderungsberechtigter Personenkreis bei Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__325.html",
+        "title": "§ 325 SGB III – Wirkung des Antrages",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/bildung/ausbildung/berufsausbildungsbeihilfe-bab",
+        "title": "Berufsausbildungsbeihilfe (BAB) – Bundesagentur für Arbeit",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/baf_g/__8.html",
+        "title": "§ 8 BAföG – Staatsangehörigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/baf_g/__15.html",
+        "title": "§ 15 BAföG – Förderungsdauer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/baf_g/__46.html",
+        "title": "§ 46 BAföG – Antrag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.xn--bafg-7qa.de/bafoeg/de/das-bafoeg-alle-infos-auf-einen-blick/wer-wird-gefoerdert.html?nn=383902",
+        "title": "Wer wird gefördert? – bafög.de",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.xn--bafg-7qa.de/bafoeg/de/das-bafoeg-alle-infos-auf-einen-blick/so-funktioniert-die-antragstellung.html?nn=383902",
+        "title": "So funktioniert die Antragstellung – bafög.de",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.xn--bafg-7qa.de/bafoeg/de/antrag-stellen/alle-antragsformulare/alle-antragsformulare_node.html",
+        "title": "Alle Antragsformulare – bafög.de",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+        "title": "§ 2 AufenthG – Begriffsbestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_10/__64.html",
+        "title": "§ 64 SGB X – Kostenfreiheit",
+        "tier": "law"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "basiskonto-sperrkonto",
+    "kind": "guide",
+    "hint": "Tài khoản ngân hàng và Sperrkonto",
+    "laws": [
+      "§ 31 Abs. 1 ZKG; § 41 Abs. 2 ZKG",
+      "§ 12 Abs. 1 GwG; § 154 Abs. 2a, 2b AO",
+      "§ 33 Abs. 2 ZKG; § 31 Abs. 2 ZKG",
+      "§ 34 Abs. 1, 3, 4 ZKG; § 48 Abs. 1 ZKG",
+      "§ 2 Abs. 3 Satz 5, 7 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/zkg/__31.html",
+        "title": "§ 31 ZKG – Basiskontovertrag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zkg/__33.html",
+        "title": "§ 33 ZKG – Antrag auf Abschluss eines Basiskontovertrags",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zkg/__34.html",
+        "title": "§ 34 ZKG – Ablehnung des Antrags",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zkg/__41.html",
+        "title": "§ 41 ZKG – Entgelte beim Basiskonto",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zkg/__48.html",
+        "title": "§ 48 ZKG – Verwaltungsverfahren",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/gwg_2017/__12.html",
+        "title": "§ 12 GwG – Identitätsüberprüfung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__154.html",
+        "title": "§ 154 AO – Kontenwahrheit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bafin.de/DE/verbraucherinnen-verbraucher/themen-finanzprodukte/konten-zahlungen/konten/basiskonto/basiskonto_node.html",
+        "title": "BaFin – Basiskonto",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/sparen-und-anlegen/das-recht-auf-ein-basiskonto-fuer-neu-in-deutschland-angekommene-12224",
+        "title": "Verbraucherzentrale – Recht auf ein Basiskonto für neu Angekommene",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+        "title": "§ 2 AufenthG – Begriffsbestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundesanzeiger.de/pub/publication/7ZVbxqtVVGzHzr35dka/content/7ZVbxqtVVGzHzr35dka/BAnz%20AT%2029.08.2025%20B1.pdf?inline",
+        "title": "BMI – Bekanntmachung zu § 2 Abs. 3 AufenthG für 2026 (BAnz AT 29.08.2025 B1)",
+        "tier": "official"
+      },
+      {
+        "url": "https://teheran.diplo.de/ir-de/02-service/merkblatt-studium-2492580",
+        "title": "Auswärtiges Amt (Botschaft Teheran) – Merkblatt Studium",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.auswaertiges-amt.de/de/sperrkonto-375488",
+        "title": "Auswärtiges Amt – Ein Sperrkonto eröffnen und schließen",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "betriebswechsel-16a",
+    "kind": "guide",
+    "hint": "Đổi chỗ học nghề hoặc đổi nghề khi có thẻ § 16a",
+    "laws": [
+      "§ 4a Abs. 3 Satz 3 und 4 AufenthG; § 35 Abs. 4 BeschV",
+      "§ 22 Abs. 2 BBiG",
+      "§ 11 Abs. 1 BBiG; § 20 BBiG",
+      "§ 39 Abs. 1 AufenthG; § 8 Abs. 1 BeschV; § 16a Abs. 3 Satz 2 AufenthG",
+      "§ 36 Abs. 1 BBiG; § 30 Abs. 1 HwO; § 8 Abs. 1 BBiG",
+      "§ 82 Abs. 6 AufenthG; § 16a Abs. 4 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/beschv_2013/__35.html",
+        "title": "§ 35 BeschV – Reichweite der Zustimmung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/beschv_2013/__8.html",
+        "title": "§ 8 BeschV – Betriebliche Aus- und Weiterbildung; Anerkennung ausländischer Berufsqualifikationen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__39.html",
+        "title": "§ 39 AufenthG – Zustimmung zur Beschäftigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16a.html",
+        "title": "§ 16a AufenthG – Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__82.html",
+        "title": "§ 82 AufenthG – Mitwirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/",
+        "title": "Berufsbildungsgesetz (BBiG)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/hwo/__30.html",
+        "title": "§ 30 HwO – Antrag auf Eintragung in die Lehrlingsrolle",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/hwo/__28.html",
+        "title": "§ 28 HwO – Lehrlingsrolle (gebührenfrei)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/datei/dok_ba033210.pdf",
+        "title": "Fachliche Weisungen Aufenthaltsgesetz und Beschäftigungsverordnung (BA, Stand 12/2024)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.ihk.de/",
+        "title": "IHK – Ausbildung & Prüfungen",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "deutschkurs-foerderung",
+    "kind": "guide",
+    "hint": "Học tiếng Đức có hỗ trợ: Integrationskurs và Berufssprachkurs",
+    "laws": [
+      "§ 44 Abs. 1 Satz 1 Nr. 1 Buchst. a, Abs. 3 Nr. 3 AufenthG",
+      "§ 44 Abs. 2 AufenthG",
+      "§ 44 Abs. 4 AufenthG",
+      "§ 9 Abs. 1, 2 und 6 IntV; § 10 IntV",
+      "§ 4 Abs. 1 Satz 1 Nr. 3, Abs. 4 Satz 2 Nr. 2 DeuFöV",
+      "§ 4 Abs. 1 Satz 1 Nr. 1 Buchst. c, Abs. 4 DeuFöV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__44.html",
+        "title": "§ 44 AufenthG – Berechtigung zur Teilnahme an einem Integrationskurs",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/intv/__9.html",
+        "title": "§ 9 IntV – Kostenbeitrag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/intv/__10.html",
+        "title": "§ 10 IntV – Grundstruktur des Integrationskurses",
+        "tier": "law"
+      },
+      {
+        "url": "https://bamf.de/EN/Themen/Integration/ZugewanderteTeilnehmende/Integrationskurse/TeilnahmeKosten/Titelab2005/titelab2005.html?nn=282656",
+        "title": "BAMF – Integration course: foreigners with residence permits issued after 2005",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/deuf_v/__4.html",
+        "title": "§ 4 DeuFöV – Teilnahmeberechtigung, Kostenbeitrag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.ihk.de/duesseldorf/ausbildung/ausbildung-von-a-z/sprachfoerderung-fuer-auszubildende-und-arbeitnehmer-6238476",
+        "title": "IHK Düsseldorf – Sprachförderung für Auszubildende und Arbeitnehmer",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/BeratungErwachsene/beratung-erwachsene-node.html",
+        "title": "BAMF – Beratung für Erwachsene (MBE)",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "einbuergerung",
+    "kind": "guide",
+    "hint": "Nhập quốc tịch Đức",
+    "laws": [
+      "§ 10 Abs. 1 Satz 1 und Abs. 2 StAG",
+      "§ 10 Abs. 1 Satz 1 Nr. 2 StAG",
+      "§ 10 Abs. 1 Satz 1 Nr. 3 StAG",
+      "§ 10 Abs. 1 Satz 1 Nr. 6 und 7, Abs. 4, Abs. 5, Abs. 6 Satz 2 StAG",
+      "§ 10 Abs. 1 Satz 1 Nr. 1, 1a und 5 StAG; § 12a Abs. 1 StAG; § 35a StAG",
+      "§ 10 Abs. 1 Satz 1 Nr. 4 StAG (weggefallen)"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__10.html",
+        "title": "§ 10 StAG – Anspruchseinbürgerung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__12a.html",
+        "title": "§ 12a StAG – Unbeachtliche Verurteilungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__35a.html",
+        "title": "§ 35a StAG – Sperrfrist",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__38.html",
+        "title": "§ 38 StAG – Gebühren",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bmi.bund.de/DE/themen/verfassung/staatsangehoerigkeit/staatsangehoerigkeitsrecht/staatsangehoerigkeitsrecht-node.html",
+        "title": "BMI – Staatsangehörigkeitsrecht",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bmi.bund.de/DE/themen/verfassung/staatsangehoerigkeit/einbuergerung/einbuergerung-node.html",
+        "title": "BMI – Einbürgerung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bmi.bund.de/SharedDocs/gesetzgebungsverfahren/DE/VII5/gesetz-6-aenderung-des-staatsangehoerigkeitsrechts.html",
+        "title": "BMI – Gesetzgebungsverfahren: Gesetz zur Änderung des Staatsangehörigkeitsgesetzes sowie weiterer Vorschriften",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/Einbuergerung/einbuergerung-node.html",
+        "title": "BAMF – Einbürgerung in Deutschland (Einbürgerungstest)",
+        "tier": "official"
+      },
+      {
+        "url": "https://xaydungchinhsach.chinhphu.vn/thong-qua-luat-sua-doi-bo-sung-mot-so-dieu-cua-luat-quoc-tich-viet-nam-119250624092425492.htm",
+        "title": "Cổng TTĐT Chính phủ – Thông qua Luật sửa đổi, bổ sung một số điều của Luật Quốc tịch Việt Nam",
+        "tier": "official"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "familiennachzug",
+    "kind": "guide",
+    "hint": "Đưa vợ/chồng và con sang Đức",
+    "laws": [
+      "§ 29 Abs. 1 Nr. 1, § 30 Abs. 1 Satz 1 Nr. 1 und 3 AufenthG",
+      "§ 5 Abs. 1 Nr. 1, § 2 Abs. 3, § 29 Abs. 1 Nr. 2 und Abs. 5 AufenthG",
+      "§ 30 Abs. 1 Satz 1 Nr. 2 und Satz 3 Nr. 5 AufenthG; § 2 Abs. 9 AufenthG",
+      "§ 32 Abs. 1 und 2 AufenthG",
+      "§ 4a Abs. 1 Satz 1 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+        "title": "§ 2 AufenthG – Begriffsbestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__5.html",
+        "title": "§ 5 AufenthG – Allgemeine Erteilungsvoraussetzungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__29.html",
+        "title": "§ 29 AufenthG – Familiennachzug zu Ausländern",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__30.html",
+        "title": "§ 30 AufenthG – Ehegattennachzug",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__32.html",
+        "title": "§ 32 AufenthG – Kindernachzug",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Familie/NachzugZuDrittstaatlern/nachzug-zu-drittstaatlern-node.html",
+        "title": "BAMF – Nachzug zu ausländischen Familienangehörigen",
+        "tier": "official"
+      },
+      {
+        "url": "https://vietnam.diplo.de/vn-de/service/visumzumfamiliennachzugzumehepartner-1292438",
+        "title": "Deutsche Vertretungen in Vietnam – Visum für den Familiennachzug zum Ehepartner",
+        "tier": "official"
+      },
+      {
+        "url": "https://vietnam.diplo.de/vn-de/service/familiennachzug-des-minderjaehrigen-kindes-zum-sorgeberechtigten-elternteil/1233834",
+        "title": "Deutsche Vertretungen in Vietnam – Visum für den Kindernachzug",
+        "tier": "official"
+      },
+      {
+        "url": "https://vietnam.diplo.de/vn-de/service/2775856-2775856",
+        "title": "Deutsche Vertretungen in Vietnam – Visa für Familienzusammenführung ab 1. Juli 2026 im Auslandsportal",
+        "tier": "official"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "fuehrerschein-umschreiben",
+    "kind": "guide",
+    "hint": "Đổi bằng lái xe Việt Nam sang bằng Đức",
+    "laws": [
+      "§ 29 Abs. 1 FeV",
+      "§ 29 Abs. 2 FeV",
+      "§ 31 Abs. 2 FeV; Anlage 11 FeV",
+      "§ 31 Abs. 2 FeV",
+      "§ 12 Abs. 2 FeV; § 19 Abs. 1 FeV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/__29.html",
+        "title": "§ 29 FeV – Ausländische Fahrerlaubnisse",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/__31.html",
+        "title": "§ 31 FeV – Fahrerlaubnis aus einem Staat außerhalb von EU/EWR",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/anlage_11.html",
+        "title": "Anlage 11 FeV – Staatenliste",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/anlage_7.html",
+        "title": "Anlage 7 FeV – Fahrerlaubnisprüfung (Prüfungssprachen)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/__12.html",
+        "title": "§ 12 FeV – Sehvermögen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/__19.html",
+        "title": "§ 19 FeV – Schulung in Erster Hilfe",
+        "tier": "law"
+      },
+      {
+        "url": "https://verwaltung.bund.de/leistungsverzeichnis/DE/leistung/99108047050002/herausgeber/RP-8939276/region/073140000000",
+        "title": "Verwaltungsportal Bund – Umschreibung einer Fahrerlaubnis aus einem Drittstaat (Herausgeber Rheinland-Pfalz)",
+        "tier": "official"
+      },
+      {
+        "url": "https://handbookgermany.de/en/driving-licence",
+        "title": "Handbook Germany – Driving licence",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "haftpflichtversicherung",
+    "kind": "guide",
+    "hint": "Bảo hiểm trách nhiệm cá nhân (Privathaftpflicht)",
+    "laws": [
+      "§ 823 Abs. 1 BGB",
+      "§ 104 Abs. 1 VVG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__823.html",
+        "title": "§ 823 BGB – Schadensersatzpflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/vvg_2008/__104.html",
+        "title": "§ 104 VVG – Anzeigepflicht des Versicherungsnehmers",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/weitere-versicherungen/private-haftpflichtversicherung-ein-absolutes-muss-fuer-alle-13891",
+        "title": "Verbraucherzentrale – Private Haftpflichtversicherung: Ein absolutes Muss für alle",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/weitere-versicherungen/private-haftpflichtversicherung-auch-fuer-gefluechtete-ein-muss-12850",
+        "title": "Verbraucherzentrale – Private Haftpflichtversicherung, auch für Geflüchtete ein Muss",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.bafin.de/DE/Verbraucher/Versicherung/Produkte/Haftpflicht/haftpflichtversicherung_node.html",
+        "title": "BaFin – Haftpflichtversicherung",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "handy-internetvertrag",
+    "kind": "guide",
+    "hint": "Hợp đồng điện thoại và Internet: ký và hủy",
+    "laws": [
+      "§ 54 Abs. 3 TKG",
+      "§ 56 Abs. 1 TKG",
+      "§ 312g Abs. 1, § 355 Abs. 1 und 2 BGB",
+      "§ 56 Abs. 3 TKG",
+      "§ 312k Abs. 2, 4 und 6 BGB",
+      "§ 60 Abs. 2 TKG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/tkg_2021/__54.html",
+        "title": "§ 54 TKG – Vertragszusammenfassung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/tkg_2021/__56.html",
+        "title": "§ 56 TKG – Vertragslaufzeit, Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__312g.html",
+        "title": "§ 312g BGB – Widerrufsrecht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__355.html",
+        "title": "§ 355 BGB – Widerrufsrecht bei Verbraucherverträgen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__312k.html",
+        "title": "§ 312k BGB – Kündigung von Verbraucherverträgen im elektronischen Geschäftsverkehr",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/tkg_2021/__60.html",
+        "title": "§ 60 TKG – Umzug",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/digitale-welt/mobilfunk-und-festnetz/wichtige-kundenrechte-fuer-telefon-handy-und-internetvertraege-65879",
+        "title": "Verbraucherzentrale – Wichtige Kundenrechte für Telefon-, Handy- und Internetverträge",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/",
+        "title": "Verbraucherzentrale",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "inkasso-mahnbescheid",
+    "kind": "guide",
+    "hint": "Thư đòi nợ (Inkasso) và Mahnbescheid của tòa",
+    "laws": [
+      "§ 13a Abs. 1 RDG",
+      "§ 10 Abs. 1 Satz 1 Nr. 1 RDG",
+      "§ 692 Abs. 1 Nr. 2 und 3 ZPO; § 694 Abs. 1 ZPO",
+      "§ 700 Abs. 1 ZPO; § 339 Abs. 1 ZPO"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/rdg/__13a.html",
+        "title": "§ 13a RDG – Darlegungs- und Informationspflichten bei Inkassodienstleistungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/rdg/__10.html",
+        "title": "§ 10 RDG – Rechtsdienstleistungen aufgrund besonderer Sachkunde (Inkasso)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundesjustizamt.de/rechtsdienstleistungsregistersuche",
+        "title": "Bundesamt für Justiz – Rechtsdienstleistungsregister, Registersuche",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zpo/__692.html",
+        "title": "§ 692 ZPO – Mahnbescheid",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zpo/__694.html",
+        "title": "§ 694 ZPO – Widerspruch gegen den Mahnbescheid",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zpo/__700.html",
+        "title": "§ 700 ZPO – Einspruch gegen den Vollstreckungsbescheid",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zpo/__339.html",
+        "title": "§ 339 ZPO – Einspruchsfrist",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/kredit-schulden-insolvenz/inkasso-so-erkennen-sie-unserioese-forderungen-10871",
+        "title": "Verbraucherzentrale – Inkasso: So erkennen Sie unseriöse Forderungen",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/kredit-schulden-insolvenz/gerichtliches-mahnverfahren-was-tun-bei-einem-mahnbescheid-10851",
+        "title": "Verbraucherzentrale – Gerichtliches Mahnverfahren: Was tun bei einem Mahnbescheid?",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "kindergeld",
+    "kind": "guide",
+    "hint": "Tiền trợ cấp con (Kindergeld)",
+    "laws": [
+      "§ 66 Abs. 1 EStG",
+      "§ 62 Abs. 1 EStG; § 32 Abs. 3, 4 EStG",
+      "§ 62 Abs. 2 Nr. 1, 2 EStG",
+      "§ 63 Abs. 1 Satz 3, 6 EStG",
+      "§ 67 EStG",
+      "§ 70 Abs. 1 Satz 2 EStG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__66.html",
+        "title": "§ 66 EStG – Höhe des Kindergeldes",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__62.html",
+        "title": "§ 62 EStG – Anspruchsberechtigte (Kindergeld)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__32.html",
+        "title": "§ 32 EStG – Kinder, Freibeträge für Kinder",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__63.html",
+        "title": "§ 63 EStG – Kinder (Kindergeld)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__67.html",
+        "title": "§ 67 EStG – Antrag (Kindergeld)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__70.html",
+        "title": "§ 70 EStG – Festsetzung und Zahlung des Kindergeldes",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/news/kindergeld-steigt-2026",
+        "title": "Bundesagentur für Arbeit – Kindergeld steigt 2026",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/familie-und-kinder/infos-rund-um-kindergeld/kindergeld-anspruch-hoehe-dauer",
+        "title": "Familienkasse – Kindergeld: Anspruch, Höhe und Dauer",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/familie-und-kinder/infos-rund-um-kindergeld/kindergeld-ausland",
+        "title": "Familienkasse – Kindergeld für Menschen im oder aus dem Ausland",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bzst.de/DE/Privatpersonen/SteuerlicheIdentifikationsnummer/FAQ/faq_node.html",
+        "title": "BZSt – Identifikationsnummer: Fragen und Antworten",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "krank",
+    "kind": "guide",
+    "hint": "Báo ốm",
+    "laws": [
+      "§ 5 Abs. 1 Satz 1 EntgFG",
+      "§ 5 Abs. 1 Satz 2 und 3 EntgFG",
+      "§ 5 Abs. 1a EntgFG; § 109 Abs. 1 SGB IV",
+      "§ 3 Abs. 1 und 3 EntgFG; § 1 Abs. 2 EntgFG; § 44 Abs. 1, § 47 Abs. 1, § 49 Abs. 1 Nr. 1 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/",
+        "title": "Entgeltfortzahlungsgesetz (EntgFG)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__1.html",
+        "title": "§ 1 EntgFG – Anwendungsbereich (auch Azubis)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__3.html",
+        "title": "§ 3 EntgFG – Anspruch auf Entgeltfortzahlung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__5.html",
+        "title": "§ 5 EntgFG – Anzeige- und Nachweispflichten, eAU",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_4/__109.html",
+        "title": "§ 109 SGB IV – Meldung der AU-Daten an den Arbeitgeber",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__44.html",
+        "title": "§ 44 SGB V – Krankengeld",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__47.html",
+        "title": "§ 47 SGB V – Höhe des Krankengeldes",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__49.html",
+        "title": "§ 49 SGB V – Ruhen des Krankengeldes",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundesregierung.de/breg-de/aktuelles/telefonische-krankschreibung-1800026",
+        "title": "Bundesregierung – Telefonische Krankschreibung (13.07.2026)",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "krankenversicherung",
+    "kind": "guide",
+    "hint": "Bảo hiểm y tế: ai phải có, chọn Kasse thế nào",
+    "laws": [
+      "§ 5 Abs. 1 Nr. 1 SGB V; § 7 Abs. 1 SGB V; § 193 Abs. 3 VVG",
+      "§ 5 Abs. 1 Nr. 9 SGB V; § 8 Abs. 1 Nr. 5, Abs. 2 SGB V",
+      "§ 241 SGB V; § 242 Abs. 1 SGB V; § 249 Abs. 1 SGB V; § 6 Abs. 1 Nr. 1 SGB V",
+      "§ 175 Abs. 1, 3, 4 SGB V",
+      "§ 291 Abs. 1 SGB V; § 291a Abs. 5 SGB V; § 15 Abs. 2 SGB V",
+      "§ 10 Abs. 1, 2 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/vvg_2008/__193.html",
+        "title": "§ 193 VVG – Versicherungspflicht Krankenversicherung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__5.html",
+        "title": "§ 5 SGB V – Versicherungspflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__6.html",
+        "title": "§ 6 SGB V – Versicherungsfreiheit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__7.html",
+        "title": "§ 7 SGB V – Versicherungsfreiheit bei geringfügiger Beschäftigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__8.html",
+        "title": "§ 8 SGB V – Befreiung von der Versicherungspflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__10.html",
+        "title": "§ 10 SGB V – Familienversicherung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__15.html",
+        "title": "§ 15 SGB V – Ärztliche Behandlung, elektronische Gesundheitskarte",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__175.html",
+        "title": "§ 175 SGB V – Ausübung des Wahlrechts",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__241.html",
+        "title": "§ 241 SGB V – Allgemeiner Beitragssatz",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__242.html",
+        "title": "§ 242 SGB V – Zusatzbeitrag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__249.html",
+        "title": "§ 249 SGB V – Tragung der Beiträge bei Beschäftigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__291.html",
+        "title": "§ 291 SGB V – Elektronische Gesundheitskarte",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__291a.html",
+        "title": "§ 291a SGB V – Elektronische Gesundheitskarte (Inhalt, Lichtbild)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/baf_g/__13.html",
+        "title": "§ 13 BAföG – Bedarf für Studierende",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/themen/krankenversicherung/online-ratgeber-krankenversicherung/krankenversicherung/wechsel-zwischen-gkv-und-pkv",
+        "title": "BMG – Wechsel zwischen GKV und PKV",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gkv-spitzenverband.de/media/dokumente/presse/zahlen_und_grafiken/20260101_Faktenblatt_Rechengroessen_Beitragsrecht.pdf",
+        "title": "GKV-Spitzenverband – Rechengrößen und Grenzwerte 2026",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gkv-spitzenverband.de/krankenversicherung/kv_grundprinzipien/finanzierung/zusatzbeitragssatz/zusatzbeitragssatz.jsp",
+        "title": "GKV-Spitzenverband – Zusatzbeitragssatz",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gkv-spitzenverband.de/service/krankenkassenliste/krankenkassen.jsp",
+        "title": "GKV-Spitzenverband – Krankenkassenliste mit Zusatzbeiträgen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/gesundheit-pflege/krankenversicherung/familienversicherung-in-der-krankenkasse-wer-kostenlos-mit-rein-kommt-28982",
+        "title": "Verbraucherzentrale – Familienversicherung in der Krankenkasse",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/BeratungErwachsene/beratung-erwachsene-node.html",
+        "title": "BAMF – Beratung für Erwachsene (MBE)",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "kuendigung",
+    "kind": "guide",
+    "hint": "Nghỉ hoặc đổi chỗ học nghề",
+    "laws": [
+      "§ 20 Satz 2 BBiG; § 22 Abs. 1 und 3 BBiG",
+      "§ 22 Abs. 2 Nr. 1 und 2, Abs. 3 und 4 BBiG",
+      "§ 22 Abs. 3 BBiG; § 623 BGB; § 126 Abs. 1 BGB",
+      "§ 623 BGB; § 10 Abs. 2 BBiG",
+      "§ 4a Abs. 3 Satz 3 AufenthG; § 39 Abs. 5 AufenthG; § 34 Abs. 1 Nr. 2 und 4 BeschV",
+      "§ 82 Abs. 6 AufenthG; § 7 Abs. 2 Satz 2 AufenthG; § 16a Abs. 4 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/",
+        "title": "Berufsbildungsgesetz (BBiG)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__10.html",
+        "title": "§ 10 BBiG – Vertrag (Arbeitsrecht anwendbar)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__20.html",
+        "title": "§ 20 BBiG – Probezeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__22.html",
+        "title": "§ 22 BBiG – Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__623.html",
+        "title": "§ 623 BGB – Schriftform der Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__126.html",
+        "title": "§ 126 BGB – Schriftform",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16a.html",
+        "title": "§ 16a AufenthG – Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__7.html",
+        "title": "§ 7 AufenthG – Aufenthaltserlaubnis, nachträgliche Verkürzung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__39.html",
+        "title": "§ 39 AufenthG – Zustimmung zur Beschäftigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__82.html",
+        "title": "§ 82 AufenthG – Mitwirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/beschv_2013/__34.html",
+        "title": "§ 34 BeschV – Beschränkung der Zustimmung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.ihk.de/",
+        "title": "IHK – Ausbildung & Prüfungen",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.ihk.de/blueprint/servlet/resource/blob/7121926/2e325fd6275deb3611c6c4041375b6fc/checkliste-wechsel-des-ausbildungsbetriebs-data.pdf",
+        "title": "IHK/NUiF – Checkliste Wechsel des Ausbildungsbetriebs (§ 16a AufenthG), Stand 06/2026",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "lohn",
+    "kind": "guide",
+    "hint": "Đọc bảng lương",
+    "laws": [
+      "§ 108 Abs. 1 und 2 GewO",
+      "§ 38 Abs. 3 Satz 1 EStG; § 38b Abs. 1 Satz 2 Nr. 1 EStG",
+      "§ 249 Abs. 1 SGB V; § 168 Abs. 1 Nr. 1 SGB VI; § 346 Abs. 1 SGB III; § 58 Abs. 1 Satz 1 und 3, Abs. 3 SGB XI; § 55 Abs. 3 SGB XI",
+      "§ 3 Abs. 1 Nr. 11 BMG; Kirchensteuergesetz des Bundeslandes"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/gewo/__108.html",
+        "title": "§ 108 GewO – Abrechnung des Arbeitsentgelts",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__38.html",
+        "title": "§ 38 EStG – Erhebung der Lohnsteuer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__38b.html",
+        "title": "§ 38b EStG – Steuerklassen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__249.html",
+        "title": "§ 249 SGB V – Tragung der Krankenversicherungsbeiträge",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_6/__168.html",
+        "title": "§ 168 SGB VI – Tragung der Rentenversicherungsbeiträge",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__346.html",
+        "title": "§ 346 SGB III – Tragung der Arbeitslosenversicherungsbeiträge",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_11/__55.html",
+        "title": "§ 55 SGB XI – Beitragssatz, Zuschlag für Kinderlose",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_11/__58.html",
+        "title": "§ 58 SGB XI – Tragung der Pflegeversicherungsbeiträge",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/beitraege",
+        "title": "Bundesgesundheitsministerium – Beiträge der GKV",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/themen/pflege/online-ratgeber-pflege/die-pflegeversicherung/finanzierung",
+        "title": "Bundesgesundheitsministerium – Finanzierung der Pflegeversicherung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__3.html",
+        "title": "§ 3 BMG – Speicherung von Daten",
+        "tier": "law"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/326175/",
+        "title": "Service-Portal Berlin – Kirchensteuer",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/",
+        "title": "Bundesagentur für Arbeit",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bzst.de/",
+        "title": "Bundeszentralamt für Steuern – Steuer-ID",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "muell",
+    "kind": "guide",
+    "hint": "Phân loại rác",
+    "laws": [
+      "§ 38 VerpackDG",
+      "§ 20 Abs. 2 Satz 1 Nr. 4 KrWG",
+      "§ 20 Abs. 2 Satz 1 Nr. 1 KrWG",
+      "§ 20 Abs. 2 Satz 1 Nr. 5 KrWG; § 46 Abs. 1 Satz 1 und Abs. 2 VerpackDG"
+    ],
+    "sources": [
+      {
+        "url": "https://handbookgermany.de/",
+        "title": "Handbook Germany",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://handbookgermany.de/de/waste-separation",
+        "title": "Handbook Germany – Mülltrennung",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/krwg/__20.html",
+        "title": "§ 20 KrWG – Getrennte Sammlung durch öffentlich-rechtliche Entsorgungsträger",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/verpackdg/__38.html",
+        "title": "§ 38 VerpackDG – Getrennte Sammlung von Verpackungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/verpackdg/__46.html",
+        "title": "§ 46 VerpackDG – Pfand- und Rücknahmepflichten für Einweggetränkeverpackungen",
+        "tier": "law"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "mutterschutz",
+    "kind": "guide",
+    "hint": "Mang thai khi đi làm hoặc học nghề: Mutterschutz",
+    "laws": [
+      "§ 1 Abs. 2 MuSchG",
+      "§ 15 Abs. 1 und 2 MuSchG",
+      "§ 3 Abs. 1 und 2 MuSchG",
+      "§ 17 Abs. 1 MuSchG; § 4 Satz 1 KSchG",
+      "§ 19 Abs. 1 und 2, § 20 Abs. 1 MuSchG; § 24i Abs. 2 SGB V",
+      "§ 7 Abs. 1, § 23 Abs. 1 MuSchG; § 8 Abs. 2 BBiG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__1.html",
+        "title": "§ 1 MuSchG – Anwendungsbereich",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__3.html",
+        "title": "§ 3 MuSchG – Schutzfristen vor und nach der Entbindung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__7.html",
+        "title": "§ 7 MuSchG – Freistellung für Untersuchungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__15.html",
+        "title": "§ 15 MuSchG – Mitteilungen und Nachweise",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__17.html",
+        "title": "§ 17 MuSchG – Kündigungsverbot",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__19.html",
+        "title": "§ 19 MuSchG – Mutterschaftsgeld",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__20.html",
+        "title": "§ 20 MuSchG – Zuschuss zum Mutterschaftsgeld",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/muschg_2018/__23.html",
+        "title": "§ 23 MuSchG – Entgelt bei Freistellung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__24i.html",
+        "title": "§ 24i SGB V – Mutterschaftsgeld",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/kschg/__4.html",
+        "title": "§ 4 KSchG – Anrufung des Arbeitsgerichtes",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__8.html",
+        "title": "§ 8 BBiG – Abkürzung und Verlängerung der Ausbildungsdauer",
+        "tier": "law"
+      },
+      {
+        "url": "https://familienportal.de/familienportal/familienleistungen/mutterschutz",
+        "title": "Familienportal des Bundes – Mutterschutz",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "nebenkostenabrechnung",
+    "kind": "guide",
+    "hint": "Hợp đồng thuê nhà và quyết toán Nebenkosten",
+    "laws": [
+      "§ 556 Abs. 1 BGB; § 573c Abs. 1 Satz 1 BGB",
+      "§ 556 Abs. 3 BGB",
+      "§ 556 Abs. 4 BGB",
+      "§ 560 Abs. 4 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__556.html",
+        "title": "§ 556 BGB – Vereinbarungen über Betriebskosten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__560.html",
+        "title": "§ 560 BGB – Veränderungen von Betriebskosten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__573c.html",
+        "title": "§ 573c BGB – Fristen der ordentlichen Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/energie/preise-tarife-anbieterwechsel/nachzahlungsschock-hilfe-bei-hoher-betriebs-und-heizkostenabrechnung-83065",
+        "title": "Verbraucherzentrale – Nachzahlungs-Schock: Hilfe bei hoher Betriebs- und Heizkostenabrechnung",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/energie/heizen-und-warmwasser/heizkostenabrechnungen-pruefen-so-erkennen-sie-teure-fehler-29217",
+        "title": "Verbraucherzentrale – Heizkostenabrechnungen prüfen",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/",
+        "title": "Verbraucherzentrale",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "niederlassungserlaubnis",
+    "kind": "guide",
+    "hint": "Xin thẻ định cư không thời hạn (Niederlassungserlaubnis)",
+    "laws": [
+      "§ 9 Abs. 2 Satz 1, Abs. 4 Nr. 3 AufenthG",
+      "§ 18c Abs. 1 AufenthG",
+      "§ 18c Abs. 2 AufenthG",
+      "§ 9 Abs. 2 Satz 1 Nr. 7 und 8, Satz 2 AufenthG; § 2 Abs. 11 AufenthG",
+      "§ 81 Abs. 4 AufenthG; § 44 Nr. 3 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__9.html",
+        "title": "§ 9 AufenthG – Niederlassungserlaubnis",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__18c.html",
+        "title": "§ 18c AufenthG – Niederlassungserlaubnis für Fachkräfte",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+        "title": "§ 2 AufenthG – Begriffsbestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__44.html",
+        "title": "§ 44 AufenthV – Gebühren für die Niederlassungserlaubnis",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/Integrationskurse/Abschlusspruefung/abschlusspruefung-node.html",
+        "title": "BAMF – Abschlussprüfung Integrationskurs (DTZ, Test „Leben in Deutschland“)",
+        "tier": "official"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "notruf-nummern",
+    "kind": "guide",
+    "hint": "Gọi khẩn cấp: 112, 110 và 116117",
+    "laws": [
+      "§ 164 Abs. 1 TKG",
+      "§ 75 Abs. 1a Satz 2, Abs. 1b SGB V",
+      "§ 323c Abs. 1 StGB; § 145 Abs. 1 StGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.wiesbaden.de/leben-in-wiesbaden/feuerwehr-notfaelle/einsatz-praevention/Notruf",
+        "title": "Landeshauptstadt Wiesbaden – Notruf 112",
+        "tier": "official"
+      },
+      {
+        "url": "https://handbookgermany.de/en/police",
+        "title": "Handbook Germany – Police in Germany",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.116117.de/de/index.php",
+        "title": "116117 – Patientenservice (KBV)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__75.html",
+        "title": "§ 75 SGB V – Terminservicestellen, Notdienst",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bmbfsfj.bund.de/resource/blob/136414/32daffd204d0495153146768a348fec1/hilfetelefon-gewalt-gegen-frauen-klappflyer-mehrsprachig-data.pdf",
+        "title": "BMFSFJ – Hilfetelefon Gewalt gegen Frauen, mehrsprachige Notfallklappkarte",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stgb/__323c.html",
+        "title": "§ 323c StGB – Unterlassene Hilfeleistung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stgb/__145.html",
+        "title": "§ 145 StGB – Mißbrauch von Notrufen",
+        "tier": "law"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "pruefungen-ihk-hwk",
+    "kind": "guide",
+    "hint": "Thi giữa khóa và thi tốt nghiệp nghề (IHK/HWK)",
+    "laws": [
+      "§ 48 BBiG; § 39 HwO",
+      "§ 43 Abs. 1 BBiG; § 36 Abs. 1 HwO",
+      "§ 37 Abs. 1 BBiG; § 31 Abs. 1 HwO",
+      "§ 21 Abs. 3 BBiG",
+      "§ 81 Abs. 4 AufenthG",
+      "§ 37 Abs. 2 und 3 BBiG; § 16 BBiG; § 20 Abs. 1 Nr. 3 und Abs. 2 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/",
+        "title": "Berufsbildungsgesetz (BBiG)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/hwo/__39.html",
+        "title": "§ 39 HwO – Zwischenprüfung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/hwo/__36.html",
+        "title": "§ 36 HwO – Zulassung zur Gesellenprüfung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/hwo/__31.html",
+        "title": "§ 31 HwO – Gesellenprüfung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.ihk.de/nordwestfalen/bildung/pruefungen/zulassung-3604654",
+        "title": "Zulassung zur IHK-Abschlussprüfung – IHK Nord Westfalen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.ihk.de/rheinhessen/aus-und-weiterbildung/ausbildung/pruefungen/abschlusspruefung-nicht-bestanden-was-jetzt--5849410",
+        "title": "Abschlussprüfung nicht bestanden – was jetzt? – IHK für Rheinhessen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.ihk.de/hannover/hauptnavigation/ausbildung-und-weiterbildung/ausbildung/ausbildung-a-z/ausbildungsverlaengerung-aufgrund-wiederholungspruefung-5194598",
+        "title": "Ausbildungsverlängerung aufgrund Wiederholungsprüfung – IHK Hannover",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__20.html",
+        "title": "§ 20 AufenthG – Arbeitsplatzsuche im Anschluss an Aufenthalte im Bundesgebiet",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Bildung/Berufsausbildung/berufsausbildung-node.html",
+        "title": "Berufsausbildung – BAMF",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "reisen-ausland",
+    "kind": "guide",
+    "hint": "Đi du lịch và về Việt Nam khi có thẻ cư trú Đức",
+    "laws": [
+      "§ 3 Abs. 1, § 48 Abs. 1 AufenthG",
+      "§ 51 Abs. 1 Nr. 6 und 7 AufenthG",
+      "§ 51 Abs. 2, 4 und 10 AufenthG",
+      "§ 81 Abs. 3 und 4 AufenthG",
+      "§ 9 Abs. 4 Nr. 2 AufenthG; § 12b Abs. 1 StAG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__3.html",
+        "title": "§ 3 AufenthG – Passpflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__48.html",
+        "title": "§ 48 AufenthG – Ausweisrechtliche Pflichten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__51.html",
+        "title": "§ 51 AufenthG – Beendigung der Rechtmäßigkeit des Aufenthalts; Fortgeltung von Beschränkungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__9.html",
+        "title": "§ 9 AufenthG – Niederlassungserlaubnis",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__12b.html",
+        "title": "§ 12b StAG – Auslandsaufenthalte und gewöhnlicher Aufenthalt",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.auswaertiges-amt.de/de/newsroom/faq/26-visadrittstaaten/606520",
+        "title": "Auswärtiges Amt – FAQ: Ausländer mit Wohnsitz in Deutschland, Auslandsreise, Pass und Visum",
+        "tier": "official"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/326233/en/",
+        "title": "Service Berlin (Landesamt für Einwanderung) – Fiktionsbescheinigung",
+        "tier": "official"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "rundfunkbeitrag",
+    "kind": "guide",
+    "hint": "Phí phát thanh truyền hình (Rundfunkbeitrag)",
+    "laws": [
+      "§ 2 Abs. 1, 3 RBStV",
+      "§ 8 Abs. 1 RBStV; § 7 Abs. 1 RBStV",
+      "§ 7 Abs. 3 RBStV",
+      "§ 4 Abs. 1 Nr. 5 RBStV",
+      "§ 4 Abs. 4, 7 RBStV",
+      "§ 10 Abs. 5 RBStV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-bayern.de/Content/Document/RBeitrStV/true",
+        "title": "Rundfunkbeitragsstaatsvertrag (RBStV) – BAYERN.RECHT",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/",
+        "title": "Beitragsservice – Rundfunkbeitrag",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/informationen",
+        "title": "Beitragsservice – Informationen für Bürgerinnen und Bürger",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/informationen/empfaenger-von-sozialleistungen",
+        "title": "Beitragsservice – Empfänger von Sozialleistungen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/informationen/informationen-fuer-studierende",
+        "title": "Beitragsservice – Informationen für Studierende",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/presse-und-aktuelles/presse/neues-sommersemester-was-studierende-und-auszubildende-jetzt-zum-rundfunkbeitrag-wissen-sollten",
+        "title": "Beitragsservice – Was Studierende und Auszubildende wissen sollten (07.05.2026)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/presse-und-aktuelles/servicethemen/befreiung-ermaessigung",
+        "title": "Beitragsservice – Befreiung und Ermäßigung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesverfassungsgericht.de/SharedDocs/Pressemitteilungen/DE/2021/bvg21-069.html",
+        "title": "BVerfG – Pressemitteilung 69/2021 zum Rundfunkbeitrag",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesverfassungsgericht.de/SharedDocs/Pressemitteilungen/DE/2026/bvg26-029.html",
+        "title": "BVerfG – Pressemitteilung 29/2026: Rundfunkfinanzierung II",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "schufa-auskunft",
+    "kind": "guide",
+    "hint": "SCHUFA: xem miễn phí và sửa thông tin tín dụng",
+    "laws": [
+      "Art. 15 Abs. 3 DSGVO",
+      "Art. 12 Abs. 3 DSGVO",
+      "Art. 16 DSGVO"
+    ],
+    "sources": [
+      {
+        "url": "https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679",
+        "title": "Verordnung (EU) 2016/679 (DSGVO), Art. 12, 15, 16 – EUR-Lex",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/schufa",
+        "title": "Handbook Germany – Schufa",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/digitale-welt/datenschutz/scoring-mit-kundendaten-so-verlangen-sie-auskunft-bei-schufa-co-12756",
+        "title": "Verbraucherzentrale – Scoring mit Kundendaten: So verlangen Sie Auskunft bei Schufa & Co.",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/kredit-schulden-insolvenz/was-tun-bei-einem-schufaeintrag-53209",
+        "title": "Verbraucherzentrale – Was tun bei einem Schufa-Eintrag?",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/vertraege-reklamation/kundenrechte/neuer-schufascore-die-wichtigsten-infos-123061",
+        "title": "Verbraucherzentrale – Neuer Schufa-Score: Die wichtigsten Infos",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/",
+        "title": "Verbraucherzentrale",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "steuererklaerung",
+    "kind": "guide",
+    "hint": "Khai thuế thu nhập",
+    "laws": [
+      "§ 46 Abs. 2 Nr. 1, 2, 3a EStG",
+      "§ 149 Abs. 2, 3 AO; § 108 Abs. 3 AO; § 152 Abs. 5 AO",
+      "§ 46 Abs. 2 Nr. 8 EStG; § 169 Abs. 2 Satz 1 Nr. 2 AO; § 170 Abs. 1 AO",
+      "§ 39b Abs. 2 Satz 1, 2 EStG; § 32a Abs. 1 EStG",
+      "§ 9a Satz 1 Nr. 1 Buchst. a EStG",
+      "§ 4 Abs. 1, 3 StBerG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__46.html",
+        "title": "§ 46 EStG – Veranlagung bei Einkünften aus nichtselbständiger Arbeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__32b.html",
+        "title": "§ 32b EStG – Progressionsvorbehalt",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__149.html",
+        "title": "§ 149 AO – Abgabe der Steuererklärungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__108.html",
+        "title": "§ 108 AO – Fristen und Termine",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__152.html",
+        "title": "§ 152 AO – Verspätungszuschlag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__169.html",
+        "title": "§ 169 AO – Festsetzungsfrist",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__170.html",
+        "title": "§ 170 AO – Beginn der Festsetzungsfrist",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__39b.html",
+        "title": "§ 39b EStG – Einbehaltung der Lohnsteuer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__32a.html",
+        "title": "§ 32a EStG – Einkommensteuertarif",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__9a.html",
+        "title": "§ 9a EStG – Pauschbeträge für Werbungskosten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stberg/__4.html",
+        "title": "§ 4 StBerG – Lohnsteuerhilfevereine",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.finanzamt.bayern.de/Informationen/Aktuelles/Termine_und_Fristen/Steuererklaerungsfristen.php",
+        "title": "Bayerisches Landesamt für Steuern – Steuererklärungsfristen",
+        "tier": "official"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/325685/",
+        "title": "Service Berlin – Einkommensteuer: Erklärung freiwillig abgeben",
+        "tier": "official"
+      },
+      {
+        "url": "https://finanzamt.brandenburg.de/fa/de/steuern/aktuelle-steuerinformation/steuertipps-fuer-schuelerinnen-schueler-studentinnen-und-studenten/",
+        "title": "Finanzämter Brandenburg – Steuertipps für Schüler und Studierende",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.elster.de/eportal/start",
+        "title": "ELSTER – Mein ELSTER",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "verlaengerung",
+    "kind": "guide",
+    "hint": "Gia hạn thẻ cư trú",
+    "laws": [
+      "§ 4a Abs. 3 Satz 1 AufenthG",
+      "§ 81 Abs. 4 Satz 1 und 3 AufenthG; § 45 Nr. 2 und 3 AufenthV",
+      "§ 82 Abs. 1 Satz 1 AufenthG",
+      "§ 81 Abs. 4 Satz 1 und 2, Abs. 5 AufenthG; § 47 Abs. 1 Nr. 8 AufenthV",
+      "§ 82 Abs. 1 Satz 2 bis 4 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__82.html",
+        "title": "§ 82 AufenthG – Mitwirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45.html",
+        "title": "§ 45 AufenthV – Gebühren für die Aufenthaltserlaubnis, Blaue Karte EU u. a.",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__47.html",
+        "title": "§ 47 AufenthV – Gebühren für sonstige aufenthaltsrechtliche Amtshandlungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.hamburg.de/politik-und-verwaltung/behoerden/behoerde-fuer-inneres-und-sport/amt-fuer-migration-1060280",
+        "title": "Hamburg – Biometrische Fotos für eAT nur noch digital",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.stadt-koeln.de/service/produkte/20320/index.html",
+        "title": "Stadt Köln – Antrag auf Verlängerung des Aufenthaltstitels",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bamf.de/",
+        "title": "BAMF",
+        "tier": "official"
+      },
+      {
+        "url": "https://bamf-navi.bamf.de/",
+        "title": "BAMF-NAvI – Migrationsberatung finden",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "wohnung",
+    "kind": "guide",
+    "hint": "Tìm nhà & tránh lừa đảo",
+    "laws": [
+      "§ 551 Abs. 1 bis 3 BGB",
+      "§ 19 Abs. 1 BMG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__551.html",
+        "title": "§ 551 BGB – Mietsicherheit (Kaution)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__19.html",
+        "title": "§ 19 BMG – Wohnungsgeberbestätigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.polizei-beratung.de/",
+        "title": "Polizei-Beratung – Betrug",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/",
+        "title": "Verbraucherzentrale",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/vertraege-reklamation/abzocke/fakewohnungen-im-internet-so-erkennen-sie-falsche-immobilienanzeigen-27576",
+        "title": "Verbraucherzentrale – Fake-Wohnungen im Internet",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "zahnarzt-bonusheft",
+    "kind": "guide",
+    "hint": "Khám răng và Bonusheft",
+    "laws": [
+      "§ 55 Abs. 1 Satz 4 Nr. 2 SGB V",
+      "§ 55 Abs. 1 SGB V",
+      "§ 87 Abs. 1a SGB V",
+      "§ 55 Abs. 2 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__55.html",
+        "title": "§ 55 SGB V – Leistungsanspruch Zahnersatz",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__87.html",
+        "title": "§ 87 SGB V – Heil- und Kostenplan",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/zahnaerztliche-behandlung",
+        "title": "BMG – Zahnärztliche Behandlung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/zahnvorsorgeuntersuchungen",
+        "title": "BMG – Zahnvorsorgeuntersuchungen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.kzbv.de/patienten/patient-und-krankenkasse/bonusheft/",
+        "title": "KZBV – Bonusheft",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/gesundheit-pflege/krankenversicherung/mehr-zuschuss-beim-zahnersatz-50645",
+        "title": "Verbraucherzentrale – Mehr Zuschuss beim Zahnersatz",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.116117.de/de/zahnaerztliche-notdienste.php",
+        "title": "116117 – Zahnärztliche Notdienste",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.116117.de/de/index.php",
+        "title": "116117 – Patientenservice (KBV)",
+        "tier": "official"
+      }
+    ],
+    "keywords": []
+  },
+  {
+    "id": "faq-papiere-anmeldung-unterlagen",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Đi đăng ký cư trú (Anmeldung) cần mang những giấy tờ gì?",
+    "laws": [
+      "§ 23 Abs. 1 BMG",
+      "§ 19 Abs. 1 BMG",
+      "§ 24 Abs. 2 BMG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__23.html",
+        "title": "§ 23 BMG – Erfüllung der allgemeinen Meldepflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__19.html",
+        "title": "§ 19 BMG – Mitwirkung des Wohnungsgebers",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__24.html",
+        "title": "§ 24 BMG – Datenerhebung, Meldebestätigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/120686/",
+        "title": "Service-Portal Berlin – Anmeldung einer Wohnung",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "anmeldung",
+      "anmelden",
+      "đăng ký cư trú",
+      "meldeschein",
+      "meldebestätigung",
+      "meldebescheinigung",
+      "erstanmeldung",
+      "address registration"
+    ]
+  },
+  {
+    "id": "faq-papiere-anmeldung-frist",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Phải Anmeldung trong bao lâu, trễ có bị phạt không? Không có lịch hẹn Bürgeramt kịp thì sao?",
+    "laws": [
+      "§ 17 Abs. 1 BMG",
+      "§ 54 Abs. 2 Nr. 1 und Abs. 3 BMG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__17.html",
+        "title": "§ 17 BMG – Anmeldung, Abmeldung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__54.html",
+        "title": "§ 54 BMG – Bußgeldvorschriften",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/registration",
+        "title": "Handbook Germany – Registering your address in Germany",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "meldefrist",
+      "meldepflicht",
+      "anmeldung trễ",
+      "bürgeramt termin",
+      "verspätete anmeldung",
+      "registration deadline"
+    ]
+  },
+  {
+    "id": "faq-papiere-wohnungsgeberbestaetigung",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Chủ nhà không đưa Wohnungsgeberbestätigung thì làm sao? Hợp đồng thuê nhà có thay được không?",
+    "laws": [
+      "§ 19 Abs. 1, 2 und 6 BMG",
+      "§ 54 Abs. 1, Abs. 2 Nr. 1 und Abs. 3 BMG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__19.html",
+        "title": "§ 19 BMG – Mitwirkung des Wohnungsgebers",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__54.html",
+        "title": "§ 54 BMG – Bußgeldvorschriften",
+        "tier": "law"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/120686/",
+        "title": "Service-Portal Berlin – Anmeldung einer Wohnung",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "wohnungsgeberbestätigung",
+      "wohnungsgeber",
+      "einzugsbestätigung",
+      "xác nhận chủ nhà",
+      "mua anmeldung",
+      "scheinanmeldung",
+      "landlord confirmation"
+    ]
+  },
+  {
+    "id": "faq-papiere-ummeldung",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Chuyển nhà trong nước Đức (sang thành phố khác hoặc trong cùng thành phố) thì phải làm gì với Anmeldung?",
+    "laws": [
+      "§ 17 Abs. 1 und 2 BMG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__17.html",
+        "title": "§ 17 BMG – Anmeldung, Abmeldung",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/registration",
+        "title": "Handbook Germany – Registering your address in Germany",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/120686/",
+        "title": "Service-Portal Berlin – Anmeldung einer Wohnung",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "ummeldung",
+      "ummelden",
+      "umzug",
+      "umziehen",
+      "chuyển nhà",
+      "dọn nhà",
+      "địa chỉ mới",
+      "đổi địa chỉ",
+      "adresse ändern",
+      "moving within germany"
+    ]
+  },
+  {
+    "id": "faq-papiere-abmeldung-ausland",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Về Việt Nam hẳn thì có phải Abmeldung không?",
+    "laws": [
+      "§ 17 Abs. 2 BMG",
+      "§ 51 Abs. 1 Nr. 6 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bmg/__17.html",
+        "title": "§ 17 BMG – Anmeldung, Abmeldung",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/registration",
+        "title": "Handbook Germany – Registering your address in Germany",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__51.html",
+        "title": "§ 51 AufenthG – Beendigung der Rechtmäßigkeit des Aufenthalts; Fortgeltung von Beschränkungen",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "abmeldung",
+      "abmelden",
+      "về nước",
+      "về hẳn",
+      "rời đức",
+      "wegzug",
+      "ausreise",
+      "deregister"
+    ]
+  },
+  {
+    "id": "faq-papiere-steuer-id",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Chưa nhận được hoặc làm mất mã số thuế (Steuer-ID) thì làm sao?",
+    "laws": [
+      "§ 139a Abs. 1 AO"
+    ],
+    "sources": [
+      {
+        "url": "https://www.bzst.de/DE/Privatpersonen/SteuerlicheIdentifikationsnummer/FAQ/faq_node.html",
+        "title": "BZSt – Fragen und Antworten zur Steuer-ID",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__139a.html",
+        "title": "§ 139a AO – Identifikationsmerkmal",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "steuer id",
+      "steueridentifikationsnummer",
+      "identifikationsnummer",
+      "mã số thuế",
+      "mã thuế",
+      "idnr",
+      "bzst",
+      "tax id"
+    ]
+  },
+  {
+    "id": "faq-papiere-visum-d-aufenthaltstitel",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Mới sang Đức bằng visa D (visa quốc gia), khi nào phải xin thẻ cư trú?",
+    "laws": [
+      "§ 6 Abs. 3 AufenthG",
+      "§ 39 Satz 1 Nr. 1 AufenthV",
+      "§ 81 Abs. 4 und 5 AufenthG",
+      "§ 45 Nr. 1 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Migrathek/Einreisebestimmungen/einreisebestimmungen-node.html",
+        "title": "BAMF – Entry regulations (Einreisebestimmungen)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__39.html",
+        "title": "§ 39 AufenthV – Verlängerung eines Aufenthalts im Bundesgebiet für längerfristige Zwecke",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45.html",
+        "title": "§ 45 AufenthV – Gebühren für die Aufenthaltserlaubnis, Blaue Karte EU u. a.",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "visum d",
+      "visa d",
+      "nationales visum",
+      "thẻ cư trú lần đầu",
+      "mới sang đức",
+      "erste aufenthaltserlaubnis",
+      "national visa",
+      "einreise"
+    ]
+  },
+  {
+    "id": "faq-papiere-verlaengerung",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Khi nào phải nộp đơn gia hạn thẻ cư trú, phí bao nhiêu?",
+    "laws": [
+      "§ 81 Abs. 4 AufenthG",
+      "§ 45 Nr. 2 und 3 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45.html",
+        "title": "§ 45 AufenthV – Gebühren für die Aufenthaltserlaubnis, Blaue Karte EU u. a.",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.stadt-koeln.de/service/produkte/20320/index.html",
+        "title": "Stadt Köln – Antrag auf Verlängerung des Aufenthaltstitels",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "verlängerung",
+      "verlängern",
+      "gia hạn thẻ",
+      "gia hạn cư trú",
+      "phí gia hạn",
+      "aufenthaltstitel verlängern",
+      "renew residence permit",
+      "permit renewal"
+    ]
+  },
+  {
+    "id": "faq-papiere-kein-termin-auslaenderbehoerde",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Thẻ cư trú sắp hết hạn mà không đặt được lịch hẹn ở Ausländerbehörde thì làm sao?",
+    "laws": [
+      "§ 81 Abs. 4 und 5 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.stadt-koeln.de/service/produkte/20320/index.html",
+        "title": "Stadt Köln – Antrag auf Verlängerung des Aufenthaltstitels",
+        "tier": "official"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/326233/en/",
+        "title": "Service Berlin (Landesamt für Einwanderung) – Fiktionsbescheinigung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/BeratungErwachsene/beratung-erwachsene-node.html",
+        "title": "BAMF – Migrationsberatung für Erwachsene (kostenlos)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "ausländerbehörde termin",
+      "abh termin",
+      "thẻ hết hạn",
+      "thẻ cư trú hết hạn",
+      "aufenthaltstitel abgelaufen",
+      "titel läuft ab",
+      "no appointment"
+    ]
+  },
+  {
+    "id": "faq-papiere-fiktionsbescheinigung",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Fiktionsbescheinigung là gì? Có Fiktionsbescheinigung có được đi làm không?",
+    "laws": [
+      "§ 81 Abs. 4, 5 und 5a AufenthG",
+      "§ 47 Abs. 1 Nr. 8 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/326233/en/",
+        "title": "Service Berlin (Landesamt für Einwanderung) – Fiktionsbescheinigung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__47.html",
+        "title": "§ 47 AufenthV – Gebühren für sonstige aufenthaltsrechtliche Amtshandlungen",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "fiktionsbescheinigung",
+      "fiktion",
+      "fortgeltung",
+      "fortgeltungsfiktion",
+      "đơn đang chờ",
+      "fictional certificate"
+    ]
+  },
+  {
+    "id": "faq-papiere-fiktionsbescheinigung-reisen",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Đang có Fiktionsbescheinigung, tôi có về Việt Nam rồi quay lại Đức được không?",
+    "laws": [
+      "§ 81 Abs. 3 und 4 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://service.berlin.de/dienstleistung/326233/en/",
+        "title": "Service Berlin (Landesamt für Einwanderung) – Fiktionsbescheinigung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.auswaertiges-amt.de/de/newsroom/faq/26-visadrittstaaten/606520",
+        "title": "Auswärtiges Amt – FAQ: Ausländer mit Wohnsitz in Deutschland, Auslandsreise, Pass und Visum",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "fiktionsbescheinigung reisen",
+      "fiktionsbescheinigung về việt nam",
+      "fiktionsbescheinigung urlaub",
+      "wiedereinreise",
+      "quay lại đức",
+      "quay về đức",
+      "re-entry",
+      "travel abroad"
+    ]
+  },
+  {
+    "id": "faq-papiere-aufenthaltstitel-verloren",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Mất thẻ cư trú (eAT) thì phải làm gì?",
+    "laws": [
+      "§ 57a Nr. 1 AufenthV",
+      "§ 45c Abs. 1 Nr. 3 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://service.berlin.de/dienstleistung/326802/",
+        "title": "Service Berlin – Elektronischer Aufenthaltstitel (eAT): Verlust oder Diebstahl",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__57a.html",
+        "title": "§ 57a AufenthV – Pflichten der Inhaber von Dokumenten mit Chip",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45c.html",
+        "title": "§ 45c AufenthV – Gebühr bei Neuausstellung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "mất thẻ cư trú",
+      "mất eat",
+      "eat verloren",
+      "eat gestohlen",
+      "aufenthaltstitel verloren",
+      "sperrkennwort",
+      "zusatzblatt",
+      "lost residence card"
+    ]
+  },
+  {
+    "id": "faq-papiere-reisepass-verloren",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Mất hộ chiếu Việt Nam ở Đức thì phải làm gì?",
+    "laws": [
+      "§ 56 Abs. 1 Nr. 2 und 5 AufenthV",
+      "§ 3 Abs. 1 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__56.html",
+        "title": "§ 56 AufenthV – Ausweisrechtliche Pflichten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.vietnambotschaft.org/wp-content/uploads/2026/03/Huong-dan-thu-tuc-cap-HC.pdf",
+        "title": "Đại sứ quán Việt Nam tại Đức – Hướng dẫn thủ tục cấp hộ chiếu (PDF, 03/2026)",
+        "tier": "official"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/121874/",
+        "title": "Service Berlin – Aufenthaltserlaubnis auf einen neuen Pass übertragen",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "mất hộ chiếu",
+      "hộ chiếu bị mất",
+      "hộ chiếu bị trộm",
+      "pass verloren",
+      "reisepass verloren",
+      "verlustanzeige",
+      "đơn trình báo",
+      "lost passport"
+    ]
+  },
+  {
+    "id": "faq-papiere-reisepass-erneuern",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Hộ chiếu Việt Nam sắp hết hạn: làm lại ở Đức thế nào, thẻ cư trú có phải làm lại không?",
+    "laws": [
+      "§ 56 Abs. 1 Nr. 1 AufenthV",
+      "§ 45c Abs. 1 Nr. 1 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.vietnambotschaft.org/thong-bao-ve-viec-cap-ho-chieu-dien-tu-tai-dai-su-quan-viet-nam-tai-duc/",
+        "title": "Đại sứ quán Việt Nam tại Đức – Thông báo về việc cấp hộ chiếu điện tử (31.03.2026)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.vietnambotschaft.org/wp-content/uploads/2026/03/Huong-dan-thu-tuc-cap-HC.pdf",
+        "title": "Đại sứ quán Việt Nam tại Đức – Hướng dẫn thủ tục cấp hộ chiếu (PDF, 03/2026)",
+        "tier": "official"
+      },
+      {
+        "url": "https://service.berlin.de/dienstleistung/121874/",
+        "title": "Service Berlin – Aufenthaltserlaubnis auf einen neuen Pass übertragen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45c.html",
+        "title": "§ 45c AufenthV – Gebühr bei Neuausstellung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "gia hạn hộ chiếu",
+      "làm lại hộ chiếu",
+      "đổi hộ chiếu",
+      "hộ chiếu hết hạn",
+      "hộ chiếu mới",
+      "hộ chiếu gắn chip",
+      "übertrag",
+      "neuer pass",
+      "passport renewal"
+    ]
+  },
+  {
+    "id": "faq-papiere-schengen-reisen",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Có thẻ cư trú Đức thì đi du lịch các nước châu Âu khác có cần visa không?",
+    "laws": [
+      "§ 3 Abs. 1 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.auswaertiges-amt.de/de/newsroom/faq/26-visadrittstaaten/606520",
+        "title": "Auswärtiges Amt – FAQ: Ausländer mit Wohnsitz in Deutschland, Auslandsreise, Pass und Visum",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__3.html",
+        "title": "§ 3 AufenthG – Passpflicht",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "schengen",
+      "du lịch châu âu",
+      "đi du lịch",
+      "90 ngày",
+      "90 tage",
+      "reisen eu",
+      "travel europe"
+    ]
+  },
+  {
+    "id": "faq-papiere-ausland-6-monate",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Về Việt Nam hoặc ở nước ngoài quá 6 tháng thì thẻ cư trú Đức có bị mất hiệu lực không?",
+    "laws": [
+      "§ 51 Abs. 1 Nr. 6 und 7, Abs. 10 AufenthG",
+      "§ 81 Abs. 4 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__51.html",
+        "title": "§ 51 AufenthG – Beendigung der Rechtmäßigkeit des Aufenthalts; Fortgeltung von Beschränkungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/BeratungErwachsene/beratung-erwachsene-node.html",
+        "title": "BAMF – Migrationsberatung für Erwachsene (kostenlos)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "quá 6 tháng",
+      "việt nam 6 tháng",
+      "6 monate ausland",
+      "mất hiệu lực",
+      "erlöschen",
+      "erlischt",
+      "về việt nam lâu",
+      "ở việt nam lâu",
+      "auslandsaufenthalt"
+    ]
+  },
+  {
+    "id": "faq-papiere-nach-ausbildung-studium",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Học xong Ausbildung hoặc đại học ở Đức, muốn ở lại làm việc thì cần thẻ gì?",
+    "laws": [
+      "§ 18 Abs. 2 und 4 AufenthG",
+      "§§ 18a, 18b AufenthG",
+      "§ 20 Abs. 1 Nr. 1, 3 und 5, Abs. 2 AufenthG",
+      "§ 81 Abs. 4 AufenthG",
+      "§ 45 Nr. 1 und 3 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__18.html",
+        "title": "§ 18 AufenthG – Grundsatz der Fachkräfteeinwanderung; allgemeine Bestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__20.html",
+        "title": "§ 20 AufenthG – Arbeitsplatzsuche im Anschluss an Aufenthalte im Bundesgebiet",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__45.html",
+        "title": "§ 45 AufenthV – Gebühren für die Aufenthaltserlaubnis, Blaue Karte EU u. a.",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "học xong",
+      "tốt nghiệp",
+      "ở lại đức",
+      "arbeitsplatzsuche",
+      "thẻ tìm việc",
+      "fachkraft",
+      "18a",
+      "18b",
+      "jobsuche"
+    ]
+  },
+  {
+    "id": "faq-papiere-niederlassungserlaubnis",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Sau bao lâu thì xin được thẻ định cư không thời hạn (Niederlassungserlaubnis)?",
+    "laws": [
+      "§ 18c Abs. 1 und 2 AufenthG",
+      "§ 9 Abs. 2 Satz 1 und Abs. 4 Nr. 3 AufenthG",
+      "§ 2 Abs. 9 und 11 AufenthG",
+      "§ 44 Nr. 3 AufenthV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__18c.html",
+        "title": "§ 18c AufenthG – Niederlassungserlaubnis für Fachkräfte",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__9.html",
+        "title": "§ 9 AufenthG – Niederlassungserlaubnis",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+        "title": "§ 2 AufenthG – Begriffsbestimmungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthv/__44.html",
+        "title": "§ 44 AufenthV – Gebühren für die Niederlassungserlaubnis",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "niederlassungserlaubnis",
+      "thẻ định cư",
+      "thẻ vĩnh viễn",
+      "unbefristeter aufenthaltstitel",
+      "permanent residence",
+      "settlement permit",
+      "18c"
+    ]
+  },
+  {
+    "id": "faq-papiere-einbuergerung",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Sau bao lâu thì được nhập quốc tịch Đức? Có phải bỏ quốc tịch Việt Nam không?",
+    "laws": [
+      "§ 10 Abs. 1 Satz 1 Nr. 2, 3, 5, 6 und 7, Abs. 4 und 5 StAG",
+      "§ 38 Abs. 2 Nr. 1 StAG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__10.html",
+        "title": "§ 10 StAG – Anspruchseinbürgerung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__38.html",
+        "title": "§ 38 StAG – Gebühren",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/Einbuergerung/einbuergerung-node.html",
+        "title": "BAMF – Einbürgerung in Deutschland (Einbürgerungstest)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "einbürgerung",
+      "einbürgerungstest",
+      "staatsangehörigkeit",
+      "quốc tịch đức",
+      "nhập quốc tịch",
+      "nhập tịch",
+      "hai quốc tịch",
+      "naturalisation",
+      "citizenship",
+      "doppelte staatsbürgerschaft"
+    ]
+  },
+  {
+    "id": "faq-papiere-familiennachzug",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Khi học Ausbildung hoặc du học, tôi có đưa vợ/chồng và con sang Đức được không?",
+    "laws": [
+      "§ 29 Abs. 1 AufenthG",
+      "§ 30 Abs. 1 Satz 1 Nr. 1, 2 und 3 Buchst. e, Abs. 2 AufenthG",
+      "§ 32 Abs. 1 AufenthG",
+      "§ 5 Abs. 1 Nr. 1 AufenthG",
+      "§ 2 Abs. 3 und 9 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__30.html",
+        "title": "§ 30 AufenthG – Ehegattennachzug",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__29.html",
+        "title": "§ 29 AufenthG – Familiennachzug zu Ausländern",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__32.html",
+        "title": "§ 32 AufenthG – Kindernachzug",
+        "tier": "law"
+      },
+      {
+        "url": "https://vietnam.diplo.de/vn-de/service/visumzumfamiliennachzugzumehepartner-1292438",
+        "title": "Deutsche Vertretungen in Vietnam – Visum für den Familiennachzug zum Ehepartner",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "familiennachzug",
+      "ehegattennachzug",
+      "kindernachzug",
+      "ehepartner nachholen",
+      "đoàn tụ",
+      "đưa vợ sang",
+      "đưa chồng sang",
+      "đưa con sang",
+      "bảo lãnh vợ",
+      "family reunification"
+    ]
+  },
+  {
+    "id": "faq-papiere-fuehrerschein-gueltigkeit",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Bằng lái xe Việt Nam dùng ở Đức được bao lâu?",
+    "laws": [
+      "§ 29 Abs. 1 Satz 4 und 5, Abs. 2 FeV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/__29.html",
+        "title": "§ 29 FeV – Ausländische Fahrerlaubnisse",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/driving-licence",
+        "title": "Handbook Germany – Driving licence",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://stadt.muenchen.de/service/vi-VN/info/fuhrerscheinstelle/10494565/",
+        "title": "Landeshauptstadt München – Chuyển đổi giấy phép lái xe nước ngoài (Führerscheinstelle)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "führerschein",
+      "fahrerlaubnis",
+      "bằng lái",
+      "lái xe",
+      "gplx",
+      "bằng lái quốc tế",
+      "internationaler führerschein",
+      "driving licence",
+      "übersetzung führerschein"
+    ]
+  },
+  {
+    "id": "faq-papiere-fuehrerschein-umschreiben",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Đổi bằng lái xe Việt Nam sang bằng Đức thế nào? Có phải thi không?",
+    "laws": [
+      "§ 31 Abs. 2 FeV",
+      "Anlage 11 FeV",
+      "§ 15 Abs. 1 FeV",
+      "Anlage 7 Nr. 1.3 FeV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/__31.html",
+        "title": "§ 31 FeV – Fahrerlaubnis aus einem Staat außerhalb von EU/EWR",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/anlage_11.html",
+        "title": "Anlage 11 FeV – Staatenliste",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/fev_2010/anlage_7.html",
+        "title": "Anlage 7 FeV – Fahrerlaubnisprüfung (Prüfungssprachen)",
+        "tier": "law"
+      },
+      {
+        "url": "https://stadt.muenchen.de/service/vi-VN/info/fuhrerscheinstelle/10494565/",
+        "title": "Landeshauptstadt München – Chuyển đổi giấy phép lái xe nước ngoài (Führerscheinstelle)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "umschreibung",
+      "umschreiben",
+      "đổi bằng lái",
+      "đổi bằng",
+      "führerscheinstelle",
+      "fahrerlaubnisbehörde",
+      "thi lý thuyết",
+      "theorieprüfung",
+      "convert driving licence"
+    ]
+  },
+  {
+    "id": "faq-papiere-kind-geboren",
+    "kind": "faq",
+    "group": "papiere",
+    "hint": "Con sinh ra ở Đức cần làm những giấy tờ gì?",
+    "laws": [
+      "§ 18 Abs. 1 PStG",
+      "§ 20 PStG",
+      "§ 17 Abs. 3 Satz 2 BMG",
+      "§ 4 Abs. 3 StAG",
+      "§ 33 AufenthG",
+      "§ 81 Abs. 2 Satz 2 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/stag/__4.html",
+        "title": "§ 4 StAG – Erwerb der Staatsangehörigkeit durch Geburt",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__33.html",
+        "title": "§ 33 AufenthG – Geburt eines Kindes im Bundesgebiet",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__81.html",
+        "title": "§ 81 AufenthG – Antrag, Fiktionswirkung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pstg/__18.html",
+        "title": "§ 18 PStG – Anzeige der Geburt",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "con sinh ở đức",
+      "con mới sinh",
+      "sinh con",
+      "geburtsurkunde",
+      "geburtsanzeige",
+      "geburt",
+      "standesamt",
+      "neugeboren",
+      "kind geboren"
+    ]
+  },
+  {
+    "id": "faq-arbeit-nebenjob-16a",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Đang học nghề với thẻ § 16a, tôi có được làm thêm hoặc làm Minijob không?",
+    "laws": [
+      "§ 16a Abs. 3 Satz 1 AufenthG",
+      "§ 2 Abs. 1 und 2 ArbZG",
+      "§ 3 ArbZG",
+      "§ 8 Abs. 1 Nr. 1 und Abs. 1a SGB IV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16a.html",
+        "title": "§ 16a AufenthG – Berufsausbildung; berufliche Weiterbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/__2.html",
+        "title": "§ 2 ArbZG – Begriffsbestimmungen (Arbeitszeiten bei mehreren Arbeitgebern)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/__3.html",
+        "title": "§ 3 ArbZG – Arbeitszeit der Arbeitnehmer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.minijob-zentrale.de/DE/die-minijobs/minijob-mit-verdienstgrenze",
+        "title": "Minijob-Zentrale – Minijob mit Verdienstgrenze",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "nebenjob",
+      "minijob",
+      "làm thêm",
+      "đi làm thêm",
+      "làm thêm khi học nghề",
+      "nebenjob ausbildung",
+      "minijob azubi",
+      "16a",
+      "20 stunden"
+    ]
+  },
+  {
+    "id": "faq-arbeit-krankmeldung",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Khi bị ốm, tôi phải báo ai và khi nào cần giấy bác sĩ (AU)?",
+    "laws": [
+      "§ 5 Abs. 1 und 1a EntgFG",
+      "§ 109 Abs. 1 SGB IV",
+      "§ 3 Abs. 1 und 3 EntgFG",
+      "§ 1 Abs. 2 EntgFG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__5.html",
+        "title": "§ 5 EntgFG – Anzeige- und Nachweispflichten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_4/__109.html",
+        "title": "§ 109 SGB IV – Meldung der Arbeitsunfähigkeitszeiten an den Arbeitgeber",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__3.html",
+        "title": "§ 3 EntgFG – Anspruch auf Entgeltfortzahlung im Krankheitsfall",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__1.html",
+        "title": "§ 1 EntgFG – Anwendungsbereich (auch Auszubildende)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "krankmeldung",
+      "krank",
+      "ốm",
+      "bị ốm",
+      "báo ốm",
+      "giấy ốm",
+      "arbeitsunfähigkeit",
+      "AU",
+      "lohnfortzahlung",
+      "sick note"
+    ]
+  },
+  {
+    "id": "faq-arbeit-urlaub",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Tôi được bao nhiêu ngày phép mỗi năm? Bị ốm trong lúc nghỉ phép thì sao?",
+    "laws": [
+      "§ 3 BUrlG",
+      "§ 2 BUrlG",
+      "§ 4 BUrlG",
+      "§ 7 Abs. 3 BUrlG",
+      "§ 9 BUrlG",
+      "§ 5 Abs. 2 EntgFG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/burlg/__3.html",
+        "title": "§ 3 BUrlG – Dauer des Urlaubs",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/burlg/__9.html",
+        "title": "§ 9 BUrlG – Erkrankung während des Urlaubs",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/entgfg/__5.html",
+        "title": "§ 5 EntgFG – Anzeige- und Nachweispflichten (Abs. 2: Erkrankung im Ausland)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.minijob-zentrale.de/DE/die-minijobs/urlaubsanspruch-im-minijob",
+        "title": "Minijob-Zentrale – Urlaubsanspruch im Minijob (Umrechnung 24 Werktage)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "urlaub",
+      "urlaubsanspruch",
+      "urlaubstage",
+      "phép",
+      "phép năm",
+      "krank im urlaub",
+      "ốm khi nghỉ phép",
+      "ốm ở việt nam",
+      "nghỉ phép về việt nam"
+    ]
+  },
+  {
+    "id": "faq-arbeit-probezeit",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Probezeit kéo dài bao lâu và trong Probezeit có dễ bị cho nghỉ không?",
+    "laws": [
+      "§ 20 BBiG",
+      "§ 22 Abs. 1 und 3 BBiG",
+      "§ 20 PflBG",
+      "§ 22 Abs. 1 und 3 PflBG",
+      "§ 622 Abs. 3 BGB",
+      "§ 623 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__20.html",
+        "title": "§ 20 BBiG – Probezeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__22.html",
+        "title": "§ 22 BBiG – Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pflbg/__20.html",
+        "title": "§ 20 PflBG – Probezeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__622.html",
+        "title": "§ 622 BGB – Kündigungsfristen bei Arbeitsverhältnissen",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "probezeit",
+      "thử việc",
+      "bị cho nghỉ",
+      "kündigung probezeit",
+      "probezeit ausbildung",
+      "probezeit pflege",
+      "pflegeausbildung"
+    ]
+  },
+  {
+    "id": "faq-arbeit-kuendigungsfrist",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Muốn nghỉ việc hoặc bị chủ cho nghỉ, thời hạn báo trước (Kündigungsfrist) là bao lâu?",
+    "laws": [
+      "§ 622 Abs. 1 bis 6 BGB",
+      "§ 623 BGB",
+      "§ 4 Satz 1 KSchG",
+      "§ 82 Abs. 6 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__622.html",
+        "title": "§ 622 BGB – Kündigungsfristen bei Arbeitsverhältnissen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__623.html",
+        "title": "§ 623 BGB – Schriftform der Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/kschg/__4.html",
+        "title": "§ 4 KSchG – Anrufung des Arbeitsgerichts",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__82.html",
+        "title": "§ 82 AufenthG – Mitwirkung des Ausländers (Abs. 6)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "kündigungsfrist",
+      "kündigung",
+      "nghỉ việc",
+      "xin nghỉ việc",
+      "bị sa thải",
+      "báo trước",
+      "arbeitsgericht",
+      "kündigungsschutzklage"
+    ]
+  },
+  {
+    "id": "faq-arbeit-kuendigung-ausbildung",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Betrieb muốn chấm dứt hợp đồng học nghề của tôi, hoặc tôi muốn nghỉ học nghề: luật nói gì?",
+    "laws": [
+      "§ 22 Abs. 2 bis 4 BBiG",
+      "§ 22 Abs. 2 bis 4 PflBG",
+      "§ 82 Abs. 6 AufenthG",
+      "§ 16a Abs. 4 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__22.html",
+        "title": "§ 22 BBiG – Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pflbg/__22.html",
+        "title": "§ 22 PflBG – Kündigung des Ausbildungsverhältnisses",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__82.html",
+        "title": "§ 82 AufenthG – Mitwirkung des Ausländers (Abs. 6)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16a.html",
+        "title": "§ 16a AufenthG – Berufsausbildung (Abs. 4: sechs Monate Suche)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "kündigung ausbildung",
+      "ausbildung kündigen",
+      "ausbildung abbrechen",
+      "bị đuổi học nghề",
+      "bị đuổi",
+      "nghỉ học nghề",
+      "bỏ học nghề",
+      "chấm dứt hợp đồng học nghề",
+      "wichtiger grund"
+    ]
+  },
+  {
+    "id": "faq-arbeit-mindestlohn",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Lương tối thiểu (Mindestlohn) năm 2026 là bao nhiêu? Azubi có được hưởng không?",
+    "laws": [
+      "§ 1 Abs. 1 MiLoG",
+      "§ 1 MiLoV5",
+      "§ 3 Satz 1 MiLoG",
+      "§ 22 Abs. 1 und 3 MiLoG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/milov5/__1.html",
+        "title": "§ 1 MiLoV5 – Höhe des Mindestlohns",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__1.html",
+        "title": "§ 1 MiLoG – Mindestlohn",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__3.html",
+        "title": "§ 3 MiLoG – Unabdingbarkeit des Mindestlohns",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__22.html",
+        "title": "§ 22 MiLoG – Persönlicher Anwendungsbereich",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "mindestlohn",
+      "mindestlohn 2026",
+      "lương tối thiểu",
+      "stundenlohn",
+      "13,90",
+      "14,60",
+      "bị trả thấp",
+      "minimum wage"
+    ]
+  },
+  {
+    "id": "faq-arbeit-ausbildungsverguetung",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Lương học nghề tối thiểu (Mindestausbildungsvergütung) là bao nhiêu?",
+    "laws": [
+      "§ 17 Abs. 2 bis 4 BBiG",
+      "§ 18 Abs. 3 BBiG",
+      "§ 19 Abs. 1 PflBG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__17.html",
+        "title": "§ 17 BBiG – Vergütungsanspruch und Mindestvergütung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bibb.de/de/pressemitteilung_212952.php",
+        "title": "BIBB Pressemitteilung 28/2025 – Mindestausbildungsvergütung 2026",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bibb.de/de/pressemitteilung_229684.php",
+        "title": "BIBB Pressemitteilung 31/2026 – Mindestausbildungsvergütung 2027",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pflbg/__19.html",
+        "title": "§ 19 PflBG – Ausbildungsvergütung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "ausbildungsvergütung",
+      "mindestausbildungsvergütung",
+      "lương học nghề",
+      "azubi gehalt",
+      "724",
+      "764"
+    ]
+  },
+  {
+    "id": "faq-arbeit-ueberstunden-azubi",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Là Azubi, tôi có phải làm thêm giờ (Überstunden) không, và có được trả thêm không?",
+    "laws": [
+      "§ 17 Abs. 7 BBiG",
+      "§ 19 Abs. 3 PflBG",
+      "§ 2 Abs. 2 ArbZG",
+      "§ 3 ArbZG",
+      "§ 14 Abs. 3 BBiG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__17.html",
+        "title": "§ 17 BBiG – Vergütungsanspruch (Abs. 7: Mehrarbeit)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pflbg/__19.html",
+        "title": "§ 19 PflBG – Ausbildungsvergütung (Abs. 3: Mehrarbeit)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/__3.html",
+        "title": "§ 3 ArbZG – Arbeitszeit der Arbeitnehmer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__14.html",
+        "title": "§ 14 BBiG – Berufsausbildung (Abs. 3: nur ausbildungsdienliche Aufgaben)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "überstunden",
+      "überstunden azubi",
+      "überstunden ausbildung",
+      "mehrarbeit",
+      "làm thêm giờ",
+      "tăng ca",
+      "làm quá giờ",
+      "ausbildungsfremde tätigkeiten"
+    ]
+  },
+  {
+    "id": "faq-arbeit-arbeitszeit",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Mỗi ngày tôi được làm tối đa bao nhiêu giờ và được nghỉ giải lao bao lâu?",
+    "laws": [
+      "§ 2 Abs. 1 ArbZG",
+      "§ 3 ArbZG",
+      "§ 4 ArbZG",
+      "§ 5 Abs. 1 ArbZG",
+      "§ 8 Abs. 1 JArbSchG",
+      "§ 14 Abs. 1 JArbSchG",
+      "§ 15 JArbSchG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/__3.html",
+        "title": "§ 3 ArbZG – Arbeitszeit der Arbeitnehmer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/__4.html",
+        "title": "§ 4 ArbZG – Ruhepausen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/arbzg/__5.html",
+        "title": "§ 5 ArbZG – Ruhezeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/jarbschg/__8.html",
+        "title": "§ 8 JArbSchG – Dauer der Arbeitszeit",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "arbeitszeit",
+      "höchstarbeitszeit",
+      "giờ làm",
+      "giờ làm việc",
+      "mấy tiếng",
+      "nghỉ giải lao",
+      "pause",
+      "ruhezeit",
+      "arbeitszeitgesetz",
+      "jugendarbeitsschutz"
+    ]
+  },
+  {
+    "id": "faq-arbeit-arbeitszeugnis",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Khi nghỉ việc hoặc học nghề xong, tôi có quyền nhận Arbeitszeugnis không?",
+    "laws": [
+      "§ 109 GewO",
+      "§ 16 BBiG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/gewo/__109.html",
+        "title": "§ 109 GewO – Zeugnis",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__16.html",
+        "title": "§ 16 BBiG – Zeugnis",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "arbeitszeugnis",
+      "zeugnis",
+      "ausbildungszeugnis",
+      "qualifiziertes zeugnis",
+      "xác nhận làm việc",
+      "thư nhận xét",
+      "thư giới thiệu",
+      "reference letter"
+    ]
+  },
+  {
+    "id": "faq-arbeit-lohn-verspaetet",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Chủ trả lương chậm hoặc không trả đủ: tôi phải làm gì?",
+    "laws": [
+      "§ 614 BGB",
+      "§ 2 Abs. 1 MiLoG",
+      "§ 3 MiLoG",
+      "§ 18 Abs. 2 BBiG",
+      "§ 45b Abs. 1 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__2.html",
+        "title": "§ 2 MiLoG – Fälligkeit des Mindestlohns",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/milog/__3.html",
+        "title": "§ 3 MiLoG – Unabdingbarkeit des Mindestlohns",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__18.html",
+        "title": "§ 18 BBiG – Bemessung und Fälligkeit der Vergütung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.faire-integration.de/",
+        "title": "Faire Integration – Beratung zu Arbeits- und Sozialrecht für Drittstaatsangehörige (§ 45b AufenthG)",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "lohn",
+      "lohn nicht bezahlt",
+      "trả lương",
+      "trả lương chậm",
+      "không trả lương",
+      "nợ lương",
+      "đòi lương",
+      "ausschlussfrist",
+      "faire integration"
+    ]
+  },
+  {
+    "id": "faq-arbeit-lohnabrechnung",
+    "kind": "faq",
+    "group": "arbeit",
+    "hint": "Đọc bảng lương (Lohnabrechnung) thế nào, và cần kiểm tra những gì?",
+    "laws": [
+      "§ 108 Abs. 1 und 2 GewO",
+      "§ 3 Abs. 1 Nr. 3 und Abs. 4 SolZG 1995"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/gewo/__108.html",
+        "title": "§ 108 GewO – Abrechnung des Arbeitsentgelts",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.elster.de/elsterweb/infoseite/elstam_(privatpersonen)",
+        "title": "ELSTER – ELStAM (Privatpersonen)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.tk.de/firmenkunden/versicherung/beitraege-faq-und-mehr/beitragssaetze/aktuelle-beitragssaetze-in-der-sozialversicherung-2031554",
+        "title": "TK – Beitragssätze in der Sozialversicherung 2026",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/solzg_1995/__3.html",
+        "title": "§ 3 SolZG 1995 – Bemessungsgrundlage und zeitliche Anwendung (Abs. 4: Freigrenze beim Lohnsteuerabzug)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "lohnabrechnung",
+      "gehaltsabrechnung",
+      "lohnzettel",
+      "entgeltabrechnung",
+      "bảng lương",
+      "đọc bảng lương",
+      "phiếu lương",
+      "brutto netto",
+      "payslip",
+      "kirchensteuer"
+    ]
+  },
+  {
+    "id": "faq-hoc-nebenjob-16b",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Du học sinh với thẻ § 16b được đi làm thêm bao nhiêu? Thực tập có bị tính không?",
+    "laws": [
+      "§ 16b Abs. 1 Satz 2 AufenthG",
+      "§ 16b Abs. 3 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16b.html",
+        "title": "§ 16b AufenthG – Studium",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.daad.de/de/in-deutschland-studieren/arbeit-karriere/nebenjobs/",
+        "title": "DAAD – Der Nebenjob",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.daad.de/de/in-deutschland-studieren/arbeit-karriere/praktikum/",
+        "title": "DAAD – Das Praktikum",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "140 tage",
+      "140 ngày",
+      "du học sinh làm thêm",
+      "nebenjob studium",
+      "16b",
+      "praktikum",
+      "pflichtpraktikum",
+      "thực tập",
+      "arbeitstagekonto",
+      "student job"
+    ]
+  },
+  {
+    "id": "faq-hoc-werkstudent",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Làm Werkstudent được bao nhiêu giờ mỗi tuần?",
+    "laws": [
+      "§ 6 Abs. 1 Nr. 3 SGB V",
+      "§ 16b Abs. 3 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.tk.de/firmenkunden/versicherung/versicherung-faq/haeufige-fragen-zu-studenten-und-praktikanten/wie-oft-duerfen-werkstudenten-ueber-20-std-arbeiten-2036712",
+        "title": "TK – An wie vielen Tagen dürfen Werkstudenten mehr als 20 Wochenstunden arbeiten?",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/bildung/studium/jobben-neben-dem-studium",
+        "title": "Bundesagentur für Arbeit – Jobben neben dem Studium",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__6.html",
+        "title": "§ 6 SGB V – Versicherungsfreiheit (Abs. 1 Nr. 3: Studierende)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__16b.html",
+        "title": "§ 16b AufenthG – Studium (Abs. 3: Arbeitstagekonto)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "werkstudent",
+      "werkstudentin",
+      "werkstudierende",
+      "20 giờ",
+      "semesterferien",
+      "sinh viên làm thêm",
+      "26 wochen"
+    ]
+  },
+  {
+    "id": "faq-hoc-berufsschule",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Có bắt buộc đi Berufsschule không? Giờ học ở trường có được tính là giờ làm không?",
+    "laws": [
+      "§ 13 Satz 2 Nr. 2 BBiG",
+      "§ 15 BBiG",
+      "§ 19 Abs. 1 Nr. 1 BBiG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__15.html",
+        "title": "§ 15 BBiG – Freistellung, Anrechnung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__13.html",
+        "title": "§ 13 BBiG – Verhalten während der Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__19.html",
+        "title": "§ 19 BBiG – Fortzahlung der Vergütung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "berufsschule",
+      "trường nghề",
+      "giờ học",
+      "blockunterricht",
+      "freistellung",
+      "anrechnung berufsschule",
+      "berufsschulpflicht"
+    ]
+  },
+  {
+    "id": "faq-hoc-pruefung-nicht-bestanden",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Thi tốt nghiệp nghề bị trượt thì sao? Thẻ § 16a có bị ảnh hưởng không?",
+    "laws": [
+      "§ 37 Abs. 1 BBiG",
+      "§ 31 Abs. 1 HwO",
+      "§ 21 Abs. 3 BBiG",
+      "§ 21 Abs. 2 PflBG",
+      "§ 19 Abs. 3 PflAPrV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__37.html",
+        "title": "§ 37 BBiG – Abschlussprüfung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__21.html",
+        "title": "§ 21 BBiG – Beendigung (Abs. 3: Verlängerung)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pflbg/__21.html",
+        "title": "§ 21 PflBG – Ende des Ausbildungsverhältnisses",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/pflaprv/__19.html",
+        "title": "§ 19 PflAPrV – Bestehen und Wiederholung der staatlichen Prüfung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "prüfung nicht bestanden",
+      "abschlussprüfung",
+      "thi trượt",
+      "trượt thi",
+      "thi lại",
+      "wiederholungsprüfung",
+      "verlängerung",
+      "gesellenprüfung",
+      "pflegeprüfung"
+    ]
+  },
+  {
+    "id": "faq-hoc-betrieb-wechseln",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Có thẻ § 16a, tôi muốn đổi sang Betrieb khác: phải làm theo thứ tự nào?",
+    "laws": [
+      "§ 4a Abs. 3 Satz 3 AufenthG",
+      "§ 35 Abs. 4 BeschV",
+      "§ 22 Abs. 2 BBiG",
+      "§ 82 Abs. 6 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.ihk.de/blueprint/servlet/resource/blob/7121926/2e325fd6275deb3611c6c4041375b6fc/checkliste-wechsel-des-ausbildungsbetriebs-data.pdf",
+        "title": "IHK/NUiF – Checkliste Wechsel des Ausbildungsbetriebs (§ 16a AufenthG), Stand Juni 2026",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__4a.html",
+        "title": "§ 4a AufenthG – Zugang zur Erwerbstätigkeit (Abs. 3)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bbig_2005/__22.html",
+        "title": "§ 22 BBiG – Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__82.html",
+        "title": "§ 82 AufenthG – Mitwirkung des Ausländers (Abs. 6)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "betriebswechsel",
+      "betrieb wechseln",
+      "ausbildungsbetrieb wechseln",
+      "đổi betrieb",
+      "đổi chỗ học nghề",
+      "đổi công ty",
+      "aufhebungsvertrag",
+      "wechsel 16a"
+    ]
+  },
+  {
+    "id": "faq-hoc-anerkennung",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Bằng cấp ở Việt Nam có được công nhận ở Đức không? Tôi bắt đầu từ đâu?",
+    "laws": [
+      "§ 3 Abs. 5 BQFG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/anerkennungs-finder.php",
+        "title": "Anerkennung in Deutschland – Anerkennungs-Finder",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/hochschule.php",
+        "title": "Anerkennung in Deutschland – Hochschulabschlüsse (anabin, Zeugnisbewertung)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.anerkennung-in-deutschland.de/html/de/finanzielle-foerderung.php",
+        "title": "Anerkennung in Deutschland – Finanzielle Förderung (Anerkennungszuschuss)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bqfg/__3.html",
+        "title": "§ 3 BQFG – Begriffsbestimmungen (Abs. 5: reglementierte Berufe)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "anerkennung",
+      "công nhận bằng",
+      "công nhận bằng cấp",
+      "văn bằng",
+      "anabin",
+      "zeugnisbewertung",
+      "ZAB",
+      "reglementiert",
+      "anerkennungszuschuss"
+    ]
+  },
+  {
+    "id": "faq-hoc-deutschkurs-kosten",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Học tiếng Đức (Integrationskurs, Berufssprachkurs) tốn bao nhiêu tiền?",
+    "laws": [
+      "§ 44 Abs. 1, 2 und 4 AufenthG",
+      "§ 9 Abs. 1 und 2 IntV",
+      "§ 4 Abs. 3 und 4 DeuFöV"
+    ],
+    "sources": [
+      {
+        "url": "https://bamf.de/EN/Themen/Integration/ZugewanderteTeilnehmende/Integrationskurse/TeilnahmeKosten/Titelab2005/titelab2005.html?nn=282656",
+        "title": "BAMF – Integration course: foreigners with residence permits issued after 2005 (costs)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__44.html",
+        "title": "§ 44 AufenthG – Berechtigung zur Teilnahme an einem Integrationskurs",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/deuf_v/__4.html",
+        "title": "§ 4 DeuFöV – Teilnahme an der berufsbezogenen Deutschsprachförderung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/intv/__9.html",
+        "title": "§ 9 IntV – Kostenbeitrag",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "deutschkurs",
+      "integrationskurs",
+      "berufssprachkurs",
+      "sprachkurs",
+      "học tiếng đức",
+      "khóa tiếng đức",
+      "học phí tiếng đức",
+      "kostenbeitrag"
+    ]
+  },
+  {
+    "id": "faq-hoc-bab",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Là Azubi người nước ngoài, tôi có được nhận trợ cấp học nghề BAB không?",
+    "laws": [
+      "§ 57 Abs. 1 und 2 SGB III",
+      "§ 60 SGB III"
+    ],
+    "sources": [
+      {
+        "url": "https://www.arbeitsagentur.de/bildung/ausbildung/berufsausbildungsbeihilfe-bab",
+        "title": "Bundesagentur für Arbeit – Berufsausbildungsbeihilfe (BAB)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__57.html",
+        "title": "§ 57 SGB III – Förderungsfähige Berufsausbildung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_3/__60.html",
+        "title": "§ 60 SGB III – Förderungsberechtigter Personenkreis bei Berufsausbildung",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "BAB",
+      "berufsausbildungsbeihilfe",
+      "trợ cấp học nghề",
+      "hỗ trợ azubi",
+      "bab antrag",
+      "bab ausländer"
+    ]
+  },
+  {
+    "id": "faq-hoc-bafoeg-16b",
+    "kind": "faq",
+    "group": "hoc",
+    "hint": "Du học sinh với thẻ § 16b có được nhận BAföG không?",
+    "laws": [
+      "§ 8 Abs. 1 bis 3 BAföG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/baf_g/__8.html",
+        "title": "§ 8 BAföG – Staatsangehörigkeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.xn--bafg-7qa.de/bafoeg/de/das-bafoeg-alle-infos-auf-einen-blick/wer-wird-gefoerdert.html?nn=383902",
+        "title": "BAföG – Wer wird gefördert?",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "bafög",
+      "bafoeg",
+      "bafög du học sinh",
+      "bafög 16b",
+      "ausbildungsförderung",
+      "hỗ trợ học phí",
+      "vay tiền học"
+    ]
+  },
+  {
+    "id": "faq-tien-steuererklaerung-pflicht",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Tôi có bắt buộc phải khai thuế (Steuererklärung) không, hạn nộp khi nào?",
+    "laws": [
+      "§ 46 Abs. 2 Nr. 1, 2, 3a EStG",
+      "§ 32b Abs. 1 Satz 1 Nr. 1 EStG",
+      "§ 149 Abs. 2 Satz 1, Abs. 3 AO",
+      "§ 152 Abs. 1 AO"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__46.html",
+        "title": "§ 46 EStG – Veranlagung bei Einkünften aus nichtselbständiger Arbeit",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__149.html",
+        "title": "§ 149 AO – Abgabe der Steuererklärungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/ao_1977/__152.html",
+        "title": "§ 152 AO – Verspätungszuschlag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.finanzamt.bayern.de/Informationen/Aktuelles/Termine_und_Fristen/Steuererklaerungsfristen.php",
+        "title": "Bayerisches Landesamt für Steuern – Steuererklärungsfristen",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "steuererklärung",
+      "pflichtveranlagung",
+      "abgabefrist",
+      "khai thuế",
+      "bắt buộc khai thuế",
+      "hạn nộp thuế",
+      "finanzamt",
+      "verspätungszuschlag",
+      "steuerklasse v"
+    ]
+  },
+  {
+    "id": "faq-tien-steuererklaerung-erstattung",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Azubi hay sinh viên đi làm có được hoàn thuế (Lohnsteuer) không?",
+    "laws": [
+      "§ 46 Abs. 2 Nr. 8 EStG",
+      "§ 39b Abs. 2 EStG",
+      "§ 32a Abs. 1 EStG",
+      "§ 9a Satz 1 Nr. 1 Buchst. a EStG",
+      "§ 169 Abs. 2 Satz 1 Nr. 2 AO"
+    ],
+    "sources": [
+      {
+        "url": "https://service.berlin.de/dienstleistung/325685/",
+        "title": "Service Berlin – Einkommensteuer: Erklärung freiwillig abgeben",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__39b.html",
+        "title": "§ 39b EStG – Einbehaltung der Lohnsteuer",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__32a.html",
+        "title": "§ 32a EStG – Einkommensteuertarif",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__9a.html",
+        "title": "§ 9a EStG – Pauschbeträge für Werbungskosten",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "steuererstattung",
+      "lohnsteuer zurück",
+      "antragsveranlagung",
+      "hoàn thuế",
+      "lấy lại tiền thuế",
+      "khai thuế tự nguyện",
+      "elster",
+      "grundfreibetrag",
+      "azubi",
+      "sinh viên"
+    ]
+  },
+  {
+    "id": "faq-tien-steuerklasse",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Tôi thuộc Steuerklasse nào? Vợ hoặc chồng ở Việt Nam thì sao?",
+    "laws": [
+      "§ 38b Abs. 1 EStG",
+      "§ 1 Abs. 1 Satz 1 EStG",
+      "§ 1a Abs. 1 EStG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__38b.html",
+        "title": "§ 38b EStG – Lohnsteuerklassen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__1.html",
+        "title": "§ 1 EStG – Steuerpflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__1a.html",
+        "title": "§ 1a EStG – EU/EWR-Staatsangehörige",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.elster.de/elsterweb/infoseite/elstam_(privatpersonen)",
+        "title": "ELSTER – ELStAM (Privatpersonen)",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "steuerklasse",
+      "lohnsteuerklasse",
+      "steuerklasse 1",
+      "steuerklasse 3",
+      "steuerklassenwechsel",
+      "elstam",
+      "nhóm thuế",
+      "lớp thuế",
+      "vợ ở việt nam",
+      "chồng ở việt nam"
+    ]
+  },
+  {
+    "id": "faq-tien-kindergeld",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Người Việt ở Đức có được nhận Kindergeld không, bao nhiêu tiền?",
+    "laws": [
+      "§ 66 Abs. 1 EStG",
+      "§ 62 Abs. 1, 2 EStG",
+      "§ 63 Abs. 1 Satz 3, 6 EStG",
+      "§ 70 Abs. 1 Satz 2 EStG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.arbeitsagentur.de/news/kindergeld-steigt-2026",
+        "title": "Bundesagentur für Arbeit – Kindergeld steigt 2026",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.arbeitsagentur.de/familie-und-kinder/infos-rund-um-kindergeld/kindergeld-anspruch-hoehe-dauer",
+        "title": "Familienkasse – Kindergeld: Anspruch, Höhe und Dauer",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__62.html",
+        "title": "§ 62 EStG – Anspruchsberechtigte (Kindergeld)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/estg/__63.html",
+        "title": "§ 63 EStG – Kinder (Kindergeld)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "kindergeld",
+      "familienkasse",
+      "tiền con",
+      "trợ cấp con",
+      "tiền nuôi con",
+      "kindergeld ausländer",
+      "con ở việt nam",
+      "steuer-id"
+    ]
+  },
+  {
+    "id": "faq-tien-basiskonto",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Mới sang Đức, tôi có quyền mở tài khoản ngân hàng không?",
+    "laws": [
+      "§ 31 Abs. 1, 2 ZKG",
+      "§ 12 Abs. 1 Satz 1 Nr. 1 GwG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/zkg/__31.html",
+        "title": "§ 31 ZKG – Basiskontovertrag",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/gwg_2017/__12.html",
+        "title": "§ 12 GwG – Identitätsüberprüfung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.bafin.de/DE/verbraucherinnen-verbraucher/themen-finanzprodukte/konten-zahlungen/konten/basiskonto/basiskonto_node.html",
+        "title": "BaFin – Basiskonto",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/sparen-und-anlegen/das-recht-auf-ein-basiskonto-fuer-neu-in-deutschland-angekommene-12224",
+        "title": "Verbraucherzentrale – Recht auf ein Basiskonto für neu Angekommene",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "basiskonto",
+      "bankkonto",
+      "girokonto",
+      "konto eröffnen",
+      "mở tài khoản",
+      "tài khoản ngân hàng",
+      "ngân hàng từ chối",
+      "bafin"
+    ]
+  },
+  {
+    "id": "faq-tien-rundfunkbeitrag",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Rundfunkbeitrag (GEZ) là gì, ở WG thì mỗi người đều phải trả à?",
+    "laws": [
+      "§ 2 Abs. 1, 3 RBStV",
+      "§ 8 Abs. 1 RBStV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.rundfunkbeitrag.de/",
+        "title": "Beitragsservice – Rundfunkbeitrag",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/informationen/informationen-fuer-studierende",
+        "title": "Beitragsservice – Informationen für Studierende",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-bayern.de/Content/Document/RBeitrStV/true",
+        "title": "Rundfunkbeitragsstaatsvertrag (RBStV) – BAYERN.RECHT",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "rundfunkbeitrag",
+      "gez",
+      "beitragsservice",
+      "phí gez",
+      "phí truyền hình",
+      "phí phát thanh",
+      "wg",
+      "ký túc xá"
+    ]
+  },
+  {
+    "id": "faq-tien-rundfunkbeitrag-befreiung",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Sinh viên, Azubi có được miễn Rundfunkbeitrag không?",
+    "laws": [
+      "§ 4 Abs. 1 Nr. 5 RBStV",
+      "§ 4 Abs. 4 RBStV"
+    ],
+    "sources": [
+      {
+        "url": "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/informationen/informationen-fuer-studierende",
+        "title": "Beitragsservice – Informationen für Studierende",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-bayern.de/Content/Document/RBeitrStV/true",
+        "title": "Rundfunkbeitragsstaatsvertrag (RBStV) – BAYERN.RECHT",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "rundfunkbeitrag befreiung",
+      "gez befreiung",
+      "gez",
+      "miễn gez",
+      "miễn rundfunkbeitrag",
+      "bafög",
+      "bab",
+      "sinh viên",
+      "azubi"
+    ]
+  },
+  {
+    "id": "faq-tien-inkasso",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Nhận thư đòi nợ Inkasso hoặc Mahnbescheid thì phải làm gì?",
+    "laws": [
+      "§ 13a Abs. 1 RDG",
+      "§ 10 Abs. 1 Satz 1 Nr. 1 RDG",
+      "§ 692 Abs. 1 Nr. 2, 3 ZPO",
+      "§ 700 Abs. 1 ZPO",
+      "§ 339 Abs. 1 ZPO"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/rdg/__13a.html",
+        "title": "§ 13a RDG – Darlegungs- und Informationspflichten bei Inkassodienstleistungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/rdg/__10.html",
+        "title": "§ 10 RDG – Registrierung (Inkassodienstleistungen)",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/zpo/__692.html",
+        "title": "§ 692 ZPO – Mahnbescheid",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/kredit-schulden-insolvenz/inkasso-so-erkennen-sie-unserioese-forderungen-10871",
+        "title": "Verbraucherzentrale – Inkasso: So erkennen Sie unseriöse Forderungen",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "inkasso",
+      "mahnbescheid",
+      "vollstreckungsbescheid",
+      "mahnung",
+      "thư đòi nợ",
+      "đòi nợ",
+      "nợ tiền",
+      "widerspruch",
+      "phong bì vàng"
+    ]
+  },
+  {
+    "id": "faq-tien-handyvertrag-kuendigen",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "Hủy hợp đồng điện thoại, Internet thế nào, phải báo trước bao lâu?",
+    "laws": [
+      "§ 56 Abs. 1, 3 TKG",
+      "§ 312k Abs. 2, 4, 6 BGB",
+      "§ 60 Abs. 2 TKG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/tkg_2021/__56.html",
+        "title": "§ 56 TKG – Vertragslaufzeit, Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__312k.html",
+        "title": "§ 312k BGB – Kündigung von Verbraucherverträgen im elektronischen Geschäftsverkehr",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/tkg_2021/__60.html",
+        "title": "§ 60 TKG – Umzug",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/digitale-welt/mobilfunk-und-festnetz/wichtige-kundenrechte-fuer-telefon-handy-und-internetvertraege-65879",
+        "title": "Verbraucherzentrale – Wichtige Kundenrechte für Telefon-, Handy- und Internetverträge",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "handyvertrag kündigen",
+      "internetvertrag kündigen",
+      "kündigungsfrist",
+      "kündigungsbutton",
+      "hủy hợp đồng điện thoại",
+      "hủy hợp đồng internet",
+      "nhà mạng",
+      "chuyển nhà"
+    ]
+  },
+  {
+    "id": "faq-tien-schufa",
+    "kind": "faq",
+    "group": "tien",
+    "hint": "SCHUFA là gì, xem dữ liệu SCHUFA của mình miễn phí thế nào?",
+    "laws": [
+      "Art. 15 Abs. 3 DSGVO"
+    ],
+    "sources": [
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/digitale-welt/datenschutz/scoring-mit-kundendaten-so-verlangen-sie-auskunft-bei-schufa-co-12756",
+        "title": "Verbraucherzentrale – Scoring mit Kundendaten: So verlangen Sie Auskunft bei Schufa & Co.",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://handbookgermany.de/en/schufa",
+        "title": "Handbook Germany – Schufa",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "schufa",
+      "schufa auskunft",
+      "datenkopie",
+      "bonität",
+      "điểm tín dụng",
+      "lịch sử tín dụng",
+      "schufa miễn phí",
+      "thuê nhà"
+    ]
+  },
+  {
+    "id": "faq-suckhoe-krankenversicherung-pflicht",
+    "kind": "faq",
+    "group": "suckhoe",
+    "hint": "Ở Đức có bắt buộc phải có bảo hiểm y tế (Krankenversicherung) không?",
+    "laws": [
+      "§ 193 Abs. 3 VVG",
+      "§ 5 Abs. 1 Nr. 1, 9 SGB V",
+      "§ 7 Abs. 1 SGB V",
+      "§ 2 Abs. 3 Satz 1 AufenthG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/vvg_2008/__193.html",
+        "title": "§ 193 VVG – Versicherungspflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__5.html",
+        "title": "§ 5 SGB V – Versicherungspflicht",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gkv-spitzenverband.de/media/dokumente/presse/zahlen_und_grafiken/20260101_Faktenblatt_Rechengroessen_Beitragsrecht.pdf",
+        "title": "GKV-Spitzenverband – Rechengrößen und Grenzwerte 2026",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/aufenthg_2004/__2.html",
+        "title": "§ 2 AufenthG – Begriffsbestimmungen (gesicherter Lebensunterhalt)",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "krankenversicherung",
+      "krankenkasse",
+      "versicherungspflicht",
+      "bảo hiểm y tế",
+      "bảo hiểm bắt buộc",
+      "bảo hiểm sinh viên",
+      "studentische krankenversicherung",
+      "minijob",
+      "azubi"
+    ]
+  },
+  {
+    "id": "faq-suckhoe-krankenkasse-waehlen",
+    "kind": "faq",
+    "group": "suckhoe",
+    "hint": "Nên chọn Krankenkasse nào, so sánh thế nào?",
+    "laws": [
+      "§ 175 Abs. 1, 3, 4 SGB V",
+      "§ 241 SGB V",
+      "§ 249 Abs. 1 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__175.html",
+        "title": "§ 175 SGB V – Ausübung des Wahlrechts",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gkv-spitzenverband.de/krankenversicherung/kv_grundprinzipien/finanzierung/zusatzbeitragssatz/zusatzbeitragssatz.jsp",
+        "title": "GKV-Spitzenverband – Zusatzbeitragssatz",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gkv-spitzenverband.de/service/krankenkassenliste/krankenkassen.jsp",
+        "title": "GKV-Spitzenverband – Krankenkassenliste mit Zusatzbeiträgen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/beitraege",
+        "title": "BMG – Beiträge der gesetzlichen Krankenversicherung",
+        "tier": "official"
+      }
+    ],
+    "keywords": [
+      "krankenkasse wählen",
+      "krankenkasse wechseln",
+      "zusatzbeitrag",
+      "chọn krankenkasse",
+      "chọn bảo hiểm y tế",
+      "đổi bảo hiểm",
+      "so sánh bảo hiểm",
+      "gkv"
+    ]
+  },
+  {
+    "id": "faq-suckhoe-arzttermin",
+    "kind": "faq",
+    "group": "suckhoe",
+    "hint": "Làm sao có hẹn khám bác sĩ, Terminservice 116117 giúp được gì?",
+    "laws": [
+      "§ 76 Abs. 1, 3 SGB V",
+      "§ 75 Abs. 1a SGB V",
+      "§ 15 Abs. 2 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/themen/krankenversicherung/online-ratgeber-krankenversicherung/staerkung-der-patientenrechte",
+        "title": "BMG – Stärkung der Patientenrechte (Terminservicestellen)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.116117.de/de/haeufige-fragen.php",
+        "title": "116117 – Häufige Fragen",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__75.html",
+        "title": "§ 75 SGB V – Terminservicestellen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__76.html",
+        "title": "§ 76 SGB V – Freie Arztwahl",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "arzttermin",
+      "terminservice",
+      "116117",
+      "hausarzt",
+      "facharzt",
+      "überweisung",
+      "hẹn bác sĩ",
+      "đặt lịch khám",
+      "khám bác sĩ",
+      "bác sĩ gia đình"
+    ]
+  },
+  {
+    "id": "faq-suckhoe-notruf",
+    "kind": "faq",
+    "group": "suckhoe",
+    "hint": "Số khẩn cấp ở Đức là gì: 112, 110 hay 116117?",
+    "laws": [
+      "§ 164 Abs. 1 TKG"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/tkg_2021/__164.html",
+        "title": "§ 164 TKG – Notruf",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.116117.de/de/aerztlicher-bereitschaftsdienst.php",
+        "title": "116117 – Ärztlicher Bereitschaftsdienst",
+        "tier": "official"
+      },
+      {
+        "url": "https://handbookgermany.de/en/police",
+        "title": "Handbook Germany – Police in Germany",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "notruf",
+      "112",
+      "110",
+      "116117",
+      "số khẩn cấp",
+      "cấp cứu",
+      "gọi cảnh sát",
+      "xe cứu thương",
+      "bereitschaftsdienst"
+    ]
+  },
+  {
+    "id": "faq-suckhoe-haftpflicht",
+    "kind": "faq",
+    "group": "suckhoe",
+    "hint": "Có cần mua bảo hiểm trách nhiệm cá nhân (Haftpflichtversicherung) không?",
+    "laws": [
+      "§ 823 Abs. 1 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/geld-versicherungen/weitere-versicherungen/private-haftpflichtversicherung-ein-absolutes-muss-fuer-alle-13891",
+        "title": "Verbraucherzentrale – Private Haftpflichtversicherung: Ein absolutes Muss für alle",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.bafin.de/DE/Verbraucher/Versicherung/Produkte/Haftpflicht/haftpflichtversicherung_node.html",
+        "title": "BaFin – Haftpflichtversicherung",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__823.html",
+        "title": "§ 823 BGB – Schadensersatzpflicht",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "haftpflichtversicherung",
+      "privathaftpflicht",
+      "haftpflicht",
+      "bảo hiểm trách nhiệm",
+      "bảo hiểm trách nhiệm cá nhân",
+      "làm hỏng đồ",
+      "bồi thường",
+      "mietsachschäden"
+    ]
+  },
+  {
+    "id": "faq-suckhoe-arztkosten-zuzahlung",
+    "kind": "faq",
+    "group": "suckhoe",
+    "hint": "Đi khám bác sĩ có phải trả tiền không, Zuzahlung là gì?",
+    "laws": [
+      "§ 2 Abs. 2 Satz 1 SGB V",
+      "§ 15 Abs. 2 SGB V",
+      "§ 61 Satz 1, 2 SGB V",
+      "§ 39 Abs. 4 SGB V",
+      "§ 62 Abs. 1 SGB V"
+    ],
+    "sources": [
+      {
+        "url": "https://www.bundesgesundheitsministerium.de/zuzahlung-krankenversicherung",
+        "title": "BMG – Zuzahlung und Erstattung von Arzneimitteln",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__61.html",
+        "title": "§ 61 SGB V – Zuzahlungen",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/sgb_5/__62.html",
+        "title": "§ 62 SGB V – Belastungsgrenze",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/gesundheit-pflege/aerztinnen-und-kliniken/igel-ihre-rechte-als-patientin-34245",
+        "title": "Verbraucherzentrale – IGeL: Ihre Rechte als Patient:in",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "zuzahlung",
+      "arztkosten",
+      "rezeptgebühr",
+      "igel",
+      "belastungsgrenze",
+      "khám bác sĩ mất tiền",
+      "tiền thuốc",
+      "đồng chi trả",
+      "thẻ egk"
+    ]
+  },
+  {
+    "id": "faq-leben-kaution",
+    "kind": "faq",
+    "group": "leben",
+    "hint": "Chủ nhà được đòi tiền cọc (Kaution) bao nhiêu?",
+    "laws": [
+      "§ 551 Abs. 1 bis 4 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__551.html",
+        "title": "§ 551 BGB – Begrenzung und Anlage von Mietsicherheiten",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/rental-contract",
+        "title": "Handbook Germany – Rental contract",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://handbookgermany.de/en/moving-out",
+        "title": "Handbook Germany – Moving out",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "kaution",
+      "mietkaution",
+      "kaution zurück",
+      "tiền cọc",
+      "tiền đặt cọc",
+      "cọc nhà",
+      "trả lại tiền cọc",
+      "thuê nhà"
+    ]
+  },
+  {
+    "id": "faq-leben-mietvertrag-kuendigen",
+    "kind": "faq",
+    "group": "leben",
+    "hint": "Muốn chuyển nhà, tôi phải báo hủy hợp đồng thuê trước bao lâu?",
+    "laws": [
+      "§ 573c Abs. 1, 3, 4 BGB",
+      "§ 568 Abs. 1 BGB",
+      "§ 549 Abs. 2 Nr. 2 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__573c.html",
+        "title": "§ 573c BGB – Fristen der ordentlichen Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__568.html",
+        "title": "§ 568 BGB – Form und Inhalt der Kündigung",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__549.html",
+        "title": "§ 549 BGB – Auf Wohnraummietverhältnisse anwendbare Vorschriften",
+        "tier": "law"
+      },
+      {
+        "url": "https://handbookgermany.de/en/rental-contract",
+        "title": "Handbook Germany – Rental contract",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "kündigung mietvertrag",
+      "wohnung kündigen",
+      "kündigungsfrist",
+      "ausziehen",
+      "hủy hợp đồng thuê nhà",
+      "báo chuyển nhà",
+      "trả nhà",
+      "chuyển nhà"
+    ]
+  },
+  {
+    "id": "faq-leben-nebenkostenabrechnung",
+    "kind": "faq",
+    "group": "leben",
+    "hint": "Nebenkostenabrechnung bắt trả thêm nhiều tiền, kiểm tra thế nào?",
+    "laws": [
+      "§ 556 Abs. 3, 4 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__556.html",
+        "title": "§ 556 BGB – Vereinbarungen über Betriebskosten",
+        "tier": "law"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/energie/preise-tarife-anbieterwechsel/nachzahlungsschock-hilfe-bei-hoher-betriebs-und-heizkostenabrechnung-83065",
+        "title": "Verbraucherzentrale – Nachzahlungs-Schock: Hilfe bei hoher Betriebs- und Heizkostenabrechnung",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "nebenkostenabrechnung",
+      "betriebskostenabrechnung",
+      "nachzahlung",
+      "heizkosten",
+      "belegeinsicht",
+      "tiền nebenkosten",
+      "quyết toán chi phí nhà",
+      "trả thêm tiền nhà"
+    ]
+  },
+  {
+    "id": "faq-leben-muelltrennung",
+    "kind": "faq",
+    "group": "leben",
+    "hint": "Phân loại rác ở Đức thế nào, thùng nào bỏ gì?",
+    "laws": [
+      "§ 46 Abs. 1 Satz 1 VerpackDG"
+    ],
+    "sources": [
+      {
+        "url": "https://handbookgermany.de/de/waste-separation",
+        "title": "Handbook Germany – Mülltrennung",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/verpackdg/__46.html",
+        "title": "§ 46 VerpackDG – Pfand für Einweggetränkeverpackungen",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "mülltrennung",
+      "müll",
+      "gelber sack",
+      "restmüll",
+      "pfand",
+      "phân loại rác",
+      "đổ rác",
+      "thùng rác",
+      "tiền cọc chai"
+    ]
+  },
+  {
+    "id": "faq-leben-wohnungsbetrug",
+    "kind": "faq",
+    "group": "leben",
+    "hint": "Làm sao nhận ra lừa đảo khi tìm nhà thuê?",
+    "laws": [],
+    "sources": [
+      {
+        "url": "https://www.polizei-beratung.de/themen-und-tipps/sicher-handeln/onlinebetrug-maschen/vorkassebetrug/",
+        "title": "Polizei-Beratung – Vorkassebetrug (auch Wohnungssuche)",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/vertraege-reklamation/abzocke/fakewohnungen-im-internet-so-erkennen-sie-falsche-immobilienanzeigen-27576",
+        "title": "Verbraucherzentrale – Fake-Wohnungen im Internet",
+        "tier": "trusted"
+      }
+    ],
+    "keywords": [
+      "wohnungsbetrug",
+      "betrug wohnung",
+      "fake wohnung",
+      "vorkasse",
+      "lừa đảo thuê nhà",
+      "lừa đảo",
+      "tìm nhà",
+      "chuyển tiền trước"
+    ]
+  },
+  {
+    "id": "faq-leben-deutschlandticket-kuendigen",
+    "kind": "faq",
+    "group": "leben",
+    "hint": "Hủy (kündigen) Deutschlandticket thế nào và trước ngày nào?",
+    "laws": [
+      "§ 312k Abs. 1, 2, 4 BGB"
+    ],
+    "sources": [
+      {
+        "url": "https://www.bundesregierung.de/breg-de/aktuelles/deutschlandticket-2134074",
+        "title": "Bundesregierung – Deutschlandticket: Fragen und Antworten",
+        "tier": "official"
+      },
+      {
+        "url": "https://www.verbraucherzentrale.de/wissen/reise-mobilitaet/unterwegs-sein/deutschlandticket-von-kaufen-bis-kuendigen-alle-wichtigen-infos-82203",
+        "title": "Verbraucherzentrale – Deutschlandticket: Von Kaufen bis Kündigen",
+        "tier": "trusted"
+      },
+      {
+        "url": "https://www.gesetze-im-internet.de/bgb/__312k.html",
+        "title": "§ 312k BGB – Kündigung von Verbraucherverträgen im elektronischen Geschäftsverkehr",
+        "tier": "law"
+      }
+    ],
+    "keywords": [
+      "deutschlandticket",
+      "deutschland ticket",
+      "deutschlandticket kündigen",
+      "deutschlandticket hủy",
+      "hủy deutschlandticket",
+      "d-ticket",
+      "jobticket",
+      "deutschlandsemesterticket",
+      "semesterticket"
+    ]
+  }
+]

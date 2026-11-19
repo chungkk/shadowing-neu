@@ -31,6 +31,7 @@ hallovn.de/                    # repo (GitHub: chungkk/shadowing-neu), máy Mac:
 ├── mobile/                    # app React Native HalloVN (dùng chung ../src/lib qua @shared, ../src/content qua @content)
 ├── content/laixe/             # catalog câu hỏi phục vụ /api/fuehrerschein/* (không sửa tay)
 ├── tools/laixe-catalog/       # tạo / dịch / publish catalog lái xe (trước nằm ở repo ckk-biz) — xem README trong đó
+├── tools/tro-ly/              # Trợ lý HalloVN: chatbot thủ tục giấy tờ (server + widget), kho kiến thức ở content/tro-ly/ — xem README trong đó
 ├── scripts/                   # nhập dữ liệu Lái xe/LiD, backup, tiện ích
 ├── e2e/                       # Playwright
 └── public/                    # /ckk = media câu hỏi lái xe, /lid, /apps… (đường dẫn công khai, không đổi tên)

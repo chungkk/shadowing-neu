@@ -1,0 +1,16 @@
+{
+  "name": "hallovn-tro-ly",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Trợ lý HalloVN: chatbot hỗ trợ thủ tục giấy tờ cho thành viên. Kho kiến thức ở ../../content/tro-ly",
+  "scripts": {
+    "extract": "node scripts/extract-sources.mjs",
+    "fetch": "node scripts/fetch-sources.mjs",
+    "draft": "node scripts/draft-articles.mjs",
+    "index": "node scripts/build-index.mjs",
+    "start": "node server/index.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": { "@anthropic-ai/sdk": "1.10.0" }
+}

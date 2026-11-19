@@ -1,0 +1,13 @@
+---
+url: https://www.gesetze-im-internet.de/zkg/__34.html
+title: "§ 34   Ablehnung des Antrags auf Abschluss eines Basiskontovertrags Gesetz über die Vergleichbarkeit von Zahlungskontoentgelten, den Wechsel von Zahlungskonten sowie den Zugang zu Zahlungskonten mit grundlegenden Funktionen (Zahlungskontengesetz - ZKG)"
+fetched: 2026-11-18
+---
+
+(1) Ein Verpflichteter kann den Antrag eines Berechtigten auf Abschluss eines Basiskontovertrags, der den Voraussetzungen des § 33 Absatz 1 genügt, nur aus den in den §§ 35 bis 37 genannten Gründen ablehnen.
+
+(2) Die Ablehnung des Antrags auf Abschluss eines Basiskontovertrags hat der Verpflichtete gegenüber dem Berechtigten unverzüglich, spätestens jedoch zehn Geschäftstage nach Eingang des Antrags des Berechtigten, zu erklären.
+
+(3) Der Verpflichtete hat den Berechtigten mit der Ablehnung des Antrags auf Abschluss eines Basiskontovertrags unentgeltlich in Textform sowie, soweit nicht anders vereinbart, in deutscher Sprache über die Gründe der Ablehnung zu unterrichten. Die Unterrichtung über die Gründe der Ablehnung unterbleibt, soweit hierdurch die öffentliche Sicherheit, insbesondere die gesetzlichen Regelungen zur Verhinderung der Nutzung des Finanzsystems zum Zweck der Geldwäsche oder der Terrorismusfinanzierung, gefährdet oder gegen ein Verbot der Informationsweitergabe verstoßen würde.
+
+(4) Der Verpflichtete hat den Berechtigten mit der Ablehnung des Antrags auf Abschluss eines Basiskontovertrags unentgeltlich in Textform sowie, soweit nicht anders vereinbart, in deutscher Sprache auch über das Verwaltungsverfahren nach § 48 sowie über das Recht des Berechtigten zu unterrichten, sich an die nach § 14 Absatz 1 des Unterlassungsklagengesetzes zuständige Verbraucherschlichtungsstelle zu wenden. Er hat dem Berechtigten zugleich die Kontaktdaten dieser Stelle mitzuteilen. Der Ablehnungserklärung durch den Verpflichteten ist das Antragsformular nach Anlage 4 beizufügen.

@@ -1,0 +1,28 @@
+---
+url: https://www.gesetze-im-internet.de/aufenthg_2004/__82.html
+title: "§ 82   Mitwirkung des Ausländers Gesetz über den Aufenthalt, die Erwerbstätigkeit und die Integration von Ausländern im Bundesgebiet 1) (Aufenthaltsgesetz - AufenthG)"
+fetched: 2026-11-18
+---
+
+(1) Der Ausländer ist verpflichtet, seine Belange und für ihn günstige Umstände, soweit sie nicht offenkundig oder bekannt sind, unter Angabe nachprüfbarer Umstände unverzüglich geltend zu machen und die erforderlichen Nachweise über seine persönlichen Verhältnisse, sonstige erforderliche Bescheinigungen und Erlaubnisse sowie sonstige erforderliche Nachweise, die er erbringen kann, unverzüglich beizubringen. Die mit dem Vollzug des Aufenthaltsrechts betrauten Behörden können ihm dafür eine angemessene Frist setzen. Die Ausländerbehörde setzt ihm eine solche Frist, wenn sie die Bearbeitung eines Antrags auf Erteilung eines Aufenthaltstitels wegen fehlender oder unvollständiger Angaben aussetzt, und benennt dabei die nachzuholenden Angaben. Nach Ablauf der Frist geltend gemachte Umstände und beigebrachte Nachweise können unberücksichtigt bleiben. Der Ausländer, der eine ICT-Karte nach § 19 beantragt hat, ist verpflichtet, der zuständigen Ausländerbehörde jede Änderung mitzuteilen, die während des Antragsverfahrens eintritt und die Auswirkungen auf die Voraussetzungen der Erteilung der ICT-Karte hat. Der Inhaber einer Blauen Karte EU ist während der ersten zwölf Monate seit der Aufnahme der Beschäftigung mit der Blauen Karte EU verpflichtet, der zuständigen Ausländerbehörde jeden Wechsel des Arbeitgebers und jede Änderung mitzuteilen, die Auswirkungen auf die Erfüllung der Voraussetzungen für die Erteilung einer Blauen Karte EU hat.
+
+(2) Absatz 1 findet im Widerspruchsverfahren entsprechende Anwendung.
+
+(3) Der Ausländer soll auf seine Pflichten nach Absatz 1 sowie seine wesentlichen Rechte und Pflichten nach diesem Gesetz, insbesondere die Verpflichtungen aus den §§ 44a, 48, 49 und 81 hingewiesen werden. Im Falle der Fristsetzung ist er auf die Folgen der Fristversäumung hinzuweisen.
+
+(3a) Wenn ein Ausländer einer Überprüfung nach Artikel 5 Absatz 1, 2 oder Artikel 7 Absatz 1 der Verordnung (EU) 2024/1356 zu unterziehen ist, hat die für die Überprüfung nach § 71 Absatz 3 Nummer 9 oder § 71 Absatz 4a zuständige Stelle eine vorläufige Gesundheitskontrolle nach Artikel 12 Absatz 1 Satz 1 und 2 der Verordnung (EU) 2024/1356 anzuordnen, um den Bedarf an einer sofortigen Gesundheitsversorgung oder Absonderung aus Gründen der öffentlichen Gesundheit zu ermitteln. Der Ausländer hat diese vorläufige Gesundheitskontrolle zu dulden. Werden im Rahmen der vorläufigen Gesundheitskontrolle körperliche Eingriffe vorgenommen, dürfen diese nur durch einen Arzt nach den Regeln der ärztlichen Kunst vorgenommen werden. Wird die vorläufige Gesundheitskontrolle von einer anderen als der anordnenden Stelle durchgeführt, wird das Ergebnis der vorläufigen Gesundheitskontrolle an die für die Überprüfung nach § 71 Absatz 3 Nummer 9 oder § 71 Absatz 4a zuständige Stelle übermittelt. Wird bei der vorläufigen Gesundheitskontrolle der Verdacht einer Erkrankung oder die Erkrankung an einer meldepflichtigen Krankheit nach § 6 des Infektionsschutzgesetzes oder eine Infektion mit einem Krankheitserreger nach § 7 des Infektionsschutzgesetzes festgestellt, ist diese Feststellung auch der für die Unterbringung zuständigen Behörde mitzuteilen, sofern eine Pflicht zur namentlichen Meldung nach den §§ 6 oder 7 des Infektionsschutzgesetzes besteht.
+
+(4) Soweit es zur Vorbereitung und Durchführung von Maßnahmen nach diesem Gesetz und nach ausländerrechtlichen Bestimmungen in anderen Gesetzen erforderlich ist, kann angeordnet werden, dass ein Ausländer bei der zuständigen Behörde sowie den Vertretungen oder ermächtigten Bediensteten des Staates, dessen Staatsangehörigkeit er vermutlich besitzt, persönlich erscheint und die zur Klärung seiner Identität erforderlichen Angaben macht sowie eine ärztliche Untersuchung zur Feststellung der Reisefähigkeit durchgeführt wird. Kommt der Ausländer einer Anordnung nach Satz 1 nicht nach, kann sie zwangsweise durchgesetzt werden. § 62 Absatz 1 und 2 sowie die §§ 63 und 65 Absatz 1 Satz 1 und 3 des Bundespolizeigesetzes finden entsprechende Anwendung.
+
+(5) Der Ausländer, für den nach diesem Gesetz, dem Asylgesetz oder den zur Durchführung dieser Gesetze erlassenen Bestimmungen ein Dokument ausgestellt werden soll, hat auf Verlangen 1.
+ ein aktuelles Lichtbild nach Maßgabe einer nach § 99 Abs. 1 Nr. 13 und 13a erlassenen Rechtsverordnung vorzulegen oder bei der Aufnahme eines solchen Lichtbildes mitzuwirken,
+
+ 2.
+ bei der Abnahme seiner Fingerabdrücke nach Maßgabe einer nach § 99 Absatz 1 Nummer 13 und 13a erlassenen Rechtsverordnung mitzuwirken und
+
+ 3.
+ eine Unterschrift nach Maßgabe einer nach § 99 Absatz 1 Nummer 13 und 13a erlassenen Rechtsverordnung zu leisten.
+
+ Das Lichtbild, die Fingerabdrücke und die Unterschrift dürfen in Dokumente nach Satz 1 eingebracht und von den zuständigen Behörden zur erneuten Ausstellung der Dokumente für einen Aufenthaltstitel nach § 4 Absatz 1 Satz 2 Nummer 2 bis 2c sowie zur Sicherung und zu einer späteren Feststellung der Identität verarbeitet werden.
+
+(6) Ausländer, die im Besitz einer Aufenthaltserlaubnis nach Kapitel 2 Abschnitt 3 oder 4 sind, sind verpflichtet, der zuständigen Ausländerbehörde innerhalb von zwei Wochen ab Kenntnis mitzuteilen, dass die Ausbildung oder die Erwerbstätigkeit, für die der Aufenthaltstitel erteilt wurde, vorzeitig beendet wurde. Der Ausländer ist bei Erteilung des Aufenthaltstitels über seine Verpflichtung nach Satz 1 zu unterrichten.
