@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { listLessons } from "@/lib/db";
 import { listDecks } from "@/lib/decks";
 import { allChapterIds } from "@/lib/laixe";
+import { activeLessonLevels, levelCatalogPath } from "@/lib/lesson-seo";
 import { LID_UPDATED, indexableSetIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { lessonPath } from "@/lib/slug";
@@ -36,6 +37,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/tieng-duc`, changeFrequency: "daily", priority: 0.9 },
+    ...activeLessonLevels().map(({ info }) => ({
+      url: SITE_URL + levelCatalogPath(info.level),
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    })),
     { url: `${SITE_URL}/vocab`, changeFrequency: "monthly", priority: 0.8 },
     ...listDecks().map((d) => ({ url: `${SITE_URL}/vocab/decks/${d.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
     { url: `${SITE_URL}/games`, changeFrequency: "monthly", priority: 0.7 },

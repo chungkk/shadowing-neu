@@ -5,10 +5,11 @@ import { ArrowRight, Languages } from "lucide-react";
 import { connection } from "next/server";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
-import { LEVELS, listChannels, listProgress } from "@/lib/db";
+import { LEVELS, learningPathStats, listChannels, listProgress } from "@/lib/db";
 import { fillLessonChannels } from "@/lib/channels";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
+import LearningPath from "@/components/LearningPath";
 import PageHeader from "@/components/PageHeader";
 import ContinueLearning from "@/components/ContinueLearning";
 import { percent } from "@/lib/progress";
@@ -17,6 +18,7 @@ import { pageMeta } from "@/lib/page-meta";
 import { LessonGridSkeleton } from "@/components/Skeleton";
 import TodayStrip from "@/components/TodayStrip";
 import { lessonPath } from "@/lib/slug";
+import { levelCatalogPath } from "@/lib/lesson-seo";
 import OwnLessons from "@/components/OwnLessons";
 
 // Link đã lọc (/tieng-duc?level=B1) vẫn là trang học tiếng Đức với Google
@@ -50,6 +52,8 @@ function lessonItems(user: User | null) {
       duration: l.duration ?? 0,
       dictation: l.dictation,
       percent: p ? percent(p) : 0,
+      dictCount: p ? Object.keys(p.dictDone).length : 0,
+      seenCount: p ? p.seen.length : 0,
       isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
       access: access(l.id),
       channel: l.channel,
@@ -109,7 +113,7 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
         <div className="nhan-line flex flex-wrap items-center gap-2 pb-2">
           <span className="text-sm font-semibold text-muted">Trình độ của bạn:</span>
           {levels.map((lv) => (
-            <Link key={lv} href={`/tieng-duc?level=${lv}#lessons`} className="chip hit-44">
+            <Link key={lv} href={levelCatalogPath(lv)} className="chip hit-44">
               {lv}
             </Link>
           ))}
@@ -119,28 +123,38 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
   );
 }
 
-/** Đầu trang: đã đăng nhập → bìa vở chào + dải "Hôm nay" (Học tiếp · Từ đến hạn · Chuỗi ngày); khách → bìa giới thiệu */
+/** Đầu trang: đã đăng nhập → bìa vở chào + dải "Hôm nay" + Lộ trình học; khách → bìa giới thiệu + Lộ trình học */
 async function Top() {
   await connection();
   const user = await getCurrentUser();
+  const items = lessonItems(user);
   if (user) {
+    const pathStats = learningPathStats(user.id);
     return (
       <>
         <div className="flex flex-col gap-4">
-          <PageHeader sec="de" icon={Languages} mascot title={`Hallo, ${user.name}!`} sub="Hôm nay học gì? Học tiếp bài dở, ôn từ đến hạn hoặc chọn bài mới." />
+          <PageHeader sec="de" icon={Languages} mascot title={`Hallo, ${user.name}!`} sub="Hôm nay học gì? Học tiếp bài dở, ôn từ đến hạn hoặc theo lộ trình bên dưới." />
           <TodayStrip userId={user.id} />
         </div>
+        <LearningPath
+          lessons={items}
+          loggedIn
+          sentencesToday={pathStats.sentencesToday}
+          reviewsToday={pathStats.reviewsToday}
+          weakWords={pathStats.weakWords}
+        />
         <ContinueLearning userId={user.id} />
         <OwnLessons userId={user.id} />
       </>
     );
   }
-  const items = lessonItems(null).filter((l) => l.access !== "locked");
-  const first = [...items].sort((a, b) => levelRank(a.level) - levelRank(b.level) || a.id - b.id)[0];
-  const levels = [...new Set(items.map((l) => l.level))].sort((a, b) => levelRank(a) - levelRank(b));
+  const open = items.filter((l) => l.access !== "locked");
+  const first = [...open].sort((a, b) => levelRank(a.level) - levelRank(b.level) || a.id - b.id)[0];
+  const levels = [...new Set(open.map((l) => l.level))].sort((a, b) => levelRank(a) - levelRank(b));
   return (
     <>
       <GuestHero first={first} levels={levels} />
+      <LearningPath lessons={items} loggedIn={false} />
       <RecentVideos />
     </>
   );

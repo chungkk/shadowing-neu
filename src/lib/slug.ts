@@ -5,6 +5,7 @@ const RESERVED = new Set([
   "admin", "api", "lesson", "login", "register", "settings", "vocab", "watch", "forgot-password", "privacy", "terms", "leaderboard",
   "sitemap", "robots", "favicon", "icon", "apple-icon", "_next", "lai-xe", "lid", "games", "stats", "sprechen", "leben-in-deutschland", "deutsch-shadowing", "about", "tieng-duc", "tin-tuc", "huong-dan",
   "fuehrerschein", "shadowing", "calendar", "deutsch-redewendung", "impressum", "refund", "support", "delete-account", "manifest", "download", "ckk", "apps", "brand", "deals", "praha",
+  "trinh-do", "a1", "a2", "b1", "b2", "c1", "c2",
 ]);
 
 /** "Wie geht's? – Lektion 1: Chào hỏi" → "wie-gehts-lektion-1-chao-hoi" */
