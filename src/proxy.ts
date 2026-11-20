@@ -54,8 +54,10 @@ export async function proxy(request: NextRequest) {
   if (OLD_HOSTS.has(host) && !pathname.startsWith("/api/")) {
     // Trang chủ cũ của ckk.pro là bài học tiếng Đức (trang chủ hiện là trang giới thiệu)
     if (host.endsWith("ckk.pro") && pathname === "/") return NextResponse.redirect(`https://${MAIN_HOST}/tieng-duc${search}`, 308);
-    const path = host.endsWith("ckk.pro") && OLD_LEGAL.test(pathname) ? `/deutsch-shadowing${pathname.replace(/\/$/, "")}` : pathname;
-    return NextResponse.redirect(`https://${MAIN_HOST}${path}${search}`, 308);
+    // Link pháp lý cũ ckk.pro/privacy|terms[/de] → 1 bước thẳng tới /privacy|terms?lang=vi|de (không qua /deutsch-shadowing)
+    const oldLegal = host.endsWith("ckk.pro") ? OLD_LEGAL.exec(pathname) : null;
+    if (oldLegal) return NextResponse.redirect(`https://${MAIN_HOST}/${oldLegal[1]}?lang=${oldLegal[2] ? "de" : "vi"}`, 308);
+    return NextResponse.redirect(`https://${MAIN_HOST}${pathname}${search}`, 308);
   }
 
   const legal = OLD_APP_LEGAL.exec(pathname);

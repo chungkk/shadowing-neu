@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 
 /** Google CMP (AdSense → Privacy & messaging) gắn hàm này lên window khi đã tải xong. */
 type GoogleFC = { callbackQueue?: Array<() => void>; showRevocationMessage?: () => void };
@@ -11,6 +12,7 @@ type GoogleFC = { callbackQueue?: Array<() => void>; showRevocationMessage?: () 
  * Nếu CMP chưa tải (bị chặn, chưa bật trong AdSense), dẫn tới mục quảng cáo trong trang Datenschutz.
  */
 export default function ConsentSettings({ label, className, icon }: { label: string; className?: string; /** icon đứng trước chữ (kiểu nút .btn của app) */ icon?: ReactNode }) {
+    const router = useRouter();
     const open = () => {
         const w = window as unknown as { googlefc?: GoogleFC };
         const fc = w.googlefc;
@@ -18,7 +20,7 @@ export default function ConsentSettings({ label, className, icon }: { label: str
             fc.callbackQueue = fc.callbackQueue || [];
             fc.callbackQueue.push(fc.showRevocationMessage);
         } else {
-            window.location.href = '/privacy#ads';
+            router.push('/privacy#ads');
         }
     };
     return (

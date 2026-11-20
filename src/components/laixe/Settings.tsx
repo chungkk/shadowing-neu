@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Car, Check, Trash2 } from "lucide-react";
 import { Row } from "@/components/SettingsForms";
-import { setLicenseClass, setLidState } from "@/app/(app)/lai-xe/actions";
+import { setLicenseClass } from "@/app/(app)/lai-xe/actions";
 import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 /** Chọn hạng bằng dạng danh sách thả xuống (trang Cài đặt) */
-export function ClassSelect({ groups, current, compact }: { groups: { title: string; classes: ClassOption[] }[]; current: string; compact?: boolean }) {
+function ClassSelect({ groups, current, compact }: { groups: { title: string; classes: ClassOption[] }[]; current: string; compact?: boolean }) {
   const [pending, start] = useTransition();
   return (
     <label className={`field w-full ${compact ? "sm:w-56" : "max-w-sm"}`}>
@@ -117,31 +117,6 @@ export function ClassPicker({ groups, current }: { groups: { title: string; clas
         </section>
       ))}
     </div>
-  );
-}
-
-/** Chọn bang (Leben in Deutschland) */
-export function StateSelect({ states, current }: { states: { code: string; name: string }[]; current: string }) {
-  const [pending, start] = useTransition();
-  return (
-    <label className="field w-full max-w-sm">
-      Bang
-      <select
-        value={current}
-        disabled={pending}
-        onChange={(e) => {
-          const v = e.target.value;
-          start(() => setLidState(v));
-        }}
-        className="min-h-11 w-full font-bold"
-      >
-        {states.map((s) => (
-          <option key={s.code} value={s.code}>
-            {s.name}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 

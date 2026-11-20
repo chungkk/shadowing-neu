@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { serializeJsonLd } from "../seo";
 import { SITE_URL } from "../site";
 
 // SEO dùng chung cho tab Lái xe và Leben in Deutschland: metadata trang + JSON-LD (BreadcrumbList, Quiz, FAQPage).
@@ -53,5 +54,5 @@ export const faqLd = (faq: { q: string; a: string }[]) => ({
 
 /** <script type="application/ld+json"> an toàn (chặn "</script>" trong chuỗi) */
 export function JsonLd({ data }: { data: object | object[] }) {
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />;
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />;
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, BarChart3, Info, LogIn, Star } from "lucide-react";
+import { ArrowLeft, BarChart3, LogIn, Star } from "lucide-react";
 import { LoginLink } from "../auth/LoginDialog";
 import Mascot from "../Mascot";
 
@@ -13,19 +13,6 @@ export function LidShell({ children }: { children: ReactNode }) {
     <main className="page" data-sec="lid">
       {children}
     </main>
-  );
-}
-
-/** Thanh đầu màn con như Lái xe: [←] Tiêu đề  [nút phải] */
-export function LidTopBar({ back, title, right }: { back: string; title: ReactNode; right?: ReactNode }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Link href={back} className="btn-icon" aria-label="Quay lại">
-        <ArrowLeft className="size-5" />
-      </Link>
-      <h1 className="page-title min-w-0 flex-1 truncate">{title}</h1>
-      {right}
-    </div>
   );
 }
 
@@ -61,17 +48,5 @@ export function ExamLoginGate({ next }: { next: string }) {
         <LogIn className="size-4" /> Đăng nhập / Đăng ký
       </LoginLink>
     </section>
-  );
-}
-
-/** Hộp nhắc nhỏ (điều kiện đậu…) */
-export function LidInfo({ children }: { children: ReactNode }) {
-  return (
-    <div className="alert alert-warn items-center">
-      <span className="icon-bubble tint-gold size-8 shrink-0" aria-hidden>
-        <Info className="size-4" />
-      </span>
-      <p className="font-bold">{children}</p>
-    </div>
   );
 }

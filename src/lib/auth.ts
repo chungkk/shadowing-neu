@@ -213,10 +213,6 @@ export async function adminSetPassword(userId: number, next: string): Promise<st
   return null;
 }
 
-export async function isAdmin(): Promise<boolean> {
-  return (await getCurrentUser())?.role === "admin";
-}
-
 /** Bắt buộc đăng nhập; chưa đăng nhập → chuyển tới /login rồi quay lại `next` */
 export async function requireUser(next = "/"): Promise<User> {
   const user = await getCurrentUser();

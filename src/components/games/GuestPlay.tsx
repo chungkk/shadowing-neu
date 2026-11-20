@@ -18,6 +18,26 @@ export function useGuestName() {
   return useLocalStorage("guest-name", "");
 }
 
+/** Dòng "Đang chơi với tên …" ở màn chọn bộ từ / phòng chơi (khách) */
+function GuestChip({ name, onEdit }: { name: string; onEdit: () => void }) {
+  return (
+    <div className="surface flex items-center gap-1.5 px-3 py-2 text-sm sm:gap-2">
+      <span className="icon-bubble tint-grape size-7 rounded-full max-sm:hidden">
+        <UserRound className="size-4" />
+      </span>
+      <span className="min-w-0 truncate">
+        Chơi với tên tạm <b>{name}</b>
+      </span>
+      <button className="btn btn-ghost btn-sm hit-44 text-link" title="Đổi tên" onClick={onEdit}>
+        <Pencil className="size-3.5" /> <span className="max-sm:sr-only">Đổi tên</span>
+      </button>
+      <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
+        Đăng nhập
+      </LoginLink>
+    </div>
+  );
+}
+
 /**
  * Bọc nút "Bắt đầu" của khách: chưa có tên tạm → hỏi tên rồi mới vào ván.
  * Trả về hàm gate(from) thay cho start(from) và phần tử popup để render.
@@ -48,24 +68,7 @@ export function useGuestGate(loggedIn: boolean, start: (from: number) => void) {
         }}
       />
     ) : null;
-  /** Dòng "Đang chơi với tên …" ở màn chọn bộ từ (khách) */
-  const chip =
-    !loggedIn && name ? (
-      <div className="surface flex items-center gap-1.5 px-3 py-2 text-sm sm:gap-2">
-        <span className="icon-bubble tint-grape size-7 rounded-full max-sm:hidden">
-          <UserRound className="size-4" />
-        </span>
-        <span className="min-w-0 truncate">
-          Chơi với tên tạm <b>{name}</b>
-        </span>
-        <button className="btn btn-ghost btn-sm hit-44 text-link" title="Đổi tên" onClick={() => setEditing(true)}>
-          <Pencil className="size-3.5" /> <span className="max-sm:sr-only">Đổi tên</span>
-        </button>
-        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
-          Đăng nhập
-        </LoginLink>
-      </div>
-    ) : null;
+  const chip = !loggedIn && name ? <GuestChip name={name} onEdit={() => setEditing(true)} /> : null;
   return { name, gate, dialog, chip };
 }
 
@@ -185,23 +188,7 @@ export function usePlayGuest(loggedIn: boolean) {
         }}
       />
     ) : null;
-  const chip =
-    !loggedIn && name ? (
-      <div className="surface flex items-center gap-1.5 px-3 py-2 text-sm sm:gap-2">
-        <span className="icon-bubble tint-grape size-7 rounded-full max-sm:hidden">
-          <UserRound className="size-4" />
-        </span>
-        <span className="min-w-0 truncate">
-          Chơi với tên tạm <b>{name}</b>
-        </span>
-        <button className="btn btn-ghost btn-sm hit-44 text-link" title="Đổi tên" onClick={() => setDialog("edit")}>
-          <Pencil className="size-3.5" /> <span className="max-sm:sr-only">Đổi tên</span>
-        </button>
-        <LoginLink href={`/login?next=${typeof location !== "undefined" ? location.pathname : "/games"}`} className="btn btn-sm ml-auto">
-          Đăng nhập
-        </LoginLink>
-      </div>
-    ) : null;
+  const chip = !loggedIn && name ? <GuestChip name={name} onEdit={() => setDialog("edit")} /> : null;
   return { name, ready, error, ask, dialog: view, chip };
 }
 

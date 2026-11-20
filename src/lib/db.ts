@@ -1562,40 +1562,6 @@ export function deleteProgress(userId: number, source: string) {
   conn().prepare("DELETE FROM progress WHERE user_id = ? AND source = ?").run(userId, source);
 }
 
-// ---- Chế độ Crazy: số lượt hét từng câu ----
-
-export type CrazyRep = { reps: number; passed: boolean };
-
-/** Số lượt từng câu của 1 bài: {"<idx>": {reps, passed}} */
-export function getCrazyReps(userId: number, source: string): Record<string, CrazyRep> {
-  const rows = conn().prepare("SELECT idx, reps, passed FROM crazy_reps WHERE user_id = ? AND source = ?").all(userId, source) as {
-    idx: number;
-    reps: number;
-    passed: number;
-  }[];
-  return Object.fromEntries(rows.map((r) => [r.idx, { reps: r.reps, passed: !!r.passed }]));
-}
-
-/** +1 lượt cho 1 câu (cộng trên server → học trên 2 máy cùng lúc không lệch số); đã đạt thì giữ đạt */
-export function addCrazyRep(userId: number, source: string, idx: number, passed: boolean): CrazyRep {
-  const r = conn()
-    .prepare(
-      `INSERT INTO crazy_reps (user_id, source, idx, reps, passed, updated_at) VALUES (?, ?, ?, 1, ?, ?)
-       ON CONFLICT(user_id, source, idx) DO UPDATE SET reps = reps + 1, passed = MAX(passed, excluded.passed), updated_at = excluded.updated_at
-       RETURNING reps, passed`,
-    )
-    .get(userId, source, idx, passed ? 1 : 0, Date.now()) as { reps: number; passed: number };
-  return { reps: r.reps, passed: !!r.passed };
-}
-
-/** Ôn tập Crazy Deutsch: số lượt hét mọi mục trong sổ từ vựng → {"<id vocab>": {reps, passed}} */
-export function getCrazyVocabReps(userId: number): Record<string, CrazyRep> {
-  const rows = conn()
-    .prepare("SELECT source, reps, passed FROM crazy_reps WHERE user_id = ? AND source LIKE '/vocab/%'")
-    .all(userId) as { source: string; reps: number; passed: number }[];
-  return Object.fromEntries(rows.map((r) => [r.source.slice("/vocab/".length), { reps: r.reps, passed: !!r.passed }]));
-}
-
 // ---- Điểm chính tả ----
 
 export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học) — có thể âm

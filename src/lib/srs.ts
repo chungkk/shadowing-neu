@@ -21,18 +21,6 @@ export function stageInfo(stage: number): { label: string; color: string } {
 export type Grade = "again" | "hard" | "good" | "easy";
 export const GRADES: readonly Grade[] = ["again", "hard", "good", "easy"];
 
-/** Tự đánh giá (Crazy Deutsch): nhớ 0 không nhớ · 1 một phần · 2 nhớ sau khi nghĩ · 3 nhớ ngay */
-export type RecallLevel = 0 | 1 | 2 | 3;
-/** Tự đánh giá: nói 0 không nói được / sai nhiều · 1 ngập ngừng · 2 trôi chảy, khá chính xác */
-export type SpeakLevel = 0 | 1 | 2;
-
-/** Gộp 2 chiều tự đánh giá thành 1 kết quả để xếp lịch */
-export function gradeOf(recall: RecallLevel, speaking: SpeakLevel): Grade {
-  if (recall === 0 || speaking === 0) return "again";
-  if (recall === 1 || speaking === 1) return "hard";
-  return recall === 3 && speaking === 2 ? "easy" : "good";
-}
-
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 /** Mục mới mà lần đầu chưa nhớ / còn khó → ôn lại sau vài giờ (trong ngày), không đợi tới mai */
