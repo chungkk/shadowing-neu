@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/**" }],
   },
   experimental: {
+    agentUpgrade: "security",
     // Phụ đề SRT của video dài có thể vượt giới hạn mặc định 1MB
     serverActions: { bodySizeLimit: "5mb" },
     // Root layout nằm trong route group (app) → trang 404 cho đường dẫn lạ ở app/global-not-found.tsx
