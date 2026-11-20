@@ -265,6 +265,7 @@ export default function ShadowPlayer({
   // Điện thoại đang gõ chính tả (bàn phím mở) → thu video về 0 (vẫn phát tiếng) để nhường chỗ cho ô gõ
   const [typing, setTyping] = useState(false);
   const [picked, setPicked] = useState<{ word: string; context: string; marks?: string[] } | null>(null); // bảng tra từ đang mở
+  const [autoSave, setAutoSave] = useLocalStorage<boolean>("vocab-auto-save", true); // tự động đưa từ bấm tra vào sổ ôn
   const [saved, setSaved] = useState<Map<string, number>>(new Map()); // từ đã lưu (chữ thường) → id trong sổ từ vựng
   const [stars, setStars] = useState<Map<string, number>>(new Map()); // câu ⭐ (chữ thường) → id
   const [starFilter, setStarFilter] = useState(false); // Shadowing: chỉ hiện các câu ⭐
@@ -600,7 +601,7 @@ export default function ShadowPlayer({
     };
   }, [loggedIn]);
 
-  const saveWord = async (word: string, context: string, meaning: string) => {
+  const saveWord = async (word: string, context: string, meaning: string, opts?: { silent?: boolean }) => {
     try {
       const r = await clientApi<{ item?: VocabItem; vocab: VocabItem[] }>("/vocab", {
         method: "POST",
@@ -611,7 +612,7 @@ export default function ShadowPlayer({
       // Điền sẵn nghĩa AI vừa giải thích nếu từ chưa có nghĩa
       if (item && !item.meaning && meaning) await clientApi(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
     } catch (e) {
-      alert(`Không lưu được: ${(e as Error).message}`);
+      if (!opts?.silent) alert(`Không lưu được: ${(e as Error).message}`);
     }
   };
   /** Bỏ từ khỏi sổ từ vựng (bỏ ngay trên màn hình, xoá trên server sau) */
@@ -1520,7 +1521,9 @@ export default function ShadowPlayer({
         marks={picked?.marks}
         loggedIn={loggedIn}
         saved={!!picked && saved.has(picked.word.toLowerCase())}
-        onSave={(meaning) => (picked ? saveWord(picked.word, picked.context, meaning) : Promise.resolve())}
+        autoSave={autoSave}
+        onAutoSaveChange={setAutoSave}
+        onSave={(meaning, opts) => (picked ? saveWord(picked.word, picked.context, meaning, opts) : Promise.resolve())}
         onRemove={() => (picked ? unsave(picked.word) : Promise.resolve())}
         onClose={closePicked}
       />

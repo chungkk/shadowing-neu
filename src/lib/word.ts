@@ -44,13 +44,15 @@ export async function translateWord(word: string, sentence: string, lang: WordLa
   return { word, meaning: m };
 }
 
-/** Chi tiết cho popup: dạng từ điển, loại từ, ghi chú ngữ pháp, giải thích ngắn, ví dụ đời thường */
+/** Chi tiết cho popup: dạng từ điển, phiên âm IPA, loại từ, ghi chú ngữ pháp, đồng nghĩa, giải thích ngắn, ví dụ đời thường */
 export type WordDetail = {
   lemma: string; // "die Aussprache", "sich verabschieden"
+  ipa: string; // "/ˈaʊ̯sˌʃpʁaːxə/" ("" nếu là cụm dài)
   pos: string; // loại từ (theo ngôn ngữ giao diện)
   grammar: string; // "Plural: die Aussprachen" / "Infinitiv: verabschieden, Partizip II: verabschiedet"
   explanation: string; // 1–2 câu
   examples: { de: string; tr: string }[]; // từ cần học được bọc **…**; tr = "" khi giao diện tiếng Đức
+  synonyms: { word: string; note: string }[]; // từ đồng nghĩa thông dụng trong tiếng Đức + sắc thái ngắn
   // Các nghĩa phổ biến của từ gốc (kiểu từ điển): nghĩa · cấu trúc dùng · ví dụ. current = nghĩa trong câu đang học
   senses: { meaning: string; use: string; de: string; tr: string; current: boolean }[];
   forms: { form: string; note: string }[]; // các dạng quan trọng: "stellt an" — chia ngôi er/sie/es
@@ -63,9 +65,10 @@ const detailPrompt = (lang: WordLang) => {
   const L = lang === "vi" ? "Vietnamese (tiếng Việt)" : lang === "en" ? "English" : "simple German (A2)";
   return (
     `You help learners of German. Input JSON {"word", "sentence"}: a word and the sentence it appears in. ` +
-    `Reply ONLY with JSON {"lemma", "pos", "grammar", "explanation", "examples", "senses", "forms", "tip", "cues", "idiom"}.\n` +
+    `Reply ONLY with JSON {"lemma", "ipa", "pos", "grammar", "explanation", "examples", "synonyms", "senses", "forms", "tip", "cues", "idiom"}.\n` +
     `OUTPUT LANGUAGE for "pos", "explanation", "tip", every "meaning", "note" and "translation": ${L}. Never use any other language there.\n` +
     `- lemma: German dictionary form (nouns with article, e.g. "die Aussprache"; reflexive/separable verbs as used here, e.g. "sich verabschieden", "anfangen").\n` +
+    `- ipa: standard German IPA pronunciation of the base word in slashes (e.g. "/ˈapvɛkslʊŋsˌʁaɪ̯ç/", "/ˈaʊ̯sˌʃpʁaːxə/"; without article for nouns), or "" for multi-word idioms.\n` +
     `- pos: part of speech (in ${L}).\n` +
     `- grammar: one short line of key German forms (nouns: plural; verbs: ALWAYS start with the infinitive, then Präteritum, Partizip II, auxiliary — e.g. "Infinitiv: betrachten, Präteritum: betrachtete, Partizip II: betrachtet, Hilfsverb: haben"; adjectives: comparative), or "".\n` +
     `- explanation: 1–2 short sentences written in ${L}: what the word means in this sentence and how it is typically used. Accurate, plain everyday language.\n` +
@@ -74,6 +77,7 @@ const detailPrompt = (lang: WordLang) => {
     (lang === "de"
       ? `Each item: {"de": "<German sentence>"}.`
       : `Each item: {"de": "<German sentence>", "translation": "<natural translation in ${L}>"}.`) +
+    `\n- synonyms: 0–4 common everyday German synonyms (matching the meaning in this sentence), each {"word": "<German synonym, nouns with article>", "note": "<very short nuance or meaning in ${L}, 1–4 words>"}. [] if no close synonym.` +
     `\n- senses: the 1–5 most common meanings of the lemma in everyday German, like a good learner's dictionary — the meaning used in this sentence FIRST with "current": true, the others "current": false. ` +
     `Each item: {"meaning": "<short meaning in ${L}, 1–5 words>", "use": "<typical German pattern with this meaning, e.g. \"jemanden anstellen\", \"sich anstellen\", \"etwas anstellen\">", ` +
     `"de": "<short natural German example, target word form in **double asterisks**>"` +
@@ -105,12 +109,16 @@ export async function wordDetail(word: string, sentence: string, lang: WordLang)
   if (cached) {
     try {
       const d = JSON.parse(cached) as WordDetail;
-      if (Array.isArray(d.senses) && Array.isArray(d.forms)) return withInfinitive(d); // bản lưu cũ thiếu phần mới → hỏi AI lại 1 lần
+      // Bản lưu cũ thiếu trường mới (senses / forms / ipa / synonyms) → hỏi AI lại 1 lần
+      if (Array.isArray(d.senses) && Array.isArray(d.forms) && typeof d.ipa === "string" && Array.isArray(d.synonyms)) {
+        return withInfinitive(d);
+      }
     } catch {}
   }
   const { provider, ...r } = await chatJson(detailPrompt(lang), { word, sentence }, isDetail, { prefer: "large" });
   const d: WordDetail = {
     lemma: r.lemma.trim(),
+    ipa: txt((r as Record<string, unknown>).ipa).slice(0, 120),
     pos: r.pos.trim(),
     grammar: typeof r.grammar === "string" ? r.grammar.trim() : "",
     explanation: r.explanation.trim(),
@@ -140,11 +148,15 @@ function cleanSenses(raw: unknown, lang: WordLang): WordDetail["senses"] {
 
 const txt = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
-/** Các phần thêm (nghĩa · dạng · mẹo nhớ · từ đi kèm · câu hay gặp) — thiếu / sai kiểu thì bỏ qua phần đó */
-function cleanExtras(r: Record<string, unknown>, lang: WordLang): Pick<WordDetail, "senses" | "forms" | "tip" | "cues" | "idiom"> {
+/** Các phần thêm (đồng nghĩa · nghĩa · dạng · mẹo nhớ · từ đi kèm · câu hay gặp) — thiếu / sai kiểu thì bỏ qua phần đó */
+function cleanExtras(r: Record<string, unknown>, lang: WordLang): Pick<WordDetail, "synonyms" | "senses" | "forms" | "tip" | "cues" | "idiom"> {
   const list = (v: unknown) => (Array.isArray(v) ? (v as Record<string, unknown>[]).filter((x) => x && typeof x === "object") : []);
   const idiom = r.idiom as Record<string, unknown> | null;
   return {
+    synonyms: list(r.synonyms)
+      .map((o) => ({ word: txt(o.word), note: txt(o.note) }))
+      .filter((s) => s.word)
+      .slice(0, 4),
     senses: cleanSenses(r.senses, lang),
     forms: list(r.forms)
       .map((o) => ({ form: txt(o.form), note: txt(o.note) }))

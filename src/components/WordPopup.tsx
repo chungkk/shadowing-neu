@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import Link from "next/link";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import { usePathname } from "next/navigation";
-import { Bookmark, BookmarkMinus, Loader2, Lock, Play, Volume2, X, Lightbulb } from "lucide-react";
+import { Bookmark, BookmarkMinus, ExternalLink, Loader2, Lock, Play, Volume2, X, Lightbulb } from "lucide-react";
 import { locatePhrase } from "@/lib/phrase-match";
 import { clientApi } from "@/lib/client-api";
 import { speakGerman, stopSpeaking } from "@/lib/speak";
@@ -14,16 +15,20 @@ type WordInfo = { word: string; meaning: string };
 /** Tab Ví dụ / Giải thích (POST /word { detail: true }); từ cần học trong ví dụ được bọc **…** */
 type WordDetail = {
   lemma: string;
+  ipa?: string;
   pos: string;
   grammar: string;
   explanation: string;
   examples: { de: string; tr: string }[];
+  synonyms?: { word: string; note: string }[];
   senses?: { meaning: string; use: string; de: string; tr: string; current: boolean }[];
   forms?: { form: string; note: string }[];
   tip?: string;
   cues?: { cue: string; meaning: string }[];
   idiom?: { de: string; note: string } | null;
 };
+
+type SavedExample = { context: string; sourceUrl: string | null; sourceTitle: string };
 
 const LANG = "vi"; // giao diện web chỉ có tiếng Việt
 const UNAVAILABLE = "Chưa có dữ liệu cho từ này, thử lại sau.";
@@ -93,8 +98,12 @@ export default function WordPopup({
   word,
   context,
   marks,
+  initialMeaning,
+  extraExamples,
   loggedIn,
   saved,
+  autoSave = false,
+  onAutoSaveChange,
   onSave,
   onRemove,
   onClose,
@@ -102,9 +111,13 @@ export default function WordPopup({
   word: string | null;
   context: string;
   marks?: string[]; // mở từ cụm từ: các phần của cụm trong câu để tô sáng
+  initialMeaning?: string; // nghĩa đã lưu sẵn (khi mở từ Sổ từ vựng) → hiện ngay không phải chờ
+  extraExamples?: SavedExample[]; // các câu khác chứa từ này đã lưu từ nhiều bài học
   loggedIn: boolean;
   saved: boolean;
-  onSave: (meaning: string) => Promise<void>;
+  autoSave?: boolean; // tự động đưa từ bấm tra vào sổ từ vựng + hàng đợi ôn
+  onAutoSaveChange?: (next: boolean) => void;
+  onSave: (meaning: string, opts?: { silent?: boolean }) => Promise<void>;
   onRemove: () => Promise<void>;
   onClose: () => void;
 }) {
@@ -113,11 +126,30 @@ export default function WordPopup({
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"examples" | "explain">("examples");
   const [speaking, setSpeaking] = useState<string | null>(null);
+  const [autoSavedKey, setAutoSavedKey] = useState<string | null>(null);
+  const autoSavedRef = useRef<string | null>(null);
+  const dismissedRef = useRef<string | null>(null);
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
 
   const key = `${LANG}|${word}|${context}`;
   const enabled = !!word && loggedIn;
-  const meaning = useWordApi(meanings, key, enabled, { word, context, lang: LANG }, attempt, isMeaning);
+  const meaning = useWordApi(meanings, key, enabled && !initialMeaning, { word, context, lang: LANG }, attempt, isMeaning);
   const detail = useWordApi(details, key, enabled, { word, context, lang: LANG, detail: true }, attempt, isDetail);
+  const resolvedMeaning = initialMeaning || meaning.data?.meaning;
+
+  // Tự động lưu từ vừa tra vào sổ từ & hàng đợi ôn (nếu bật autoSave, chưa bấm Bỏ lưu trong lần mở này)
+  useEffect(() => {
+    if (!enabled || !autoSave || !resolvedMeaning) return;
+    if (autoSavedRef.current === key || dismissedRef.current === key) return;
+    autoSavedRef.current = key;
+    const wasNew = !saved;
+    void onSaveRef.current(resolvedMeaning, { silent: true }).then(() => {
+      if (wasNew) setAutoSavedKey(key);
+    });
+  }, [enabled, autoSave, resolvedMeaning, key, saved]);
 
   const speak = (text: string, slow = false) => {
     setSpeaking(text);
@@ -163,18 +195,25 @@ export default function WordPopup({
 
   if (!word) return null;
 
-  /** Chưa lưu → lưu (kèm nghĩa AI vừa giải thích); đã lưu → bỏ lưu */
+  /** Chưa lưu → lưu (kèm nghĩa AI vừa giải thích); đã lưu → bỏ lưu (và không tự lưu lại trong lần mở này) */
   const save = async () => {
     setSaving(true);
     try {
-      if (saved) await onRemove();
-      else await onSave(meaning.data?.meaning ?? "");
+      if (saved) {
+        dismissedRef.current = key;
+        setAutoSavedKey(null);
+        await onRemove();
+      } else {
+        dismissedRef.current = null;
+        await onSave(resolvedMeaning ?? "");
+      }
     } finally {
       setSaving(false);
     }
   };
   const retry = () => setAttempt((a) => a + 1);
   const d = detail.data;
+  const justAutoSaved = saved && autoSavedKey === key;
 
   return (
     <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && close()}>
@@ -186,13 +225,16 @@ export default function WordPopup({
         aria-label={word}
         data-sec="de" className="dialog word-sheet max-w-[640px] gap-0 overflow-hidden p-0 outline-none sm:p-0 md:max-h-[80vh]"
       >
-        {/* Từ + loa + đóng, nghĩa ngay bên dưới */}
+        {/* Từ + phiên âm IPA + loa + đóng, nghĩa ngay bên dưới */}
         <div className="flex flex-col gap-1.5 border-b border-line px-5 pt-2 pb-3.5 md:pt-5">
           <div className="flex items-center gap-2">
-            <h2 className="min-w-0 flex-1 truncate font-display text-2xl leading-tight font-extrabold tracking-tight sm:text-[28px]">{word}</h2>
+            <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+              <h2 className="truncate font-display text-2xl leading-tight font-extrabold tracking-tight sm:text-[28px]">{word}</h2>
+              {!!d?.ipa && <span className="font-mono text-sm font-medium text-muted select-text">{d.ipa}</span>}
+            </div>
             {saved && (
-              <span className="badge badge-ok">
-                <Bookmark className="size-3 fill-current" /> Đã lưu
+              <span className="badge badge-ok shrink-0">
+                <Bookmark className="size-3 fill-current" /> {justAutoSaved ? "Đã tự lưu" : "Đã lưu"}
               </span>
             )}
             <button
@@ -208,8 +250,8 @@ export default function WordPopup({
             </button>
           </div>
           {loggedIn &&
-            (meaning.data ? (
-              <p className="text-lg leading-6 font-semibold select-text">{meaning.data.meaning}</p>
+            (resolvedMeaning ? (
+              <p className="text-lg leading-6 font-semibold select-text">{resolvedMeaning}</p>
             ) : meaning.error ? (
               <ErrorRow text={meaning.error} onRetry={retry} />
             ) : (
@@ -253,6 +295,27 @@ export default function WordPopup({
                   {!!context && (
                     <ExampleRow label="Trong video" de={markWord(context, word, marks)} playing={speaking === context} {...speakProps(context)} />
                   )}
+                  {/* Các câu khác đã gặp từ này trong nhiều bài học */}
+                  {!!extraExamples?.length &&
+                    extraExamples.map((ex, i) => (
+                      <div key={i} className="flex flex-col gap-1">
+                        <ExampleRow
+                          label={ex.sourceTitle || "Trong bài học khác"}
+                          de={markWord(ex.context, word)}
+                          playing={speaking === ex.context}
+                          {...speakProps(ex.context)}
+                        />
+                        {ex.sourceUrl && (
+                          <Link
+                            href={ex.sourceUrl}
+                            onClick={close}
+                            className="ml-10 inline-flex items-center gap-1 self-start text-xs font-bold text-link hover:underline"
+                          >
+                            <ExternalLink className="size-3" /> Mở bài học
+                          </Link>
+                        )}
+                      </div>
+                    ))}
                   {d ? (
                     d.examples.map((ex, i) => <ExampleRow key={i} de={ex.de} tr={ex.tr} playing={speaking === plain(ex.de)} {...speakProps(plain(ex.de))} />)
                   ) : detail.error ? (
@@ -263,11 +326,31 @@ export default function WordPopup({
                 </>
               ) : d ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-baseline gap-2">
                     <span className="font-display text-lg font-extrabold">{d.lemma}</span>
+                    {!!d.ipa && <span className="font-mono text-sm text-muted select-text">{d.ipa}</span>}
                     {!!d.pos && <span className="badge">{d.pos}</span>}
                   </div>
                   {!!d.grammar && <p className="surface p-2.5 text-sm leading-5 font-semibold">{d.grammar}</p>}
+                  {/* Từ đồng nghĩa (bấm để nghe phát âm) */}
+                  {!!d.synonyms?.length && (
+                    <Section title="Từ đồng nghĩa">
+                      <div className="flex flex-wrap gap-2">
+                        {d.synonyms.map((s, i) => (
+                          <button
+                            key={i}
+                            {...speakProps(s.word)}
+                            title="Bấm để nghe phát âm · giữ để nghe chậm"
+                            className={`surface press inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-left text-sm transition ${speaking === s.word ? "border-accent bg-accent-soft" : "hover:border-line-strong"}`}
+                          >
+                            <Volume2 className="size-3.5 shrink-0 text-accent-text" />
+                            <b className="font-bold">{s.word}</b>
+                            {!!s.note && <span className="text-xs text-muted">· {s.note}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </Section>
+                  )}
                   {/* Các nghĩa phổ biến của từ gốc (kiểu từ điển): nghĩa · cấu trúc dùng · ví dụ */}
                   {!!d.senses?.length && (
                     <Section title="Các nghĩa thường gặp">
@@ -336,8 +419,19 @@ export default function WordPopup({
               )}
             </div>
 
-            {/* Lưu từ: chưa lưu → nút chính; đã lưu → Bỏ lưu (nút trung tính) */}
-            <div className="shrink-0 border-t border-line px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            {/* Lưu từ + công tắc tự lưu vào hàng đợi ôn (khi mở trong bài học) */}
+            <div className="flex shrink-0 flex-col gap-2.5 border-t border-line px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              {onAutoSaveChange && (
+                <label className="check cursor-pointer justify-between text-xs font-semibold text-muted">
+                  <span>Tự lưu từ đã tra vào sổ ôn tập</span>
+                  <input
+                    type="checkbox"
+                    checked={autoSave}
+                    onChange={(e) => onAutoSaveChange(e.target.checked)}
+                    className="size-4 accent-accent"
+                  />
+                </label>
+              )}
               <button onClick={save} disabled={saving} className={`btn btn-lg btn-block ${saved ? "" : "btn-primary"}`}>
                 {saving ? (
                   <Loader2 className="size-[17px] animate-spin" />
@@ -346,7 +440,7 @@ export default function WordPopup({
                 ) : (
                   <Bookmark className="size-[17px] fill-current" />
                 )}
-                {saved ? "Bỏ lưu" : "Lưu vào sổ từ vựng"}
+                {saved ? "Bỏ lưu khỏi sổ ôn" : "Lưu vào sổ từ vựng"}
               </button>
             </div>
           </>
