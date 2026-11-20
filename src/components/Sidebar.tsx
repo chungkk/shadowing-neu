@@ -28,7 +28,7 @@ const ITEMS: Item[] = [
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
-  { href: "/games", label: "Game", icon: Gamepad2 },
+  { href: "/games", label: "Trò chơi", short: "Game", icon: Gamepad2 },
 ];
 const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers }; // sổ từ; có từ đến hạn → vào thẳng buổi ôn
 // Các trang con của phần Tiếng Đức (hàng tab nhỏ dưới thanh trên cùng — DeutschSubnav)
@@ -38,15 +38,19 @@ const DEUTSCH: Item[] = [
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
-// Thanh dưới đáy (tối đa 6 ô): khách thấy đủ các phần; đã đăng nhập thì Ôn tập (có chấm đỏ số từ đến hạn) thay Trang chủ
-// — trang chủ chỉ là trang giới thiệu, logo ở thanh trên cùng vẫn dẫn về đó.
+// Thanh dưới đáy điện thoại (tối đa 4–5 ô để chạm một tay thoải mái):
+// khách thấy các khu chính; đã đăng nhập thì Ôn tập (có chấm đỏ số từ đến hạn) thay Trang chủ (logo ở trên vẫn về "/").
 // Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
-// Tab Game đã ẩn khỏi thanh dưới đáy (và thanh trên cùng) — trang /games vẫn mở được, còn trong menu avatar
 const GUEST_BAR: Item[] = ITEMS.filter((it) => it.href !== "/games");
 const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3]];
 const USER_ITEMS: Item[] = [
-  { href: "/stats", label: "Thành tích", icon: BarChart3 },
+  { href: "/stats", label: "Tiến độ & thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
+];
+const LEARN_QUICK: Item[] = [
+  { href: "/vocab/notebook", label: "Sổ từ & ôn tập", icon: Layers },
+  { href: "/vocab", label: "Kho từ vựng", icon: BookMarked },
+  { href: "/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
 ];
 const ADMIN_ITEMS: Item[] = [
   { href: "/admin", label: "Quản lý bài học", short: "Admin", icon: ListVideo },
@@ -133,8 +137,8 @@ export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-// Máy tính: logo đã là nút về trang chủ → thanh trên cùng bắt đầu từ "Tiếng Đức"; ẩn tab Game (vẫn còn ở thanh dưới đáy điện thoại)
-const HEADER_ITEMS = ITEMS.slice(1).filter((it) => it.href !== "/games");
+// Máy tính: logo đã là nút về trang chủ → thanh trên cùng gồm 4 khu chính (Tiếng Đức · Lái xe · Leben in DE · Trò chơi)
+const HEADER_ITEMS = ITEMS.slice(1);
 
 /** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy). Ôn tập là nút riêng ở góc phải (ReviewPill) */
 export function HeaderNav() {
@@ -210,7 +214,7 @@ function useGreeting() {
 export function UserDropdown({ user }: { user: NavUser }) {
   const admin = user.role === "admin";
   const greeting = useGreeting();
-  const current = useCurrent([...ITEMS, REVIEW, ...USER_ITEMS, ...(admin ? ADMIN_ITEMS : [])]);
+  const current = useCurrent([...ITEMS, ...LEARN_QUICK, ...USER_ITEMS, ...(admin ? ADMIN_ITEMS : [])]);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -294,7 +298,11 @@ export function UserDropdown({ user }: { user: NavUser }) {
                   <p className={`badge mt-1 ${admin ? "badge-gold" : "badge-accent"}`}>{admin ? "Quản trị viên" : "Học viên"}</p>
                 </div>
               </div>
-              {[...ITEMS, REVIEW, ...USER_ITEMS].map(item)}
+              <p className="menu-label">Cá nhân</p>
+              {USER_ITEMS.map(item)}
+              <div className="menu-sep" />
+              <p className="menu-label">Học tập & ôn tập</p>
+              {LEARN_QUICK.map(item)}
               {admin && (
                 <>
                   <div className="menu-sep" />
@@ -319,15 +327,16 @@ export function UserDropdown({ user }: { user: NavUser }) {
   );
 }
 
-/** Trang thuộc phần Tiếng Đức có hàng tab con (không hiện ở màn học /watch, /<slug> — màn đó cần chỗ cho trình phát) */
-const showDeutschSubnav = (p: string) => p === "/tieng-duc" || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
+/** Trang thuộc phần Tiếng Đức có hàng tab con (không hiện ở màn học /watch, /tieng-duc/<slug> — màn đó cần chỗ cho trình phát) */
+const showDeutschSubnav = (p: string) =>
+  p === "/tieng-duc" || p.startsWith("/tieng-duc/trinh-do/") || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
 
 /** Hàng tab con của phần Tiếng Đức: Bài học · Từ vựng · Ôn tập · Xếp hạng */
 export function DeutschSubnav() {
   const pathname = usePathname();
-  const current = DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort(
-    (a, b) => b.href.length - a.href.length,
-  )[0]?.href;
+  const current = pathname.startsWith("/tieng-duc/trinh-do/")
+    ? "/tieng-duc"
+    : DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   if (!showDeutschSubnav(pathname)) return null;
   return (
     <nav aria-label="Tiếng Đức" className="scroll-row mx-auto flex w-full max-w-6xl gap-2 px-4 pt-4 md:px-6 md:pt-5">
