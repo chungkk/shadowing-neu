@@ -3,6 +3,7 @@
 @import "./styles/deutsch.css";
 @import "./styles/exams.css";
 @import "./styles/account.css";
+@import "./styles/noel.css";
 /* Bỏ qua dữ liệu JSON lớn khi Tailwind quét tên class */
 @source not "../../../content";
 @source not "../../content";

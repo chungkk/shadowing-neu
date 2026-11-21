@@ -12,7 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu, { HeaderNavWithUser, SidebarWithUser } from "@/components/UserMenu";
 import { siteJsonLd, serializeJsonLd } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { SEASONAL_THEME, THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 // Plus Jakarta Sans: tối giản, sắc nét, hỗ trợ đầy đủ dấu tiếng Việt và ký tự Đức (ä, ö, ü, ß)
@@ -70,12 +70,17 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f8fafc",
+  themeColor: THEME_COLOR.light,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${body.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html
+      lang="vi"
+      data-season={SEASONAL_THEME ?? undefined}
+      className={`${body.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <link rel="prefetch" href="/mascot-loading.svg" as="image" />

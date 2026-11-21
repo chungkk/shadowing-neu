@@ -46,7 +46,7 @@ async function CurrentYear() {
 /** Chân trang tối giản: bề mặt trung tính, đồng bộ sáng & tối, giữ đầy đủ liên kết pháp lý Đức */
 export default function SiteFooter() {
   return (
-    <footer className="mt-14 border-t border-line bg-card dark:bg-sidebar">
+    <footer className="site-footer relative mt-14 border-t border-line bg-card dark:bg-sidebar">
       <div className="share-gutter">
         <div className="footer-inner mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pt-10 pb-8 md:px-6 md:pt-12">
           <div className="footer-cols grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[1.5fr_1fr_1fr]">

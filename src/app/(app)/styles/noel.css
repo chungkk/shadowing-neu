@@ -1,0 +1,228 @@
+/* Seasonal CSS: Noel — Đỏ berry ấm, vàng champagne & xanh thông trên nền tuyết ấm / đêm đông.
+   Bật/tắt tại SEASONAL_THEME trong src/lib/theme.ts (data-season="noel" trên <html>).
+   Lưu ý: .theme-fahrschule tự định nghĩa token riêng nên được bảo toàn hoàn toàn. */
+
+:root[data-season="noel"] {
+  /* Bề mặt & mực: kem tuyết ấm */
+  --background: #faf7f2;
+  --sidebar: #fffdf9;
+  --foreground: #1c1917;
+  --ink: #d6c9b8;
+  --ink-strong: #1c1917;
+  --line: #eae2d6;
+  --line-strong: #9c8f80;
+  --card: #ffffff;
+  --card-2: #f4efe6;
+  --border: #d6c9b8;
+  --muted: #57534e;
+  --stripe: #ffffff;
+  --shadow-color: 28 25 23;
+
+  /* Thương hiệu & khu Tiếng Đức: đỏ berry ấm (tách biệt với --red báo sai) */
+  --accent: #b42334;
+  --accent-dark: #961b2a;
+  --accent-text: #9f1d2c;
+  --accent-soft: #fdf2f3;
+  --link: #9f1d2c;
+  --link-soft: #fdf2f3;
+  --on-link: #ffffff;
+
+  /* Khu Lái xe & điểm nhấn ấm: vàng champagne */
+  --gold: #d97706;
+  --gold-dark: #b45309;
+  --gold-soft: #fef6e4;
+  --amber: #854d0e;
+  --amber-dark: #713f12;
+
+  /* Khu Leben in Deutschland & ghi âm: xanh thông trầm (tách biệt với --ok báo đúng) */
+  --coral: #1e6b52;
+  --coral-dark: #16533f;
+  --coral-soft: #ecf7f2;
+  --coral-text: #16533f;
+
+  /* Tím mận mùa đông: nhãn trình độ C */
+  --grape: #6d28d9;
+  --grape-dark: #5b21b6;
+  --grape-soft: #f5f3ff;
+  --grape-text: #5b21b6;
+
+  /* Trạng thái đúng / sai giữ nguyên sắc độ chuẩn */
+  --ok: #16a34a;
+  --ok-dark: #15803d;
+  --ok-soft: #f0fdf4;
+  --ok-text: #15803d;
+  --red: #dc2626;
+  --red-dark: #b91c1c;
+  --red-soft: #fef2f2;
+  --red-400: #b91c1c;
+  --red-300: #dc2626;
+
+  /* Kim cương & bước transcript hài hòa mùa đông */
+  --gem: #0e7490;
+  --gem-dark: #155e75;
+  --gem-soft: #ecfeff;
+  --phrase: #0e7490;
+  --aqua: #fce7ea;
+  --candy: #e6f4ee;
+  --candy-dark: #86c7ae;
+  --sun: #fef3c7;
+  --leaf: #dcfce7;
+}
+
+:root[data-season="noel"][data-theme="dark"] {
+  /* Đêm đông xanh đen sâu, chữ ấm rõ nét */
+  --background: #0c1117;
+  --sidebar: #0f161e;
+  --foreground: #f5f2eb;
+  --ink: #2c3a4a;
+  --ink-strong: #f5f2eb;
+  --line: #212e3c;
+  --line-strong: #4d6075;
+  --card: #131b24;
+  --card-2: #1a2430;
+  --border: #2c3b4c;
+  --muted: #a3b1c2;
+  --stripe: #131b24;
+  --shadow-color: 0 0 0;
+
+  /* Đỏ berry ấm tương phản tốt với chữ trắng trên .btn-primary */
+  --accent: #d43649;
+  --accent-dark: #b8293b;
+  --accent-text: #f27483;
+  --accent-soft: #2b1419;
+  --link: #f27483;
+  --link-soft: #2b1419;
+  --on-link: #0c1117;
+
+  /* Vàng champagne dịu mắt ban đêm */
+  --gold: #f5b942;
+  --gold-dark: #d9971e;
+  --gold-soft: #2b2210;
+  --amber: #fcd34d;
+  --amber-dark: #fde68a;
+
+  /* Xanh thông trầm tương phản tốt với chữ trắng trên .btn-record */
+  --coral: #1f8260;
+  --coral-dark: #17694d;
+  --coral-soft: #102a22;
+  --coral-text: #6ee7b7;
+
+  /* Tím mận mùa đông */
+  --grape: #a78bfa;
+  --grape-dark: #8b5cf6;
+  --grape-soft: #201a38;
+  --grape-text: #c4b5fd;
+
+  /* Trạng thái đúng / sai */
+  --ok: #22c55e;
+  --ok-dark: #16a34a;
+  --ok-soft: #0e2619;
+  --ok-text: #4ade80;
+  --red: #ef4444;
+  --red-dark: #dc2626;
+  --red-soft: #2d1418;
+  --red-400: #f87171;
+  --red-300: #fca5a5;
+
+  /* Kim cương & bước transcript */
+  --gem: #38bdf8;
+  --gem-dark: #0284c7;
+  --gem-soft: #0e2536;
+  --phrase: #38bdf8;
+  --aqua: #2b151a;
+  --candy: #122922;
+  --candy-dark: #224d3f;
+  --sun: #2d2310;
+  --leaf: #112b1d;
+}
+
+/* Điều chỉnh tông khu vực ink & lid dưới chủ đề Noel */
+[data-season="noel"] [data-sec="ink"] {
+  --sec: #44403c;
+  --sec-dark: #292524;
+}
+
+[data-season="noel"][data-theme="dark"] [data-sec="ink"] {
+  --sec: #57534e;
+  --sec-dark: #44403c;
+}
+
+[data-season="noel"][data-theme="dark"] [data-sec="laixe"] {
+  --on-sec: #0c1117;
+}
+
+[data-season="noel"][data-theme="dark"] [data-sec="lid"] {
+  --on-sec: #ffffff;
+}
+
+@layer components {
+  /* Dải viền tĩnh trên đầu header */
+  [data-season="noel"] .site-header::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    pointer-events: none;
+    background: linear-gradient(90deg, #b42334 0%, #d97706 35%, #1e6b52 70%, #b42334 100%);
+  }
+
+  [data-season="noel"][data-theme="dark"] .site-header::before {
+    background: linear-gradient(90deg, #d43649 0%, #f5b942 35%, #1f8260 70%, #d43649 100%);
+  }
+
+  /* Dải viền tĩnh trên chân trang */
+  [data-season="noel"] .site-footer::before {
+    content: "";
+    position: absolute;
+    inset: -1px 0 auto 0;
+    height: 2px;
+    pointer-events: none;
+    background: linear-gradient(90deg, #b42334 0%, #d97706 35%, #1e6b52 70%, #b42334 100%);
+    opacity: 0.78;
+  }
+
+  [data-season="noel"][data-theme="dark"] .site-footer::before {
+    background: linear-gradient(90deg, #d43649 0%, #f5b942 35%, #1f8260 70%, #d43649 100%);
+    opacity: 0.85;
+  }
+
+  /* Thanh điều hướng dưới trên điện thoại */
+  [data-season="noel"] .bottom-nav {
+    border-top-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  }
+
+  /* Nền chuyển sắc mùa đông tĩnh & nhẹ ở Hero trang chủ */
+  [data-season="noel"] .noel-hero {
+    background-image:
+      radial-gradient(640px 280px at 8% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+      radial-gradient(560px 260px at 92% 10%, color-mix(in srgb, var(--gold) 7%, transparent), transparent 70%),
+      radial-gradient(520px 240px at 52% 100%, color-mix(in srgb, var(--coral) 5%, transparent), transparent 72%);
+  }
+
+  [data-season="noel"][data-theme="dark"] .noel-hero {
+    background-image:
+      radial-gradient(680px 300px at 8% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
+      radial-gradient(580px 280px at 92% 10%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 70%),
+      radial-gradient(520px 260px at 52% 100%, color-mix(in srgb, var(--coral) 9%, transparent), transparent 72%);
+  }
+
+  /* Thẻ CTA cuối trang có viền tĩnh và ánh sáng ấm dịu quanh linh vật */
+  [data-season="noel"] .noel-cta {
+    background-image:
+      radial-gradient(240px 180px at 94% 92%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 70%),
+      radial-gradient(260px 200px at 10% 10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 72%);
+  }
+
+  [data-season="noel"] .noel-cta::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    pointer-events: none;
+    background: linear-gradient(90deg, #b42334 0%, #d97706 50%, #1e6b52 100%);
+  }
+
+  [data-season="noel"][data-theme="dark"] .noel-cta::before {
+    background: linear-gradient(90deg, #d43649 0%, #f5b942 50%, #1f8260 100%);
+  }
+}

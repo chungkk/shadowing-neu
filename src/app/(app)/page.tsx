@@ -18,6 +18,7 @@ import type { ComponentType, CSSProperties } from "react";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
 import { pageMeta } from "@/lib/page-meta";
+import { SEASONAL_THEME } from "@/lib/theme";
 
 // Trang chủ TĨNH: không đọc DB / cookie → dựng sẵn lúc build.
 // Phong cách Tối giản & Chuyên nghiệp (DESIGN.md): tập trung vào giao diện sản phẩm thật, số liệu thật, phân cấp rõ ràng.
@@ -102,12 +103,14 @@ export default function Home() {
   return (
     <main className="flex flex-col">
       {/* ── Hero: tối giản, rõ ràng, minh họa bằng preview giao diện thật ── */}
-      <section className="border-b border-line bg-card/60 dark:bg-sidebar/40">
+      <section className="noel-hero border-b border-line bg-card/60 dark:bg-sidebar/40">
         <div className={`${wrap} grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12 lg:py-16`}>
           <div className="flex flex-col items-start gap-5">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted">
               <span className="size-1.5 rounded-full bg-accent" aria-hidden />
-              Dành cho người Việt tại Đức · Miễn phí 0 €
+              {SEASONAL_THEME === "noel"
+                ? "Giáng Sinh an lành · Dành cho người Việt tại Đức · Miễn phí 0 €"
+                : "Dành cho người Việt tại Đức · Miễn phí 0 €"}
             </span>
 
             <h1 className="display max-w-[18ch]">
@@ -425,7 +428,7 @@ export default function Home() {
           </div>
         </Link>
 
-        <div className="card relative flex flex-col items-start justify-between gap-5 overflow-hidden p-6 sm:p-8">
+        <div className="noel-cta card relative flex flex-col items-start justify-between gap-5 overflow-hidden p-6 sm:p-8">
           <div className="flex max-w-[44ch] flex-col gap-2">
             <h2 className="font-display text-2xl leading-snug font-bold tracking-[-0.02em]">
               Bắt đầu hôm nay — 10 phút mỗi ngày là đủ.
