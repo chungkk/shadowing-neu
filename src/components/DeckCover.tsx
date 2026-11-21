@@ -1,9 +1,9 @@
 import type { DeckSummary } from "@/lib/decks";
 
-/** Màu nền nhạt và thanh nhấn theo nhóm trình độ: A xanh lá (cơ bản) · B xanh lam (trung cấp) · C tím chàm (cao cấp) */
+/** Màu nền nhạt và thanh nhấn theo nhóm trình độ: A xanh lá (#22C55E) · B xanh da trời (#38BDF8) · C tím dịu (#A78BFA) */
 const COLORS: Record<string, { bg: string; bar: string; badge: string }> = {
   A: { bg: "bg-ok-soft", bar: "bg-ok", badge: "text-ok-text" },
-  B: { bg: "bg-accent-soft", bar: "bg-accent", badge: "text-accent-text" },
+  B: { bg: "bg-link-soft", bar: "bg-link", badge: "text-link" },
   C: { bg: "bg-grape-soft", bar: "bg-grape", badge: "text-grape-text" },
 };
 

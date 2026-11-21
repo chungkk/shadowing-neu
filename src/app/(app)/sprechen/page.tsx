@@ -18,7 +18,7 @@ export default function SprechenPage() {
         icon={Mic}
         compact
         title="Sprechen"
-        meta={<span className="badge bg-white/90 text-[#16203a]">Sắp ra mắt</span>}
+        meta={<span className="badge badge-gold">Sắp ra mắt</span>}
         sub="Tính năng luyện nói tiếng Đức với người thật đang được hoàn thiện. Trong lúc chờ, bạn có thể luyện nói theo video ngay bây giờ."
         actions={
           <Link href="/#lessons" className="btn btn-primary btn-lg max-sm:w-full">

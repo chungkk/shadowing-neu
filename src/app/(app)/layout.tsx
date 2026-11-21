@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist_Mono, Manrope } from "next/font/google";
 import { DeutschSubnav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/auth/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
@@ -16,8 +16,8 @@ import { SITE_URL } from "@/lib/site";
 import { DEFAULT_THEME, FORCE_DARK, SEASONAL_THEME, THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-// Plus Jakarta Sans: tối giản, sắc nét, hỗ trợ đầy đủ dấu tiếng Việt và ký tự Đức (ä, ö, ü, ß)
-const body = Plus_Jakarta_Sans({
+// Manrope: rõ nét, thân thiện chuẩn EdTech hiện đại, hỗ trợ đầy đủ dấu tiếng Việt và ký tự Đức (ä, ö, ü, ß)
+const body = Manrope({
   variable: "--font-body",
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
@@ -94,7 +94,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SidebarWithUser />
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-          <header className="site-header sticky top-0 z-30 border-b border-line bg-card/90 backdrop-blur-md dark:bg-sidebar/90">
+          <header className="site-header sticky top-0 z-30 border-b border-line bg-sidebar">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:h-15 sm:gap-6 md:px-6">
               <Link href="/" aria-label="HalloVN — trang chủ" className="group flex min-w-0 shrink-0 items-center gap-2 rounded-lg pr-1">
                 <Mascot className="size-8 shrink-0 transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none" />

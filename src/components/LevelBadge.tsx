@@ -1,8 +1,8 @@
-/** Nhãn cấp độ A1–C2 — mẩu băng dính màu theo nhóm (A xanh lá, B xanh lam, C tím), dùng token chung để hợp theme sáng / tối */
+/** Nhãn cấp độ CEFR A1–C2: phân biệt rõ 3 nhóm (A xanh ngọc #22C55E · B xanh da trời #38BDF8 · C tím dịu #A78BFA) */
 const COLORS: Record<string, string> = {
-  A: "bg-ok-soft text-ok-text",
-  B: "bg-accent-soft text-accent-text",
-  C: "bg-grape-soft text-grape-text",
+  A: "border border-ok/25 bg-ok-soft text-ok-text",
+  B: "border border-link/25 bg-link-soft text-link",
+  C: "border border-grape/25 bg-grape-soft text-grape-text",
 };
 
 export default function LevelBadge({ level, className = "" }: { level: string; className?: string }) {

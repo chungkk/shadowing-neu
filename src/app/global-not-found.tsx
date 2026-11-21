@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Manrope } from "next/font/google";
 import { FORCE_DARK, SEASONAL_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./(app)/globals.css";
 
-const body = Plus_Jakarta_Sans({ variable: "--font-body", subsets: ["latin", "vietnamese"], weight: ["400", "500", "600", "700", "800"] });
+const body = Manrope({ variable: "--font-body", subsets: ["latin", "vietnamese"], weight: ["400", "500", "600", "700", "800"] });
 
 export const metadata: Metadata = { title: "Không tìm thấy trang | HalloVN", robots: { index: false, follow: true } };
 

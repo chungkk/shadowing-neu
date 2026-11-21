@@ -104,11 +104,11 @@ export default function Home() {
   return (
     <main className="flex flex-col">
       {/* ── Hero: tối giản, rõ ràng, minh họa bằng preview giao diện thật ── */}
-      <section className="noel-hero relative overflow-hidden border-b border-line bg-card/60 dark:bg-sidebar/40">
+      <section className="noel-hero relative overflow-hidden border-b border-line bg-sidebar">
         <NoelHeroBeams />
         <div className={`${wrap} relative z-10 grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12 lg:py-16`}>
           <div className="flex flex-col items-start gap-5">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card/85 px-3 py-1 text-xs font-medium text-muted backdrop-blur-xs">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted">
               <span className="noel-dot size-1.5 rounded-full bg-accent" aria-hidden />
               {SEASONAL_THEME === "noel"
                 ? "Giáng Sinh an lành · Dành cho người Việt tại Đức · Miễn phí 0 €"

@@ -120,7 +120,7 @@ function Toggle({
       disabled={disabled}
       title={title}
     >
-      <Icon className={`size-4 ${on ? "fill-accent/20 text-accent-text" : "text-muted"}`} />
+      <Icon className={`size-4 ${on ? "text-current" : "text-muted"}`} />
       {label}
       <span
         aria-hidden
@@ -593,10 +593,10 @@ export default function ShadowPlayer({
     let alive = true;
     clientApi<{ vocab: VocabItem[] }>("/vocab")
       .then(({ vocab }) => alive && setSaved(new Map(vocab.filter((v) => !isSentence(v)).map((v) => [v.word.toLowerCase(), v.id]))))
-      .catch(() => {});
+      .catch(() => { });
     clientApi<{ stars: { id: number; text: string }[] }>("/stars")
       .then(({ stars: list }) => alive && setStars(new Map(list.map((s) => [s.text.toLowerCase(), s.id]))))
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       alive = false;
     };
@@ -611,7 +611,7 @@ export default function ShadowPlayer({
       const item = r.item ?? r.vocab.find((v) => v.word.toLowerCase() === word.toLowerCase());
       if (item) setSaved((s) => new Map(s).set(word.toLowerCase(), item.id));
       // Điền sẵn nghĩa AI vừa giải thích nếu từ chưa có nghĩa
-      if (item && !item.meaning && meaning) await clientApi(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => {});
+      if (item && !item.meaning && meaning) await clientApi(`/vocab/${item.id}`, { method: "PATCH", body: { meaning } }).catch(() => { });
     } catch (e) {
       if (!opts?.silent) alert(`Không lưu được: ${(e as Error).message}`);
     }
@@ -625,7 +625,7 @@ export default function ShadowPlayer({
       m.delete(text.toLowerCase());
       return m;
     });
-    await clientApi(`/vocab/${id}`, { method: "DELETE" }).catch(() => {});
+    await clientApi(`/vocab/${id}`, { method: "DELETE" }).catch(() => { });
   };
   // Sao trên mỗi câu: đánh dấu câu để lọc ở Shadowing (không vào sổ từ vựng); bấm lại để bỏ
   const toggleStar = async (text: string) => {
@@ -742,7 +742,7 @@ export default function ShadowPlayer({
         setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         if (!alive) return;
         progressLoaded.current = true;
@@ -763,7 +763,7 @@ export default function ShadowPlayer({
         awarded.current = { ...r.open, ...awarded.current };
         setPointIdx((s) => new Set([...s, ...r.idx]));
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       alive = false;
     };
@@ -818,7 +818,7 @@ export default function ShadowPlayer({
     const b = pendingSave.current;
     pendingSave.current = null;
     // keepalive: vẫn gửi được khi đang đóng tab / chuyển trang
-    if (b) clientApi("/progress", { method: "PUT", body: b, keepalive: true }).catch(() => {});
+    if (b) clientApi("/progress", { method: "PUT", body: b, keepalive: true }).catch(() => { });
   }, []);
   // Lưu sau 1,5 giây kể từ thay đổi cuối (đổi câu, đổi chế độ, làm xong câu chính tả…)
   useEffect(() => {
@@ -855,7 +855,7 @@ export default function ShadowPlayer({
   const restartProgress = () => {
     pause();
     pendingSave.current = null;
-    if (syncProgress) clientApi(`/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => {});
+    if (syncProgress) clientApi(`/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => { });
     const round = dictation ? pickDictation(texts, {}) : [];
     setIdx(round.length ? round[0] : 0);
     setSeen(new Set());
@@ -948,7 +948,7 @@ export default function ShadowPlayer({
   const hasRec = !!recorder.recordings[idx];
   const toggleRecord = () => (isRecording ? recorder.stop() : void recorder.start(idx));
   const recordLabel = isRecording ? "Dừng ghi" : hasRec ? "Ghi lại" : "Ghi âm";
-  const step =dictation ? "dict" : isRecording || gap ? "speak" : playing ? "listen" : recorder.recordings[idx] ? "compare" : seen.has(idx) ? "speak" : "listen";
+  const step = dictation ? "dict" : isRecording || gap ? "speak" : playing ? "listen" : recorder.recordings[idx] ? "compare" : seen.has(idx) ? "speak" : "listen";
   // Mỗi bước chỉ 1 nút tô màu: nghe → "Phát" xanh · nói → "Ghi âm" hồng · so sánh → "Câu tiếp theo" xanh
   const recordCls = isRecording ? "btn-recording" : hasRec ? "" : step === "speak" ? "btn-record" : "btn-soft";
   const playCls = !dictation && step === "listen" ? "btn-primary" : "btn-soft";
@@ -1037,369 +1037,368 @@ export default function ShadowPlayer({
             className={
               mediaHidden || typing
                 ? "h-0 overflow-hidden"
-                : "overflow-hidden rounded-ui max-md:sticky max-md:top-0 max-md:z-20 max-sm:-mx-3 max-md:rounded-none sm:max-md:-mx-4 max-md:bg-black"
+                : "overflow-hidden rounded-ui border border-line bg-background max-md:sticky max-md:top-0 max-md:z-20 max-sm:-mx-3 max-md:rounded-none max-md:border-x-0 sm:max-md:-mx-4"
             }
           >
-            {/* Chính tả: tắt phụ đề YouTube (phụ đề = đáp án) */}
-            <YouTubePlayer videoId={videoId} onReady={onReady} captions={!dictation} />
-          </div>
-          {mediaHidden && (
-            <p className="surface flex items-center justify-center gap-2 text-center text-sm font-semibold text-muted">
-              <VideoOff className="size-4 shrink-0" aria-hidden /> Video đang ẩn — chỉ nghe tiếng.
-            </p>
+          {/* Chính tả: tắt phụ đề YouTube (phụ đề = đáp án) */}
+          <YouTubePlayer videoId={videoId} onReady={onReady} captions={!dictation} />
+        </div>
+        {mediaHidden && (
+          <p className="surface flex items-center justify-center gap-2 text-center text-sm font-semibold text-muted">
+            <VideoOff className="size-4 shrink-0" aria-hidden /> Video đang ẩn — chỉ nghe tiếng.
+          </p>
+        )}
+        {/* Thanh điều khiển ngay dưới video: phát / nghe lại (Shadowing thêm ⚙ cho tốc độ, lặp, nghỉ…) */}
+        <div className="flex gap-2 sm:gap-3">
+          {/* Điện thoại (Shadowing): nút phát nằm ở thanh dưới đáy */}
+          <button className={`btn btn-lg flex-1 ${playCls} ${dictation ? "" : "max-md:hidden"}`} title="Phát / dừng (Space)" onClick={togglePlay}>
+            {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Dừng" : "Phát"}
+          </button>
+          <button className="btn btn-lg flex-1" title={dictation ? "Nghe lại câu (Tab)" : "Nghe lại câu"} onClick={() => go(idx)}>
+            <RotateCcw className="size-5" /> Nghe lại
+          </button>
+          {!dictation && (
+            <button
+              className={`btn btn-lg size-12 shrink-0 p-0 ${panel === "settings" ? "btn-soft" : ""}`}
+              title="Cài đặt (tốc độ, lặp câu, nghỉ để nói…)"
+              aria-label="Cài đặt"
+              aria-expanded={panel === "settings"}
+              onClick={() => setPanel(panel === "settings" ? null : "settings")}
+            >
+              <Settings2 className="size-5" />
+            </button>
           )}
-          {/* Thanh điều khiển ngay dưới video: phát / nghe lại (Shadowing thêm ⚙ cho tốc độ, lặp, nghỉ…) */}
-          <div className="flex gap-2 sm:gap-3">
-            {/* Điện thoại (Shadowing): nút phát nằm ở thanh dưới đáy */}
-            <button className={`btn btn-lg flex-1 ${playCls} ${dictation ? "" : "max-md:hidden"}`} title="Phát / dừng (Space)" onClick={togglePlay}>
-              {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Dừng" : "Phát"}
-            </button>
-            <button className="btn btn-lg flex-1" title={dictation ? "Nghe lại câu (Tab)" : "Nghe lại câu"} onClick={() => go(idx)}>
-              <RotateCcw className="size-5" /> Nghe lại
-            </button>
-            {!dictation && (
-              <button
-                className={`btn btn-lg size-12 shrink-0 p-0 ${panel === "settings" ? "btn-soft" : ""}`}
-                title="Cài đặt (tốc độ, lặp câu, nghỉ để nói…)"
-                aria-label="Cài đặt"
-                aria-expanded={panel === "settings"}
-                onClick={() => setPanel(panel === "settings" ? null : "settings")}
-              >
-                <Settings2 className="size-5" />
-              </button>
-            )}
-          </div>
+        </div>
 
-          {!dictation && panel === "settings" && (
-            <div className="surface rise-in grid gap-3 text-sm min-[400px]:grid-cols-2 sm:p-4">
-              <p className="label text-muted min-[400px]:col-span-2">Cài đặt luyện nói</p>
-              {/* Điện thoại: các nút bật/tắt của đầu màn chuyển vào đây */}
-              <div className="flex flex-wrap gap-2 md:hidden min-[400px]:col-span-2">{toggles}</div>
-              <label className="field">
-                Tốc độ phát
-                <select
-                  value={settings.rate}
-                  onChange={(e) => {
-                    const r = Number(e.target.value);
-                    update({ rate: r });
-                    handleRef.current?.setRate(r);
-                  }}
-                >
-                  {RATES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}×
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Lặp mỗi câu
-                <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
-                  {[1, 2, 3, 5].map((r) => (
-                    <option key={r} value={r}>
-                      {r} lần
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Nghỉ để nói
-                <select value={settings.gapFactor} onChange={(e) => update({ gapFactor: Number(e.target.value) })}>
-                  <option value={0}>Không</option>
-                  <option value={1}>1× độ dài câu</option>
-                  <option value={1.2}>1.2×</option>
-                  <option value={1.5}>1.5×</option>
-                  <option value={2}>2×</option>
-                </select>
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={settings.autoNext}
-                  onChange={(e) => update({ autoNext: e.target.checked })}
-                />
-                Tự sang câu tiếp
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={settings.mode === "free"}
-                  onChange={(e) => update({ mode: e.target.checked ? "free" : "segment" })}
-                />
-                Phát liên tục (không dừng sau mỗi câu)
-              </label>
-              {/* Điện thoại không có bàn phím → ẩn phím tắt */}
-              <p className="leading-7 text-muted max-md:hidden min-[400px]:col-span-2">
+        {!dictation && panel === "settings" && (
+          <div className="surface rise-in grid gap-3 text-sm min-[400px]:grid-cols-2 sm:p-4">
+            <p className="label text-muted min-[400px]:col-span-2">Cài đặt luyện nói</p>
+            {/* Điện thoại: các nút bật/tắt của đầu màn chuyển vào đây */}
+            <div className="flex flex-wrap gap-2 md:hidden min-[400px]:col-span-2">{toggles}</div>
+            <label className="field">
+              Tốc độ phát
+              <select
+                value={settings.rate}
+                onChange={(e) => {
+                  const r = Number(e.target.value);
+                  update({ rate: r });
+                  handleRef.current?.setRate(r);
+                }}
+              >
+                {RATES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}×
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Lặp mỗi câu
+              <select value={settings.repeat} onChange={(e) => update({ repeat: Number(e.target.value) })}>
+                {[1, 2, 3, 5].map((r) => (
+                  <option key={r} value={r}>
+                    {r} lần
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Nghỉ để nói
+              <select value={settings.gapFactor} onChange={(e) => update({ gapFactor: Number(e.target.value) })}>
+                <option value={0}>Không</option>
+                <option value={1}>1× độ dài câu</option>
+                <option value={1.2}>1.2×</option>
+                <option value={1.5}>1.5×</option>
+                <option value={2}>2×</option>
+              </select>
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={settings.autoNext}
+                onChange={(e) => update({ autoNext: e.target.checked })}
+              />
+              Tự sang câu tiếp
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={settings.mode === "free"}
+                onChange={(e) => update({ mode: e.target.checked ? "free" : "segment" })}
+              />
+              Phát liên tục (không dừng sau mỗi câu)
+            </label>
+            {/* Điện thoại không có bàn phím → ẩn phím tắt */}
+            <p className="leading-7 text-muted max-md:hidden min-[400px]:col-span-2">
               <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd>{" "}
               nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
-              </p>
-            </div>
-          )}
+            </p>
+          </div>
+        )}
 
-          {children}
+        {children}
+      </div>
+
+      {/* Cột 2: luyện tập câu hiện tại */}
+      <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
+        <div className="flex justify-center">
+          {dictation ? (
+            <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
+          ) : (
+            // 1 công tắc cho cả vòng shadow; tinh chỉnh (lặp, thời gian nghỉ, phát liên tục) nằm trong ⚙
+            <Toggle
+              on={shadowOn}
+              onToggle={toggleShadow}
+              icon={CirclePause}
+              label="Chế độ Shadow"
+              title={
+                shadowOn
+                  ? "Đang bật: dừng sau mỗi câu, nghỉ để bạn nói lại — bấm để tắt"
+                  : "Bật: dừng sau mỗi câu, nghỉ để bạn nói lại"
+              }
+            />
+          )}
         </div>
 
-        {/* Cột 2: luyện tập câu hiện tại */}
-        <div className="card flex flex-col gap-3 self-start max-sm:p-3 sm:gap-4">
-          <div className="flex justify-center">
-            {dictation ? (
-              <Segmented options={DICT_LEVELS} value={settings.dictLevel} onChange={(l) => update({ dictLevel: l })} />
-            ) : (
-              // 1 công tắc cho cả vòng shadow; tinh chỉnh (lặp, thời gian nghỉ, phát liên tục) nằm trong ⚙
-              <Toggle
-                on={shadowOn}
-                onToggle={toggleShadow}
-                icon={CirclePause}
-                label="Chế độ Shadow"
-                title={
-                  shadowOn
-                    ? "Đang bật: dừng sau mỗi câu, nghỉ để bạn nói lại — bấm để tắt"
-                    : "Bật: dừng sau mỗi câu, nghỉ để bạn nói lại"
-                }
-              />
-            )}
+        {resumed !== null && (
+          <div className="alert alert-ok items-center py-1.5 pr-1.5">
+            <span className="flex-1">
+              Tiếp tục từ câu {resumed + 1}/{segments.length}
+            </span>
+            <button className="btn btn-ghost btn-sm shrink-0 text-link" onClick={restartProgress}>
+              Học lại từ đầu
+            </button>
+            <button className="btn-icon size-8 shrink-0 text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng" aria-label="Đóng">
+              <X className="size-4" />
+            </button>
           </div>
+        )}
 
-          {resumed !== null && (
-            <div className="alert alert-ok items-center py-1.5 pr-1.5">
-              <span className="flex-1">
-                Tiếp tục từ câu {resumed + 1}/{segments.length}
-              </span>
-              <button className="btn btn-ghost btn-sm shrink-0 text-link" onClick={restartProgress}>
-                Học lại từ đầu
-              </button>
-              <button className="btn-icon size-8 shrink-0 text-muted hover:text-foreground" onClick={() => setResumed(null)} title="Đóng" aria-label="Đóng">
-                <X className="size-4" />
-              </button>
-            </div>
-          )}
-
-          {dictation && current && dictPick.length > 0 && (
-            <>
-              <div className="flex items-center justify-between gap-2 sm:gap-3">
-                <div className="flex items-center gap-0.5">
-                  <button className="btn-icon" title="Câu trước (↑)" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
-                    <ChevronLeft className="size-5" />
-                  </button>
-                  <span className="label whitespace-nowrap text-link max-sm:text-xs">
-                    {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
-                  </span>
-                  <button className="btn-icon" title="Câu sau (↓)" aria-label="Câu sau" onClick={next} disabled={nextIdx === undefined}>
-                    <ChevronRight className="size-5" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="text-xs whitespace-nowrap text-muted">
-                    <span className="max-sm:hidden">Đã xong </span>
-                    <span className="sm:hidden">Xong </span>
-                    {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length}
-                    <span className="max-sm:hidden"> câu</span>
-                  </span>
-                  {loggedIn && starButton(current.text, "size-[18px]")}
-                </div>
+        {dictation && current && dictPick.length > 0 && (
+          <>
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-0.5">
+                <button className="btn-icon" title="Câu trước (↑)" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
+                  <ChevronLeft className="size-5" />
+                </button>
+                <span className="label whitespace-nowrap text-link max-sm:text-xs">
+                  {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
+                </span>
+                <button className="btn-icon" title="Câu sau (↓)" aria-label="Câu sau" onClick={next} disabled={nextIdx === undefined}>
+                  <ChevronRight className="size-5" />
+                </button>
               </div>
-              <DictationPanel
-                key={`${idx}-${dictEpoch}`}
-                text={current.text}
-                level={settings.dictLevel}
-                onReplay={() => go(idx)}
-                onTogglePlay={togglePlay}
-                onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
-                onPrevSentence={prev}
-                onNextSentence={next}
-                onDone={(correct, total) => dictFinished(idx, correct, total)}
-                onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
-                onHint={syncPoints ? (n) => dictHint(idx, n) : undefined}
-                hasNext={dictNextIdx !== undefined}
-                draft={dictDrafts[idx]}
-                saved={dictDone[idx]}
-                onWord={(w) => pickWord(w)}
-                onTyping={setTyping}
-                translation={settings.showTranslation ? trText(current.text) : undefined}
-                onDraft={(d) =>
-                  setDictDrafts((prev) => {
-                    const drafts = { ...prev };
-                    if (d) drafts[idx] = d;
-                    else delete drafts[idx];
-                    return drafts;
-                  })
-                }
-              />
-            </>
-          )}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="text-xs whitespace-nowrap text-muted">
+                  <span className="max-sm:hidden">Đã xong </span>
+                  <span className="sm:hidden">Xong </span>
+                  {queue ? queue.filter((k) => dictDone[k]).length : doneCount}/{queue ? queue.length : segments.length}
+                  <span className="max-sm:hidden"> câu</span>
+                </span>
+                {loggedIn && starButton(current.text, "size-[18px]")}
+              </div>
+            </div>
+            <DictationPanel
+              key={`${idx}-${dictEpoch}`}
+              text={current.text}
+              level={settings.dictLevel}
+              onReplay={() => go(idx)}
+              onTogglePlay={togglePlay}
+              onNext={() => dictNextIdx !== undefined && go(dictNextIdx)}
+              onPrevSentence={prev}
+              onNextSentence={next}
+              onDone={(correct, total) => dictFinished(idx, correct, total)}
+              onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
+              onHint={syncPoints ? (n) => dictHint(idx, n) : undefined}
+              hasNext={dictNextIdx !== undefined}
+              draft={dictDrafts[idx]}
+              saved={dictDone[idx]}
+              onWord={(w) => pickWord(w)}
+              onTyping={setTyping}
+              translation={settings.showTranslation ? trText(current.text) : undefined}
+              onDraft={(d) =>
+                setDictDrafts((prev) => {
+                  const drafts = { ...prev };
+                  if (d) drafts[idx] = d;
+                  else delete drafts[idx];
+                  return drafts;
+                })
+              }
+            />
+          </>
+        )}
 
-          {dictation && ready && (roundDone || !dictPick.length) && (
-            <div className="flex flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--ok)_35%,transparent)] bg-ok-soft p-4">
-              {roundDone && (
-                <p className="flex items-start gap-2 font-display text-lg leading-snug font-bold text-ok-text">
-                  <CircleCheck className="mt-0.5 size-5 shrink-0" /> Xong lượt {dictPick.length} câu — đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
-                </p>
-              )}
-              {roundDone && roundPoints !== 0 && (
-                <p className="badge badge-gem gap-2 self-start py-1 pr-3 pl-1.5 text-sm">
-                  <Gem className="size-6" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} điểm lượt này
-                </p>
-              )}
-              <p className="text-sm text-muted">
-                {left > 0
-                  ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Chép tiếp các câu còn lại theo thứ tự.`
-                  : `Bạn đã chép hết ${dictTotal} câu của bài này.`}
+        {dictation && ready && (roundDone || !dictPick.length) && (
+          <div className="flex flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--ok)_35%,transparent)] bg-ok-soft p-4">
+            {roundDone && (
+              <p className="flex items-start gap-2 font-display text-lg leading-snug font-bold text-ok-text">
+                <CircleCheck className="mt-0.5 size-5 shrink-0" /> Xong lượt {dictPick.length} câu — đúng {roundScore.n ? Math.round((roundScore.c / roundScore.n) * 100) : 0}% số từ
               </p>
-              <button className="btn btn-primary btn-lg" onClick={left > 0 ? newRound : restartProgress}>
-                {left > 0 ? (
-                  <>
-                    Lượt mới <ChevronRight className="size-5" />
-                  </>
-                ) : (
-                  "Học lại từ đầu"
+            )}
+            {roundDone && roundPoints !== 0 && (
+              <p className="badge badge-gem gap-2 self-start py-1 pr-3 pl-1.5 text-sm">
+                <Gem className="size-6" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} điểm lượt này
+              </p>
+            )}
+            <p className="text-sm text-muted">
+              {left > 0
+                ? `Cả bài: đã chép ${doneCount}/${dictTotal} câu. Chép tiếp các câu còn lại theo thứ tự.`
+                : `Bạn đã chép hết ${dictTotal} câu của bài này.`}
+            </p>
+            <button className="btn btn-primary btn-lg" onClick={left > 0 ? newRound : restartProgress}>
+              {left > 0 ? (
+                <>
+                  Lượt mới <ChevronRight className="size-5" />
+                </>
+              ) : (
+                "Học lại từ đầu"
+              )}
+            </button>
+          </div>
+        )}
+
+        {!dictation && (
+          <>
+            {/* Câu hiện tại: bấm vào từ để tra / lưu, bấm cụm từ (xanh) để xem cả cụm */}
+            <div className="flex min-h-40 flex-col gap-3 sm:min-h-48">
+              <div className="flex items-center gap-3">
+                <span className="label flex-1 text-link">
+                  {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
+                </span>
+                {current && <span className="text-xs text-muted">{formatTime(current.start)}</span>}
+                {current && settings.hideText && revealButton(idx)}
+                {current && loggedIn && !curHidden && starButton(current.text)}
+              </div>
+              {current && (
+                // Đang ẩn chữ: di chuột để xem; bấm (hoặc chạm trên điện thoại) để hiện hẳn câu này — chưa tra từ được khi còn mờ
+                <p
+                  className={`font-display text-[1.375rem] leading-snug font-bold tracking-[-0.01em] transition sm:text-[1.65rem] ${curHidden ? "cursor-pointer blur-md select-none hover:blur-none [&_button]:pointer-events-none" : ""
+                    }`}
+                  title={curHidden ? "Di chuột để xem · bấm để hiện câu này" : undefined}
+                  onClick={curHidden ? () => setRevealed((r) => new Set(r).add(idx)) : undefined}
+                >
+                  <SentenceText
+                    text={current.text}
+                    phrases={curPhrases ?? []}
+                    saved={saved}
+                    onWord={(w) => pickWord(w)}
+                    onPhrase={(p) => pickPhrase(p, current.text)}
+                  />
+                </p>
+              )}
+              {current && !curHidden && curPhrases && <div className="flex flex-col gap-1">{phraseRows(curPhrases, current.text)}</div>}
+              {current && !curHidden && showPhr && !curPhrases && (
+                <p className="flex items-center gap-1.5 text-sm text-muted">
+                  {phrError ? (
+                    <>
+                      <TriangleAlert className="size-4 shrink-0 text-amber" /> {phrError}
+                    </>
+                  ) : (
+                    "Đang tìm cụm từ…"
+                  )}
+                </p>
+              )}
+              {current && (settings.showTranslation || trShown.has(idx)) && trBlock(current.text, "text-base")}
+              <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+                {current && !settings.showTranslation && !trShown.has(idx) && (
+                  <button
+                    className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
+                    onClick={() => {
+                      setTrShown((s) => new Set(s).add(idx));
+                      void translateFrom(idx);
+                    }}
+                  >
+                    <Languages className="size-4" /> Dịch câu này
+                  </button>
                 )}
+                {current && (trError || tr[current.text] === "") && (
+                  <a
+                    className="inline-flex items-center gap-1 text-xs font-bold text-link hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                    href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
+                    title={trError}
+                  >
+                    Mở Google Dịch <ExternalLink className="size-3.5" />
+                  </a>
+                )}
+                {gap && (
+                  <span className="badge badge-coral ml-auto">
+                    {isRecording ? <Mic className="size-3.5" /> : <MessageCircle className="size-3.5" />}
+                    {isRecording ? "Đến lượt bạn — đang ghi âm…" : "Đến lượt bạn nói…"}
+                  </span>
+                )}
+              </div>
+              <div className="progress h-1.5">
+                {gap && (
+                  <div
+                    key={gap.id}
+                    className="gap-bar h-full rounded-full bg-[var(--candy-dark)]"
+                    style={{ animationDuration: `${gap.ms}ms` }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Ghi âm — máy tính; điện thoại dùng thanh dưới đáy. Nút chính đổi theo bước: Ghi âm → Câu tiếp theo */}
+            <div className="grid grid-cols-2 gap-3 max-md:hidden">
+              <button className={`btn btn-lg ${recordCls}`} onClick={toggleRecord}>
+                {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
+                {recordLabel}
+              </button>
+              <button className="btn btn-lg" disabled={!hasRec} onClick={() => recorder.play(idx)}>
+                <Volume2 className="size-5" /> Nghe lại
               </button>
             </div>
-          )}
 
-          {!dictation && (
-            <>
-              {/* Câu hiện tại: bấm vào từ để tra / lưu, bấm cụm từ (xanh) để xem cả cụm */}
-              <div className="flex min-h-40 flex-col gap-3 sm:min-h-48">
-                <div className="flex items-center gap-3">
-                  <span className="label flex-1 text-link">
-                    {queue?.includes(idx) ? `Câu ${queue.indexOf(idx) + 1}/${queue.length} · #${idx + 1}` : `Câu ${idx + 1}/${segments.length}`}
-                  </span>
-                  {current && <span className="text-xs text-muted">{formatTime(current.start)}</span>}
-                  {current && settings.hideText && revealButton(idx)}
-                  {current && loggedIn && !curHidden && starButton(current.text)}
+            {lessonDone ? (
+              // Câu cuối đã nghe → khép vòng học: chép chính tả bài này / ôn từ đã lưu / chọn bài khác
+              <div className="rise-in flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--ok)_35%,transparent)] bg-ok-soft p-4 text-center">
+                <Mascot animated className="size-20" />
+                <div>
+                  <p className="font-display text-xl font-bold text-ok-text">Xong bài rồi!</p>
+                  <p className="text-sm text-muted">
+                    Đã nghe {seenCount}/{segments.length} câu · nói theo {spokenCount} câu
+                    {seenCount < segments.length ? " — còn vài câu bạn chưa phát" : ""}.
+                  </p>
                 </div>
-                {current && (
-                  // Đang ẩn chữ: di chuột để xem; bấm (hoặc chạm trên điện thoại) để hiện hẳn câu này — chưa tra từ được khi còn mờ
-                  <p
-                    className={`font-display text-[1.375rem] leading-snug font-bold tracking-[-0.01em] transition sm:text-[1.65rem] ${
-                      curHidden ? "cursor-pointer blur-md select-none hover:blur-none [&_button]:pointer-events-none" : ""
-                    }`}
-                    title={curHidden ? "Di chuột để xem · bấm để hiện câu này" : undefined}
-                    onClick={curHidden ? () => setRevealed((r) => new Set(r).add(idx)) : undefined}
-                  >
-                    <SentenceText
-                      text={current.text}
-                      phrases={curPhrases ?? []}
-                      saved={saved}
-                      onWord={(w) => pickWord(w)}
-                      onPhrase={(p) => pickPhrase(p, current.text)}
-                    />
-                  </p>
-                )}
-                {current && !curHidden && curPhrases && <div className="flex flex-col gap-1">{phraseRows(curPhrases, current.text)}</div>}
-                {current && !curHidden && showPhr && !curPhrases && (
-                  <p className="flex items-center gap-1.5 text-sm text-muted">
-                    {phrError ? (
-                      <>
-                        <TriangleAlert className="size-4 shrink-0 text-amber" /> {phrError}
-                      </>
-                    ) : (
-                      "Đang tìm cụm từ…"
-                    )}
-                  </p>
-                )}
-                {current && (settings.showTranslation || trShown.has(idx)) && trBlock(current.text, "text-base")}
-                <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {current && !settings.showTranslation && !trShown.has(idx) && (
-                    <button
-                      className="inline-flex cursor-pointer items-center gap-1 text-xs font-bold text-link hover:underline"
-                      onClick={() => {
-                        setTrShown((s) => new Set(s).add(idx));
-                        void translateFrom(idx);
-                      }}
-                    >
-                      <Languages className="size-4" /> Dịch câu này
+                <div className="grid w-full gap-2 sm:grid-cols-2">
+                  {allowDictation && (
+                    <button className="btn btn-primary btn-lg sm:col-span-2" onClick={() => changePractice("dictation")}>
+                      <Keyboard className="size-5" /> Chép chính tả bài này
                     </button>
                   )}
-                  {current && (trError || tr[current.text] === "") && (
-                    <a
-                      className="inline-flex items-center gap-1 text-xs font-bold text-link hover:underline"
-                      target="_blank"
-                      rel="noreferrer"
-                      href={`https://translate.google.com/?sl=de&tl=vi&text=${encodeURIComponent(current.text)}`}
-                      title={trError}
-                    >
-                      Mở Google Dịch <ExternalLink className="size-3.5" />
-                    </a>
-                  )}
-                  {gap && (
-                    <span className="badge badge-coral ml-auto">
-                      {isRecording ? <Mic className="size-3.5" /> : <MessageCircle className="size-3.5" />}
-                      {isRecording ? "Đến lượt bạn — đang ghi âm…" : "Đến lượt bạn nói…"}
-                    </span>
-                  )}
-                </div>
-                <div className="progress h-1.5">
-                  {gap && (
-                    <div
-                      key={gap.id}
-                      className="gap-bar h-full rounded-full bg-[var(--candy-dark)]"
-                      style={{ animationDuration: `${gap.ms}ms` }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Ghi âm — máy tính; điện thoại dùng thanh dưới đáy. Nút chính đổi theo bước: Ghi âm → Câu tiếp theo */}
-              <div className="grid grid-cols-2 gap-3 max-md:hidden">
-                <button className={`btn btn-lg ${recordCls}`} onClick={toggleRecord}>
-                  {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
-                  {recordLabel}
-                </button>
-                <button className="btn btn-lg" disabled={!hasRec} onClick={() => recorder.play(idx)}>
-                  <Volume2 className="size-5" /> Nghe lại
-                </button>
-              </div>
-
-              {lessonDone ? (
-                // Câu cuối đã nghe → khép vòng học: chép chính tả bài này / ôn từ đã lưu / chọn bài khác
-                <div className="rise-in flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--ok)_35%,transparent)] bg-ok-soft p-4 text-center">
-                  <Mascot animated className="size-20" />
-                  <div>
-                    <p className="font-display text-xl font-bold text-ok-text">Xong bài rồi!</p>
-                    <p className="text-sm text-muted">
-                      Đã nghe {seenCount}/{segments.length} câu · nói theo {spokenCount} câu
-                      {seenCount < segments.length ? " — còn vài câu bạn chưa phát" : ""}.
-                    </p>
-                  </div>
-                  <div className="grid w-full gap-2 sm:grid-cols-2">
-                    {allowDictation && (
-                      <button className="btn btn-primary btn-lg sm:col-span-2" onClick={() => changePractice("dictation")}>
-                        <Keyboard className="size-5" /> Chép chính tả bài này
-                      </button>
-                    )}
-                    {loggedIn && (
-                      <Link href="/vocab/notebook?review=1" className={`btn btn-lg ${allowDictation ? "" : "btn-primary"}`}>
-                        <Layers className="size-5" /> Ôn từ vựng
-                      </Link>
-                    )}
-                    <Link href={backHref} className={`btn btn-lg ${loggedIn ? "" : "sm:col-span-2"}`}>
-                      Chọn bài khác <ChevronRight className="size-5" />
+                  {loggedIn && (
+                    <Link href="/vocab/notebook?review=1" className={`btn btn-lg ${allowDictation ? "" : "btn-primary"}`}>
+                      <Layers className="size-5" /> Ôn từ vựng
                     </Link>
-                  </div>
+                  )}
+                  <Link href={backHref} className={`btn btn-lg ${loggedIn ? "" : "sm:col-span-2"}`}>
+                    Chọn bài khác <ChevronRight className="size-5" />
+                  </Link>
                 </div>
-              ) : lessonAlmost ? (
-                <div className="surface flex flex-col gap-1 text-sm">
-                  <p className="flex items-center gap-1.5 font-bold">
-                    <Headphones className="size-4 shrink-0 text-sec-text" /> Bạn đã nghe hết bài
-                  </p>
-                  <p className="text-muted">
-                    Mới nói theo {spokenCount}/{segments.length} câu. Nói thêm {spokenNeed - spokenCount} câu nữa (bấm câu bất kỳ trong transcript rồi Ghi âm) để hoàn thành bài.
-                  </p>
-                </div>
-              ) : (
-                <button className={`btn btn-lg max-md:hidden ${hasRec ? "btn-primary" : ""}`} disabled={nextIdx === undefined} onClick={next}>
-                  Câu tiếp theo <ChevronRight className="size-5" />
-                </button>
-              )}
-            </>
-          )}
-        </div>
+              </div>
+            ) : lessonAlmost ? (
+              <div className="surface flex flex-col gap-1 text-sm">
+                <p className="flex items-center gap-1.5 font-bold">
+                  <Headphones className="size-4 shrink-0 text-sec-text" /> Bạn đã nghe hết bài
+                </p>
+                <p className="text-muted">
+                  Mới nói theo {spokenCount}/{segments.length} câu. Nói thêm {spokenNeed - spokenCount} câu nữa (bấm câu bất kỳ trong transcript rồi Ghi âm) để hoàn thành bài.
+                </p>
+              </div>
+            ) : (
+              <button className={`btn btn-lg max-md:hidden ${hasRec ? "btn-primary" : ""}`} disabled={nextIdx === undefined} onClick={next}>
+                Câu tiếp theo <ChevronRight className="size-5" />
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
         {/* Điện thoại: thanh điều khiển dưới đáy (thay thanh điều hướng) — ngón cái với tới, không phải cuộn tìm nút */}
         {!dictation && (
-          <div className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center gap-1 border-t border-line bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden dark:bg-sidebar/95">
+          <div className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center gap-1 border-t border-line bg-sidebar px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
             <button className="btn-icon shrink-0" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
               <ChevronLeft className="size-6" />
             </button>

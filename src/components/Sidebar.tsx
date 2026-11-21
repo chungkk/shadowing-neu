@@ -3,7 +3,24 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Car, ChevronDown, House, Landmark, Languages, Layers, LogOut, MonitorPlay, Settings, ShieldCheck, Trophy } from "lucide-react";
+import {
+  BarChart3,
+  BookMarked,
+  BookOpen,
+  Car,
+  ChevronDown,
+  FileStack,
+  Flag,
+  House,
+  Landmark,
+  Languages,
+  Layers,
+  LogOut,
+  MonitorPlay,
+  Settings,
+  ShieldCheck,
+  Trophy,
+} from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -32,6 +49,19 @@ const DEUTSCH: Item[] = [
   { href: "/vocab", label: "Từ vựng", icon: BookMarked },
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
+];
+const LAIXE_NAV: Item[] = [
+  { href: "/lai-xe", label: "Tổng quan", icon: Car },
+  { href: "/lai-xe/hoc", label: "Theo chương", icon: BookOpen },
+  { href: "/lai-xe/de-mau", label: "Đề mẫu", icon: FileStack },
+  { href: "/lai-xe/thi-thu", label: "Thi thử", icon: Flag },
+  { href: "/lai-xe/thong-ke", label: "Thống kê", icon: BarChart3 },
+];
+const LID_NAV: Item[] = [
+  { href: "/leben-in-deutschland", label: "Tổng quan", icon: Landmark },
+  { href: "/leben-in-deutschland/chu-de", label: "Chủ đề", icon: BookOpen },
+  { href: "/leben-in-deutschland/thi-thu", label: "Thi thử", icon: Flag },
+  { href: "/leben-in-deutschland/thong-ke", label: "Thống kê", icon: BarChart3 },
 ];
 const GUEST_BAR: Item[] = ITEMS;
 const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3]];
@@ -105,7 +135,7 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
-    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-card/95 px-1.5 pb-[env(safe-area-inset-bottom)] backdrop-blur-md *:shrink-0 md:hidden dark:bg-sidebar/95">
+    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-sidebar px-1.5 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden">
       {children}
     </nav>
   );
@@ -149,7 +179,9 @@ export function HeaderNavFrame({ current }: { current?: string }) {
             href={it.href}
             data-sec={secOf(it.href)}
             aria-current={on ? "page" : undefined}
-            className={`group relative flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors duration-150 ${on ? "bg-sec-soft font-semibold text-sec-text" : "font-medium text-muted hover:bg-card-2 hover:text-foreground"
+            className={`group relative flex h-9 items-center gap-2 rounded-lg border px-3 text-sm transition-colors duration-150 ${on
+              ? "border-line bg-card-2 font-semibold text-foreground"
+              : "border-transparent font-medium text-muted hover:bg-card hover:text-foreground"
               }`}
           >
             <it.icon className={`size-4 ${on ? "text-sec-text" : "text-muted group-hover:text-foreground"}`} />
@@ -292,22 +324,49 @@ export function UserDropdown({ user }: { user: NavUser }) {
 const showDeutschSubnav = (p: string) =>
   p === "/tieng-duc" || p.startsWith("/tieng-duc/trinh-do/") || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
 
-/** Hàng tab con của khu Tiếng Đức: gạch chân gọn gàng dưới thanh đầu trang */
+const showLaixeSubnav = (p: string) =>
+  p === "/lai-xe" || p === "/lai-xe/hoc" || p === "/lai-xe/de-mau" || p === "/lai-xe/thi-thu" || p === "/lai-xe/thong-ke" || p === "/lai-xe/cau-sai" || p === "/lai-xe/danh-dau" || p === "/lai-xe/hang";
+
+const showLidSubnav = (p: string) =>
+  p === "/leben-in-deutschland" || p === "/leben-in-deutschland/chu-de" || p === "/leben-in-deutschland/thi-thu" || p === "/leben-in-deutschland/thong-ke" || p === "/leben-in-deutschland/cau-sai" || p === "/leben-in-deutschland/danh-dau" || p === "/leben-in-deutschland/cai-dat";
+
+/** Hàng tab con thống nhất theo từng sản phẩm học tập (Tiếng Đức · Lái xe · Leben in DE), tự ẩn trong màn học/thi */
 export function DeutschSubnav() {
   const pathname = usePathname();
-  const current = pathname.startsWith("/tieng-duc/trinh-do/")
-    ? "/tieng-duc"
-    : DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
-  if (!showDeutschSubnav(pathname)) return null;
+  let sec: "de" | "laixe" | "lid" | null = null;
+  let label = "";
+  let items: Item[] = [];
+  let current: string | undefined;
+
+  if (showDeutschSubnav(pathname)) {
+    sec = "de";
+    label = "Tiếng Đức";
+    items = DEUTSCH;
+    current = pathname.startsWith("/tieng-duc/trinh-do/")
+      ? "/tieng-duc"
+      : DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  } else if (showLaixeSubnav(pathname)) {
+    sec = "laixe";
+    label = "Lý thuyết lái xe";
+    items = LAIXE_NAV;
+    current = LAIXE_NAV.find((it) => pathname === it.href)?.href ?? "/lai-xe";
+  } else if (showLidSubnav(pathname)) {
+    sec = "lid";
+    label = "Leben in Deutschland";
+    items = LID_NAV;
+    current = LID_NAV.find((it) => pathname === it.href)?.href ?? "/leben-in-deutschland";
+  }
+
+  if (!sec) return null;
   return (
-    <div data-sec="de" className="border-b border-line bg-card/70 dark:bg-sidebar/70">
-      <nav aria-label="Tiếng Đức" className="tabs-line mx-auto w-full max-w-6xl border-b-0 px-4 md:px-6">
-        {DEUTSCH.map((it) => (
+    <div data-sec={sec} className="border-b border-line bg-sidebar">
+      <nav aria-label={label} className="tabs-line mx-auto w-full max-w-6xl border-b-0 px-4 md:px-6">
+        {items.map((it) => (
           <Link
             key={it.href}
             href={it.href}
             aria-current={it.href === current ? "page" : undefined}
-            className="tab py-2.5 text-sm"
+            className="tab px-2.5 py-2.5 text-xs sm:px-3 sm:text-sm"
           >
             <it.icon className={`size-4 ${it.href === current ? "text-sec-text" : "text-muted"}`} />
             {it.label}

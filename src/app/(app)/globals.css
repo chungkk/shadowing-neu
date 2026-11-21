@@ -112,13 +112,18 @@
 }
 
 /* Chế độ tối: than tối sạch, tương phản chữ cao, viền hairline rõ */
+/* Chế độ tối mặc định: Modern Dark EdTech (#0B0F14 → #101720 → #151D28 → #1C2735, viền #263241) */
 :root[data-theme="dark"] {
   color-scheme: dark;
   /* Thang bề mặt: nền → card → card-2 → --raised (popover/dialog). Mỗi bậc sáng hơn rõ, vì bóng đổ gần như vô hình trên nền tối */
   --background: #090b10;
   --sidebar: #0e1118;
+  /* Bề mặt & mực trung tính */
+  --background: #0b0f14;
+  --sidebar: #101720;
   --foreground: #f1f5f9;
   --ink: #2d3548;
+  --ink: #263241;
   --ink-strong: #f1f5f9;
   --line: #232a39;
   --line-strong: #5b6680;
@@ -135,31 +140,66 @@
   --link: #60a5fa;
   --link-soft: #15223d;
   --on-link: #0b0d12;
+  --line: #263241;
+  --line-strong: #3b4c63;
+  --card: #151d28;
+  --card-hover: #1c2735;
+  --card-2: #1c2735;
+  --raised: #192330;
+  --border: #263241;
+  --muted: #94a3b8;
+  /* Nhấn chính (Primary accent): xanh ngọc lục bảo #22C55E — thân thiện, nổi bật, chữ tối đạt AAA */
+  --accent: #22c55e;
+  --accent-dark: #16a34a;
+  --accent-text: #4ade80;
+  --accent-soft: #102a1e;
+  --on-accent: #07130c;
+  /* Nhấn phụ (Secondary accent): xanh da trời #38BDF8 — link, B1–B2, cụm từ, kim cương */
+  --link: #38bdf8;
+  --link-soft: #0f2537;
+  --on-link: #07131d;
+  /* Cảnh báo & khu Lái xe: vàng hổ phách #FBBF24 */
   --gold: #fbbf24;
   --gold-dark: #d97706;
   --gold-soft: #2b210d;
+  --gold-soft: #261f0e;
   --amber: #fcd34d;
   --amber-dark: #fde68a;
+  /* Khu Leben in Deutschland & ghi âm: cam ấm dịu */
   --coral: #fb923c;
   --coral-dark: #c2410c;
   --coral-soft: #2c1a10;
+  --coral-dark: #ea580c;
+  --coral-soft: #271a12;
   --coral-text: #fdba74;
   --grape: #818cf8;
   --grape-dark: #6366f1;
   --grape-soft: #1c1e3d;
   --grape-text: #a5b4fc;
+  /* Nhãn trình độ C1–C2: tím dịu */
+  --grape: #a78bfa;
+  --grape-dark: #7c3aed;
+  --grape-soft: #1d1a33;
+  --grape-text: #c4b5fd;
+  /* Trạng thái đúng / hoàn thành */
   --ok: #22c55e;
   --ok-dark: #16a34a;
   --ok-soft: #0e2619;
+  --ok-soft: #102a1e;
   --ok-text: #4ade80;
   --red: #ef4444;
+  /* Trạng thái sai / cảnh báo nguy hiểm (#F87171) */
+  --red: #f87171;
   --red-dark: #dc2626;
   --red-soft: #2d1418;
+  --red-soft: #2b1519;
   --red-400: #f87171;
   --red-300: #fca5a5;
+  /* Kim cương & cụm từ */
   --gem: #38bdf8;
   --gem-dark: #0284c7;
   --gem-soft: #0d2233;
+  --gem-soft: #0f2537;
   --phrase: #38bdf8;
   --aqua: #172544;
   --candy: #331e14;
@@ -167,8 +207,16 @@
   --sun: #302510;
   --leaf: #112b1d;
   --stripe: #13171f;
+  /* Màu nền dịu cho từng bước học trong transcript */
+  --aqua: #112622;
+  --candy: #261c14;
+  --candy-dark: #4b3421;
+  --sun: #262011;
+  --leaf: #102a1e;
+  --stripe: #151d28;
   --shadow-color: 0 0 0;
   scrollbar-color: var(--border) var(--sidebar);
+  scrollbar-color: #263241 #101720;
 }
 
 /* Màu nhận diện theo khu vực */
@@ -178,6 +226,7 @@
   --sec-soft: var(--accent-soft);
   --sec-text: var(--accent-text);
   --on-sec: #ffffff;
+  --on-sec: var(--on-accent);
 }
 
 [data-sec="laixe"] {
@@ -192,6 +241,7 @@
   --sec: var(--gold);
   --sec-dark: var(--gold-dark);
   --on-sec: #0b0d12;
+  --on-sec: #0b0f14;
 }
 
 [data-sec="lid"] {
@@ -204,6 +254,7 @@
 
 [data-theme="dark"] [data-sec="lid"] {
   --on-sec: #0b0d12;
+  --on-sec: #0b0f14;
 }
 
 [data-sec="ink"] {
@@ -217,6 +268,11 @@
 [data-theme="dark"] [data-sec="ink"] {
   --sec: #475569;
   --sec-dark: #334155;
+  --sec: #38bdf8;
+  --sec-dark: #0ea5e9;
+  --sec-soft: #0f2537;
+  --sec-text: #38bdf8;
+  --on-sec: #07131d;
 }
 
 /* Màn làm câu hỏi Lái xe: bảo toàn tinh thần phần mềm thi lý thuyết thật (luôn sáng, rõ) */
@@ -270,6 +326,9 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 12px -4px rgb(0 0 0 / 0.45);
   --shadow-md: 0 2px 6px rgb(0 0 0 / 0.4), 0 16px 32px -10px rgb(0 0 0 / 0.65);
   --shadow-lg: 0 4px 12px rgb(0 0 0 / 0.45), 0 28px 56px -16px rgb(0 0 0 / 0.8);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.28);
+  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.6);
 }
 
 @theme inline {
@@ -277,6 +336,7 @@
   --color-sidebar: var(--sidebar);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-hover: var(--card-hover, var(--card-2));
   --color-card-2: var(--card-2);
   --color-raised: var(--raised);
   --color-border: var(--border);
@@ -375,6 +435,7 @@ select {
 @layer base {
   :focus-visible {
     outline: 2px solid var(--accent);
+    outline: 2px solid var(--link);
     outline-offset: 2px;
   }
 
@@ -422,8 +483,10 @@ select {
   }
 
   /* Nền tối: mép trên hắt sáng rất nhẹ để khối nổi khỏi nền mà không cần bóng */
+  /* Nền tối: phân tầng bằng màu bề mặt và viền mảnh #263241 thay vì bóng nặng */
   [data-theme="dark"] :where(.sticker, .card, .tile) {
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+    box-shadow: none;
   }
 
   .sticker,
@@ -467,6 +530,9 @@ select {
   @media (hover: hover) {
     [data-theme="dark"] :where(.sticker-link, .card-link):hover {
       background-color: color-mix(in srgb, var(--foreground) 3%, var(--card));
+      border-color: var(--line-strong);
+      background-color: var(--card-hover);
+      box-shadow: none;
     }
   }
 
@@ -534,10 +600,14 @@ select {
     font-size: clamp(2rem, 1.35rem + 2.8vw, 3.35rem);
     line-height: 1.16;
     letter-spacing: -0.03em;
+    font-size: clamp(1.85rem, 1.35rem + 2.1vw, 2.85rem);
+    line-height: 1.18;
+    letter-spacing: -0.025em;
   }
 
   .lead {
     @apply text-base leading-relaxed text-muted sm:text-[1.0625rem];
+    @apply text-[0.9375rem] leading-relaxed text-muted sm:text-base;
   }
 
   .muted {
@@ -558,10 +628,14 @@ select {
     font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem);
     line-height: 1.22;
     letter-spacing: -0.025em;
+    font-size: clamp(1.4rem, 1.2rem + 0.8vw, 1.85rem);
+    line-height: 1.24;
+    letter-spacing: -0.02em;
   }
 
   .section-title {
     @apply font-display text-lg leading-snug font-bold sm:text-xl;
+    @apply font-display text-lg leading-snug font-bold sm:text-[1.25rem];
     letter-spacing: -0.015em;
   }
 
@@ -676,19 +750,25 @@ select {
   }
 
   /* Nền tối: màu nhấn sáng để làm chữ/viền, còn mảng nền dưới chữ trắng dùng bậc đậm để đạt AA (≥4.5:1) */
+  /* Nền tối: nút chính dùng trực tiếp Primary Accent (#22C55E) + chữ đậm (#07130C) đạt chuẩn AAA; nút đỏ/ghi âm dùng bậc đậm để chữ trắng ≥ 4.5:1 */
   [data-theme="dark"] :where(.btn-primary) {
     --fill: var(--accent-dark);
     --fill-hover: color-mix(in srgb, var(--accent-dark) 86%, #000);
+    --fill: var(--accent);
+    --fill-hover: #2dd46c;
+    color: var(--on-accent);
   }
 
   [data-theme="dark"] :where(.btn-red) {
     --fill: var(--red-dark);
     --fill-hover: color-mix(in srgb, var(--red-dark) 86%, #000);
+    --fill-hover: #b91c1c;
   }
 
   [data-theme="dark"] :where(.btn-record) {
     --fill: var(--coral-dark);
     --fill-hover: color-mix(in srgb, var(--coral-dark) 86%, #000);
+    --fill-hover: #c2410c;
   }
 
   [data-theme="dark"] :where(.btn-recording) {
@@ -880,10 +960,15 @@ select {
     z-index: 1;
     border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
     background: color-mix(in srgb, var(--stage) 55%, var(--card));
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+    box-shadow: inset 3px 0 0 var(--accent);
+    background: color-mix(in srgb, var(--stage) 75%, var(--card));
   }
+
   @media (hover: hover) {
     .trow-on:hover {
       background: color-mix(in srgb, var(--stage) 65%, var(--card));
+      background: color-mix(in srgb, var(--stage) 85%, var(--card));
     }
   }
 
@@ -919,6 +1004,8 @@ select {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color: var(--link);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 18%, transparent);
   }
 
   .input[aria-invalid="true"] {
@@ -942,8 +1029,10 @@ select {
   }
 
   /* Nền tối: ô nhập lõm xuống (tối hơn card) để nhận ra là chỗ gõ */
+  /* Nền tối: ô nhập tối hơn bề mặt card (#0B0F14 pha #151D28) để nhận diện rõ vùng gõ */
   [data-theme="dark"] :where(.input, .input-group) {
     background-color: color-mix(in srgb, var(--background) 55%, var(--card));
+    background-color: var(--sidebar);
   }
 
   .input-group:hover:not(:focus-within) {
@@ -953,6 +1042,8 @@ select {
   .input-group:focus-within {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color: var(--link);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 18%, transparent);
   }
 
   .input-group>input {
@@ -1078,6 +1169,12 @@ select {
     border-color: var(--foreground);
     background-color: var(--foreground);
     font-weight: 600;
+  }
+
+  [data-theme="dark"] :where(.chip[aria-pressed="true"], .chip[aria-selected="true"], .chip[aria-current]:not([aria-current="false"]), .chip-on) {
+    color: var(--accent-text);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    background-color: var(--accent-soft);
   }
 
   .chip[aria-pressed="true"] svg,
