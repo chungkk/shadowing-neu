@@ -15,7 +15,6 @@ import { percent } from "@/lib/progress";
 import { RecentVideos } from "@/components/RecentVideos";
 import { pageMeta } from "@/lib/page-meta";
 import { LessonGridSkeleton } from "@/components/Skeleton";
-import TodayStrip from "@/components/TodayStrip";
 import { lessonPath } from "@/lib/slug";
 import { levelCatalogPath } from "@/lib/lesson-seo";
 import OwnLessons from "@/components/OwnLessons";
@@ -120,17 +119,14 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
   );
 }
 
-/** Đầu trang: đã đăng nhập → bìa vở chào + dải "Hôm nay" (Học tiếp · Từ đến hạn · Chuỗi ngày); khách → bìa giới thiệu */
+/** Đầu trang: đã đăng nhập → bìa vở chào + bài học dở + bài riêng; khách → bìa giới thiệu */
 async function Top() {
   await connection();
   const user = await getCurrentUser();
   if (user) {
     return (
       <>
-        <div className="flex flex-col gap-4">
-          <PageHeader sec="de" icon={Languages} mascot title={`Hallo, ${user.name}!`} sub="Hôm nay học gì? Học tiếp bài dở, ôn từ đến hạn hoặc chọn bài mới." />
-          <TodayStrip userId={user.id} />
-        </div>
+        <PageHeader sec="de" icon={Languages} mascot title={`Hallo, ${user.name}!`} sub="Hôm nay học gì? Học tiếp bài dở, ôn từ đến hạn hoặc chọn bài mới." />
         <ContinueLearning userId={user.id} />
         <OwnLessons userId={user.id} />
       </>

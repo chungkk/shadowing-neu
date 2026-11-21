@@ -108,59 +108,59 @@
   --on-sec: #ffffff;
 }
 
-/* Tối: mực xanh đêm — trang vở dưới đèn bàn */
+/* Tối: đen thuần — không ánh xanh/tím, lớp thẻ xám than trung tính dễ đọc */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #0e1424;
-  --sidebar: #0b101d;
-  --foreground: #e9edf7;
-  --ink: #2a3552;
-  --ink-strong: #e9edf7;
-  --line: #222c45;
-  --line-strong: #66718f;
-  --card: #151c2f;
-  --card-2: #1c2540;
-  --border: #2a3552;
-  --muted: #a3adc6;
+  --background: #000000;
+  --sidebar: #080808;
+  --foreground: #f2f2f2;
+  --ink: #2a2a2a;
+  --ink-strong: #f2f2f2;
+  --line: #222222;
+  --line-strong: #5c5c5c;
+  --card: #111111;
+  --card-2: #191919;
+  --border: #2a2a2a;
+  --muted: #9e9e9e;
   --accent: #3d5ef0;
   --accent-dark: #2c48c9;
   --accent-text: #8ea6ff;
-  --accent-soft: #1c2a5c;
+  --accent-soft: #161f40;
   --link: #8ea6ff;
-  --link-soft: #1c2a5c;
-  --on-link: #0e1424;
+  --link-soft: #161f40;
+  --on-link: #000000;
   --gold: #ffd36a;
   --gold-dark: #c99a1e;
-  --gold-soft: #3a3017;
+  --gold-soft: #2b2310;
   --amber: #ffd36a;
   --amber-dark: #ffe3a1;
   --coral: #ff8f7e;
   --coral-dark: #d9654f;
-  --coral-soft: #3f2420;
+  --coral-soft: #2e1916;
   --coral-text: #ffa596;
   --grape: #8f74ff;
   --grape-dark: #6a4ae0;
-  --grape-soft: #2a2350;
+  --grape-soft: #211b3b;
   --grape-text: #bfaeff;
   --ok: #2f9e5e;
   --ok-dark: #1c6b3e;
-  --ok-soft: #173326;
+  --ok-soft: #11261b;
   --ok-text: #6fdc9c;
   --red: #e5484d;
   --red-dark: #8c2228;
-  --red-soft: #3a1c22;
+  --red-soft: #2e1518;
   --red-400: #ff8a8f;
   --red-300: #ffb3b6;
   --gem: #7fd3f0;
   --gem-dark: #2f86a8;
-  --gem-soft: #13304a;
+  --gem-soft: #0f2533;
   --phrase: #7fd3f0;
-  --candy: #8a4a42;
-  --candy-dark: #b8665b;
-  --sun: #6b5520;
-  --leaf: #245c3d;
-  --aqua: #2c3f80;
-  --stripe: #151c2f;
+  --candy: #6e3b35;
+  --candy-dark: #9c554c;
+  --sun: #574518;
+  --leaf: #1c4a30;
+  --aqua: #203166;
+  --stripe: #111111;
   --shadow-color: 0 0 0;
   scrollbar-color: var(--ink) var(--sidebar);
 }
@@ -203,51 +203,51 @@
   --on-sec: #ffffff;
 }
 [data-theme="dark"] [data-sec="ink"] {
-  --sec: #26314f;
-  --sec-dark: #1a233d;
+  --sec: #222222;
+  --sec-dark: #141414;
 }
 
 [data-theme="dark"] ::selection {
   background: color-mix(in srgb, var(--gold) 40%, transparent);
 }
 
-/* Màn chơi game và tranh minh hoạ game: giấy than tím đêm — vẫn chung chữ, nút, bo góc với cả trang */
+/* Màn chơi game và tranh minh hoạ game: nền đen thuần — vẫn chung chữ, nút, bo góc với cả trang */
 .theme-night {
   color-scheme: dark;
-  --background: #120f24;
-  --sidebar: #0c0a19;
-  --foreground: #f1eeff;
-  --ink: #2f2852;
-  --line: #262046;
-  --line-strong: #6a6299;
-  --card: #1a1533;
-  --card-2: #231d42;
-  --border: #2f2852;
-  --muted: #a9a2cc;
+  --background: #000000;
+  --sidebar: #080808;
+  --foreground: #f2f2f2;
+  --ink: #2a2a2a;
+  --line: #222222;
+  --line-strong: #5c5c5c;
+  --card: #111111;
+  --card-2: #191919;
+  --border: #2a2a2a;
+  --muted: #9e9e9e;
   --link: #ffd36a;
-  --link-soft: #3a3017;
+  --link-soft: #2b2310;
   --accent: #6a4ae0;
   --accent-dark: #4f33bd;
   --accent-text: #bfaeff;
-  --accent-soft: #2a2350;
+  --accent-soft: #211b3b;
   --amber: #ffd36a;
   --amber-dark: #c99a1e;
   --gold: #ffd36a;
   --gold-dark: #c99a1e;
-  --gold-soft: #3a3017;
+  --gold-soft: #2b2310;
   --ok: #2f9e5e;
   --ok-dark: #1c6b3e;
-  --ok-soft: #173326;
+  --ok-soft: #11261b;
   --ok-text: #6fdc9c;
   --red: #e5484d;
   --red-dark: #8c2228;
-  --red-soft: #3a1c22;
+  --red-soft: #2e1518;
   --red-400: #ff8a8f;
   --red-300: #ffb3b6;
   --phrase: #7fd3f0;
   --gem: #7fd3f0;
   --gem-dark: #2f86a8;
-  --gem-soft: #13304a;
+  --gem-soft: #0f2533;
   --shadow-color: 0 0 0;
   /* Bàn Caro / Sudoku: khai báo lại vì :root đã chốt theo màu sáng */
   --board: var(--card-2);

@@ -8,7 +8,7 @@ Code thật: `src/app/(app)/globals.css` (token + primitive), `src/components/Pa
 
 ## 1. Màu
 
-Mặc định giao diện **sáng** (giấy trắng ấm `--background #fbfaf7`, mực xanh đen `--foreground #16203a`). Tối = "mực xanh đêm" qua `[data-theme="dark"]`, cùng tên token.
+Mặc định giao diện **sáng** (giấy trắng ấm `--background #fbfaf7`, mực xanh đen `--foreground #16203a`). Tối = **đen thuần** (`--background #000000`, thẻ `#111111`, không ánh xanh/tím) qua `[data-theme="dark"]`, cùng tên token.
 
 | Vai | Token | Dùng cho |
 |---|---|---|
@@ -76,7 +76,7 @@ import PageHeader from "@/components/PageHeader";
 ## 7. Màn đặc biệt
 
 - `.theme-fahrschule` (màn làm câu hỏi Lái xe): xanh lá nhạt giống phần mềm thi thật, luôn sáng; nút/chữ/bo góc như hệ chung.
-- `.theme-night` (màn chơi game): giấy than tím đêm; chung chữ, nút, bo góc.
+- `.theme-night` (màn chơi game): nền đen thuần `#000000`; chung chữ, nút, bo góc.
 
 ## 8. Ứng dụng iOS (mobile/)
 
