@@ -103,17 +103,48 @@
     margin-top: 0.5rem;
     margin-bottom: 0;
   }
+  .word-meta {
+    @apply flex flex-col gap-1.5 px-3 py-2.5;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background-color: var(--card-2);
+  }
+  .word-tip {
+    @apply flex flex-col gap-1.5 p-3;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--gold) 32%, var(--line));
+    background-color: color-mix(in srgb, var(--gold-soft) 55%, var(--card));
+  }
   .word-example {
-    @apply flex cursor-pointer gap-2.5 rounded-lg text-left;
-    transition: opacity var(--dur-fast);
+    @apply -mx-2 flex cursor-pointer gap-2.5 rounded-xl px-2 py-2 text-left;
+    border: 1px solid transparent;
+    transition:
+      background-color var(--dur-fast),
+      border-color var(--dur-fast),
+      opacity var(--dur-fast);
+  }
+  .word-example[data-source="video"] {
+    @apply mx-0 px-3 py-2.5;
+    border-color: var(--line);
+    background-color: var(--card-2);
+  }
+  .word-example[data-playing] {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    background-color: var(--accent-soft);
   }
   @media (hover: hover) {
     .word-example:hover {
-      opacity: 0.85;
+      background-color: var(--card-2);
+    }
+    .word-example[data-source="video"]:hover {
+      border-color: var(--line-strong);
+    }
+    .word-example[data-playing]:hover {
+      background-color: var(--accent-soft);
     }
   }
   .word-example:active {
-    opacity: 0.65;
+    opacity: 0.78;
   }
   .word-example:focus-visible,
   .word-sense:focus-visible {
@@ -121,14 +152,20 @@
     outline-offset: 2px;
   }
   .word-sense {
-    @apply flex flex-col gap-1 p-3;
+    @apply flex flex-col gap-1.5 p-3;
     border-radius: var(--radius);
     border: 1px solid var(--line);
     background-color: var(--card);
-    transition: border-color var(--dur-fast);
+    transition:
+      border-color var(--dur-fast),
+      background-color var(--dur-fast);
   }
   .word-sense[data-current] {
-    border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+    background-color: var(--accent-soft);
+  }
+  .word-sense[data-playing] {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
     background-color: var(--accent-soft);
   }
   @media (hover: hover) {
