@@ -280,7 +280,7 @@ function ChannelSection({ g, onLocked, href }: { g: Group; onLocked?: (l: Item) 
 
 /**
  * Thư viện bài học chia theo kênh / chủ đề, lọc theo cấp độ (lưu trên URL: ?level=B1).
- * Mỗi kênh hiển thị gọn 1 hàng lướt ngang; tên kênh / chip kênh dẫn tới trang riêng /tieng-duc/kenh/<kênh> (tốt cho SEO).
+ * Mỗi kênh hiển thị gọn 1 hàng lướt ngang; tên kênh dẫn tới trang riêng /tieng-duc/kenh/<kênh> (tốt cho SEO).
  * `channel`: đang ở trang của 1 kênh → bỏ nav kênh, hiện lưới toàn bộ bài.
  */
 export default function LessonGrid({ lessons, lock, admin, channel }: { lessons: Item[]; lock?: LockInfo; admin?: boolean; channel?: string }) {
@@ -326,7 +326,6 @@ export default function LessonGrid({ lessons, lock, admin, channel }: { lessons:
           (l.channel?.toLowerCase().includes(qNorm) ?? false),
       )
     : byLevel;
-  const navGroups = byChannel(byLevel);
   const groups = byChannel(shown);
   const flat = !!channel || (allGroups.length === 1 && allGroups[0].name === OTHER);
   const onLocked = lock?.enabled && !admin ? setOpening : undefined;
@@ -365,22 +364,6 @@ export default function LessonGrid({ lessons, lock, admin, channel }: { lessons:
         </div>
       )}
       {lock?.enabled && <LockNote lock={lock} admin={admin} />}
-      {!flat && navGroups.length > 1 && (
-        <nav aria-label="Kênh YouTube" className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
-          <span className="label shrink-0">Kênh</span>
-          {navGroups.flatMap((g) => {
-            const href = channelHref(g);
-            return href
-              ? [
-                  <Link key={g.key} href={href} className="chip text-xs">
-                    {g.name}
-                    <span className="tabular-nums text-muted">{g.lessons.length}</span>
-                  </Link>,
-                ]
-              : [];
-          })}
-        </nav>
-      )}
       {!shown.length ? (
         <div className="card empty">
           <p className="font-semibold text-foreground">Không tìm thấy bài học phù hợp</p>
