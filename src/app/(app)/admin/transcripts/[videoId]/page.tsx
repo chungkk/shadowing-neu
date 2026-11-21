@@ -24,7 +24,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
   if (!entries.length) notFound();
   const current = entries.find((e) => e.key === wanted) ?? entries[0];
   const label = (t: Transcript) =>
-    t.track.languageCode === "whisper" ? "Whisper (AI)" : `${t.track.name}${t.track.auto ? " (tự động)" : ""}`;
+    t.track.languageCode === "whisper" ? "Whisper v1 (AI)" : t.track.languageCode === "whisper-v2" ? "Whisper v2 (AI)" : `${t.track.name}${t.track.auto ? " (tự động)" : ""}`;
 
   return (
     <>

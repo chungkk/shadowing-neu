@@ -200,6 +200,8 @@ export async function toggleLessonPublished(id: number, published: boolean) {
 
 // ---- Phụ đề video YouTube đã lưu ----
 
+const WHISPER_KEY = /:whisper(-v2)?$/;
+
 /** Sửa phụ đề đã lưu: cập nhật mọi bản lưu cùng track của video (bản "mặc định" + theo mã track) */
 export async function saveTranscript(videoId: string, key: string, _: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
@@ -214,7 +216,7 @@ export async function saveTranscript(videoId: string, key: string, _: FormState,
   for (const k of savedTranscriptKeys(videoId)) {
     const t = getCached<Transcript>(k);
     if (!t) continue;
-    const sameTrack = k === key || (!k.endsWith(":whisper") && !key.endsWith(":whisper") && t.track.languageCode === original.track.languageCode);
+    const sameTrack = k === key || (!WHISPER_KEY.test(k) && !WHISPER_KEY.test(key) && t.track.languageCode === original.track.languageCode);
     setCached(k, sameTrack ? { ...t, title, segments } : { ...t, title }, null);
   }
   prewarmPhrases(segments);

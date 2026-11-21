@@ -3,7 +3,7 @@ import type { User } from "./auth";
 import { createOwnLesson, getPoints } from "./db";
 import { OWN_LESSON_PRICE } from "./lesson-lock";
 import { prewarmPhrases } from "./phrases";
-import { getYouTubeTranscript, MAX_VIDEO_SECONDS, WHISPER, type Transcript } from "./youtube";
+import { defaultWhisper, getYouTubeTranscript, isWhisper, MAX_VIDEO_SECONDS, type Transcript } from "./youtube";
 import { whisperEnabled } from "./whisper";
 
 /**
@@ -23,9 +23,9 @@ export const ownLessonPrice = (user: User) => (user.role === "admin" ? 0 : OWN_L
 async function bestTranscript(videoId: string, user: User): Promise<Transcript> {
   const opts = { whisper: true, quotaKey: `u:${user.id}`, maxSeconds: user.role === "admin" ? undefined : MAX_VIDEO_SECONDS };
   const d = await getYouTubeTranscript(videoId, undefined, opts);
-  if (!d.track.auto || d.track.languageCode === WHISPER || !whisperEnabled()) return d;
+  if (!d.track.auto || isWhisper(d.track.languageCode) || !whisperEnabled()) return d;
   try {
-    return await getYouTubeTranscript(videoId, WHISPER, opts);
+    return await getYouTubeTranscript(videoId, defaultWhisper(), opts);
   } catch {
     return d;
   }

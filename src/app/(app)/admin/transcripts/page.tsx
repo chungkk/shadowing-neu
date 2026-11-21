@@ -12,7 +12,7 @@ async function Transcripts() {
   for (const r of listSavedTranscripts()) {
     if (!r.videoId) continue;
     const v = videos.get(r.videoId) ?? { videoId: r.videoId, title: r.title, updatedAt: r.updatedAt, tracks: [] };
-    const label = r.languageCode === "whisper" ? "Whisper (AI)" : `${r.trackName}${r.auto ? " (tự động)" : ""}`;
+    const label = r.languageCode === "whisper" ? "Whisper v1 (AI)" : r.languageCode === "whisper-v2" ? "Whisper v2 (AI)" : `${r.trackName}${r.auto ? " (tự động)" : ""}`;
     if (!v.tracks.some((t) => t.label === label)) v.tracks.push({ label, lines: r.lines });
     v.updatedAt = Math.max(v.updatedAt ?? 0, r.updatedAt ?? 0) || null;
     videos.set(r.videoId, v);

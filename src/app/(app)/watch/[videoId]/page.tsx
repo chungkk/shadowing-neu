@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import ShadowPlayer from "@/components/ShadowPlayer";
 import Mascot from "@/components/Mascot";
 import { RememberVideo } from "@/components/RecentVideos";
-import { extractVideoId, getYouTubeTranscript, MAX_VIDEO_SECONDS, WHISPER } from "@/lib/youtube";
+import { extractVideoId, getYouTubeTranscript, MAX_VIDEO_SECONDS, isWhisper } from "@/lib/youtube";
 import { getCurrentUser } from "@/lib/auth";
 import { lockedLessonOfVideo } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
@@ -82,7 +82,7 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
           {data.track.auto && <span className="badge badge-gold whitespace-normal">
               <TriangleAlert className="size-3.5" /> Phụ đề tự động — có thể sai chính tả / thiếu dấu câu.
             </span>}
-          {data.track.languageCode === WHISPER && <span className="badge badge-gem whitespace-normal">Phụ đề do Whisper (AI) tạo.</span>}
+          {isWhisper(data.track.languageCode) && <span className="badge badge-gem whitespace-normal">Phụ đề do Whisper (AI) tạo.</span>}
         </div>
       </ShadowPlayer>
     </>

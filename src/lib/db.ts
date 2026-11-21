@@ -630,7 +630,7 @@ export function lessonsByVideoIds(videoIds: string[]): Map<string, { id: number;
 }
 
 // ---- Phụ đề video YouTube đã lưu (trang admin) ----
-// Khoá: "ytp:<videoId>:<default | mã track>" (phụ đề YouTube) và "yt:<videoId>:whisper" (Whisper)
+// Khoá: "ytp:<videoId>:<default | mã track>" (phụ đề YouTube) và "yt:<videoId>:whisper" / ":whisper-v2" (Whisper v1 / v2)
 
 export type SavedTranscript = {
   key: string;
@@ -643,7 +643,7 @@ export type SavedTranscript = {
   updatedAt: number | null;
 };
 
-const SAVED_WHERE = "(key LIKE 'ytp:%' OR key LIKE 'yt:%:whisper')";
+const SAVED_WHERE = "(key LIKE 'ytp:%' OR key LIKE 'yt:%:whisper' OR key LIKE 'yt:%:whisper-v2')";
 
 export function listSavedTranscripts(): SavedTranscript[] {
   const rows = conn()
@@ -660,8 +660,8 @@ export function listSavedTranscripts(): SavedTranscript[] {
 export function savedTranscriptKeys(videoId: string): string[] {
   return (
     conn()
-      .prepare(`SELECT key FROM transcript_cache WHERE ${SAVED_WHERE} AND (key LIKE ? OR key = ?)`)
-      .all(`ytp:${videoId}:%`, `yt:${videoId}:whisper`) as { key: string }[]
+      .prepare(`SELECT key FROM transcript_cache WHERE ${SAVED_WHERE} AND (key LIKE ? OR key = ? OR key = ?)`)
+      .all(`ytp:${videoId}:%`, `yt:${videoId}:whisper`, `yt:${videoId}:whisper-v2`) as { key: string }[]
   ).map((r) => r.key);
 }
 
