@@ -4,6 +4,7 @@ import { getTranslations, listLessons, type LessonSummary, type NounGender } fro
 import { getDeck, listDecks, type Deck } from "./decks";
 import type { Phrase } from "./phrase-match";
 import { mergeIntoSentences, type Segment } from "./subtitles";
+import { channelSlug } from "./slug";
 
 export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 
@@ -109,6 +110,29 @@ export function activeLessonLevels(): { info: LevelCatalogInfo; count: number }[
     const count = counts.get(lv) ?? 0;
     return count > 0 ? [{ info: LEVEL_CATALOG[lv], count }] : [];
   });
+}
+
+/** Trang kênh có ít hơn số bài này → noindex (chống nội dung mỏng), vẫn mở được và vẫn có trong nav */
+export const CHANNEL_MIN_INDEX = 3;
+
+export type LessonChannel = { slug: string; name: string; url: string | null; count: number; levels: string[] };
+
+/** Các kênh YouTube có bài học công khai, nhiều bài trước — bài chưa biết kênh không có trang riêng */
+export function lessonChannels(): LessonChannel[] {
+  const map = new Map<string, LessonChannel>();
+  for (const l of listLessons()) {
+    const name = l.channel?.trim();
+    if (!name) continue;
+    const slug = channelSlug(name);
+    const c = map.get(slug) ?? { slug, name, url: l.channelUrl || null, count: 0, levels: [] };
+    c.count++;
+    if (!c.levels.includes(l.level)) c.levels.push(l.level);
+    map.set(slug, c);
+  }
+  const rank = (lv: string) => ((CEFR_LEVELS as readonly string[]).indexOf(lv) + 7) % 7;
+  return [...map.values()]
+    .map((c) => ({ ...c, levels: c.levels.sort((a, b) => rank(a) - rank(b)) }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "de"));
 }
 
 // ---- Trích xuất từ vựng quan trọng từ bài học khớp kho bộ từ (0 gọi AI, liên kết nội bộ 2 chiều) ----

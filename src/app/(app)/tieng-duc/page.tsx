@@ -3,15 +3,15 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, BookMarked, Languages, Layers, Link2 } from "lucide-react";
 import { connection } from "next/server";
-import { getCurrentUser, type User } from "@/lib/auth";
-import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
-import { dueCount, LEVELS, listChannels, listProgress } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { lockInfo } from "@/lib/access";
+import { dueCount, LEVELS } from "@/lib/db";
+import { lessonGridItems } from "@/lib/lesson-items";
 import { fillLessonChannels } from "@/lib/channels";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
 import PageHeader from "@/components/PageHeader";
 import ContinueLearning from "@/components/ContinueLearning";
-import { percent } from "@/lib/progress";
 import { RecentVideos } from "@/components/RecentVideos";
 import { pageMeta } from "@/lib/page-meta";
 import { LessonGridSkeleton } from "@/components/Skeleton";
@@ -26,42 +26,12 @@ export const metadata: Metadata = pageMeta({
   path: "/tieng-duc",
 });
 
-const NEW_MS = 3 * 86_400_000;
-
-function lessonItems(user: User | null) {
-  const now = Date.now();
-  const access = accessOf(user?.role === "admin" ? null : user);
-  const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
-  const avatars = new Map(listChannels().flatMap((c) => (c.handle && c.avatar ? [[c.handle.toLowerCase(), c.avatar] as const] : [])));
-  const items = lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
-    const p = progress.get(`/lesson/${l.id}`);
-    return {
-      id: l.id,
-      title: l.title,
-      slug: l.slug,
-      videoId: l.videoId,
-      level: l.level,
-      description: l.description,
-      sentences: l.sentenceCount ?? l.segmentCount,
-      duration: l.duration ?? 0,
-      dictation: l.dictation,
-      percent: p ? percent(p) : 0,
-      isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
-      access: access(l.id),
-      channel: l.channel,
-      channelUrl: l.channelUrl || null,
-      channelAvatar: avatars.get(l.channelUrl?.match(/\/(@[^/?#]+)/)?.[1]?.toLowerCase() ?? "") ?? null,
-    };
-  });
-  return items.sort((x, y) => +(x.access === "locked") - +(y.access === "locked"));
-}
-
 async function Lessons() {
   await connection();
   const user = await getCurrentUser();
   const admin = user?.role === "admin";
   fillLessonChannels();
-  return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
+  return <LessonGrid lessons={lessonGridItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
 }
 
 const levelRank = (lv: string) => {
@@ -146,7 +116,7 @@ async function Top() {
       </>
     );
   }
-  const items = lessonItems(null).filter((l) => l.access !== "locked");
+  const items = lessonGridItems(null).filter((l) => l.access !== "locked");
   const first = [...items].sort((a, b) => levelRank(a.level) - levelRank(b.level) || a.id - b.id)[0];
   const levels = [...new Set(items.map((l) => l.level))].sort((a, b) => levelRank(a) - levelRank(b));
   return (

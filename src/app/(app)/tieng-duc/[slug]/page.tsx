@@ -10,7 +10,7 @@ import { getLesson, getLessonBySlug, type Lesson } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { accessOf, canViewLesson, lockInfo, lockSettings } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
-import { lessonPath } from "@/lib/slug";
+import { channelPath, lessonPath } from "@/lib/slug";
 import { SITE_URL } from "@/lib/site";
 import { clip, pageMeta, youtubeThumb } from "@/lib/page-meta";
 import { ORGANIZATION_ID, serializeJsonLd } from "@/lib/seo";
@@ -139,7 +139,9 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
           {lesson.channel && (
             <>
               <span aria-hidden>·</span>
-              <span>Kênh {lesson.channel}</span>
+              <Link href={channelPath(lesson.channel)} className="font-bold text-link hover:underline">
+                Kênh {lesson.channel}
+              </Link>
             </>
           )}
           <span aria-hidden>·</span>

@@ -4,10 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, ChevronLeft, Languages } from "lucide-react";
 import { connection } from "next/server";
-import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
-import { getCurrentUser, type User } from "@/lib/auth";
-import { listChannels, listProgress } from "@/lib/db";
-import { percent } from "@/lib/progress";
+import { lockInfo } from "@/lib/access";
+import { getCurrentUser } from "@/lib/auth";
+import { lessonGridItems } from "@/lib/lesson-items";
 import {
   LEVEL_CATALOG,
   activeLessonLevels,
@@ -22,38 +21,6 @@ import { lessonPath } from "@/lib/slug";
 import LessonGrid from "@/components/LessonGrid";
 import PageHeader from "@/components/PageHeader";
 import { LessonGridSkeleton } from "@/components/Skeleton";
-
-const NEW_MS = 3 * 86_400_000;
-
-function itemsForLevel(user: User | null, level: string) {
-  const now = Date.now();
-  const access = accessOf(user?.role === "admin" ? null : user);
-  const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
-  const avatars = new Map(listChannels().flatMap((c) => (c.handle && c.avatar ? [[c.handle.toLowerCase(), c.avatar] as const] : [])));
-  return lessonsFor(user?.role === "admin" ? null : (user?.id ?? null))
-    .filter((l) => l.level === level)
-    .map((l) => {
-      const p = progress.get(`/lesson/${l.id}`);
-      return {
-        id: l.id,
-        title: l.title,
-        slug: l.slug,
-        videoId: l.videoId,
-        level: l.level,
-        description: l.description,
-        sentences: l.sentenceCount ?? l.segmentCount,
-        duration: l.duration ?? 0,
-        dictation: l.dictation,
-        percent: p ? percent(p) : 0,
-        isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
-        access: access(l.id),
-        channel: l.channel,
-        channelUrl: l.channelUrl || null,
-        channelAvatar: avatars.get(l.channelUrl?.match(/\/(@[^/?#]+)/)?.[1]?.toLowerCase() ?? "") ?? null,
-      };
-    })
-    .sort((x, y) => +(x.access === "locked") - +(y.access === "locked"));
-}
 
 export async function generateMetadata({ params }: PageProps<"/tieng-duc/trinh-do/[level]">): Promise<Metadata> {
   const lv = parseCefrLevel((await params).level);
@@ -77,7 +44,7 @@ async function LevelCatalogView({ params }: PageProps<"/tieng-duc/trinh-do/[leve
   const info = LEVEL_CATALOG[lv];
   const user = await getCurrentUser();
   const admin = user?.role === "admin";
-  const lessons = itemsForLevel(user, lv);
+  const lessons = lessonGridItems(user, (l) => l.level === lv);
   const active = activeLessonLevels();
   const deck = deckForLevel(lv);
   const first = lessons.find((l) => l.access !== "locked");

@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
     // Tab Lái xe: link cũ của chương / ôn câu sai
     { source: "/lai-xe/:c(\\d\\.\\d\\.\\d{2})", destination: "/lai-xe/hoc/:c", permanent: true },
     { source: "/lai-xe/on-tap", destination: "/lai-xe/cau-sai", permanent: true },
+    // Bộ lọc kênh cũ ?channel=easy-german → trang kênh riêng
+    { source: "/tieng-duc", has: [{ type: "query", key: "channel", value: "(?<ch>[a-z0-9-]+)" }], destination: "/tieng-duc/kenh/:ch", permanent: true },
     { source: "/leben-in-deutschland/on-tap", destination: "/leben-in-deutschland/cau-sai", permanent: true },
   ],
   cacheComponents: true,

@@ -3,10 +3,10 @@ import { connection } from "next/server";
 import { listLessons } from "@/lib/db";
 import { listDecks } from "@/lib/decks";
 import { allChapterIds } from "@/lib/laixe";
-import { activeLessonLevels, levelCatalogPath } from "@/lib/lesson-seo";
+import { CHANNEL_MIN_INDEX, activeLessonLevels, lessonChannels, levelCatalogPath } from "@/lib/lesson-seo";
 import { LID_UPDATED, indexableSetIds } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
-import { lessonPath } from "@/lib/slug";
+import { channelPath, lessonPath } from "@/lib/slug";
 import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/lib/company/legal";
 import { PRODUCT_PAGES } from "@/lib/company/productPages";
 import { SERVICES, productPath } from "@/lib/company/services";
@@ -42,6 +42,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.85,
     })),
+    ...lessonChannels()
+      .filter((c) => c.count >= CHANNEL_MIN_INDEX)
+      .map((c) => ({ url: SITE_URL + channelPath(c.name), changeFrequency: "weekly" as const, priority: 0.8 })),
     { url: `${SITE_URL}/vocab`, changeFrequency: "monthly", priority: 0.8 },
     ...listDecks().map((d) => ({ url: `${SITE_URL}/vocab/decks/${d.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
     { url: `${SITE_URL}/games`, changeFrequency: "monthly", priority: 0.7 },
