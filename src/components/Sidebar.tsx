@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Captions, Car, ChevronDown, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Car, ChevronDown, House, Landmark, Languages, Layers, LogOut, MonitorPlay, Settings, ShieldCheck, Trophy } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -44,12 +44,8 @@ const LEARN_QUICK: Item[] = [
   { href: "/vocab", label: "Kho từ vựng", icon: BookMarked },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
 ];
-const ADMIN_ITEMS: Item[] = [
-  { href: "/admin", label: "Quản lý bài học", short: "Admin", icon: ListVideo },
-  { href: "/admin/transcripts", label: "Phụ đề đã lưu", icon: Captions },
-  { href: "/admin/users", label: "Người dùng", icon: Users },
-  { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
-];
+/** Một lối vào duy nhất — các mục con (bài học, kênh, phụ đề, người dùng, góp ý) nằm ở tab trong trang /admin */
+const ADMIN_ITEMS: Item[] = [{ href: "/admin", label: "Trang quản trị", short: "Admin", icon: ShieldCheck }];
 
 const INFO_PAGES = ["about", "shadowing", "support", "privacy", "terms", "impressum", "refund", "calendar", "deutsch-redewendung"];
 const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing", ...INFO_PAGES]);
@@ -75,7 +71,7 @@ function DueBadge({ due, className = "" }: { due: number; className?: string }) 
 const reviewHref = (href: string, due: number) => (href === REVIEW.href && due ? "/vocab/notebook?review=1" : href);
 
 export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?: number }) {
-  const items = [...(user ? USER_BAR : GUEST_BAR), ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
+  const items = [...(user ? USER_BAR : GUEST_BAR), ...(user?.role === "admin" ? ADMIN_ITEMS : [])];
   const current = useCurrent([...ITEMS, ...items, ...USER_ITEMS]);
 
   return (
