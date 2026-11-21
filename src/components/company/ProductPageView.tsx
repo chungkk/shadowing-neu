@@ -192,7 +192,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
 
             {/* Từng phần học */}
             {shotSections.map(({ section, i, shots }, k) => (
-                <section key={section.title} data-sec="de" aria-labelledby={`feature-${i}`} className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:gap-8">
+                <section key={section.title} data-sec="de" aria-labelledby={`feature-${i}`} className="card grid items-center gap-6 p-5 sm:p-6 lg:grid-cols-2 lg:gap-8">
                     <div className={k % 2 ? 'lg:order-2' : ''}>
                         <FeatureText section={section} i={i} />
                     </div>
@@ -204,7 +204,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
             {textSections.length > 0 && (
                 <div className="grid gap-4 md:grid-cols-2">
                     {textSections.map(({ section, i }) => (
-                        <section key={section.title} data-sec="de" aria-labelledby={`feature-${i}`} className="sticker p-4 sm:p-6">
+                        <section key={section.title} data-sec="de" aria-labelledby={`feature-${i}`} className="card p-5 sm:p-6">
                             <FeatureText section={section} i={i} />
                         </section>
                     ))}
@@ -222,7 +222,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                         {copy.plans.columns.map((col, i) => (
-                            <div key={col.title} className={`sticker flex flex-col gap-3 p-5 ${i ? 'border-accent/35 bg-accent-soft' : ''}`}>
+                            <div key={col.title} className={`card flex flex-col gap-3 p-5 ${i ? 'border-accent/35 bg-accent-soft' : ''}`}>
                                 <h3 className="flex items-center gap-2 font-display text-xl font-bold">
                                     <BadgeCheck className={`size-6 ${i ? 'text-accent-text' : 'text-muted'}`} /> {col.title}
                                 </h3>
@@ -288,8 +288,7 @@ export default function ProductPageView({ id }: { id: ServiceId }) {
                 </div>
             </section>
 
-            {/* Lời mời cuối trang: trang giấy ô ly như trang chủ */}
-            <section aria-labelledby="closing-title" className="o-ly flex flex-col items-start gap-4 rounded-[var(--radius-xl)] border border-line p-6 sm:p-10 dark:border-border">
+            <section aria-labelledby="closing-title" className="card flex flex-col items-start gap-4 p-6 sm:p-8">
                 <h2 id="closing-title" className="font-display text-[clamp(1.75rem,1.3rem+1.6vw,2.4rem)] leading-[1.1] font-extrabold tracking-[-0.03em] text-balance">
                     {t.closing}
                 </h2>

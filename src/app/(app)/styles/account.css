@@ -1,145 +1,65 @@
-/* Area CSS: account — owned by the account worker. Plain CSS or @layer components; tokens from globals.css.
-   Đăng nhập / đăng ký / quên mật khẩu (AuthForm, PasswordForms, LoginDialog), Cài đặt, Thành tích.
-   Thế giới "Nhãn vở" (DESIGN.md): phẳng, bìa vở màu + nhãn vở viền đôi, không gradient, không bóng cứng. */
+/* Area CSS: account — Đăng nhập / đăng ký / quên mật khẩu, Cài đặt, Thành tích. */
 
 @layer components {
   /* ───── Đăng nhập / đăng ký ───── */
-  /* Nền tối của popup đăng nhập: cùng màu .dialog-backdrop, nhưng cuộn được (hộp 2 nửa cao hơn màn hình thấp) */
   .auth-backdrop {
     @apply fixed inset-0 z-50 flex overflow-y-auto overscroll-contain sm:p-4 md:p-8;
-    background: rgb(14 20 36 / 0.5);
-    animation: sheet-fade 160ms ease-out;
+    background: rgb(15 23 42 / 0.45);
+    backdrop-filter: blur(2px);
+    animation: sheet-fade 150ms ease-out;
   }
   .auth-backdrop .auth-card {
-    animation: sheet-pop 280ms var(--ease-out);
+    animation: sheet-pop 220ms var(--ease-out);
   }
   @media (max-width: 39.99rem) {
     .auth-backdrop .auth-card {
       animation-name: sheet-up;
     }
   }
-  /* Hộp 2 nửa: form + bìa vở (trên điện thoại: dải bìa ở trên, form bên dưới) */
   .auth-card {
-    @apply relative grid w-full overflow-hidden;
+    @apply relative w-full overflow-hidden;
     background-color: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--radius-xl);
-  }
-  [data-theme="dark"] .auth-card {
-    border-color: var(--border);
   }
   .auth-backdrop .auth-card {
     box-shadow: var(--shadow-lg);
   }
   .auth-subtitle {
-    @apply mt-2 max-w-sm text-[0.95rem] leading-relaxed text-muted;
+    @apply mt-1.5 text-sm leading-relaxed text-muted;
   }
-
-  /* Nửa bìa vở: khối màu khu Tiếng Đức có gáy băng dính (.cover), nhãn vở ở giữa, linh vật ngồi trên mép nhãn */
-  .auth-art {
-    @apply relative flex min-h-36 items-end justify-end overflow-hidden pr-4 pb-0 pl-8 md:min-h-0 md:items-center md:justify-center md:p-10 md:pl-14;
-  }
-  .auth-art-label {
-    @apply relative mt-16 hidden w-full max-w-[18rem] flex-col gap-1 pt-4 pb-4 md:flex;
-    transform: rotate(-2deg);
-  }
-  .auth-art-label .nhan-line {
-    @apply flex items-baseline gap-2 pt-2.5 pb-1 text-sm text-muted;
-  }
-  .auth-art-label .nhan-line b {
-    @apply font-semibold text-foreground;
-  }
-  /* Linh vật: điện thoại — ngồi ở góc dưới dải bìa; máy tính — ngồi trên mép trên của nhãn */
-  .auth-mascot {
-    @apply relative size-28 translate-y-3;
-  }
-  @media (min-width: 48rem) {
-    .auth-mascot {
-      @apply absolute -top-[7.4rem] right-0 size-40 translate-y-0;
-    }
-  }
-  /* Bong bóng thoại: mảnh giấy phẳng, có đuôi nhỏ */
-  .auth-bubble {
-    @apply absolute rounded-2xl px-3.5 py-2 font-display text-lg leading-none font-extrabold tracking-[-0.01em] md:px-4 md:py-2.5 md:text-2xl;
-  }
-  .auth-bubble::after {
-    content: "";
-    @apply absolute size-3 rotate-45;
-    background: inherit;
-  }
-  .auth-bubble-hallo {
-    color: #16203a;
-    background: var(--gold);
-    transform: rotate(-4deg);
-  }
-  .auth-bubble-hallo::after {
-    @apply -bottom-1 left-5;
-  }
-  .auth-bubble-wie {
-    @apply text-base md:text-lg;
-    color: #16203a;
-    background: #fff;
-    transform: rotate(3deg);
-  }
-  .auth-bubble-wie::after {
-    @apply -top-1 right-6;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .auth-bubble-hallo {
-      animation: auth-bubble 4s var(--ease-out) infinite;
-    }
-  }
-  /* Nút đóng nằm trên nền bìa (màu đậm) → chữ trắng */
   .auth-close {
-    @apply absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-20 inline-flex size-11 items-center justify-center rounded-xl;
-    color: var(--on-sec);
-    transition: background-color var(--dur-fast);
+    @apply absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-20 inline-flex size-9 items-center justify-center rounded-lg text-muted;
+    transition:
+      background-color var(--dur-fast),
+      color var(--dur-fast);
   }
   .auth-close:hover {
-    background: rgb(255 255 255 / 0.16);
-  }
-  .auth-close:focus-visible {
-    outline: 3px solid #fff;
-    outline-offset: -3px;
-  }
-  /* Email đã nhập + nút "Đổi": dòng nhãn kẻ chấm như "Họ và tên: ……" */
-  .auth-email {
-    @apply flex min-h-12 items-center gap-2 py-1 pr-1 pl-3.5 text-[0.95rem];
-    border-radius: var(--radius);
-    border: 1px dashed color-mix(in srgb, var(--foreground) 28%, transparent);
+    color: var(--foreground);
     background: var(--card-2);
   }
-  /* Ô mã 6 số */
-  .auth-code {
-    @apply text-center font-display text-3xl font-extrabold tracking-[0.5em] md:text-3xl;
-    padding-left: calc(1rem + 0.25em);
+  .auth-email {
+    @apply flex min-h-11 items-center gap-2 py-1 pr-1 pl-3 text-sm;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--card-2);
   }
-  /* Hàng link phụ dưới form (Sửa thông tin / Gửi lại mã) */
+  .auth-code {
+    @apply text-center font-mono text-2xl font-bold tracking-[0.45em];
+    padding-left: calc(1rem + 0.22em);
+  }
   .auth-links {
-    @apply flex items-center justify-between gap-3 text-sm font-semibold;
+    @apply flex items-center justify-between gap-3 text-sm font-medium;
   }
   .auth-links button,
   .auth-links a {
-    @apply inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-link hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline;
+    @apply inline-flex min-h-10 items-center gap-1 rounded-lg px-1 text-link hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline;
   }
   .social-btn {
     @apply font-semibold;
   }
 }
 
-@keyframes auth-bubble {
-  0%,
-  70%,
-  100% {
-    transform: rotate(-4deg);
-  }
-  78% {
-    transform: rotate(-9deg) scale(1.06);
-  }
-  86% {
-    transform: rotate(1deg);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .auth-backdrop,
   .auth-backdrop .auth-card {
@@ -149,26 +69,24 @@
 
 @layer components {
   /* ───── Cài đặt ───── */
-  /* Ảnh đại diện: bấm vào ảnh để đổi — nút máy ảnh nhỏ dán ở góc */
   .settings-avatar {
     @apply relative shrink-0 rounded-full;
   }
   .settings-avatar-cam {
-    @apply absolute -right-1 -bottom-1 inline-flex size-9 items-center justify-center rounded-full;
+    @apply absolute -right-1 -bottom-1 inline-flex size-8 items-center justify-center rounded-full;
     color: var(--background);
     background: var(--foreground);
-    border: 3px solid var(--card);
+    border: 2px solid var(--card);
   }
-  /* Bố cục: menu mục bên trái (máy tính, dính khi cuộn) · điện thoại: hàng chip cuộn ngang trên cùng */
   .settings-layout {
-    @apply grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-10;
+    @apply grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8;
   }
   .settings-nav {
-    @apply min-w-0 lg:sticky lg:top-24;
+    @apply min-w-0 lg:sticky lg:top-20;
   }
   .settings-nav-link {
-    @apply flex min-h-10 items-center gap-2.5 rounded-full px-3.5 text-sm font-semibold whitespace-nowrap text-muted lg:rounded-[var(--radius)] lg:px-3;
-    border: 1.5px solid var(--border);
+    @apply flex min-h-9 items-center gap-2.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap text-muted;
+    border: 1px solid var(--line);
     background: var(--card);
     transition:
       background-color var(--dur-fast),
@@ -189,12 +107,12 @@
   .settings-nav-link[aria-current="true"] {
     color: var(--foreground);
     background: var(--card-2);
-    border-color: var(--foreground);
+    border-color: var(--border);
+    font-weight: 600;
   }
   @media (min-width: 64rem) {
     .settings-nav-link[aria-current="true"] {
       border-color: transparent;
-      box-shadow: inset 3px 0 0 var(--foreground);
     }
   }
   .settings-nav-danger[aria-current="true"],
@@ -202,10 +120,9 @@
     color: var(--red-400) !important;
   }
 
-  /* Khung nhóm: các hàng ngăn bằng đường kẻ */
   .settings-card {
     @apply overflow-hidden;
-    border: 1.5px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     background: var(--card);
   }
@@ -222,9 +139,8 @@
     @apply inline-flex size-9 shrink-0 items-center justify-center self-start rounded-[var(--radius)] text-muted;
     background: var(--card-2);
   }
-  /* Giá trị hiện tại: cạnh tên trên máy tính, xuống dòng dưới trên điện thoại (thẳng hàng chữ, không thẳng icon) */
   .settings-row-value {
-    @apply flex min-w-0 text-sm font-semibold max-sm:order-3 max-sm:basis-full max-sm:pl-[3.25rem] sm:max-w-[45%] sm:justify-end;
+    @apply flex min-w-0 text-sm font-medium max-sm:order-3 max-sm:basis-full max-sm:pl-[3.25rem] sm:max-w-[45%] sm:justify-end;
   }
   .settings-row-action {
     @apply shrink-0 max-sm:ml-auto;
@@ -238,10 +154,10 @@
   .settings-inline {
     @apply flex flex-wrap items-end gap-2;
   }
-  /* Kim cương trong khung hồ sơ — bấm để xem thống kê */
   .settings-gem {
     @apply flex shrink-0 items-center gap-3 px-4 py-3;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--gem) 20%, var(--line));
     color: var(--gem-dark);
     background: var(--gem-soft);
   }
@@ -250,12 +166,9 @@
   }
 
   .settings-foot {
-    @apply flex flex-wrap items-center justify-end gap-2 px-4 py-3 sm:px-6;
+    @apply flex flex-wrap items-center justify-end gap-2 px-4 py-3 sm:px-5;
     border-top: 1px solid var(--line);
     background: var(--card-2);
-  }
-  [data-theme="dark"] .settings-foot {
-    border-top-color: var(--border);
   }
   @media (max-width: 39.99rem) {
     .settings-foot > .btn,
@@ -266,15 +179,15 @@
     }
   }
   .settings-danger {
-    border-color: color-mix(in srgb, var(--red) 35%, var(--line));
+    border-color: color-mix(in srgb, var(--red) 30%, var(--line));
   }
   .settings-danger .settings-foot {
     border-top-color: color-mix(in srgb, var(--red) 20%, var(--line));
-    background: color-mix(in srgb, var(--red-soft) 60%, var(--card));
+    background: color-mix(in srgb, var(--red-soft) 55%, var(--card));
   }
   .btn.settings-danger-btn {
     color: var(--red-400);
-    border-color: color-mix(in srgb, var(--red) 40%, var(--line));
+    border-color: color-mix(in srgb, var(--red) 35%, var(--line));
   }
   @media (hover: hover) {
     .btn.settings-danger-btn:hover:not(:disabled) {
@@ -284,15 +197,15 @@
   .settings-confirm {
     @apply flex flex-col gap-3 p-4;
     border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--red) 28%, var(--line));
     background: var(--red-soft);
   }
 
   /* ───── Thành tích ───── */
-  /* Kim cương: dải màu ngọc phẳng, con số lớn */
   .stats-gem {
     @apply flex items-center gap-4 p-4 sm:p-5;
     border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--gem) 22%, var(--line));
     color: var(--gem-dark);
     background: var(--gem-soft);
   }
@@ -300,7 +213,8 @@
     color: var(--gem);
   }
   .stats-gem-icon {
-    @apply inline-flex size-14 shrink-0 items-center justify-center rounded-2xl sm:size-16;
+    @apply inline-flex size-12 shrink-0 items-center justify-center rounded-xl sm:size-14;
     background: var(--card);
+    border: 1px solid var(--line);
   }
 }

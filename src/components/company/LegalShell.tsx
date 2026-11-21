@@ -50,7 +50,7 @@ function MoreNav({ nav, title, locale }: { nav: LegalNavItem[]; title: string; l
     return (
         <nav aria-label={title} className="card flex flex-col gap-1 p-4">
             <h2 className="label pb-1">{title}</h2>
-            <ul className="flex flex-col max-lg:sm:grid max-lg:sm:grid-cols-2 max-lg:sm:gap-x-6">
+            <ul className="divide-y divide-line max-lg:sm:grid max-lg:sm:grid-cols-2 max-lg:sm:gap-x-6 max-lg:sm:divide-y-0">
                 {nav.map((item) => {
                     const Icon = item.icon;
                     const active = pathname === item.href;
@@ -59,8 +59,8 @@ function MoreNav({ nav, title, locale }: { nav: LegalNavItem[]; title: string; l
                             <Link
                                 href={item.href}
                                 aria-current={active ? 'page' : undefined}
-                                className={`nhan-line group flex min-h-11 items-center gap-2.5 py-2 text-[0.95rem] transition-colors duration-(--dur-fast) focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                                    active ? 'font-bold text-foreground' : 'font-medium text-muted hover:text-link'
+                                className={`group flex min-h-10 items-center gap-2.5 py-2 text-sm transition-colors duration-(--dur-fast) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                                    active ? 'font-semibold text-foreground' : 'font-medium text-muted hover:text-link'
                                 }`}
                             >
                                 <Icon className={`size-[18px] shrink-0 ${active ? 'text-foreground' : 'text-muted group-hover:text-link'}`} aria-hidden="true" />

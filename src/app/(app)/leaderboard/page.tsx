@@ -11,7 +11,6 @@ import { LeaderboardSkeleton } from "@/components/Skeleton";
 export const metadata: Metadata = { title: "Bảng xếp hạng", robots: { index: false, follow: false } };
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
-/** Huy chương số hạng của 3 người đầu (styles/games.css) */
 const PODIUM = ["g-rank-1", "g-rank-2", "g-rank-3"];
 
 async function Board() {
@@ -19,53 +18,52 @@ async function Board() {
   const { top, me, players } = getLeaderboard(user.id);
   return (
     <>
-      <section className="card hero flex flex-wrap items-center gap-x-4 gap-y-3 p-4 sm:p-5" aria-label="Hạng của bạn">
-        <Avatar user={user} className="size-14 text-2xl" />
+      <section className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-4 sm:p-5" aria-label="Hạng của bạn">
+        <Avatar user={user} className="size-12 text-lg" />
         <div className="min-w-0 flex-1">
           {me.rank === null ? (
             <>
-              <p className="font-display text-2xl leading-tight font-bold tracking-[-0.02em]">Chưa có hạng</p>
-              <p className="text-sm text-muted">Chép chính tả đúng để có điểm và lên bảng xếp hạng.</p>
+              <p className="text-lg leading-tight font-bold">Chưa có hạng</p>
+              <p className="mt-0.5 text-sm text-muted">Chép chính tả đúng để tích kim cương và lên bảng xếp hạng.</p>
             </>
           ) : (
             <>
-              <p className="font-display text-4xl leading-none font-extrabold tracking-[-0.03em] tabular-nums">#{fmt(me.rank)}</p>
-              <p className="mt-1 text-sm font-semibold text-muted">Hạng của bạn · trong {fmt(players)} người</p>
+              <p className="font-display text-3xl leading-none font-bold tracking-[-0.03em] tabular-nums">#{fmt(me.rank)}</p>
+              <p className="mt-1 text-xs font-medium text-muted">Hạng hiện tại của bạn · trong {fmt(players)} học viên</p>
             </>
           )}
         </div>
-        <span className="badge badge-gem shrink-0 gap-1.5 px-3 py-1.5 text-base tabular-nums max-[360px]:w-full max-[360px]:justify-center">
-          <Gem className="size-5" /> {fmt(me.total)}
+        <span className="badge badge-gem shrink-0 gap-1.5 px-3 py-1.5 text-sm tabular-nums max-[360px]:w-full max-[360px]:justify-center">
+          <Gem className="size-4" /> {fmt(me.total)}
         </span>
       </section>
 
       {top.length === 0 ? (
         <div className="card empty">
-          <span className="icon-bubble tint-gold size-16 rounded-panel">
-            <Trophy className="size-8" />
+          <span className="icon-bubble tint-gold size-12 rounded-xl">
+            <Trophy className="size-6" />
           </span>
-          <p className="font-display text-lg font-bold text-foreground">Chưa có ai trên bảng xếp hạng</p>
-          <p className="text-sm">Chép chính tả đúng để có điểm và là người đầu tiên.</p>
+          <p className="text-base font-semibold text-foreground">Chưa có ai trên bảng xếp hạng</p>
+          <p className="text-sm">Chép chính tả đúng để tích kim cương và trở thành người đầu tiên.</p>
         </div>
       ) : (
-        <ol className="card flex flex-col overflow-hidden p-1.5">
+        <ol className="card divide-y divide-line overflow-hidden p-0">
           {top.map((r) => {
             const mine = r.id === user.id;
             return (
               <li
                 key={r.id}
                 aria-current={mine ? "true" : undefined}
-                className={`flex min-h-14 items-center gap-3 rounded-xl px-2.5 py-2 sm:px-3 ${mine ? "g-rank-me" : "[&+&]:border-t [&+&]:border-line"}`}
+                className={`flex min-h-14 items-center gap-3 px-4 py-2.5 ${mine ? "g-rank-me" : ""}`}
               >
                 <span className={`g-rank ${PODIUM[r.rank - 1] ?? "text-muted"}`}>{r.rank}</span>
-                {/* Ảnh đại diện chỉ chính chủ xem được → người khác hiện chữ cái đầu tên */}
-                <Avatar user={{ id: r.id, name: r.name, avatarAt: mine ? user.avatarAt : null }} className="size-10 text-base" />
-                <span className="min-w-0 flex-1 truncate font-bold">
+                <Avatar user={{ id: r.id, name: r.name, avatarAt: mine ? user.avatarAt : null }} className="size-9 text-sm" />
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-[0.9375rem]">
                   {r.name}
                   {mine && <span className="badge badge-accent ml-2 align-middle">Bạn</span>}
                 </span>
-                <span className="flex shrink-0 items-center gap-1 font-bold text-gem tabular-nums">
-                  <Gem className="size-5" /> {fmt(r.total)}
+                <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-gem tabular-nums">
+                  <Gem className="size-4" /> {fmt(r.total)}
                 </span>
               </li>
             );
@@ -79,7 +77,7 @@ async function Board() {
 export default function LeaderboardPage() {
   return (
     <main className="page page-narrow" data-sec="de">
-      <PageHeader sec="de" icon={Trophy} compact title="Bảng xếp hạng" sub="Xếp theo tổng kim cương kiếm được khi học." />
+      <PageHeader sec="de" icon={Trophy} compact title="Bảng xếp hạng" sub="Xếp theo tổng kim cương kiếm được từ luyện tập." />
       <Suspense fallback={<LeaderboardSkeleton />}>
         <Board />
       </Suspense>

@@ -104,12 +104,12 @@ export default function LockedLesson({
 }) {
   return (
     <main className="page page-narrow" data-sec="de">
-      <div className="sticker relative aspect-video overflow-hidden bg-card-2">
+      <div className="card relative aspect-video overflow-hidden bg-card-2 p-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`https://i.ytimg.com/vi/${lesson.videoId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-50 blur-[3px] saturate-50" />
         <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex size-16 items-center justify-center rounded-full border border-line bg-card text-foreground">
-            <Lock className="size-8" />
+          <span className="flex size-14 items-center justify-center rounded-full border border-line bg-card text-foreground shadow-sm">
+            <Lock className="size-6" />
           </span>
         </span>
       </div>

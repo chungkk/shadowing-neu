@@ -152,7 +152,7 @@ function CardTitle({ id, icon: Icon, children }: { id: string; icon: typeof Mail
 function ContactSection({ id, title, locale, product }: { id: string; title: string; locale: Locale; product?: LegalProduct }) {
     const t = COPY[locale];
     return (
-        <section aria-labelledby={id} className="sticker flex flex-col gap-4 p-4 sm:p-6">
+        <section aria-labelledby={id} className="card flex flex-col gap-4 p-5 sm:p-6">
             <div className="flex flex-col gap-2">
                 <CardTitle id={id} icon={Mail}>{title}</CardTitle>
                 <p className="max-w-[65ch] text-sm text-muted">{t.contactDesc}</p>

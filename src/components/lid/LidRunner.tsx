@@ -313,7 +313,7 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
 
       {/* Kết quả bài thi */}
       {submitted && result && (
-        <section className="sticker hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--ok)" : "var(--red)" }} aria-live="polite">
+        <section className="card hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--ok)" : "var(--red)" }} aria-live="polite">
           <div className="flex items-center gap-4">
             <span className={`flex size-14 shrink-0 items-center justify-center rounded-xl text-white sm:size-16 ${result.passed ? "bg-ok" : "bg-red"}`} aria-hidden>
               {result.passed ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}

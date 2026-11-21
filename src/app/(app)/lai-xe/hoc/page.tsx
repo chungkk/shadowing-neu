@@ -114,7 +114,7 @@ async function Topics() {
                         {t.chapters.map((c) => {
                           const cs = summarize(c.ids, stats);
                           return (
-                            <li key={c.id} className="flex flex-col gap-2 border-b border-dotted border-line-strong/40 py-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-4 sm:pl-7">
+                            <li key={c.id} className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-4 sm:pl-7">
                               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                                 <Link href={`/lai-xe/hoc/${c.id}`} className="flex flex-col underline-offset-2 hover:underline">
                                   <span className="font-semibold">{c.vi || c.de}</span>

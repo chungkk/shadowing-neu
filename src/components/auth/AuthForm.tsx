@@ -329,9 +329,8 @@ export default function AuthForm({
 
   return (
     <Frame onClose={onClose}>
-      {/* Popup trên điện thoại: phủ kín màn hình (không viền / bo góc) thay cho hộp nhỏ giữa màn */}
       <div
-        className={`auth-card max-w-4xl md:min-h-[34rem] md:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)] ${
+        className={`auth-card mx-auto max-w-md ${
           onClose
             ? "max-sm:min-h-dvh max-sm:content-start max-sm:rounded-none max-sm:border-0"
             : ""
@@ -339,9 +338,17 @@ export default function AuthForm({
       >
         <CloseButton onClose={onClose} />
 
-        <div className="flex flex-col gap-5 px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8 md:p-10 md:pt-12">
+        <div className="flex flex-col gap-5 px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8">
+          <div className="flex items-center gap-2 pr-10">
+            <Mascot className="size-8 shrink-0" />
+            <span className="flex items-center gap-1 font-display text-base leading-none font-extrabold tracking-[-0.03em]">
+              Hallo
+              <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-white">VN</span>
+            </span>
+          </div>
+
           <div>
-            <h1 id="auth-title" className="page-title">
+            <h1 id="auth-title" className="page-title text-2xl">
               {title}
             </h1>
             <p className="auth-subtitle">{subtitle}</p>
@@ -349,7 +356,6 @@ export default function AuthForm({
 
           {step === "email" ? (
             <>
-              {/* Google / Apple: chưa có tài khoản thì tự tạo luôn, nên dùng chung cho cả đăng nhập lẫn đăng ký */}
               <SocialLogin
                 google={social.google}
                 apple={social.apple}
@@ -378,12 +384,12 @@ export default function AuthForm({
             />
           )}
 
-          <p className="mt-auto text-xs leading-relaxed text-muted">
+          <p className="border-t border-line pt-4 text-xs leading-relaxed text-muted">
             Khi tiếp tục (kể cả bằng Google / Apple), bạn đồng ý với{" "}
             <Link
               href="/deutsch-shadowing/terms"
               target="_blank"
-              className="font-semibold text-link underline underline-offset-2"
+              className="font-medium text-link underline underline-offset-2"
             >
               Điều khoản sử dụng
             </Link>{" "}
@@ -391,42 +397,12 @@ export default function AuthForm({
             <Link
               href="/deutsch-shadowing/privacy"
               target="_blank"
-              className="font-semibold text-link underline underline-offset-2"
+              className="font-medium text-link underline underline-offset-2"
             >
               Chính sách quyền riêng tư
             </Link>
             . Chưa có tài khoản vẫn học thử được.
           </p>
-        </div>
-
-        {/* Bìa vở: điện thoại là dải màu ở trên (linh vật ngồi góc), máy tính là nửa bên phải có nhãn vở */}
-        <div
-          data-sec="de"
-          className="cover auth-art order-first rounded-none md:order-last"
-          aria-hidden
-        >
-          <span className="auth-bubble auth-bubble-hallo top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] left-8 md:top-[16%] md:left-[18%]">
-            Hallo!
-          </span>
-          <span className="auth-bubble auth-bubble-wie bottom-[14%] left-[16%] hidden md:block">
-            Wie geht&apos;s?
-          </span>
-          <Mascot className="auth-mascot md:hidden" />
-          <div className="nhan auth-art-label">
-            <Mascot animated className="auth-mascot max-md:hidden" />
-            <span className="font-display text-2xl leading-tight font-extrabold tracking-[-0.025em]">
-              HalloVN
-            </span>
-            <span className="nhan-line">
-              Môn: <b>Tiếng Đức · Lái xe · LiD</b>
-            </span>
-            <span className="nhan-line">
-              Họ và tên: <b className="flex-1" />
-            </span>
-            <span className="nhan-line">
-              Lớp: <b>A1 → B1</b>
-            </span>
-          </div>
         </div>
       </div>
     </Frame>
@@ -445,7 +421,7 @@ function Frame({
     if (!onClose) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden"; // khoá cuộn trang phía sau
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = overflow;
@@ -467,34 +443,28 @@ function Frame({
       className="auth-backdrop"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* m-auto thay cho căn giữa: hộp cao hơn màn hình vẫn cuộn được tới mép trên */}
-      <div className="m-auto w-full max-w-4xl">{children}</div>
+      <div className="m-auto w-full max-w-md">{children}</div>
     </div>
   );
 }
 
 function CloseButton({ onClose }: { onClose?: () => void }) {
-  // Nằm trên nền bìa vở (dải trên điện thoại / nửa phải máy tính) → chữ trắng
   if (onClose) {
     return (
       <button
         type="button"
-        data-sec="de"
         title="Đóng"
         aria-label="Đóng"
         className="auth-close"
         onClick={onClose}
       >
-        <X className="size-6" />
+        <X className="size-5" />
       </button>
     );
   }
-  // Trang /login riêng (thường do bị chuyển từ trang cần đăng nhập, ?next=…): đóng = về trang vừa xem trong web.
-  // Mở thẳng từ ngoài vào (không có trang trước cùng web) → về trang chủ
   return (
     <Link
       href="/"
-      data-sec="de"
       title="Đóng"
       aria-label="Đóng"
       className="auth-close"
@@ -505,7 +475,7 @@ function CloseButton({ onClose }: { onClose?: () => void }) {
         history.back();
       }}
     >
-      <X className="size-6" />
+      <X className="size-5" />
     </Link>
   );
 }

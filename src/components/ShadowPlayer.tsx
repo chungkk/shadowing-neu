@@ -1391,7 +1391,7 @@ export default function ShadowPlayer({
 
         {/* Điện thoại: thanh điều khiển dưới đáy (thay thanh điều hướng) — ngón cái với tới, không phải cuộn tìm nút */}
         {!dictation && (
-          <div className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center gap-1 border-t border-line bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
+          <div className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center gap-1 border-t border-line bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden dark:bg-sidebar/95">
             <button className="btn-icon shrink-0" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
               <ChevronLeft className="size-6" />
             </button>
@@ -1416,9 +1416,8 @@ export default function ShadowPlayer({
           </div>
         )}
 
-        {/* Cột 3: đường đi qua các câu, linh vật đứng ở câu đang học (Chính tả: chỉ các câu của lượt đang làm) */}
-        {/* Điện thoại: transcript cuộn theo trang (không lồng vùng cuộn riêng — dễ kẹt ngón tay) */}
-        <div className="card flex max-h-[75dvh] min-h-0 min-w-0 flex-col gap-2.5 max-md:max-h-none max-sm:p-3 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:max-h-[calc(100vh-7rem)]">
+        {/* Cột 3: transcript sạch, dính gọn dưới header sticky */}
+        <div className="card flex max-h-[75dvh] min-h-0 min-w-0 flex-col gap-2.5 max-md:max-h-none max-sm:p-3 lg:col-span-2 xl:sticky xl:top-20 xl:col-span-1 xl:max-h-[calc(100vh-6.5rem)]">
           <h2 className="label flex min-w-0 items-center gap-1.5 truncate text-foreground">
             <SoundMark className="text-base" />
             {dictation ? "Lượt chính tả" : starredOnly ? "Câu đã đánh dấu" : "Transcript"}
@@ -1454,7 +1453,7 @@ export default function ShadowPlayer({
                   }}
                   className={`trow ${i === idx ? "trow-on" : ""}`}
                 >
-                  <span className={`trow-dot ${passed ? "trow-passed" : ""}`}>{i === idx ? <Mascot className="size-9 max-w-none" /> : i + 1}</span>
+                  <span className={`trow-dot ${i === idx ? "!border-accent !bg-accent !text-white" : passed ? "trow-passed" : ""}`}>{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     {/* Chính tả: câu chưa chép không hiện "****" — dấu sao lộ số từ, độ dài từ, dấu câu (mức Khó thành vô nghĩa) */}
                     <p className={`text-[15px] leading-snug ${i === idx ? "font-bold" : ""} ${hidden ? (dictation ? "text-muted italic" : "font-mono tracking-wider text-muted") : ""}`}>

@@ -22,54 +22,16 @@
     background-color: var(--grape-soft);
   }
 
-  /* ───── Sảnh /games: mỗi game là một "gói" = tranh minh hoạ (bìa) + nhãn vở dán chồng lên mép dưới ───── */
-  .g-pack {
-    @apply relative flex flex-col outline-none;
-  }
-  .g-pack .g-art {
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--line);
-    transition: transform 400ms var(--ease-out);
-  }
-  .g-pack-label {
-    @apply relative z-[1] mx-3 -mt-9 flex flex-1 flex-col gap-2 sm:mx-5;
-    transform: rotate(var(--t, 0deg));
-    transition:
-      transform 400ms var(--ease-spring),
-      box-shadow 300ms var(--ease-out);
-  }
-  @media (hover: hover) {
-    .g-pack:hover .g-pack-label {
-      transform: translateY(-4px) rotate(calc(var(--t, 0deg) * -1));
-      box-shadow: var(--shadow-md);
-    }
-    .g-pack:hover .g-art {
-      transform: translateY(-2px);
-    }
-  }
-  .g-pack:focus-visible .g-pack-label {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-  }
-  /* Số thứ tự trên nhãn (như số vở) */
-  .g-pack-no {
-    @apply font-display text-sm leading-none font-extrabold tabular-nums;
-    color: var(--grape-text);
-  }
-  /* Tranh đầu gói game: khung đêm phẳng */
+  /* Tranh đầu thẻ game */
   .g-art {
-    @apply relative h-44 overflow-hidden sm:h-48;
+    @apply relative h-40 overflow-hidden sm:h-44;
     background-color: var(--background);
   }
   .g-art-sm {
     @apply h-auto;
   }
-  /* Mẩu băng dính ghi số người chơi, dán xéo góc tranh */
   .g-art-tag {
-    @apply absolute top-3 right-3 z-[1] inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold;
-    color: #16203a;
-    background-color: #fff6d6;
-    transform: rotate(3deg);
+    @apply absolute top-2.5 right-2.5 z-[1] inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm;
   }
 
   /* ───── Màn chọn bộ từ ───── */
@@ -580,8 +542,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .g-pack .g-art,
-  .g-pack-label,
   .g-toast,
   .g-panel {
     animation: none;

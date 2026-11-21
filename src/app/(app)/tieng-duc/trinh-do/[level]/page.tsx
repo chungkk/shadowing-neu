@@ -135,27 +135,27 @@ async function LevelCatalogView({ params }: PageProps<"/tieng-duc/trinh-do/[leve
           title={info.heading}
           sub={info.intro}
           meta={
-            <span className="tabular-nums">
-              {lessons.length} bài video · Shadowing · Dictation
+            <span className="badge badge-accent tabular-nums">
+              {lessons.length} bài video
             </span>
           }
           actions={
             first && (
-              <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg max-sm:w-full">
-                Bắt đầu bài {lv} đầu tiên <ArrowRight className="size-5" />
+              <Link href={lessonPath(first.slug)} className="btn btn-primary max-sm:w-full">
+                Bắt đầu bài {lv} đầu tiên <ArrowRight className="size-4" />
               </Link>
             )
           }
         >
           {active.length > 1 && (
-            <nav aria-label="Chuyển trình độ" className="nhan-line flex flex-wrap items-center gap-2 pb-2">
-              <span className="text-sm font-semibold text-muted">Trình độ khác:</span>
+            <nav aria-label="Chuyển trình độ" className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs font-semibold text-muted">Trình độ khác:</span>
               {active.map(({ info: other, count }) => (
                 <Link
                   key={other.level}
                   href={levelCatalogPath(other.level)}
                   aria-current={other.level === lv ? "page" : undefined}
-                  className={`chip hit-44 ${other.level === lv ? "border-accent bg-accent-soft font-extrabold text-accent-text" : ""}`}
+                  className="chip hit-44 text-xs"
                 >
                   {other.level}
                   <span className="tabular-nums opacity-75">{count}</span>
@@ -170,21 +170,21 @@ async function LevelCatalogView({ params }: PageProps<"/tieng-duc/trinh-do/[leve
       {deck && (
         <Link
           href={`/vocab/decks/${deck.slug}`}
-          className="sticker sticker-link flex items-center gap-3 p-3.5 sm:gap-4 sm:px-5"
+          className="card card-link flex items-center gap-3.5 p-4 sm:px-5"
           data-sec="de"
         >
-          <span className="icon-bubble tint-sec size-11 shrink-0 rounded-xl">
+          <span className="icon-bubble tint-sec size-10 shrink-0">
             <BookOpen className="size-5" />
           </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="font-display font-bold tracking-[-0.015em]">
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-semibold text-foreground sm:text-base">
               Từ vựng tiếng Đức {lv}: {deck.title}
             </span>
             <span className="text-xs text-muted sm:text-sm">
               {deck.wordCount.toLocaleString("vi-VN")} từ kèm nghĩa tiếng Việt, phát âm, giống der/die/das và ôn SRS.
             </span>
           </span>
-          <ArrowRight className="size-5 shrink-0 text-sec-text" />
+          <ArrowRight className="size-4 shrink-0 text-sec-text" />
         </Link>
       )}
 

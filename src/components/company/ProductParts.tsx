@@ -28,7 +28,7 @@ export function Shot({
     const crop = screen.cropTop ?? 0;
     const image = <Image src={screen.src} alt={alt} width={screen.width} height={screen.height} sizes={sizes} priority={priority} className="block h-auto w-full" />;
     return (
-        <figure className={`sticker overflow-hidden ${className}`}>
+        <figure className={`card overflow-hidden p-0 ${className}`}>
             {crop ? (
                 // Cắt bỏ dải trên cùng của ảnh chụp (margin % tính theo chiều rộng nên tỉ lệ luôn đúng)
                 <div className="overflow-hidden" style={{ aspectRatio: `${screen.width} / ${screen.height - crop}` }}>

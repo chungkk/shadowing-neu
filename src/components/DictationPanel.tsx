@@ -8,10 +8,7 @@ import { useIsTouchPhone, useKeyboardInset } from "@/hooks/useKeyboardInset";
 import Mascot from "./Mascot";
 import { Gem } from "./PointsBadge";
 
-/** Ô từ như sticker (kiểu trong deutsch.css, theo data-state): ô trống viền đứt chờ dán, từ đúng là sticker xanh đã dán (gờ dưới, hơi nghiêng),
- * sai = đỏ, gần đúng / đã xem = vàng, ô đang gõ = viền teal */
 type BoxState = WordState | "hint";
-const TILT = ["-1.5deg", "1deg", "-0.5deg", "1.5deg"];
 const PRAISE = ["Tuyệt vời!", "Chính xác!", "Giỏi lắm!", "Xuất sắc!", "Quá chuẩn!"];
 const SPARK_COLORS = ["var(--red)", "var(--gold)", "var(--accent)", "var(--gem)"];
 const SPARKS = Array.from({ length: 12 }, (_, k) => ({ a: `${k * 30}deg`, d: `${k % 2 ? 26 : 38}px`, c: SPARK_COLORS[k % 4] }));
@@ -215,8 +212,8 @@ export default function DictationPanel({
           </p>
         </div>
 
-        {/* Tiến độ câu: dải sọc kẹo như thân linh vật */}
-        <div className="progress h-3" aria-hidden>
+        {/* Tiến độ câu */}
+        <div className="progress h-2" aria-hidden>
           <div className="dict-progress h-full rounded-full" style={{ width: `${result.total ? (scored / result.total) * 100 : 0}%` }} />
         </div>
 
@@ -282,7 +279,6 @@ export default function DictationPanel({
             const typedNow = !!slots[k] && state === "hint";
             const box = `dict-box ${won ? "dict-win" : k === stuck ? "dict-stick" : ""} ${checked && !result.done && (w.state === "wrong" || w.state === "close") ? "shake" : ""}`;
             const boxAttrs = { "data-state": state, "data-typed": typedNow || undefined, "data-active": isActive || undefined };
-            const tilt = { rotate: w.state === "correct" ? TILT[k % TILT.length] : undefined };
             if (result.done && onWord)
               return (
                 <button
@@ -290,7 +286,7 @@ export default function DictationPanel({
                   {...boxAttrs}
                   data-tap
                   className={`${box} cursor-pointer`}
-                  style={{ "--i": k, ...tilt } as CSSProperties}
+                  style={{ "--i": k } as CSSProperties}
                   title="Tra nghĩa từ này"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -302,7 +298,7 @@ export default function DictationPanel({
               );
             if (w.state === "revealed" || w.state === "given" || result.done)
               return (
-                <span key={k} {...boxAttrs} className={box} style={tilt}>
+                <span key={k} {...boxAttrs} className={box}>
                   {w.text}
                 </span>
               );
@@ -312,7 +308,6 @@ export default function DictationPanel({
                 <button
                   {...boxAttrs}
                   className={`${box} cursor-text`}
-                  style={tilt}
                   title={`Bấm để gõ vào ô này${checked && typed ? ` · Bạn gõ: ${typed}` : ""}`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setActive(k)}

@@ -51,24 +51,21 @@ export function ForgotForm() {
   return (
     <main className="flex flex-1 items-center justify-center p-4 md:p-8">
       <div className="auth-card max-w-md">
-        {/* Dải bìa vở mỏng ở đầu hộp — cùng khuôn với hộp đăng nhập */}
-        <div
-          data-sec="de"
-          className="cover flex h-20 items-center rounded-none pr-5 pl-9"
-          aria-hidden
-        >
-          <KeyRound className="size-8" strokeWidth={2.25} />
-        </div>
         <div className="flex flex-col gap-5 p-5 sm:p-8">
-          <div>
-            <h1 className="page-title">
-              {step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}
-            </h1>
-            <p className="auth-subtitle">
-              {step === "email"
-                ? "Nhập email đã đăng ký, chúng tôi gửi mã 6 số để bạn đặt mật khẩu mới."
-                : "Nhập mã trong email và chọn mật khẩu mới — đặt xong là đăng nhập luôn."}
-            </p>
+          <div className="flex items-start gap-3">
+            <span className="icon-bubble tint-accent size-10 shrink-0" aria-hidden>
+              <KeyRound className="size-5" strokeWidth={2} />
+            </span>
+            <div>
+              <h1 className="page-title text-2xl">
+                {step === "email" ? "Quên mật khẩu" : "Đặt mật khẩu mới"}
+              </h1>
+              <p className="auth-subtitle">
+                {step === "email"
+                  ? "Nhập email đã đăng ký, chúng tôi gửi mã 6 số để bạn đặt mật khẩu mới."
+                  : "Nhập mã trong email và chọn mật khẩu mới — đặt xong là đăng nhập luôn."}
+              </p>
+            </div>
           </div>
 
           {step === "email" ? (

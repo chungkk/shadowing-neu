@@ -1067,7 +1067,7 @@ function ResultBar({ module, result, maxErrorPoints, savedId, saveError }: { mod
   const lid = module === "lid";
   const pct = result.total ? (result.correct / result.total) * 100 : 0;
   return (
-    <section className="sticker hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--ok)" : "var(--red)" }} aria-live="polite">
+    <section className="card hero flex flex-col gap-4 p-4 sm:p-6" style={{ ["--hero" as string]: result.passed ? "var(--ok)" : "var(--red)" }} aria-live="polite">
       <div className="flex items-center gap-4">
         <span className={`flex size-14 shrink-0 items-center justify-center rounded-xl text-white sm:size-16 ${result.passed ? "bg-ok" : "bg-red"}`} aria-hidden>
           {result.passed ? <PartyPopper className="size-7" /> : <X className="size-8" strokeWidth={3} />}

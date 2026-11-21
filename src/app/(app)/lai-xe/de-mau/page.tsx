@@ -69,7 +69,7 @@ async function Sheets() {
                 <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}?mode=ueben`} className="btn btn-sm flex-1">
                   Luyện
                 </Link>
-                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="btn btn-sm btn-amber flex-1">
+                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="btn btn-sm btn-primary flex-1">
                   Thi
                 </Link>
               </span>

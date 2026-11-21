@@ -298,21 +298,21 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((r) => (
-              <Link key={r.id} href={lessonPath(r.slug)} className="group sticker sticker-link flex flex-col overflow-hidden">
-                <div className="relative m-2 mb-0 aspect-video overflow-hidden rounded-[calc(var(--radius-lg)-6px)] bg-card-2">
+              <Link key={r.id} href={lessonPath(r.slug)} className="group card card-link flex flex-col overflow-hidden p-0">
+                <div className="relative aspect-video overflow-hidden bg-card-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`}
                     alt=""
                     loading="lazy"
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
+                    className="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
                   />
-                  <LevelBadge level={r.level} className="absolute top-1.5 right-1.5" />
+                  <LevelBadge level={r.level} className="absolute top-2 right-2" />
                 </div>
                 <div className="flex flex-1 flex-col gap-1 p-3">
-                  <h3 className="line-clamp-2 text-sm leading-snug font-bold group-hover:text-accent-text">{r.title}</h3>
+                  <h3 className="line-clamp-2 text-sm leading-snug font-semibold group-hover:text-accent-text">{r.title}</h3>
                   <p className="mt-auto text-xs text-muted">
-                    {r.sentenceCount ?? r.segmentCount} câu{r.dictation ? " · Dictation" : ""}
+                    {r.sentenceCount ?? r.segmentCount} câu{r.dictation ? " · Chính tả" : ""}
                   </p>
                 </div>
               </Link>

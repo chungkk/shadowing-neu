@@ -11,40 +11,26 @@
     transition: width 500ms var(--ease-out);
   }
 
-  /* Thẻ lớn Học / Thi thử: cuốn vở (bìa .cover + nhãn .nhan, xem .exam-heft trong globals.css).
-     .quiz-heft-soft: cuốn phụ — bìa màu nhạt của khu vực, chữ đậm màu khu vực; cuốn chính giữ bìa màu đặc */
-  .quiz-heft-soft .cover {
-    background-color: var(--sec-soft);
-    color: var(--sec-text);
-  }
-  .quiz-heft-soft .cover::before {
-    background: color-mix(in srgb, var(--sec) 45%, var(--sec-soft));
-  }
-  .quiz-heft:focus-visible {
-    outline: 3px solid var(--accent);
-    outline-offset: 3px;
-    border-radius: var(--radius-lg);
-  }
-
   /* Phương án trả lời (màn Học / Luyện / Thi — ngoài khung giả lập phần mềm thi) */
   .quiz-option {
-    @apply relative flex min-h-14 w-full items-center gap-3 overflow-hidden p-3 text-left disabled:cursor-default;
+    @apply relative flex min-h-14 w-full items-center gap-3 overflow-hidden p-3.5 text-left disabled:cursor-default;
     border-radius: var(--radius);
-    border: 1.5px solid var(--border);
+    border: 1px solid var(--border);
     background-color: var(--card);
     transition:
       border-color var(--dur-fast),
       background-color var(--dur-fast),
+      box-shadow var(--dur-fast),
       transform var(--dur-fast) var(--ease-out);
   }
   @media (hover: hover) {
     .quiz-option:not(:disabled):hover {
-      border-color: color-mix(in srgb, var(--foreground) 35%, var(--border));
+      border-color: color-mix(in srgb, var(--foreground) 30%, var(--border));
       background-color: color-mix(in srgb, var(--card-2) 55%, var(--card));
     }
   }
   .quiz-option:not(:disabled):active {
-    transform: scale(0.99);
+    transform: scale(0.995);
   }
   /* Đang chọn (chưa chấm) = xanh lam hành động · Đúng = ok · Sai = đỏ · còn lại mờ đi */
   .quiz-option[data-state="on"] {
@@ -68,8 +54,8 @@
 
   /* Ô chọn số / dấu tích ở đầu phương án */
   .quiz-mark {
-    @apply flex size-9 shrink-0 items-center justify-center border-[1.5px] text-sm font-bold tabular-nums;
-    border-color: var(--line-strong);
+    @apply flex size-8 shrink-0 items-center justify-center border text-xs font-bold tabular-nums;
+    border-color: var(--border);
     background-color: var(--card);
     color: var(--muted);
     transition:
@@ -94,8 +80,8 @@
 
   /* Ô số câu trong bảng câu hỏi */
   .quiz-cell {
-    @apply relative flex size-10 items-center justify-center rounded-lg text-xs font-bold tabular-nums sm:size-9;
-    border: 1.5px solid var(--border);
+    @apply relative flex size-10 items-center justify-center rounded-lg text-xs font-semibold tabular-nums sm:size-9;
+    border: 1px solid var(--border);
     background-color: var(--card);
     transition:
       transform var(--dur-fast) var(--ease-out),

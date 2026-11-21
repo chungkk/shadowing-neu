@@ -116,7 +116,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <button
           type="button"
           onClick={() => setFlipped((f) => !f)}
-          className="o-ly flex min-h-56 w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border border-line p-6 text-center transition-[border-color,transform] duration-200 hover:border-accent/50 active:scale-[0.99] motion-reduce:transition-none"
+          className="flex min-h-56 w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 rounded-panel border border-line bg-background p-6 text-center transition-[border-color,box-shadow,transform] duration-150 hover:border-accent/45 hover:shadow-sm active:scale-[0.995] motion-reduce:transition-none"
         >
           {!flipped ? (
             <>
@@ -449,7 +449,7 @@ export default function DeckStudy({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         {/* Danh sách chủ đề: cột trái (máy tính) · hàng cuộn ngang (điện thoại) */}
-        <aside className="card flex flex-col gap-2 p-3 max-lg:-mx-4 max-lg:rounded-none max-lg:border-x-0 max-lg:border-y-0 max-lg:bg-transparent max-lg:p-0 max-lg:px-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-6rem)] lg:self-start">
+        <aside className="card flex flex-col gap-2 p-3 max-lg:-mx-4 max-lg:rounded-none max-lg:border-x-0 max-lg:border-y-0 max-lg:bg-transparent max-lg:p-0 max-lg:px-4 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6.5rem)] lg:self-start">
           <p className="label px-1 max-lg:hidden">Chủ đề</p>
           <div className="scroll-row flex gap-2 overflow-auto max-lg:pb-1 lg:flex-col">
             {topics.map((t) => {

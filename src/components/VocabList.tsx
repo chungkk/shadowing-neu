@@ -581,9 +581,9 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
                 setLimit(PAGE);
               }}
               aria-pressed={filter === k}
-              className={`btn btn-sm ${filter === k ? "btn-soft border-accent text-accent-text" : "btn-ghost text-muted"}`}
+              className="chip text-xs"
             >
-              {label} <span className="tabular-nums opacity-75">({count})</span>
+              {label} <span className={`tabular-nums ${filter === k ? "opacity-80" : "text-muted"}`}>{count}</span>
             </button>
           ))}
         </div>

@@ -115,21 +115,22 @@ function SectionHead({ id, title, text }: { id: string; title: string; text?: st
     );
 }
 
-/** Thẻ một phần học: dải bìa màu của khu (icon), tên, con số và mô tả — bấm vào là tới phần đó */
 function AreaCard({ area }: { area: LearnArea }) {
     const { locale } = useLocale();
     const copy = area.copy[locale];
     const look = AREA_LOOK[area.id];
     return (
-        <Link href={area.href} data-sec={look.sec} className="group sticker card-link flex flex-col overflow-hidden motion-reduce:hover:translate-y-0">
-            <span className="cover flex h-14 items-center justify-between rounded-none pr-3 pl-7 sm:h-16 sm:pr-4">
-                <look.icon className="size-6 sm:size-7" strokeWidth={2.25} aria-hidden="true" />
-                <ArrowRight className="size-5 transition-transform duration-(--dur) group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
+        <Link href={area.href} data-sec={look.sec} className="group card card-link flex flex-col gap-3 p-4">
+            <span className="flex items-center justify-between">
+                <span className="icon-bubble tint-sec size-9">
+                    <look.icon className="size-[18px]" strokeWidth={2} aria-hidden="true" />
+                </span>
+                <ArrowRight className="size-4 text-muted transition-transform duration-(--dur) group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none" aria-hidden="true" />
             </span>
-            <span className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
-                <span className="leading-snug font-semibold sm:text-lg">{copy.title}</span>
-                <span className="font-display text-[1.75rem] leading-none font-extrabold tracking-[-0.03em] tabular-nums sm:text-3xl">{copy.fact}</span>
-                <span className="text-sm text-muted">{copy.text}</span>
+            <span className="flex flex-1 flex-col gap-1">
+                <span className="text-sm leading-snug font-semibold">{copy.title}</span>
+                <span className="font-display text-2xl leading-none font-bold tracking-[-0.025em] tabular-nums">{copy.fact}</span>
+                <span className="text-xs leading-relaxed text-muted sm:text-sm">{copy.text}</span>
             </span>
         </Link>
     );
@@ -145,7 +146,7 @@ function PlatformSection() {
     return (
         <section id="lernen" aria-labelledby="lernen-title" className="flex scroll-mt-20 flex-col gap-4">
             <SectionHead id="lernen-title" title={t.forTitle} text={t.forDesc} />
-            <div className="sticker grid items-center gap-6 p-4 sm:p-6 lg:grid-cols-2">
+            <div className="card grid items-center gap-6 p-5 sm:p-6 lg:grid-cols-2">
                 <div className="flex min-w-0 flex-col gap-4">
                     <ul className="flex flex-col gap-2">
                         {service.copy[locale].features.map((feature) => (
@@ -186,7 +187,7 @@ export default function HomeContent() {
                     mascot
                     title={
                         <span id="home-title" className="text-balance">
-                            {t.h1a} <span className="highlight">{t.h1b}</span>
+                            {t.h1a} <span className="text-accent-text">{t.h1b}</span>
                         </span>
                     }
                     sub={
@@ -244,11 +245,10 @@ export default function HomeContent() {
                 </div>
             </section>
 
-            {/* Liên hệ: trang giấy ô ly như khối kêu gọi cuối trang chủ */}
             <section
                 id="contact"
                 aria-labelledby="contact-title"
-                className="o-ly flex scroll-mt-20 flex-col items-start gap-4 rounded-[var(--radius-xl)] border border-line p-6 sm:p-10 dark:border-border"
+                className="card flex scroll-mt-20 flex-col items-start gap-4 p-6 sm:p-8"
             >
                 <h2 id="contact-title" className="font-display text-[clamp(1.75rem,1.3rem+1.6vw,2.4rem)] leading-[1.1] font-extrabold tracking-[-0.03em] text-balance">
                     {t.contactTitle}

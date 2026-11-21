@@ -151,7 +151,7 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
       cover={phase !== "word" && phase !== "flash"}
       onBack={phase === "word" || phase === "flash" ? quit : undefined}
       right={
-        <button className={`btn-icon hit-44 ${phase !== "word" && phase !== "flash" ? "text-white hover:bg-white/15" : ""}`} title={sound ? "Tắt tiếng" : "Bật tiếng"} aria-label={sound ? "Tắt tiếng" : "Bật tiếng"} onClick={() => setSound(!sound)}>
+        <button className="btn-icon hit-44" title={sound ? "Tắt tiếng" : "Bật tiếng"} aria-label={sound ? "Tắt tiếng" : "Bật tiếng"} onClick={() => setSound(!sound)}>
           {sound ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
         </button>
       }
@@ -181,12 +181,12 @@ export default function ArtikelGame({ decks, loggedIn }: { decks: DeckOption[]; 
             <span style={{ width: `${phase === "flash" ? 100 : (left / (ARTIKEL_SECONDS * 1000)) * 100}%` }} />
           </div>
           <div className="g-word-stage">
-            <div className="nhan flex w-full max-w-md -rotate-1 flex-col items-center gap-1 px-5 py-5">
-              <p className="font-display text-3xl font-extrabold tracking-[-0.02em] break-words md:text-4xl" lang="de">
+            <div className="flex w-full max-w-md flex-col items-center gap-1.5 rounded-panel border border-border bg-card px-6 py-6">
+              <p className="font-display text-3xl font-bold tracking-[-0.02em] break-words md:text-4xl" lang="de">
                 {phase === "flash" ? <span className={TEXT[word.gender]}>{word.gender} </span> : <span className="text-muted">___ </span>}
                 {word.word}
               </p>
-              <p className="nhan-line w-full pb-1 text-muted">{word.meaning}</p>
+              <p className="text-sm text-muted">{word.meaning}</p>
             </div>
             <p role="status" className={`badge badge-ok mt-3 ${phase === "flash" ? "" : "invisible"}`}>
               <Check className="size-4" strokeWidth={3} /> Chính xác

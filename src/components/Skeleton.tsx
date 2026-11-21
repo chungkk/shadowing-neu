@@ -16,10 +16,9 @@ export function LessonGridSkeleton({ count = 8 }: { count?: number }) {
           ))}
         </div>
       </div>
-      {/* Điện thoại: 1 hàng vuốt ngang như thẻ thật */}
       <div className="max-sm:-mx-4 max-sm:flex max-sm:gap-3 max-sm:overflow-hidden max-sm:px-4 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: count }, (_, i) => (
-          <div key={i} className="sticker flex flex-col overflow-hidden max-sm:w-[78vw] max-sm:shrink-0">
+          <div key={i} className="card flex flex-col overflow-hidden p-0 max-sm:w-[78vw] max-sm:shrink-0">
             <Bone className="aspect-video rounded-none" />
             <div className="flex flex-col gap-2 p-3 sm:p-4">
               <div className="flex min-h-[2.75em] flex-col gap-1.5">
@@ -213,8 +212,8 @@ export function DecksSkeleton() {
         <Bone className="h-7 w-44" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="sticker flex flex-col gap-3 p-2.5 sm:p-3">
-              <Bone className="aspect-[16/10] w-full rounded-xl" />
+            <div key={i} className="card flex flex-col gap-3 p-3">
+              <Bone className="aspect-[16/10] w-full rounded-[var(--radius)]" />
               <Bone className="h-5 w-3/4" />
               <Bone className="h-4 w-12" />
             </div>
@@ -244,16 +243,13 @@ export function LeaderboardSkeleton() {
   );
 }
 
-/** Sảnh từng game (chọn bộ từ / phòng chơi) — bìa tím compact + lưới ô bộ từ + thanh Bắt đầu */
+/** Sảnh từng game (chọn bộ từ / phòng chơi) */
 export function GameSkeleton() {
   return (
     <div data-sec="game" className="flex flex-col gap-6" aria-busy="true" aria-label="Đang tải game">
-      <div className="relative">
-        <div className="cover min-h-20 opacity-60" />
-        <div className="nhan relative z-10 mx-3 -mt-10 flex flex-col gap-2 sm:mx-6 sm:max-w-md">
-          <Bone className="h-7 w-48" />
-          <Bone className="h-4 w-64 max-w-full" />
-        </div>
+      <div className="flex flex-col gap-2 border-b border-line pb-5">
+        <Bone className="h-8 w-48" />
+        <Bone className="h-4 w-64 max-w-full" />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }, (_, i) => (

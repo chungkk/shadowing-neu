@@ -1,26 +1,24 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, BookOpen, ChevronDown, Flag, Landmark, RotateCcw, Settings, Star } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, CheckCircle2, ChevronDown, Clock, Flag, Landmark, RotateCcw, Settings, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";
 import { JsonLd, breadcrumbLd, faqLd, quizPageMeta } from "@/lib/laixe/seo";
 import { summarize } from "@/lib/quiz/types";
-import { ActionCard, BigCard, QuizProgress } from "@/components/quiz/QuizParts";
+import { ActionCard, BigCard, ProgressBar, QuizProgress } from "@/components/quiz/QuizParts";
 import PageHeader from "@/components/PageHeader";
 import { StatePicker } from "@/components/lid/StatePicker";
 import { Wappen } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
-// 310 = 300 câu chung + 10 câu của bang mình (mỗi người chỉ học bộ của bang đang sống)
 export const metadata: Metadata = quizPageMeta({
   path: "/leben-in-deutschland",
   title: `Leben in Deutschland: ${generalCount() + stateIds(STATES[0].code).length} câu hỏi thi + dịch tiếng Việt`,
   description: `Ôn thi Leben in Deutschland / Einbürgerungstest bằng tiếng Việt: ${generalCount()} câu chung + 10 câu riêng của ${STATES.length} bang (danh mục BAMF 2025), thi thử ${EXAM_TOTAL} câu ${EXAM.minutes} phút.`,
 });
 
-// Câu hỏi thường gặp: hiện trên trang + dữ liệu có cấu trúc FAQPage (nội dung hai nơi phải giống nhau)
 const FAQ = [
   {
     q: "Bài thi Leben in Deutschland có bao nhiêu câu?",
@@ -48,56 +46,118 @@ async function Home() {
   const { state, chosen } = await prefs();
   const user = await getCurrentUser();
   const stats = user ? quizStats(user.id, "lid") : {};
-  const mine = [...generalIds(), ...stateIds(state.code)];
+  const gen = generalIds();
+  const st = stateIds(state.code);
+  const mine = [...gen, ...st];
   const inScope = new Set(mine);
   const all = summarize(mine, stats);
+  const genStat = summarize(gen, stats);
+  const stStat = summarize(st, stats);
   const marked = user ? quizBookmarks(user.id, "lid").filter((id) => inScope.has(id)).length : 0;
 
   return (
     <>
-      {/* Đầu trang: bìa vở coral + nhãn — tiến trình nằm ngay trong nhãn (cùng khuôn với Lái xe) */}
       <PageHeader
         sec="lid"
         icon={Landmark}
         mascot
         title="Leben in Deutschland"
-        sub={`Ôn thi nhập tịch bang ${state.name} · Einbürgerungstest · danh mục BAMF 2025`}
+        sub={`Ôn thi nhập tịch & hội nhập (Einbürgerungstest) · danh mục BAMF 2025 · bang ${state.name}`}
         meta={
-          <span className="flex items-center gap-2 rounded-md bg-white/85 py-1 pr-2.5 pl-1.5 text-[#16203a] max-sm:hidden">
-            <Wappen code={state.code} className="h-6 w-5" />
+          <span className="badge badge-coral gap-1.5">
+            <Wappen code={state.code} className="h-4 w-3.5" />
             {state.name}
           </span>
         }
         actions={
           <Link href="/leben-in-deutschland/cai-dat" className="btn btn-sm">
-            <Settings className="size-4" /> Cài đặt
+            <Settings className="size-3.5" /> Đổi bang / Cài đặt
           </Link>
         }
-      >
-        <QuizProgress {...all} />
-      </PageHeader>
+      />
 
-      {/* Chưa tự chọn bang → nhắc chọn; đã chọn thì đổi bang trong Cài đặt (như đổi hạng ở Lái xe) */}
       {!chosen && <StatePicker states={STATES} current={state.code} chosen={false} />}
 
       {!user && (
         <p className="alert alert-info">
           <span>
-            <Link href={`/login?next=${encodeURIComponent("/leben-in-deutschland")}`} className="font-bold underline underline-offset-2">
+            <Link href={`/login?next=${encodeURIComponent("/leben-in-deutschland")}`} className="font-semibold underline underline-offset-2">
               Đăng nhập
             </Link>{" "}
-            để lưu tiến trình, câu sai và lịch sử thi.
+            để lưu tiến độ, gom câu hay sai và làm đề thi thử 33 câu có chấm điểm.
           </span>
         </p>
       )}
 
-      {/* 2 cuốn vở lớn: Học / Thi thử (cuốn chính) */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-6">
-        <BigCard href="/leben-in-deutschland/chu-de" icon={BookOpen} title="Học theo chủ đề" text={`${generalCount()} câu chung + ${stateIds(state.code).length} câu bang`} cta="Học" />
-        <BigCard href="/leben-in-deutschland/thi-thu" icon={Flag} title="Thi thử" text={`${EXAM_TOTAL} câu · ${EXAM.minutes} phút`} cta="Vào thi" primary />
+      {/* Khối đặc thù của LiD: Bang đang chọn (Wappen) + tách rõ 300 câu chung / 10 câu riêng của bang */}
+      <section className="card grid gap-5 p-5 lg:grid-cols-[1.25fr_0.75fr] lg:items-center" aria-label="Tổng quan bộ câu hỏi theo bang">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted">
+            <span className="badge badge-coral">BAMF 2025</span>
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <CheckCircle2 className="size-3.5 text-ok-text" aria-hidden /> Đậu từ {EXAM.pass}/{EXAM_TOTAL} câu
+            </span>
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Clock className="size-3.5" aria-hidden /> {EXAM.minutes} phút
+            </span>
+          </div>
+
+          <QuizProgress {...all} />
+
+          <div className="flex flex-col gap-1.5 border-t border-line pt-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-foreground">300 câu chung toàn liên bang</span>
+              <span className="font-mono text-muted tabular-nums">
+                {genStat.done}/{genStat.total}
+              </span>
+            </div>
+            <ProgressBar {...genStat} />
+          </div>
+        </div>
+
+        {/* Thẻ riêng của Bang (đặc trưng của Leben in Deutschland) */}
+        <div className="surface flex flex-col gap-3 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-line bg-card p-1.5">
+              <Wappen code={state.code} className="h-8 w-6" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted">10 câu riêng của bang</p>
+              <p className="truncate text-sm font-bold text-foreground">{state.name}</p>
+            </div>
+            <span className="font-mono text-xs font-semibold text-muted tabular-nums">
+              {stStat.done}/{stStat.total}
+            </span>
+          </div>
+          <ProgressBar {...stStat} />
+          <Link href={`/leben-in-deutschland/${state.code}`} prefetch={false} className="btn btn-sm w-full">
+            Luyện 10 câu bang {state.name} <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* 2 lối vào chính */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <BigCard
+          href="/leben-in-deutschland/chu-de"
+          icon={BookOpen}
+          title="Học theo chủ đề & bộ 30 câu"
+          text={`${generalCount()} câu chung chia theo chủ đề BAMF & bộ 30 câu, kèm 10 câu của bang ${state.name}.`}
+          badge="310 câu"
+          cta="Chọn bộ câu hỏi"
+        />
+        <BigCard
+          href="/leben-in-deutschland/thi-thu"
+          icon={Flag}
+          title="Thi thử Einbürgerungstest"
+          text={`${EXAM_TOTAL} câu (${EXAM.general} chung + ${EXAM.state} bang ${state.name}), đề tiếng Đức thuần, đạt ≥ ${EXAM.pass} câu đậu.`}
+          badge={`${EXAM_TOTAL} câu · ${EXAM.minutes}p`}
+          cta="Vào thi thử"
+          primary
+        />
       </div>
 
-      {/* Menu phụ — cùng 3 mục, cùng thứ tự với Lái xe */}
+      {/* Công cụ ôn tập phụ */}
       <div className="grid gap-3 sm:grid-cols-3">
         <ActionCard
           href="/leben-in-deutschland/cau-sai"
@@ -105,28 +165,28 @@ async function Home() {
           title="Ôn câu sai"
           locked={!user}
           disabled={!!user && !all.wrong}
-          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
+          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu cần làm lại` : "Chưa có câu sai nào"}
         />
         <ActionCard
           href="/leben-in-deutschland/danh-dau"
           icon={Star}
-          title="Đánh dấu"
+          title="Câu đánh dấu"
           locked={!user}
           disabled={!!user && !marked}
-          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ngôi sao ở câu hỏi để đánh dấu"}
+          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu đã lưu` : "Bấm ngôi sao ở câu hỏi để lưu"}
         />
-        <ActionCard href="/leben-in-deutschland/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Kết quả và tiến trình" : "Đăng nhập để xem thống kê"} />
+        <ActionCard href="/leben-in-deutschland/thong-ke" icon={BarChart3} title="Thống kê & lịch sử" locked={!user} text={user ? "Biểu đồ & 10 bài thi gần nhất" : "Đăng nhập để xem thống kê"} />
       </div>
 
-      {/* Câu hỏi thường gặp: nội dung cho SEO (FAQPage), xếp sau menu như phần phụ */}
-      <section className="card flex flex-col gap-1 sm:p-6" aria-labelledby="lid-faq">
+      {/* FAQPage */}
+      <section className="card flex flex-col gap-1 p-5 sm:p-6" aria-labelledby="lid-faq">
         <h2 id="lid-faq" className="section-title mb-1">
           Câu hỏi thường gặp
         </h2>
         <div className="flex flex-col">
           {FAQ.map((f) => (
             <details key={f.q} className="quiz-faq group">
-              <summary>
+              <summary className="text-sm sm:text-[0.9375rem]">
                 <span className="min-w-0 flex-1">{f.q}</span>
                 <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
               </summary>

@@ -91,14 +91,12 @@ export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?:
             data-sec={secOf(it.href)}
             aria-label={`${it.short && it.short !== it.label ? `${it.short} – ${it.label}` : it.label}${it.href === REVIEW.href && due ? ` — ${due} từ đến hạn ôn` : ""}`}
             aria-current={active ? "page" : undefined}
-            className={`group relative flex h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 transition-colors ${
-              active ? "text-foreground" : "text-muted active:text-foreground"
-            }`}
+            className={`group relative flex h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 transition-colors ${active ? "text-foreground" : "text-muted active:text-foreground"
+              }`}
           >
             <span
-              className={`flex h-7 w-12 items-center justify-center rounded-lg transition-colors duration-150 ${
-                active ? "bg-sec-soft text-sec-text" : "group-active:bg-card-2"
-              }`}
+              className={`flex h-7 w-12 items-center justify-center rounded-lg transition-colors duration-150 ${active ? "bg-sec-soft text-sec-text" : "group-active:bg-card-2"
+                }`}
             >
               <it.icon className="size-5" />
             </span>
@@ -157,9 +155,8 @@ export function HeaderNavFrame({ current }: { current?: string }) {
             href={it.href}
             data-sec={secOf(it.href)}
             aria-current={on ? "page" : undefined}
-            className={`group relative flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors duration-150 ${
-              on ? "bg-sec-soft font-semibold text-sec-text" : "font-medium text-muted hover:bg-card-2 hover:text-foreground"
-            }`}
+            className={`group relative flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors duration-150 ${on ? "bg-sec-soft font-semibold text-sec-text" : "font-medium text-muted hover:bg-card-2 hover:text-foreground"
+              }`}
           >
             <it.icon className={`size-4 ${on ? "text-sec-text" : "text-muted group-hover:text-foreground"}`} />
             {it.label}
@@ -310,15 +307,15 @@ export function DeutschSubnav() {
   if (!showDeutschSubnav(pathname)) return null;
   return (
     <div data-sec="de" className="border-b border-line bg-card/70 dark:bg-sidebar/70">
-      <nav aria-label="Tiếng Đức" className="tabs-line mx-auto w-full max-w-6xl border-b-0 px-3 sm:px-4 md:px-6">
+      <nav aria-label="Tiếng Đức" className="tabs-line mx-auto w-full max-w-6xl border-b-0 px-4 md:px-6">
         {DEUTSCH.map((it) => (
           <Link
             key={it.href}
             href={it.href}
             aria-current={it.href === current ? "page" : undefined}
-            className="tab px-2.5 py-2.5 text-[13px] sm:px-3 sm:text-sm"
+            className="tab py-2.5 text-sm"
           >
-            <it.icon className={`size-3.5 sm:size-4 ${it.href === current ? "text-sec-text" : "text-muted"}`} />
+            <it.icon className={`size-4 ${it.href === current ? "text-sec-text" : "text-muted"}`} />
             {it.label}
           </Link>
         ))}

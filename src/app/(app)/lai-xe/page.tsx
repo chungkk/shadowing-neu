@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, BookOpen, Car, ChevronDown, Flag, RotateCcw, Settings, Star } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, Car, ChevronDown, Clock, FileStack, Flag, RotateCcw, Settings, ShieldAlert, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
-import { BOGEN_COUNT, CLASS_ORDER, DEFAULT_CLASS, WEB_BOGEN_LIMIT, classInfo, classQuestionIds, prefs, totalQuestions } from "@/lib/laixe";
+import { BOGEN_COUNT, CLASS_ORDER, DEFAULT_CLASS, WEB_BOGEN_LIMIT, classInfo, classQuestionIds, isGrund, prefs, totalQuestions } from "@/lib/laixe";
 import { JsonLd, breadcrumbLd, faqLd, fmtNum, quizPageMeta } from "@/lib/laixe/seo";
 import { summarize } from "@/lib/quiz/types";
-import { ActionCard, BigCard, QuizProgress } from "@/components/quiz/QuizParts";
+import { ActionCard, BigCard, ProgressBar, QuizProgress } from "@/components/quiz/QuizParts";
 import PageHeader from "@/components/PageHeader";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -21,7 +21,6 @@ export const metadata: Metadata = quizPageMeta({
   description: `Ôn thi lý thuyết bằng lái xe Đức (Führerschein) bằng tiếng Việt: ${fmtNum(TOTAL)} câu hỏi chính thức cho ${CLASS_ORDER.length} hạng B, A, C, D…, giải thích, đề mẫu, thi thử.`,
 });
 
-// Câu hỏi thường gặp: hiện trên trang + dữ liệu có cấu trúc FAQPage (nội dung hai nơi phải giống nhau)
 const FAQ = [
   {
     q: "Bài thi lý thuyết lái xe hạng B có bao nhiêu câu?",
@@ -52,46 +51,115 @@ async function Home() {
   const info = classInfo(cls);
   const ids = classQuestionIds(cls);
   const all = summarize(ids, stats);
+  const grund = summarize(ids.filter(isGrund), stats);
+  const zusatz = summarize(ids.filter((id) => !isGrund(id)), stats);
   const marked = user ? quizBookmarks(user.id, "fuehrerschein").length : 0;
   const settingsHref = user ? "/settings#hoc-tap" : "/lai-xe/hang";
 
   return (
     <>
-      {/* Đầu trang: bìa vở vàng + nhãn — tiến trình nằm ngay trong nhãn (cùng khuôn với LiD) */}
       <PageHeader
         sec="laixe"
         icon={Car}
         mascot
-        title="Bằng lái xe Đức"
-        sub={`Ôn thi lý thuyết hạng ${cls} · Theorieprüfung · bộ đề từ 01.04.2025`}
-        meta={<span className="rounded-md bg-white/85 max-sm:hidden px-2 py-0.5 font-display text-base font-extrabold text-[#16203a] tabular-nums">Hạng {cls}</span>}
+        title="Lý thuyết lái xe Đức"
+        sub={`Ôn thi Führerschein hạng ${cls} (${info.vi}) · bộ đề chính thức từ 01.04.2025`}
+        meta={<span className="badge badge-gold font-mono tabular-nums">Hạng {cls}</span>}
         actions={
           <Link href={settingsHref} className="btn btn-sm">
-            <Settings className="size-4" /> {user ? "Cài đặt" : "Đổi hạng"}
+            <Settings className="size-3.5" /> {user ? "Đổi hạng / Cài đặt" : "Đổi hạng"}
           </Link>
         }
-      >
-        <QuizProgress {...all} />
-      </PageHeader>
+      />
 
       {!user && (
         <p className="alert alert-info">
           <span>
-            <Link href="/login?next=/lai-xe" className="font-bold underline underline-offset-2">
+            <Link href="/login?next=/lai-xe" className="font-semibold underline underline-offset-2">
               Đăng nhập
             </Link>{" "}
-            để lưu tiến trình, câu sai và lịch sử thi.
+            để lưu tiến độ học, tự động gom câu sai và theo dõi lịch sử thi thử.
           </span>
         </p>
       )}
 
-      {/* 2 cuốn vở lớn: Học / Thi thử (cuốn chính) */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-6">
-        <BigCard href="/lai-xe/hoc" icon={BookOpen} title="Học theo chủ đề" text="Theo chương, có giải thích" cta="Học" />
-        <BigCard href="/lai-xe/thi-thu" icon={Flag} title="Thi thử" text={cls === "B" ? "Đề ngẫu nhiên & đề mẫu" : `${info.exam.questions} câu · ${info.exam.minutes} phút`} cta="Vào thi" primary />
+      {/* Bảng cấu trúc kỳ thi & tiến độ Grundstoff / Zusatzstoff (đặc thù của Führerschein) */}
+      <section className="card flex flex-col gap-4 p-5" aria-label="Tiến độ và cấu trúc bài thi lái xe">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted">
+            <span className="badge badge-gold">Hạng {cls}</span>
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Clock className="size-3.5" aria-hidden /> {info.exam.questions} câu · {info.exam.minutes} phút
+            </span>
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <ShieldAlert className="size-3.5" aria-hidden /> Tối đa {info.exam.maxErrorPoints} điểm lỗi
+            </span>
+          </div>
+          <Link href="/lai-xe/thong-ke" className="text-xs font-semibold text-link hover:underline">
+            Xem thống kê chi tiết
+          </Link>
+        </div>
+
+        <QuizProgress {...all} />
+
+        <div className="grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
+          <Link href="/lai-xe/hoc/grund" className="group surface flex flex-col gap-1.5 p-3 transition-colors hover:bg-card-2/80">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-foreground group-hover:text-sec-text">Grundstoff (cơ bản)</span>
+              <span className="font-mono text-muted tabular-nums">
+                {grund.done}/{grund.total} câu
+              </span>
+            </div>
+            <ProgressBar {...grund} />
+          </Link>
+          <Link href="/lai-xe/hoc/zusatz" className="group surface flex flex-col gap-1.5 p-3 transition-colors hover:bg-card-2/80">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-foreground group-hover:text-sec-text">Zusatzstoff (riêng hạng {cls})</span>
+              <span className="font-mono text-muted tabular-nums">
+                {zusatz.done}/{zusatz.total} câu
+              </span>
+            </div>
+            <ProgressBar {...zusatz} />
+          </Link>
+        </div>
+      </section>
+
+      {/* 2 lối vào chính */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <BigCard
+          href="/lai-xe/hoc"
+          icon={BookOpen}
+          title="Học theo chương & chủ đề"
+          text={`Luyện ${fmtNum(ids.length)} câu có bản dịch tiếng Việt và giải thích chi tiết từng đáp án.`}
+          badge={`${fmtNum(ids.length)} câu`}
+          cta="Mở danh sách chương"
+        />
+        <BigCard
+          href="/lai-xe/thi-thu"
+          icon={Flag}
+          title="Thi thử chuẩn phần mềm Đức"
+          text={`${info.exam.questions} câu (${info.exam.grundstoff} cơ bản + ${info.exam.questions - info.exam.grundstoff} riêng hạng ${cls}), chấm điểm lỗi thật.`}
+          badge={`${info.exam.minutes} phút`}
+          cta="Vào phòng thi"
+          primary
+        />
       </div>
 
-      {/* Menu phụ — cùng 3 mục, cùng thứ tự với LiD */}
+      {/* Lối tắt Đề mẫu chính thức (riêng hạng B) */}
+      {cls === "B" && (
+        <Link href="/lai-xe/de-mau" className="group card card-link flex items-center gap-3.5 p-4 sm:px-5">
+          <span className="icon-bubble tint-gold size-10">
+            <FileStack className="size-5" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-semibold text-foreground">Đề mẫu chính thức hạng B (Musterbögen)</span>
+            <span className="text-xs text-muted sm:text-sm">Làm thử {WEB_BOGEN_LIMIT} đề chuẩn trên web — chọn chế độ Đọc, Luyện hoặc Thi có giờ.</span>
+          </span>
+          <ArrowRight className="size-4 shrink-0 text-sec-text transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </Link>
+      )}
+
+      {/* Công cụ ôn tập phụ */}
       <div className="grid gap-3 sm:grid-cols-3">
         <ActionCard
           href="/lai-xe/cau-sai"
@@ -99,28 +167,28 @@ async function Home() {
           title="Ôn câu sai"
           locked={!user}
           disabled={!!user && !all.wrong}
-          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu đang sai` : "Chưa có câu sai nào"}
+          text={!user ? "Đăng nhập để lưu câu sai" : all.wrong ? `${all.wrong} câu cần làm lại` : "Chưa có câu sai nào"}
         />
         <ActionCard
           href="/lai-xe/danh-dau"
           icon={Star}
-          title="Đánh dấu"
+          title="Câu đánh dấu"
           locked={!user}
           disabled={!!user && !marked}
-          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu` : "Bấm ngôi sao ở câu hỏi để đánh dấu"}
+          text={!user ? "Đăng nhập để đánh dấu câu" : marked ? `${marked} câu đã lưu` : "Bấm ngôi sao ở câu hỏi để lưu"}
         />
-        <ActionCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê" locked={!user} text={user ? "Kết quả và tiến trình" : "Đăng nhập để xem thống kê"} />
+        <ActionCard href="/lai-xe/thong-ke" icon={BarChart3} title="Thống kê & lịch sử" locked={!user} text={user ? "Biểu đồ & 10 bài thi gần nhất" : "Đăng nhập để xem thống kê"} />
       </div>
 
-      {/* Câu hỏi thường gặp: nội dung cho SEO (FAQPage), xếp sau menu như phần phụ — cùng khuôn với LiD */}
-      <section className="card flex flex-col gap-1 sm:p-6" aria-labelledby="lx-faq">
+      {/* FAQPage */}
+      <section className="card flex flex-col gap-1 p-5 sm:p-6" aria-labelledby="lx-faq">
         <h2 id="lx-faq" className="section-title mb-1">
           Câu hỏi thường gặp
         </h2>
         <div className="flex flex-col">
           {FAQ.map((f) => (
             <details key={f.q} className="quiz-faq group">
-              <summary>
+              <summary className="text-sm sm:text-[0.9375rem]">
                 <span className="min-w-0 flex-1">{f.q}</span>
                 <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
               </summary>

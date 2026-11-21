@@ -19,69 +19,61 @@ export const metadata: Metadata = pageMeta({
   path: "/vocab",
 });
 
-/** Nhóm theo category, giữ thứ tự listDecks (đã xếp theo order) */
 function byCategory(decks: DeckSummary[]) {
   const groups = new Map<string, DeckSummary[]>();
   for (const d of decks) (groups.get(d.category) ?? groups.set(d.category, []).get(d.category)!).push(d);
   return [...groups];
 }
 
-/** Lời nhắc trên bìa: số từ đến hạn ôn nếu có */
-async function MascotSays() {
+async function DueBadgeMeta() {
   const user = await getCurrentUser();
   const due = user ? vocabOverview(user.id).due : 0;
-  return <span>{due ? `Có ${due} từ đang chờ bạn ôn` : "Hallo! Học từ mới nào"}</span>;
+  return due ? <span className="badge badge-coral tabular-nums">{due} từ đến hạn ôn</span> : null;
 }
 
-/** Đầu trang: bìa vở xanh của khu Tiếng Đức */
 function VocabHero() {
   return (
     <PageHeader
       sec="de"
       icon={Library}
       mascot
-      title="Từ vựng"
-      sub="Học theo bộ từ từng trình độ, lưu từ vào sổ và ôn đúng lúc."
+      title="Kho từ vựng"
+      sub="Học theo bộ từ chuẩn Goethe A1–B2, lưu từ vào sổ cá nhân và ôn tập theo lịch lặp lại ngắt quãng (SRS)."
       meta={
-        // Điện thoại: linh vật ngồi đúng chỗ này → ẩn lời nhắc (banner Sổ từ bên dưới đã hiện số từ đến hạn)
-        <span className="max-sm:hidden">
-          <Suspense fallback={<span>Hallo! Học từ mới nào</span>}>
-            <MascotSays />
-          </Suspense>
-        </span>
+        <Suspense>
+          <DueBadgeMeta />
+        </Suspense>
       }
     />
   );
 }
 
-/** Banner đầu trang: sổ từ cá nhân — số từ, số từ đến hạn (chưa đăng nhập → mời đăng nhập) */
 function NotebookBanner({ notebook }: { notebook: { total: number; due: number } | null }) {
   const inner = (
     <>
-      <span className="icon-bubble tint-sec size-12 sm:size-14">
-        <BookOpen className="size-6 sm:size-7" />
+      <span className="icon-bubble tint-sec size-10 sm:size-11">
+        <BookOpen className="size-5" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-display text-lg font-bold tracking-[-0.02em]">Sổ từ vựng</span>
-        <span className="truncate text-sm text-muted">
+        <span className="text-sm font-semibold text-foreground sm:text-base">Sổ từ vựng cá nhân</span>
+        <span className="truncate text-xs text-muted sm:text-sm">
           {notebook
-            ? [`${notebook.total} từ đã lưu`, notebook.due ? `${notebook.due} đến hạn ôn` : ""].filter(Boolean).join(" · ")
-            : "Đăng nhập để lưu từ và ôn tập"}
+            ? [`${notebook.total} từ đã lưu`, notebook.due ? `${notebook.due} từ đến hạn ôn hôm nay` : "Không có từ quá hạn"].join(" · ")
+            : "Đăng nhập để lưu từ khi học video và ôn tập theo lịch SRS"}
         </span>
       </span>
-      {!notebook?.due && <ChevronRight className="size-5 shrink-0 text-muted" />}
+      {!notebook?.due && <ChevronRight className="size-4 shrink-0 text-muted" />}
     </>
   );
-  const cls = "sticker sticker-link flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4";
-  // Có từ đến hạn: nút "Ôn tập" riêng → vào thẳng buổi ôn (1 chạm), phần còn lại của banner mở sổ từ
+  const cls = "card card-link flex items-center gap-3 p-4";
   if (notebook?.due)
     return (
-      <div className="sticker flex items-center gap-3 p-3.5 sm:p-4 max-[420px]:flex-col max-[420px]:items-stretch">
-        <Link href="/vocab/notebook" className="flex min-w-0 flex-1 items-center gap-3 rounded-ui sm:gap-4">
+      <div className="card flex items-center gap-3 p-4 max-[440px]:flex-col max-[440px]:items-stretch">
+        <Link href="/vocab/notebook" className="flex min-w-0 flex-1 items-center gap-3">
           {inner}
         </Link>
-        <Link href="/vocab/notebook?review=1" className="btn btn-primary shrink-0 max-[420px]:w-full">
-          <Layers className="size-4" /> Ôn {notebook.due}
+        <Link href="/vocab/notebook?review=1" className="btn btn-primary shrink-0 max-[440px]:w-full">
+          <Layers className="size-4" /> Ôn {notebook.due} từ
         </Link>
       </div>
     );
@@ -99,38 +91,32 @@ function NotebookBanner({ notebook }: { notebook: { total: number; due: number }
 function DeckCard({ deck, learned }: { deck: DeckSummary; learned: number | null }) {
   const done = learned !== null && learned >= deck.wordCount;
   return (
-    <Link
-      href={`/vocab/decks/${deck.slug}`}
-      className="group sticker sticker-link flex flex-col gap-3 p-2.5 sm:p-3"
-    >
-      <div className="relative">
-        <DeckCover deck={deck} />
-        {/* Học xong cả bộ: linh vật ngồi trên bìa ăn mừng; chưa xong thì chỉ ló lên khi rê chuột */}
-        <Mascot
-          className={`pointer-events-none absolute -right-1.5 -bottom-2 size-14 transition sm:size-16 motion-reduce:transition-none ${done ? "group-hover:-translate-y-1" : "translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"}`}
-        />
-      </div>
-      <h3 className="line-clamp-2 min-h-[2lh] px-0.5 font-display leading-snug font-bold tracking-[-0.015em] transition-colors group-hover:text-accent-text sm:text-lg">{deck.title}</h3>
-      <div className="flex items-center gap-1.5 px-0.5 text-sm font-semibold text-muted">
-        <Layers className="size-4" />
-        <span className="flex-1">{deck.wordCount} từ</span>
-        {!!learned &&
-          (done ? (
-            <span className="badge badge-ok">
-              <Check className="size-3.5" /> Xong
-            </span>
-          ) : (
-            <span className="badge badge-gold tabular-nums">
-              {learned}/{deck.wordCount}
-            </span>
-          ))}
-      </div>
-      {/* Tiến độ: phần đã học */}
-      {!!learned && !done && (
-        <div className="progress -mt-1.5 mx-0.5 w-auto">
-          <div className="progress-bar" style={{ width: `${(learned * 100) / deck.wordCount}%` }} />
+    <Link href={`/vocab/decks/${deck.slug}`} className="group card card-link flex flex-col gap-3 p-3">
+      <DeckCover deck={deck} />
+      <div className="flex flex-1 flex-col gap-2 px-0.5">
+        <h3 className="line-clamp-2 min-h-[2.6em] text-sm leading-snug font-semibold text-foreground transition-colors group-hover:text-accent-text sm:text-[0.9375rem]">
+          {deck.title}
+        </h3>
+        <div className="mt-auto flex items-center gap-1.5 text-xs font-medium text-muted">
+          <Layers className="size-3.5" />
+          <span className="flex-1 tabular-nums">{deck.wordCount} từ</span>
+          {!!learned &&
+            (done ? (
+              <span className="badge badge-ok">
+                <Check className="size-3" /> Xong
+              </span>
+            ) : (
+              <span className="badge badge-accent tabular-nums">
+                {learned}/{deck.wordCount}
+              </span>
+            ))}
         </div>
-      )}
+        {!!learned && !done && (
+          <div className="progress h-1.5">
+            <div className="progress-bar" style={{ width: `${(learned * 100) / deck.wordCount}%` }} />
+          </div>
+        )}
+      </div>
     </Link>
   );
 }
@@ -150,7 +136,7 @@ async function Decks() {
   return (
     <>
       {byCategory(decks).map(([title, list]) => (
-        <section key={title} className="flex flex-col gap-3">
+        <section key={title} className="flex flex-col gap-3.5">
           <h2 className="section-title flex items-center gap-2">
             {title}
             <span className="badge badge-muted font-sans tabular-nums">{list.length}</span>
@@ -163,20 +149,20 @@ async function Decks() {
         </section>
       ))}
       {decks.length ? (
-        <Link href="/games" data-sec="game" className="group sticker sticker-link flex items-center gap-3 overflow-hidden p-3 sm:gap-4 sm:px-5">
-          <span className="icon-bubble tint-sec size-12">
-            <Gamepad2 className="size-6" />
+        <Link href="/games" data-sec="game" className="group card card-link flex items-center gap-3.5 p-4 sm:px-5">
+          <span className="icon-bubble tint-sec size-10">
+            <Gamepad2 className="size-5" />
           </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="font-display font-bold tracking-[-0.015em] sm:text-lg">Học mệt rồi? Chơi game từ vựng nhé</span>
-            <span className="text-sm text-muted max-sm:hidden">Mưa từ vựng, Nối từ, Der Die Das…</span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-semibold text-foreground sm:text-base">Ôn từ nhanh bằng trò chơi</span>
+            <span className="text-xs text-muted sm:text-sm">Mưa từ vựng, Nối từ, Ong đánh vần, Der Die Das…</span>
           </span>
-          <ArrowRight className="size-5 shrink-0 text-sec-text transition group-hover:translate-x-0.5 motion-reduce:transition-none" />
+          <ArrowRight className="size-4 shrink-0 text-sec-text transition group-hover:translate-x-0.5 motion-reduce:transition-none" />
         </Link>
       ) : (
         <div className="card empty">
-          <Mascot className="size-28" />
-          <p className="font-display text-lg font-bold">Chưa có bộ từ nào.</p>
+          <Mascot className="size-20 opacity-90" />
+          <p className="text-base font-semibold text-foreground">Chưa có bộ từ nào.</p>
           <p className="text-sm text-muted">Bộ từ mới sẽ hiện ở đây ngay khi được đăng.</p>
         </div>
       )}
@@ -186,7 +172,7 @@ async function Decks() {
 
 export default function VocabPage() {
   return (
-    <main className="page" data-sec="de">
+    <main className="page gap-7" data-sec="de">
       <div className="flex flex-col gap-4">
         <VocabHero />
         <Suspense fallback={<div className="skeleton min-h-20 rounded-panel" />}>

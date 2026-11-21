@@ -201,16 +201,16 @@ function Waiting({
       <MascotSay mood={everyoneReady || me?.ready ? "cheer" : "happy"}>
         {say}
       </MascotSay>
-      {/* Mã phòng: bìa tím + nhãn vở ghi mã (như vé dán) */}
-      <div data-sec="game" className="flex flex-col">
-        <div className="cover flex items-start justify-between gap-3 pt-3 pr-4 pb-10 pl-8 text-sm font-semibold">
-          <span>Mã phòng</span>
-          <span className="text-right opacity-90">
+      {/* Mã phòng */}
+      <div data-sec="game" className="card flex flex-col gap-3 p-5 text-center">
+        <div className="flex items-center justify-between gap-3 text-xs font-medium text-muted">
+          <span className="label">Mã phòng</span>
+          <span>
             {GAME_TITLE[v.game]}
             {v.level && ` · ${SUDOKU_LEVEL_LABEL[v.level]}`} · {v.capacity} người
           </span>
         </div>
-        <div className="nhan relative z-10 mx-3 -mt-8 flex flex-col items-center gap-1 py-4 sm:mx-6">
+        <div className="surface py-4">
           <p className="g-code select-all">{v.code}</p>
         </div>
       </div>
