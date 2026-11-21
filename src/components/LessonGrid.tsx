@@ -1,9 +1,9 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, CircleCheck, Clock, ExternalLink, Lock, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleCheck, Clock, ExternalLink, Lock, Search, X } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
@@ -71,38 +71,38 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
           loading="lazy"
           className={`size-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none ${l.access === "locked" ? "opacity-75 saturate-50" : ""}`}
         />
-        {l.access === "free" && <span className="badge absolute top-2 left-2 border border-line bg-card/95 text-ok-text">Miễn phí</span>}
-        <LevelBadge level={l.level} className="absolute top-2 right-2" />
+        {l.access === "free" && <span className="badge absolute top-1.5 left-1.5 border border-line bg-card/95 px-1.5 py-0.5 text-[11px] text-ok-text">Miễn phí</span>}
+        <LevelBadge level={l.level} className="absolute top-1.5 right-1.5" />
         {l.access === "locked" && (
           <span className="absolute inset-0 flex items-center justify-center bg-black/15">
-            <span className="flex size-10 items-center justify-center rounded-full border border-line bg-card text-foreground shadow-sm">
-              <Lock className="size-4" />
+            <span className="flex size-8 items-center justify-center rounded-full border border-line bg-card/95 text-foreground shadow-sm">
+              <Lock className="size-3.5" />
               <span className="sr-only">Khoá</span>
             </span>
           </span>
         )}
-        {l.isNew && <span className="badge absolute bottom-2 left-2 bg-gold text-[#0f172a]">Mới</span>}
+        {l.isNew && <span className="badge absolute bottom-1.5 left-1.5 bg-gold px-1.5 py-0.5 text-[11px] text-[#0f172a]">Mới</span>}
         {l.duration > 0 && (
-          <span className="pill absolute right-2 bottom-2 bg-black/75 text-white tabular-nums">
-            <Clock className="size-3" /> {formatDuration(l.duration)}
+          <span className="pill absolute right-1.5 bottom-1.5 bg-black/75 px-1.5 py-0.5 text-[11px] text-white tabular-nums">
+            <Clock className="size-2.5" /> {formatDuration(l.duration)}
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-3.5">
-        <h3 className="line-clamp-2 min-h-[2.6em] text-sm leading-snug font-semibold text-foreground transition-colors group-hover:text-accent-text sm:text-[0.9375rem]">{l.title}</h3>
-        {l.description && <p className="line-clamp-2 text-xs leading-relaxed text-muted">{l.description}</p>}
-        <div className="mt-auto flex flex-col gap-2 pt-2">
-          <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+      <div className="flex flex-1 flex-col gap-1 p-2.5">
+        <h3 className="line-clamp-2 min-h-[2.45em] text-[13px] leading-snug font-semibold text-foreground transition-colors group-hover:text-accent-text">{l.title}</h3>
+        {l.description && <p className="line-clamp-1 text-[11px] leading-relaxed text-muted">{l.description}</p>}
+        <div className="mt-auto flex flex-col gap-1.5 pt-1">
+          <p className="truncate text-[11px] text-muted">
             Shadowing{l.dictation && " · Chính tả"} · {l.sentences} câu
           </p>
           {l.percent >= 100 ? (
-            <p className="flex items-center gap-1 text-xs font-semibold text-ok-text">
-              <CircleCheck className="size-3.5" /> Đã hoàn thành
+            <p className="flex items-center gap-1 text-[11px] font-semibold text-ok-text">
+              <CircleCheck className="size-3" /> Đã hoàn thành
             </p>
           ) : (
             l.percent > 0 && (
-              <div className="flex items-center gap-2 text-xs font-semibold text-sec-text tabular-nums">
-                <div className="progress h-1.5 flex-1">
+              <div className="flex items-center gap-2 text-[11px] font-semibold text-sec-text tabular-nums">
+                <div className="progress h-1 flex-1">
                   <div className="progress-bar" style={{ width: `${l.percent}%` }} />
                 </div>
                 {l.percent}%
@@ -158,54 +158,100 @@ function byChannel(lessons: Item[]): Group[] {
 }
 
 const anchor = (name: string) => `kenh-${name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x"}`;
-const DESKTOP_SHOWN = 8; // máy tính: mỗi kênh hiện 2 hàng đầu, bấm "Xem thêm" mới mở hết
 
 function ChannelAvatar({ g }: { g: Group }) {
   if (g.avatar)
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={g.avatar} alt="" loading="lazy" className="size-9 shrink-0 rounded-full border border-line bg-card-2 object-cover" />;
+    return <img src={g.avatar} alt="" loading="lazy" className="size-7 shrink-0 rounded-full border border-line bg-card-2 object-cover" />;
   return (
-    <span className="icon-bubble tint-muted size-9 shrink-0 rounded-full font-display text-base font-extrabold" aria-hidden>
+    <span className="icon-bubble tint-muted size-7 shrink-0 rounded-full font-display text-xs font-extrabold" aria-hidden>
       {g.name === OTHER ? "?" : g.name.charAt(0).toUpperCase()}
     </span>
   );
 }
 
-/** 1 kênh: tiêu đề (ảnh, tên, số bài, link YouTube) + bài — điện thoại: 1 hàng vuốt ngang · máy tính: lưới, quá 2 hàng thì thu gọn */
+/** 1 kênh: tiêu đề gọn + 1 hàng thẻ vuốt / cuộn ngang (có nút mũi tên ‹ › trên màn hình rộng) */
 function ChannelSection({ g, onLocked }: { g: Group; onLocked?: (l: Item) => void }) {
-  const [open, setOpen] = useState(false);
-  const more = g.lessons.length - DESKTOP_SHOWN;
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [nav, setNav] = useState({ left: false, right: false });
+
+  const syncNav = useCallback(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setNav((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+  }, []);
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(syncNav);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [syncNav, g.lessons.length]);
+
+  const scrollByDir = (dir: -1 | 1) => {
+    const el = rowRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(260, Math.round(el.clientWidth * 0.82)), behavior: "smooth" });
+  };
+
+  const canScroll = nav.left || nav.right;
+
   return (
-    <section id={anchor(g.key)} aria-labelledby={`${anchor(g.key)}-h`} className="flex scroll-mt-20 flex-col gap-3">
-      <div className="flex items-center gap-3">
+    <section id={anchor(g.key)} aria-labelledby={`${anchor(g.key)}-h`} className="flex scroll-mt-20 flex-col gap-2.5">
+      <div className="flex items-center gap-2">
         <ChannelAvatar g={g} />
-        <h3 id={`${anchor(g.key)}-h`} className="min-w-0 truncate font-display text-lg font-bold tracking-[-0.015em]">
+        <h3 id={`${anchor(g.key)}-h`} className="min-w-0 truncate font-display text-base font-bold tracking-[-0.015em]">
           {g.name}
         </h3>
         <span className="badge badge-muted shrink-0 tabular-nums">{g.lessons.length} bài</span>
-        {g.url && (
-          <a href={g.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost ml-auto shrink-0 text-muted max-sm:px-2" title={`Kênh ${g.name} trên YouTube`}>
-            <ExternalLink className="size-4" /> <span className="max-sm:sr-only">YouTube</span>
-          </a>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {g.url && (
+            <a href={g.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost text-muted max-sm:px-2" title={`Kênh ${g.name} trên YouTube`}>
+              <ExternalLink className="size-3.5" /> <span className="max-sm:sr-only">YouTube</span>
+            </a>
+          )}
+          {canScroll && (
+            <div className="hidden items-center gap-1 sm:flex">
+              <button
+                type="button"
+                onClick={() => scrollByDir(-1)}
+                disabled={!nav.left}
+                aria-label={`Cuộn trái ${g.name}`}
+                className="btn-icon size-8 rounded-lg border border-line bg-card disabled:opacity-35"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollByDir(1)}
+                disabled={!nav.right}
+                aria-label={`Cuộn phải ${g.name}`}
+                className="btn-icon size-8 rounded-lg border border-line bg-card disabled:opacity-35"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-      {/* Điện thoại: hàng vuốt ngang, thẻ kế tiếp ló ra ở mép để biết còn bài */}
-      <div className="scroll-row -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 px-4 pt-1.5 pb-2.5 sm:hidden">
+      {/* 1 hàng vuốt ngang trên cả điện thoại và máy tính, thẻ tiếp theo ló ra ở mép phải */}
+      <div
+        ref={rowRef}
+        onScroll={syncNav}
+        className="scroll-row flex snap-x snap-mandatory gap-3 pt-0.5 pb-1.5 max-sm:-mx-4 max-sm:scroll-px-4 max-sm:px-4"
+      >
         {g.lessons.map((l) => (
-          <LessonCard key={l.id} l={l} onLocked={onLocked} className={`snap-start ${g.lessons.length > 1 ? "w-[78vw]" : "w-full"}`} />
+          <LessonCard
+            key={l.id}
+            l={l}
+            onLocked={onLocked}
+            className={`snap-start ${g.lessons.length > 1 ? "w-[72vw] max-w-[248px] sm:w-[232px] lg:w-[244px]" : "w-full sm:w-[244px]"}`}
+          />
         ))}
       </div>
-      <div className="grid gap-4 max-sm:hidden sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {(open ? g.lessons : g.lessons.slice(0, DESKTOP_SHOWN)).map((l) => (
-          <LessonCard key={l.id} l={l} onLocked={onLocked} />
-        ))}
-      </div>
-      {more > 0 && (
-        <button className="btn btn-sm self-center max-sm:hidden" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Thu gọn" : `Xem thêm ${more} bài của ${g.name}`}
-          <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
-        </button>
-      )}
     </section>
   );
 }
@@ -321,7 +367,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
           ))}
         </div>
       ) : (
-        <div className="flex flex-col gap-8 sm:gap-10">
+        <div className="flex flex-col gap-6 sm:gap-7">
           {groups.map((g) => (
             <ChannelSection key={`${level}-${g.key}`} g={g} onLocked={onLocked} />
           ))}
