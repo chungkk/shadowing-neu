@@ -3,10 +3,12 @@
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { TriangleAlert } from "lucide-react";
+import { Pause, Play, TriangleAlert } from "lucide-react";
 import { slugify } from "@/lib/slug";
 import { formatTime, keepWordTimings, mergeIntoSentences, parseSubtitleFile, type Segment } from "@/lib/subtitles";
+import { extractVideoId } from "@/lib/youtube-id";
 import { fetchSubtitles, saveLesson, type FetchResult } from "./actions";
+import { LessonPreviewPanel, useLessonPreview } from "./LessonPreview";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -59,8 +61,20 @@ function LessonFormInner({ initial, presetUrl }: Props) {
       withWords: lines.filter((s) => s.words?.length).length,
     };
   }, [srt, baseSegments]);
+  const videoId = useMemo(() => extractVideoId(url), [url]);
+  const sentences = useMemo(() => counts?.sentences ?? [], [counts]);
+  const preview = useLessonPreview(videoId, sentences);
+  const sentenceListRef = useRef<HTMLOListElement>(null);
   // Chỉ đổi cách XEM: dữ liệu lưu vẫn là các dòng SRT gốc (người học tự gộp thành câu lúc phát)
   const [bySentence, setBySentence] = useState(false);
+
+  useEffect(() => {
+    if (!preview.open || !bySentence) return;
+    sentenceListRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [preview.open, preview.activeIdx, bySentence]);
   const [info, setInfo] = useState<Extract<FetchResult, { srt: string }> | null>(null);
   const [fetchError, setFetchError] = useState("");
 
@@ -197,32 +211,78 @@ function LessonFormInner({ initial, presetUrl }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label htmlFor="lesson-srt">
             {bySentence
-              ? "Phụ đề theo câu — đúng như người học thấy (chỉ xem; muốn sửa thì quay lại SRT)."
+              ? "Phụ đề theo câu — đúng như người học thấy (bấm vào từng câu để nghe thử; muốn sửa thì quay lại SRT)."
               : "Phụ đề (SRT) — sửa trực tiếp nội dung hoặc thời gian nếu cần. Để trống sẽ tự lấy khi lưu."}
           </label>
-          {counts && (
-            <div className="flex gap-1.5" role="group" aria-label="Cách xem phụ đề">
-              <button type="button" className="chip text-xs" aria-pressed={!bySentence} onClick={() => setBySentence(false)}>
-                SRT
-              </button>
-              <button type="button" className="chip text-xs" aria-pressed={bySentence} onClick={() => setBySentence(true)}>
-                Xem theo câu
-              </button>
+          {(counts || videoId) && (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cách xem phụ đề">
+              {counts && (
+                <>
+                  <button type="button" className="chip text-xs" aria-pressed={!bySentence} onClick={() => setBySentence(false)}>
+                    SRT
+                  </button>
+                  <button type="button" className="chip text-xs" aria-pressed={bySentence} onClick={() => setBySentence(true)}>
+                    Xem theo câu
+                  </button>
+                </>
+              )}
+              {videoId && (
+                <button
+                  type="button"
+                  className="chip text-xs"
+                  aria-pressed={preview.open}
+                  onClick={() => {
+                    if (!preview.open && counts) setBySentence(true);
+                    preview.toggleOpen();
+                  }}
+                >
+                  <Play className="size-3.5" aria-hidden />
+                  {preview.open ? "Ẩn nghe thử" : "Nghe thử"}
+                </button>
+              )}
             </div>
           )}
         </div>
+        {preview.open && videoId && <LessonPreviewPanel videoId={videoId} sentences={sentences} preview={preview} />}
         {bySentence && counts ? (
           <>
             {/* Vẫn gửi SRT gốc khi lưu */}
             <input type="hidden" name="srt" value={srt} />
-            <ol className="input max-h-96 overflow-y-auto text-foreground">
-              {counts.sentences.map((s, i) => (
-                <li key={i} className="flex gap-3 border-b border-line py-1.5 last:border-0">
-                  <span className="w-10 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
-                  <span className="w-12 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
-                  <span className="min-w-0">{s.text}</span>
-                </li>
-              ))}
+            <ol ref={sentenceListRef} className="input max-h-96 overflow-y-auto p-1 text-foreground">
+              {counts.sentences.map((s, i) => {
+                const isActive = preview.open && preview.activeIdx === i;
+                const isPlaying = isActive && preview.playing;
+                return (
+                  <li key={i} data-active={isActive ? "true" : undefined} className="border-b border-line last:border-0">
+                    {videoId ? (
+                      <button
+                        type="button"
+                        onClick={() => preview.toggleSentence(i)}
+                        className={`flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors ${
+                          isActive ? "bg-accent-soft text-foreground" : "hover:bg-accent-soft/40"
+                        }`}
+                      >
+                        <span className="mt-0.5 flex w-4 shrink-0 items-center justify-center text-muted">
+                          {isPlaying ? (
+                            <Pause className="size-3.5 text-accent" aria-hidden />
+                          ) : (
+                            <Play className={`size-3.5 ${isActive ? "text-accent" : "opacity-60"}`} aria-hidden />
+                          )}
+                        </span>
+                        <span className="w-7 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
+                        <span className="w-11 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
+                        <span className={`min-w-0 flex-1 ${isActive ? "font-medium" : ""}`}>{s.text}</span>
+                      </button>
+                    ) : (
+                      <div className="flex gap-3 px-2 py-1.5">
+                        <span className="w-10 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
+                        <span className="w-12 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
+                        <span className="min-w-0">{s.text}</span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
           </>
         ) : (
