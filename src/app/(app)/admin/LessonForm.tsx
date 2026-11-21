@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { slugify } from "@/lib/slug";
-import { formatTime, mergeIntoSentences, parseSubtitleFile } from "@/lib/subtitles";
+import { formatTime, keepWordTimings, mergeIntoSentences, parseSubtitleFile, type Segment } from "@/lib/subtitles";
 import { fetchSubtitles, saveLesson, type FetchResult } from "./actions";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -20,6 +20,7 @@ export type LessonFormValues = {
   published: boolean;
   dictation: boolean;
   srt: string;
+  segments?: Segment[];
 };
 
 type Props = { initial?: LessonFormValues; presetUrl?: string };
@@ -41,16 +42,23 @@ function LessonFormInner({ initial, presetUrl }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [srt, setSrt] = useState(initial?.srt ?? "");
+  // Giữ bản gốc (có thời gian từng từ nếu là Whisper v2 / sub tự động YouTube) để tab "Xem theo câu" khớp đúng với lúc người học mở
+  const [baseSegments, setBaseSegments] = useState<Segment[]>(initial?.segments ?? []);
   // Giữ trong state (không dùng defaultValue): React 19 reset form sau khi gửi → lưu lỗi sẽ mất các ô này
   const [level, setLevel] = useState(initial?.level ?? "A1");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [published, setPublished] = useState(initial?.published ?? true);
   const [dictation, setDictation] = useState(initial?.dictation ?? true);
-  // Các câu người học sẽ thấy (người học xem bản đã gộp câu của các dòng này)
+  // Các câu người học sẽ thấy (giữ thời gian từng từ cho dòng không sửa, giống hệt lúc lưu & phát)
   const counts = useMemo(() => {
-    const lines = parseSubtitleFile(srt);
-    return lines.length ? { lines: lines.length, sentences: mergeIntoSentences(lines) } : null;
-  }, [srt]);
+    const lines = keepWordTimings(parseSubtitleFile(srt), baseSegments);
+    if (!lines.length) return null;
+    return {
+      lines: lines.length,
+      sentences: mergeIntoSentences(lines),
+      withWords: lines.filter((s) => s.words?.length).length,
+    };
+  }, [srt, baseSegments]);
   // Chỉ đổi cách XEM: dữ liệu lưu vẫn là các dòng SRT gốc (người học tự gộp thành câu lúc phát)
   const [bySentence, setBySentence] = useState(false);
   const [info, setInfo] = useState<Extract<FetchResult, { srt: string }> | null>(null);
@@ -63,6 +71,7 @@ function LessonFormInner({ initial, presetUrl }: Props) {
       if ("error" in res) return setFetchError(res.error);
       setInfo(res);
       setSrt(res.srt);
+      setBaseSegments(res.segments);
       if (!title || title === info?.title) setTitle(res.title);
     });
 
@@ -77,6 +86,7 @@ function LessonFormInner({ initial, presetUrl }: Props) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
+      {info?.lang && <input type="hidden" name="track" value={info.lang} />}
 
       <div className="card flex flex-col gap-3">
         <label className="field text-sm">
@@ -228,7 +238,8 @@ function LessonFormInner({ initial, presetUrl }: Props) {
         )}
         {counts && (
           <span className="field-hint">
-            {counts.lines} dòng → người học thấy {counts.sentences.length} câu (tự gộp theo dấu câu và chỗ ngừng)
+            {counts.lines} dòng → người học thấy {counts.sentences.length} câu (tự gộp/tách theo dấu câu và chỗ ngừng
+            {counts.withWords > 0 ? " · có thời gian từng từ" : ""})
           </span>
         )}
       </div>

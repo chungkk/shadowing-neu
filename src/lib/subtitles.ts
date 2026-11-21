@@ -199,9 +199,14 @@ export function mergeIntoSentences(segs: Segment[]): Segment[] {
  * thì lấy lại bản gốc (có `words`) để gộp câu cho người học vẫn như cũ. Dòng đã sửa thì dùng bản mới.
  */
 export function keepWordTimings(edited: Segment[], ...originals: Segment[][]): Segment[] {
-  const key = (s: Segment) => `${Math.round(s.start * 1000)}|${Math.round(s.end * 1000)}|${s.text}`;
+  const key = (s: Segment) => `${Math.round(s.start * 1000)}|${Math.round(s.end * 1000)}|${cleanText(s.text)}`;
   const byKey = new Map<string, Segment>();
-  for (const list of originals) for (const s of normalize(list)) if (!byKey.has(key(s))) byKey.set(key(s), s);
+  for (const list of originals) {
+    for (const s of normalize(list)) {
+      // Chỉ lấy bản thật sự có thời gian từng từ — tránh track không có `words` che mất track có `words`
+      if (s.words?.length && !byKey.has(key(s))) byKey.set(key(s), s);
+    }
+  }
   return edited.map((s) => byKey.get(key(s)) ?? s);
 }
 

@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { adminSetPassword, envAdminEmail, requireAdmin } from "@/lib/auth";
 import { createLesson, deleteFeedback, deleteLesson, getLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, bumpSessionVersion, emailTaken, resetQuiz, setUserEmailVerified, setVerifiedEmail, updateUserName, QUIZ_MODULES, type Level, type QuizModule, type Role } from "@/lib/db";
-import { extractVideoId, getSavedTranscript, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
-import { keepWordTimings, parseSubtitleFile, toSrt } from "@/lib/subtitles";
+import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
+import { keepWordTimings, parseSubtitleFile, toSrt, type Segment } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
 import { removeAccount, validEmail } from "@/lib/account";
 import { slugify } from "@/lib/slug";
@@ -25,6 +25,7 @@ export type FetchResult =
       auto: boolean;
       tracks: { languageCode: string; name: string; auto: boolean }[];
       srt: string;
+      segments: Segment[];
     };
 
 /** Admin dán link → lấy phụ đề YouTube về dạng SRT để xem / chỉnh sửa trước khi lưu */
@@ -43,6 +44,7 @@ export async function fetchSubtitles(url: string, lang?: string): Promise<FetchR
       // Dòng gốc (không gộp sẵn): người học thấy bản gộp câu của đúng các dòng này,
       // gộp sẵn rồi lưu thì lúc phát bị gộp lần nữa → khác bản admin đã xem
       srt: toSrt(d.segments),
+      segments: d.segments,
     };
   } catch (e) {
     return { error: (e as Error).message };
@@ -60,16 +62,23 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   const published = formData.get("published") === "on";
   const dictation = formData.get("dictation") === "on";
   const srt = String(formData.get("srt") ?? "");
+  const track = String(formData.get("track") ?? "").trim();
 
   const videoId = extractVideoId(url);
   if (!videoId) return { error: "Link YouTube không hợp lệ" };
   if (!LEVELS.includes(level)) return { error: "Cấp độ không hợp lệ" };
 
-  // Dòng không sửa → giữ bản gốc có thời gian từng từ (bài đang sửa / phụ đề đã lưu của video)
+  // Dòng không sửa → giữ bản gốc có thời gian từng từ (ưu tiên track admin vừa chọn, bài đang sửa, rồi mọi bản đã cache của video — gồm cả Whisper v2 & Original + Whisper)
+  const cached = savedTranscriptKeys(videoId)
+    .map((k) => getCached<Transcript>(k))
+    .filter((t): t is Transcript => !!t);
+  const picked = track ? cached.filter((t) => t.track.languageCode === track) : [];
+  const rest = track ? cached.filter((t) => t.track.languageCode !== track) : cached;
   let segments = keepWordTimings(
     parseSubtitleFile(srt),
+    ...picked.map((t) => t.segments),
     (id && getLesson(id)?.segments) || [],
-    (await getSavedTranscript(videoId))?.segments ?? [],
+    ...rest.map((t) => t.segments),
   );
   // Chưa bấm "Lấy phụ đề" → tự lấy luôn khi lưu
   if (!srt.trim()) {

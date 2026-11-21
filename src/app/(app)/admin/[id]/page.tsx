@@ -26,6 +26,7 @@ async function Edit({ params }: PageProps<"/admin/[id]">) {
         // Đúng các dòng đã lưu (người học thấy bản gộp câu của chúng) — không gộp sẵn ở đây,
         // vì gộp lại lần nữa khi lưu sẽ ra số câu khác → lệch tiến độ / điểm Dictation của người học
         srt: toSrt(lesson.segments),
+        segments: lesson.segments,
       }}
     />
   );
