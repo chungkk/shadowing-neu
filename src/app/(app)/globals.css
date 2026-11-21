@@ -895,10 +895,14 @@ select {
   }
 
   .trow-on {
-    @apply hover:bg-[color-mix(in_srgb, var(--stage)_60%, var(--card))];
     z-index: 1;
     border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
     background: color-mix(in srgb, var(--stage) 55%, var(--card));
+  }
+  @media (hover: hover) {
+    .trow-on:hover {
+      background: color-mix(in srgb, var(--stage) 65%, var(--card));
+    }
   }
 
   .trow-dot {
