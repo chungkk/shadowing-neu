@@ -449,9 +449,9 @@ async function fetchTranscript(
     throw new Error(`Mỗi ngày chỉ tạo được ${WHISPER_PER_DAY} phụ đề bằng Whisper. Mai thử lại nhé.`);
   }
   const { blob, filename } = await audio();
-  const segments = await transcribeAudio(blob, filename);
+  const { segments, version } = await transcribeAudio(blob, filename, 0, { prompt: title });
   if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
-  const result = { videoId, title, track: WHISPER_TRACK, tracks, segments };
+  const result = { videoId, title, track: { ...WHISPER_TRACK, name: `🤖 Whisper ${version} (AI)` }, tracks, segments };
   setCached(`yt:${videoId}:${WHISPER}`, result, null);
   return result;
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import type { Segment } from "./subtitles";
+import type { Segment, Word } from "./subtitles";
 
 // API tương thích OpenAI Whisper. Mặc định OpenAI; có thể đổi sang Groq (nhanh + rẻ) qua .env.local
 const API_URL = process.env.TRANSCRIBE_API_URL ?? "https://api.openai.com/v1/audio/transcriptions";
@@ -46,8 +46,22 @@ export function whisperFilename(head: Uint8Array, filename: string, mime: string
   return ext ? `audio.${ext}` : null;
 }
 
-/** Gửi 1 file audio lên Whisper, trả về segment có timestamp (đã cộng offset giây). */
-export async function transcribeAudio(audio: Blob, filename: string, offset = 0): Promise<Segment[]> {
+/**
+ * Phiên bản Whisper (biến WHISPER_VERSION, mặc định "v2"):
+ * - v1: code cũ, chỉ lấy thời gian theo đoạn (segment) → cắt câu chia thời gian theo số ký tự
+ * - v2: lấy thêm thời gian TỪNG TỪ (cắt câu chính xác như phụ đề tự động YouTube) + gửi tiêu đề
+ *       video làm `prompt` (Whisper viết đúng tên riêng / thuật ngữ). v2 lỗi → tự chạy lại bằng v1.
+ */
+export type WhisperVersion = "v1" | "v2";
+export const whisperVersion = (): WhisperVersion => (process.env.WHISPER_VERSION === "v1" ? "v1" : "v2");
+
+/** Gửi 1 file audio lên Whisper, trả về segment có timestamp (đã cộng offset giây) + phiên bản đã dùng. */
+export async function transcribeAudio(
+  audio: Blob,
+  filename: string,
+  offset = 0,
+  { prompt, version = whisperVersion() }: { prompt?: string; version?: WhisperVersion } = {},
+): Promise<{ segments: Segment[]; version: WhisperVersion }> {
   if (!whisperEnabled()) throw new Error("Chưa cấu hình Whisper trong .env.local (xem README).");
 
   const head = new Uint8Array(await audio.slice(0, 16).arrayBuffer());
@@ -58,13 +72,17 @@ export async function transcribeAudio(audio: Blob, filename: string, offset = 0)
     throw new Error(`File ghi âm không đúng định dạng audio hỗ trợ (${filename || "không tên"}, ${audio.type || "không rõ kiểu"}).`);
   }
 
-  const body = new FormData();
-  body.append("file", audio, name);
-  body.append("model", MODEL);
-  body.append("language", "de");
-  body.append("response_format", "verbose_json");
-  body.append("timestamp_granularities[]", "segment");
+  if (version === "v2") {
+    try {
+      return { segments: await transcribeV2(audio, name, offset, prompt), version };
+    } catch (e) {
+      console.error("[whisper] v2 lỗi, chạy lại bằng v1:", (e as Error).message);
+    }
+  }
+  return { segments: await transcribeV1(audio, name, offset), version: "v1" };
+}
 
+async function callApi(body: FormData, info: object) {
   const res = await fetch(API_URL, {
     method: "POST",
     headers: API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {},
@@ -72,16 +90,105 @@ export async function transcribeAudio(audio: Blob, filename: string, offset = 0)
   });
   if (!res.ok) {
     const detail = await res.text();
-    console.error("[whisper]", res.status, { sent: name, filename, type: audio.type, size: audio.size }, detail.slice(0, 300));
+    console.error("[whisper]", res.status, info, detail.slice(0, 300));
     throw new Error(`Lỗi API nhận dạng giọng nói (${res.status}): ${detail}`);
   }
+  return res.json();
+}
 
-  const data: { segments?: RawSegment[] } = await res.json();
+// ---- v1 (code cũ, giữ nguyên) ----
+
+async function transcribeV1(audio: Blob, name: string, offset: number): Promise<Segment[]> {
+  const body = new FormData();
+  body.append("file", audio, name);
+  body.append("model", MODEL);
+  body.append("language", "de");
+  body.append("response_format", "verbose_json");
+  body.append("timestamp_granularities[]", "segment");
+
+  const data: { segments?: RawSegment[] } = await callApi(body, { v: 1, sent: name, type: audio.type, size: audio.size });
   return filterHallucinations(data.segments ?? []).map((s) => ({
     start: s.start + offset,
     end: s.end + offset,
     text: s.text.trim(),
   }));
+}
+
+// ---- v2: thời gian từng từ + prompt ----
+
+type RawWord = { word: string; start: number; end: number };
+
+async function transcribeV2(audio: Blob, name: string, offset: number, prompt?: string): Promise<Segment[]> {
+  const body = new FormData();
+  body.append("file", audio, name);
+  body.append("model", MODEL);
+  body.append("language", "de");
+  body.append("response_format", "verbose_json");
+  body.append("timestamp_granularities[]", "segment");
+  body.append("timestamp_granularities[]", "word");
+  // Prompt của Whisper tối đa ~224 token; chỉ là gợi ý từ vựng / văn phong (câu tiếng Đức có dấu câu đầy đủ)
+  const p = prompt?.replace(/\s+/g, " ").trim().slice(0, 200);
+  if (p) body.append("prompt", p);
+
+  const data: { segments?: RawSegment[]; words?: RawWord[] } = await callApi(body, {
+    v: 2,
+    sent: name,
+    type: audio.type,
+    size: audio.size,
+  });
+  const words = (data.words ?? []).filter((w) => w.word?.trim() && Number.isFinite(w.start));
+  if (!words.length) throw new Error("API không trả về thời gian từng từ.");
+
+  // Whisper đôi khi chép lại nguyên prompt vào chỗ im lặng / có nhạc → bỏ
+  const pn = p ? norm(p) : "";
+  const segs = filterHallucinations(data.segments ?? []).filter((s) => !pn || norm(s.text) !== pn);
+  return segs.map((s) => {
+    const inSeg = words.filter((w) => w.start >= s.start - 0.05 && w.start < s.end);
+    const text = s.text.trim();
+    return {
+      start: s.start + offset,
+      end: s.end + offset,
+      text,
+      ...(inSeg.length ? { words: attachWordTimes(text, inSeg, s.start, s.end).map(([t, w]): Word => [t + offset, w]) } : {}),
+    };
+  });
+}
+
+const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+
+/**
+ * Chữ của segment (có dấu câu, chữ hoa) + thời gian từ API (từ thường không có dấu câu):
+ * mỗi từ trong câu tìm từ khớp gần nhất phía trước (nhìn tới 3 từ); không khớp → nội suy giữa 2 từ khớp bên cạnh.
+ */
+export function attachWordTimes(text: string, words: RawWord[], segStart: number, segEnd: number): Word[] {
+  const toks = text.split(/\s+/).filter(Boolean);
+  const times: (number | null)[] = toks.map(() => null);
+  let j = 0;
+  toks.forEach((tok, i) => {
+    const n = norm(tok);
+    if (!n) return;
+    for (let k = j; k < Math.min(j + 4, words.length); k++) {
+      if (norm(words[k].word) === n) {
+        times[i] = words[k].start;
+        j = k + 1;
+        return;
+      }
+    }
+  });
+  // Nội suy chỗ trống; thời gian phải tăng dần và nằm trong segment
+  let prev = segStart;
+  return toks.map((tok, i): Word => {
+    let t = times[i];
+    if (t == null) {
+      let k = i + 1;
+      while (k < toks.length && times[k] == null) k++;
+      const nextT = k < toks.length ? (times[k] as number) : segEnd;
+      t = prev + (nextT - prev) / (k - i + 1);
+    }
+    t = Math.min(Math.max(t, prev), segEnd);
+    prev = t;
+    return [t, tok];
+  });
 }
 
 type RawSegment = {
