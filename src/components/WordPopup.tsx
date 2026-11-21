@@ -241,7 +241,7 @@ export default function WordPopup({
               {...speakProps(word)}
               title="Nghe phát âm (giữ hoặc Shift + bấm để nghe chậm)"
               aria-label="Nghe phát âm"
-              className={`btn-icon press rounded-full ${speaking === word ? "bg-accent text-white" : "tint-accent"}`}
+              className={`btn-icon press rounded-full ${speaking === word ? "bg-accent text-on-accent" : "tint-accent"}`}
             >
               <Volume2 className="size-[18px]" />
             </button>
@@ -495,7 +495,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function ExampleRow({ label, de, tr, playing, ...press }: { label?: string; de: string; tr?: string; playing: boolean } & ReturnType<typeof holdable>) {
   return (
     <button {...press} className="word-example press" data-playing={playing || undefined} title="Bấm để nghe · giữ để nghe chậm">
-      <span className={`icon-bubble size-7 rounded-full ${playing ? "bg-accent text-white" : "tint-accent"} ${label ? "mt-[18px]" : ""}`}>
+      <span className={`icon-bubble size-7 rounded-full ${playing ? "bg-accent text-on-accent" : "tint-accent"} ${label ? "mt-[18px]" : ""}`}>
         {playing ? <Volume2 className="size-3.5" /> : <Play className="size-3 translate-x-px fill-current" />}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">

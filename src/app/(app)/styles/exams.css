@@ -66,7 +66,7 @@
   .quiz-mark[data-tick="on"] {
     border-color: var(--accent);
     background-color: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
   }
   .quiz-option[data-state="correct"] .quiz-mark[data-tick="on"] {
     border-color: var(--ok);

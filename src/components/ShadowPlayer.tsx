@@ -1464,7 +1464,7 @@ export default function ShadowPlayer({
                   }}
                   className={`trow ${i === idx ? "trow-on" : ""}`}
                 >
-                  <span className={`trow-dot ${i === idx ? "!border-accent !bg-accent !text-white" : passed ? "trow-passed" : ""}`}>{i + 1}</span>
+                  <span className={`trow-dot ${i === idx ? "!border-accent !bg-accent !text-on-accent" : passed ? "trow-passed" : ""}`}>{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     {/* Chính tả: câu chưa chép không hiện "****" — dấu sao lộ số từ, độ dài từ, dấu câu (mức Khó thành vô nghĩa) */}
                     <p className={`text-[15px] leading-snug ${i === idx ? "font-bold" : ""} ${hidden ? (dictation ? "text-muted italic" : "font-mono tracking-wider text-muted") : ""}`}>

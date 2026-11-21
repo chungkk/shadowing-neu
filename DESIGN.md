@@ -68,7 +68,11 @@ Nguyên tắc tối giản: **dùng màu khu vực tiết chế** (icon tint, g�
 
 ## 5. Màn đặc biệt được bảo toàn
 
-- **`.theme-fahrschule`** (màn câu hỏi & thi thử Lái xe): giữ giao diện sáng, rõ, mô phỏng phần mềm thi lý thuyết thật (luôn sáng kể cả khi bật Dark mode), đồng bộ font và bo góc với hệ mới.
+- **Màn đặc biệt được bảo toàn:**
+  - **`.theme-fahrschule`** (màn câu hỏi & thi thử Lái xe): giữ giao diện sáng, rõ, mô phỏng phần mềm thi lý thuyết thật (luôn sáng kể cả khi bật Dark mode), đồng bộ font và bo góc với hệ mới.
+- **Chủ đề mùa Noel (`SEASONAL_THEME = "noel"` trong `src/lib/theme.ts`, CSS tại `src/app/(app)/styles/noel.css`, hiệu ứng tại `src/components/NoelAtmosphere.tsx`):**
+  - Ưu tiên tối đa tông **đen – trắng** trên nền tối (`#060607` → `#101012` → `#17171A`, chữ trắng tuyết `#FAF8F4`, nút chính trắng chữ đen qua `--on-accent`).
+  - Ánh đèn chiếu ấm áp từ trên xuống (spotlight beams toàn trang, vùng Hero và đầu trang con), dây đèn nhỏ dịu mắt dọc mép header và tuyết rơi chậm rất nhẹ (tự ẩn khi `prefers-reduced-motion: reduce` hoặc trong `.theme-fahrschule`).
 
 ---
 

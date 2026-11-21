@@ -55,7 +55,7 @@ export default function SiteFooter() {
                 <Mascot className="size-8" />
                 <span className="flex items-center gap-1">
                   Hallo
-                  <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-white">VN</span>
+                  <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-on-accent">VN</span>
                 </span>
               </Link>
               <p className="max-w-xs text-sm leading-relaxed text-muted">

@@ -19,7 +19,7 @@ export const THEME_NEXT: Record<Theme, Theme> = { dark: "light", light: "dark" }
 /** Màu thanh trình duyệt trên điện thoại, khớp --background của từng giao diện */
 export const THEME_COLOR: Record<Theme, string> =
   SEASONAL_THEME === "noel"
-    ? { light: "#faf7f2", dark: "#0a0f15" }
+    ? { light: "#faf9f6", dark: "#060607" }
     : { light: "#f8fafc", dark: "#090b10" };
 
 /** Chạy trong <head> trước khi vẽ trang. Mặc định giao diện sáng; chỉ bật tối khi người dùng đã chọn (không theo hệ điều hành) */

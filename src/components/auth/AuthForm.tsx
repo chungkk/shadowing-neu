@@ -343,7 +343,7 @@ export default function AuthForm({
             <Mascot className="size-8 shrink-0" />
             <span className="flex items-center gap-1 font-display text-base leading-none font-extrabold tracking-[-0.03em]">
               Hallo
-              <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-white">VN</span>
+              <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-on-accent">VN</span>
             </span>
           </div>
 

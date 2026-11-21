@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { FORCE_DARK, THEME_INIT_SCRIPT } from "@/lib/theme";
+import { FORCE_DARK, SEASONAL_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./(app)/globals.css";
 
 const body = Plus_Jakarta_Sans({ variable: "--font-body", subsets: ["latin", "vietnamese"], weight: ["400", "500", "600", "700", "800"] });
@@ -10,7 +10,13 @@ export const metadata: Metadata = { title: "Không tìm thấy trang | HalloVN",
 
 export default function GlobalNotFound() {
   return (
-    <html lang="vi" data-theme={FORCE_DARK ? "dark" : undefined} className={`${body.variable} antialiased`} suppressHydrationWarning>
+    <html
+      lang="vi"
+      data-season={SEASONAL_THEME ?? undefined}
+      data-theme={FORCE_DARK ? "dark" : undefined}
+      className={`${body.variable} antialiased`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
@@ -22,7 +28,7 @@ export default function GlobalNotFound() {
               <img src="/mascot.svg" alt="" className="size-8" />
               <span className="flex items-center gap-1 font-display text-[1.15rem] leading-none font-extrabold tracking-[-0.03em]">
                 Hallo
-                <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-white">VN</span>
+                <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-on-accent">VN</span>
               </span>
             </Link>
           </div>

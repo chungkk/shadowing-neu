@@ -1,52 +1,49 @@
-/* Seasonal CSS: Noel — Đỏ berry ấm, vàng champagne & xanh thông trên nền tuyết ấm / đêm đông.
+/* Seasonal CSS: Noel Monochrome & Warm Spotlight — Đen trắng tối giản, ánh đèn chiếu ấm áp & tuyết rơi nhẹ.
    Bật/tắt tại SEASONAL_THEME trong src/lib/theme.ts (data-season="noel" trên <html>).
    Lưu ý: .theme-fahrschule tự định nghĩa token riêng nên được bảo toàn hoàn toàn. */
 
 :root[data-season="noel"] {
-  /* Bề mặt & mực: kem tuyết ấm */
-  --background: #faf7f2;
-  --sidebar: #fffdf9;
-  --foreground: #1c1917;
-  --ink: #d6c9b8;
-  --ink-strong: #1c1917;
-  --line: #eae2d6;
-  --line-strong: #9c8f80;
+  /* Chế độ sáng mùa đông (dự phòng khi tắt FORCE_DARK): trắng tuyết, mực đen sâu, ánh nến ấm */
+  --background: #faf9f6;
+  --sidebar: #ffffff;
+  --foreground: #111112;
+  --ink: #d4d1cb;
+  --ink-strong: #09090b;
+  --line: #e7e5e0;
+  --line-strong: #8e8a82;
   --card: #ffffff;
-  --card-2: #f4efe6;
-  --border: #d6c9b8;
+  --card-2: #f3f1ec;
+  --raised: #ffffff;
+  --border: #d4d1cb;
   --muted: #57534e;
   --stripe: #ffffff;
-  --shadow-color: 28 25 23;
+  --shadow-color: 17 17 18;
 
-  /* Thương hiệu & khu Tiếng Đức: đỏ berry ấm (tách biệt với --red báo sai) */
-  --accent: #b42334;
-  --accent-dark: #961b2a;
-  --accent-text: #9f1d2c;
-  --accent-soft: #fdf2f3;
-  --link: #9f1d2c;
-  --link-soft: #fdf2f3;
+  --accent: #18181b;
+  --accent-dark: #09090b;
+  --accent-text: #18181b;
+  --accent-soft: #f2f0eb;
+  --on-accent: #ffffff;
+  --link: #18181b;
+  --link-soft: #f2f0eb;
   --on-link: #ffffff;
 
-  /* Khu Lái xe & điểm nhấn ấm: vàng champagne */
-  --gold: #d97706;
-  --gold-dark: #b45309;
-  --gold-soft: #fef6e4;
-  --amber: #854d0e;
-  --amber-dark: #713f12;
+  --gold: #b58338;
+  --gold-dark: #926625;
+  --gold-soft: #fbf5ea;
+  --amber: #78521b;
+  --amber-dark: #5c3e12;
 
-  /* Khu Leben in Deutschland & ghi âm: xanh thông trầm (tách biệt với --ok báo đúng) */
-  --coral: #1e6b52;
-  --coral-dark: #16533f;
-  --coral-soft: #ecf7f2;
-  --coral-text: #16533f;
+  --coral: #3f3b36;
+  --coral-dark: #292524;
+  --coral-soft: #f3f0eb;
+  --coral-text: #292524;
 
-  /* Tím mận mùa đông: nhãn trình độ C */
-  --grape: #6d28d9;
-  --grape-dark: #5b21b6;
-  --grape-soft: #f5f3ff;
-  --grape-text: #5b21b6;
+  --grape: #4c4663;
+  --grape-dark: #38334a;
+  --grape-soft: #f4f3f7;
+  --grape-text: #38334a;
 
-  /* Trạng thái đúng / sai giữ nguyên sắc độ chuẩn */
   --ok: #16a34a;
   --ok-dark: #15803d;
   --ok-soft: #f0fdf4;
@@ -57,173 +54,575 @@
   --red-400: #b91c1c;
   --red-300: #dc2626;
 
-  /* Kim cương & bước transcript hài hòa mùa đông */
-  --gem: #0e7490;
-  --gem-dark: #155e75;
-  --gem-soft: #ecfeff;
-  --phrase: #0e7490;
-  --aqua: #fce7ea;
-  --candy: #e6f4ee;
-  --candy-dark: #86c7ae;
-  --sun: #fef3c7;
+  --gem: #9a6d2b;
+  --gem-dark: #7a541d;
+  --gem-soft: #fbf5ea;
+  --phrase: #9a6d2b;
+  --aqua: #f3f1ec;
+  --candy: #f7f1e6;
+  --candy-dark: #d8c29e;
+  --sun: #fbf3e1;
   --leaf: #dcfce7;
+
+  --noel-warm: #d4a45d;
+  --noel-warm-bright: #f7dfb4;
+  --noel-snow: #ffffff;
 }
 
 :root[data-season="noel"][data-theme="dark"] {
-  /* Đêm đông xanh đen sâu, chữ ấm rõ nét */
-  --background: #0a0f15;
-  --sidebar: #0e151d;
-  --foreground: #f5f2eb;
-  --ink: #2c3a4a;
-  --ink-strong: #f5f2eb;
-  --line: #253342;
-  --line-strong: #5a6e85;
-  --card: #141d27;
-  --card-2: #1d2834;
-  --raised: #1a2430;
-  --border: #374a5e;
-  --muted: #a8b5c5;
-  --stripe: #141d27;
+  /* Đen tuyền pha hơi ấm tinh tế + chữ trắng tuyết sắc nét — ưu tiên tối đa tương phản đen trắng */
+  --background: #060607;
+  --sidebar: #0a0a0b;
+  --foreground: #faf8f4;
+  --ink: #2c2a27;
+  --ink-strong: #ffffff;
+  --line: #21201e;
+  --line-strong: #58544d;
+  --card: #101012;
+  --card-2: #17171a;
+  --raised: #151518;
+  --border: #302e2b;
+  --muted: #a19c94;
+  --stripe: #101012;
   --shadow-color: 0 0 0;
 
-  /* Đỏ berry ấm tương phản tốt với chữ trắng trên .btn-primary */
-  --accent: #d43649;
-  --accent-dark: #b8293b;
-  --accent-text: #f27483;
-  --accent-soft: #2b1419;
-  --link: #f27483;
-  --link-soft: #2b1419;
-  --on-link: #0c1117;
+  /* Thương hiệu & hành động chính: trắng tuyết sáng nổi bật trên nền đen, chữ đen sâu */
+  --accent: #f6f3ed;
+  --accent-dark: #faf8f4;
+  --accent-text: #faf7f0;
+  --accent-soft: #1b1a18;
+  --on-accent: #09090b;
+  --link: #f5e6cc;
+  --link-soft: #1e1a14;
+  --on-link: #09090b;
 
-  /* Vàng champagne dịu mắt ban đêm */
-  --gold: #f5b942;
-  --gold-dark: #d9971e;
-  --gold-soft: #2b2210;
-  --amber: #fcd34d;
-  --amber-dark: #fde68a;
+  /* Điểm nhấn ấm mùa Noel: ánh vàng champagne dịu như đèn nến */
+  --gold: #ebd09b;
+  --gold-dark: #d1af72;
+  --gold-soft: #1f1b13;
+  --amber: #f4ddb0;
+  --amber-dark: #fae9c8;
 
-  /* Xanh thông trầm tương phản tốt với chữ trắng trên .btn-record */
-  --coral: #1f8260;
-  --coral-dark: #17694d;
-  --coral-soft: #102a22;
-  --coral-text: #6ee7b7;
+  /* Nhấn phụ LiD & ghi âm: trắng ngà ấm hài hòa tông đen trắng */
+  --coral: #e8dfd0;
+  --coral-dark: #d5c8b4;
+  --coral-soft: #1c1a17;
+  --coral-text: #efe7da;
 
-  /* Tím mận mùa đông */
-  --grape: #a78bfa;
-  --grape-dark: #8b5cf6;
-  --grape-soft: #201a38;
-  --grape-text: #c4b5fd;
+  /* Tím tro bạc dịu cho trình độ C1–C2 */
+  --grape: #d6d1e6;
+  --grape-dark: #b9b1d4;
+  --grape-soft: #1a1921;
+  --grape-text: #e4e0f0;
 
-  /* Trạng thái đúng / sai */
-  --ok: #22c55e;
+  /* Trạng thái đúng / sai giữ rõ ngữ nghĩa học tập nhưng dịu mắt trên nền đen */
+  --ok: #4ade80;
   --ok-dark: #16a34a;
-  --ok-soft: #0e2619;
-  --ok-text: #4ade80;
-  --red: #ef4444;
+  --ok-soft: #0d2116;
+  --ok-text: #86efac;
+  --red: #f87171;
   --red-dark: #dc2626;
-  --red-soft: #2d1418;
-  --red-400: #f87171;
-  --red-300: #fca5a5;
+  --red-soft: #261315;
+  --red-400: #fca5a5;
+  --red-300: #fecaca;
 
-  /* Kim cương & bước transcript */
-  --gem: #38bdf8;
-  --gem-dark: #0284c7;
-  --gem-soft: #0e2536;
-  --phrase: #38bdf8;
-  --aqua: #2b151a;
-  --candy: #122922;
-  --candy-dark: #224d3f;
-  --sun: #2d2310;
-  --leaf: #112b1d;
+  /* Kim cương & bước transcript: ánh champagne ấm và bề mặt than mềm */
+  --gem: #f3d5a0;
+  --gem-dark: #cfa969;
+  --gem-soft: #201a11;
+  --phrase: #f3d5a0;
+  --aqua: #1a1917;
+  --candy: #211c15;
+  --candy-dark: #3d3324;
+  --sun: #241e14;
+  --leaf: #102418;
+
+  /* Ánh sáng đặc trưng Noel: ánh đèn vàng ấm pha trắng tuyết */
+  --noel-warm: #f3d5a0;
+  --noel-warm-bright: #fff4de;
+  --noel-snow: #ffffff;
 }
 
-/* Điều chỉnh tông khu vực ink & lid dưới chủ đề Noel */
+/* Màu khu vực đồng bộ tông đen trắng + ánh champagne ấm */
 [data-season="noel"] [data-sec="ink"] {
-  --sec: #44403c;
-  --sec-dark: #292524;
+  --sec: #292524;
+  --sec-dark: #1c1917;
 }
 
-[data-season="noel"][data-theme="dark"] [data-sec="ink"] {
-  --sec: #57534e;
-  --sec-dark: #44403c;
+[data-season="noel"][data-theme="dark"] [data-sec="de"] {
+  --sec: #f6f3ed;
+  --sec-dark: #e6e0d5;
+  --sec-soft: #1b1a18;
+  --sec-text: #faf8f4;
+  --on-sec: #09090b;
 }
 
 [data-season="noel"][data-theme="dark"] [data-sec="laixe"] {
-  --on-sec: #0c1117;
+  --sec: #ebd09b;
+  --sec-dark: #d1af72;
+  --sec-soft: #1f1b13;
+  --sec-text: #f4ddb0;
+  --on-sec: #09090b;
 }
 
 [data-season="noel"][data-theme="dark"] [data-sec="lid"] {
-  --on-sec: #ffffff;
+  --sec: #e8dfd0;
+  --sec-dark: #d5c8b4;
+  --sec-soft: #1c1a17;
+  --sec-text: #efe7da;
+  --on-sec: #09090b;
 }
 
+[data-season="noel"][data-theme="dark"] [data-sec="ink"] {
+  --sec: #d4d0c8;
+  --sec-dark: #b5b0a6;
+  --sec-soft: #1a1918;
+  --sec-text: #ece9e2;
+  --on-sec: #09090b;
+}
+
+/* ═══════════════ Hiệu ứng không khí Noel: ánh đèn chiếu & tuyết nhẹ ═══════════════ */
+.noel-spotlights,
+.noel-snow,
+.noel-header-lights,
+.noel-hero-beams {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Chỉ hiển thị đầy đủ hiệu ứng đèn chiếu trên nền tối */
+.noel-spotlights {
+  display: none;
+}
+
+[data-season="noel"][data-theme="dark"] .noel-spotlights {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  overflow: hidden;
+}
+
+.noel-beam {
+  position: absolute;
+  top: -12%;
+  pointer-events: none;
+  filter: blur(42px);
+  will-change: opacity;
+}
+
+/* Luồng đèn chiếu chính từ trên xuống, ấm dịu như ánh đèn sân khấu mùa đông */
+.noel-beam-main {
+  left: 50%;
+  width: min(1100px, 130vw);
+  height: min(620px, 78vh);
+  transform: translateX(-56%) rotate(-7deg);
+  background:
+    radial-gradient(ellipse 46% 32% at 50% 6%, rgb(255 247 230 / 0.14), transparent 72%),
+    conic-gradient(
+      from 164deg at 50% 0%,
+      transparent 0deg,
+      rgb(255 243 218 / 0.065) 14deg,
+      rgb(243 213 160 / 0.08) 26deg,
+      rgb(255 250 240 / 0.045) 38deg,
+      transparent 54deg
+    );
+}
+
+/* Luồng ánh sáng phụ cân bằng chiều sâu góc phải */
+.noel-beam-side {
+  right: -8%;
+  width: min(680px, 85vw);
+  height: min(520px, 64vh);
+  transform: rotate(12deg);
+  background:
+    radial-gradient(ellipse 42% 30% at 62% 8%, rgb(255 255 255 / 0.08), transparent 70%),
+    conic-gradient(
+      from 172deg at 60% 0%,
+      transparent 0deg,
+      rgb(255 252 246 / 0.045) 18deg,
+      rgb(243 213 160 / 0.05) 32deg,
+      transparent 48deg
+    );
+}
+
+/* Hơi ấm mờ rất nhẹ phía đáy màn hình để nền đen không bị lạnh */
+.noel-hearth {
+  position: absolute;
+  inset: auto 0 -14% 0;
+  height: 36vh;
+  background: radial-gradient(ellipse 60% 55% at 50% 100%, rgb(243 213 160 / 0.045), transparent 75%);
+}
+
+/* ───── Tuyết rơi nhẹ nhàng ───── */
+.noel-snow {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.noel-flake {
+  position: absolute;
+  top: -12px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, rgb(255 248 235 / 0.85) 55%, transparent 100%);
+  opacity: var(--o);
+  box-shadow: 0 0 6px rgb(255 248 235 / 0.35);
+  animation: noel-snowfall var(--d) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.noel-flake-soft {
+  filter: blur(1px);
+  box-shadow: 0 0 10px rgb(243 213 160 / 0.25);
+}
+
+@media (max-width: 47.99rem) {
+  .noel-flake-desktop {
+    display: none;
+  }
+}
+
+@keyframes noel-snowfall {
+  0% {
+    transform: translate3d(0, -4vh, 0);
+  }
+  25% {
+    transform: translate3d(calc(var(--drift) * 0.6), 24vh, 0);
+  }
+  50% {
+    transform: translate3d(calc(var(--drift) * -0.35), 52vh, 0);
+  }
+  75% {
+    transform: translate3d(calc(var(--drift) * 0.8), 78vh, 0);
+  }
+  100% {
+    transform: translate3d(var(--drift), 106vh, 0);
+  }
+}
+
+/* Ẩn tuyết & đèn chiếu khi đang vào màn giả lập thi lý thuyết lái xe (.theme-fahrschule) */
+body:has(.theme-fahrschule) .noel-snow,
+body:has(.theme-fahrschule) .noel-spotlights {
+  display: none;
+}
+
+/* ───── Dây đèn nhỏ tinh tế dọc mép dưới header ───── */
+.noel-header-lights {
+  position: absolute;
+  inset: auto 0 -21px 0;
+  height: 22px;
+  overflow-x: clip;
+  overflow-y: visible;
+  opacity: 0.65;
+}
+
+[data-season="noel"][data-theme="dark"] .noel-header-lights {
+  opacity: 0.94;
+}
+
+.noel-wire {
+  color: rgb(24 24 27 / 0.16);
+}
+
+[data-season="noel"][data-theme="dark"] .noel-wire {
+  color: rgb(255 255 255 / 0.14);
+}
+
+.noel-bulb {
+  animation: noel-twinkle var(--dur, 5s) ease-in-out var(--delay, 0s) infinite;
+}
+
+.noel-bulb-halo-warm {
+  fill: rgb(243 213 160 / 0.24);
+  filter: blur(2.5px);
+}
+
+.noel-bulb-halo-white {
+  fill: rgb(255 255 255 / 0.2);
+  filter: blur(2px);
+}
+
+.noel-bulb-core-warm {
+  fill: #ffe8bd;
+}
+
+.noel-bulb-core-white {
+  fill: #ffffff;
+}
+
+@keyframes noel-twinkle {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  45% {
+    opacity: 0.42;
+  }
+  70% {
+    opacity: 0.85;
+  }
+}
+
+/* ───── Ánh đèn chiếu riêng cho vùng Hero ───── */
+.noel-hero-beams {
+  display: none;
+}
+
+[data-season="noel"][data-theme="dark"] .noel-hero-beams {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.noel-hero-source {
+  position: absolute;
+  top: -36px;
+  left: 26%;
+  width: 340px;
+  height: 84px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgb(255 247 232 / 0.24) 0%, rgb(243 213 160 / 0.1) 45%, transparent 74%);
+  filter: blur(18px);
+}
+
+.noel-hero-cone {
+  position: absolute;
+  top: -18%;
+  height: 135%;
+  filter: blur(26px);
+}
+
+.noel-hero-cone-left {
+  left: -4%;
+  width: min(640px, 82vw);
+  transform: rotate(-10deg);
+  background: conic-gradient(
+    from 158deg at 42% 0%,
+    transparent 0deg,
+    rgb(255 250 240 / 0.085) 14deg,
+    rgb(243 213 160 / 0.12) 26deg,
+    rgb(255 247 230 / 0.05) 40deg,
+    transparent 56deg
+  );
+}
+
+.noel-hero-cone-right {
+  right: -6%;
+  width: min(560px, 76vw);
+  transform: rotate(10deg);
+  background: conic-gradient(
+    from 168deg at 56% 0%,
+    transparent 0deg,
+    rgb(255 255 255 / 0.06) 14deg,
+    rgb(243 213 160 / 0.085) 28deg,
+    transparent 48deg
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noel-snow {
+    display: none;
+  }
+
+  .noel-bulb {
+    animation: none;
+    opacity: 0.82;
+  }
+}
+
+/* ═══════════════ Tinh chỉnh thành phần theo chủ đề Đen · Trắng · Ánh đèn ấm ═══════════════ */
 @layer components {
-  /* Dải viền tĩnh trên đầu header */
+  /* Header: mép trên ánh sáng trắng-vàng mảnh như tia đèn, nền đen kính mờ */
+  [data-season="noel"][data-theme="dark"] .site-header {
+    background-color: rgb(10 10 11 / 0.84);
+    border-bottom-color: rgb(255 250 240 / 0.1);
+    box-shadow: 0 1px 28px -10px rgb(243 213 160 / 0.16);
+  }
+
   [data-season="noel"] .site-header::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
-    height: 3px;
+    height: 1px;
     pointer-events: none;
-    background: linear-gradient(90deg, #b42334 0%, #d97706 35%, #1e6b52 70%, #b42334 100%);
+    background: linear-gradient(
+      90deg,
+      transparent 4%,
+      rgb(255 255 255 / 0.25) 25%,
+      rgb(243 213 160 / 0.72) 50%,
+      rgb(255 255 255 / 0.25) 75%,
+      transparent 96%
+    );
   }
 
-  [data-season="noel"][data-theme="dark"] .site-header::before {
-    background: linear-gradient(90deg, #d43649 0%, #f5b942 35%, #1f8260 70%, #d43649 100%);
+  /* Footer: đường ánh sáng mảnh & nền đen ấm tinh tế */
+  [data-season="noel"][data-theme="dark"] .site-footer {
+    background:
+      radial-gradient(520px 180px at 50% 0%, rgb(243 213 160 / 0.06), transparent 72%),
+      var(--sidebar);
+    border-top-color: rgb(255 250 240 / 0.09);
   }
 
-  /* Dải viền tĩnh trên chân trang */
   [data-season="noel"] .site-footer::before {
     content: "";
     position: absolute;
     inset: -1px 0 auto 0;
-    height: 2px;
+    height: 1px;
     pointer-events: none;
-    background: linear-gradient(90deg, #b42334 0%, #d97706 35%, #1e6b52 70%, #b42334 100%);
-    opacity: 0.78;
-  }
-
-  [data-season="noel"][data-theme="dark"] .site-footer::before {
-    background: linear-gradient(90deg, #d43649 0%, #f5b942 35%, #1f8260 70%, #d43649 100%);
-    opacity: 0.85;
+    background: linear-gradient(
+      90deg,
+      transparent 6%,
+      rgb(255 255 255 / 0.2) 30%,
+      rgb(243 213 160 / 0.58) 50%,
+      rgb(255 255 255 / 0.2) 70%,
+      transparent 94%
+    );
   }
 
   /* Thanh điều hướng dưới trên điện thoại */
-  [data-season="noel"] .bottom-nav {
-    border-top-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  [data-season="noel"][data-theme="dark"] .bottom-nav {
+    background-color: rgb(10 10 11 / 0.92);
+    border-top-color: rgb(255 250 240 / 0.11);
   }
 
-  /* Nền chuyển sắc mùa đông tĩnh & nhẹ ở Hero trang chủ */
-  [data-season="noel"] .noel-hero {
-    background-image:
-      radial-gradient(640px 280px at 8% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
-      radial-gradient(560px 260px at 92% 10%, color-mix(in srgb, var(--gold) 7%, transparent), transparent 70%),
-      radial-gradient(520px 240px at 52% 100%, color-mix(in srgb, var(--coral) 5%, transparent), transparent 72%);
+  /* Nút chính: trắng tuyết tinh khôi, chữ đen sắc nét, tỏa quầng ấm nhẹ khi rê chuột */
+  [data-season="noel"][data-theme="dark"] :where(.btn-primary):not(.theme-fahrschule *) {
+    --fill: #faf8f4;
+    --fill-hover: #ffffff;
+    color: #09090b;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.75) inset,
+      0 8px 24px -10px rgb(243 213 160 / 0.32);
   }
 
+  @media (hover: hover) {
+    [data-season="noel"][data-theme="dark"] :where(.btn-primary):not(.theme-fahrschule *):hover:not(:disabled) {
+      box-shadow:
+        0 1px 0 rgb(255 255 255 / 0.9) inset,
+        0 0 28px -4px rgb(243 213 160 / 0.44);
+    }
+  }
+
+  /* Nút ghi âm: tông champagne ấm tương phản cao với chữ đen */
+  [data-season="noel"][data-theme="dark"] :where(.btn-record) {
+    --fill: #ebd09b;
+    --fill-hover: #f5dfaf;
+    color: #09090b;
+  }
+
+  /* Nút trung tính bắt sáng nhẹ mép trên */
+  [data-season="noel"][data-theme="dark"] :where(.btn:not(.btn-primary):not(.btn-amber):not(.btn-red):not(.btn-record):not(.btn-recording):not(.btn-ghost):not(.btn-soft)):not(.theme-fahrschule *) {
+    border-color: rgb(255 250 240 / 0.13);
+    background-color: rgb(20 20 22 / 0.9);
+    box-shadow: inset 0 1px 0 rgb(255 250 240 / 0.06);
+  }
+
+  @media (hover: hover) {
+    [data-season="noel"][data-theme="dark"] :where(.btn:not(.btn-primary):not(.btn-amber):not(.btn-red):not(.btn-record):not(.btn-recording):not(.btn-ghost):not(.btn-soft)):not(.theme-fahrschule *):hover:not(:disabled) {
+      border-color: rgb(243 213 160 / 0.3);
+      background-color: rgb(28 27 26 / 0.95);
+    }
+  }
+
+  /* Thẻ nội dung đen mờ có viền bắt ánh đèn từ trên xuống */
+  [data-season="noel"][data-theme="dark"] :where(.sticker, .card, .tile):not(.theme-fahrschule *) {
+    border-color: rgb(255 250 240 / 0.085);
+    box-shadow:
+      inset 0 1px 0 rgb(255 248 235 / 0.075),
+      0 1px 2px rgb(0 0 0 / 0.5);
+  }
+
+  @media (hover: hover) {
+    [data-season="noel"][data-theme="dark"] :where(.sticker-link, .card-link):not(.theme-fahrschule *):hover {
+      border-color: rgb(243 213 160 / 0.28);
+      background-color: #151414;
+      box-shadow:
+        inset 0 1px 0 rgb(255 244 220 / 0.16),
+        0 12px 30px -14px rgb(0 0 0 / 0.85),
+        0 0 24px -14px rgb(243 213 160 / 0.28);
+    }
+  }
+
+  /* Chip đang bật: chữ & icon luôn đồng bộ màu nền tối tương phản */
+  [data-season="noel"][data-theme="dark"] :where(.chip-on, .chip[aria-pressed="true"], .chip[aria-selected="true"], .chip[aria-current]:not([aria-current="false"])) svg {
+    color: inherit !important;
+  }
+
+  /* Hero trang chủ: sân khấu đen sâu được rọi bởi ánh đèn chiếu ấm áp */
   [data-season="noel"][data-theme="dark"] .noel-hero {
+    background-color: #080809;
     background-image:
-      radial-gradient(680px 300px at 8% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
-      radial-gradient(580px 280px at 92% 10%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 70%),
-      radial-gradient(520px 260px at 52% 100%, color-mix(in srgb, var(--coral) 9%, transparent), transparent 72%);
+      radial-gradient(640px 320px at 24% -6%, rgb(255 246 228 / 0.12), transparent 68%),
+      radial-gradient(540px 280px at 84% 4%, rgb(243 213 160 / 0.08), transparent 70%),
+      radial-gradient(480px 220px at 50% 105%, rgb(243 213 160 / 0.045), transparent 72%);
+    border-bottom-color: rgb(255 250 240 / 0.09);
   }
 
-  /* Thẻ CTA cuối trang có viền tĩnh và ánh sáng ấm dịu quanh linh vật */
-  [data-season="noel"] .noel-cta {
+  /* Chữ tiêu đề Hero bắt sáng trắng tuyết chuyển nhẹ sang trắng ngà */
+  [data-season="noel"][data-theme="dark"] .noel-headline {
+    background-image: linear-gradient(180deg, #ffffff 0%, #f6efe2 75%, #e6d7be 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Chấm ánh sáng ấm nhỏ trên nhãn mùa Giáng Sinh */
+  [data-season="noel"][data-theme="dark"] .noel-dot {
+    background-color: var(--noel-warm-bright);
+    box-shadow: 0 0 9px 1px rgb(243 213 160 / 0.85);
+  }
+
+  /* Các trang con (PageHeader): vầng đèn chiếu nhẹ ngay phía trên đầu trang */
+  [data-season="noel"][data-theme="dark"] .page-head {
+    position: relative;
+  }
+
+  [data-season="noel"][data-theme="dark"] .page-head::before {
+    content: "";
+    position: absolute;
+    inset: -24px -16px auto -16px;
+    height: 150px;
+    pointer-events: none;
+    background: radial-gradient(ellipse 55% 85% at 18% 0%, rgb(255 245 224 / 0.075), transparent 75%);
+  }
+
+  /* Thẻ CTA cuối trang: luồng đèn chiếu ấm & viền ánh sáng tinh tế */
+  [data-season="noel"][data-theme="dark"] .noel-cta {
+    background-color: #101012;
     background-image:
-      radial-gradient(240px 180px at 94% 92%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 70%),
-      radial-gradient(260px 200px at 10% 10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 72%);
+      radial-gradient(360px 220px at 18% -10%, rgb(255 247 230 / 0.11), transparent 72%),
+      radial-gradient(280px 200px at 92% 94%, rgb(243 213 160 / 0.14), transparent 70%);
   }
 
   [data-season="noel"] .noel-cta::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
-    height: 2px;
+    height: 1px;
     pointer-events: none;
-    background: linear-gradient(90deg, #b42334 0%, #d97706 50%, #1e6b52 100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 255 255 / 0.3) 22%,
+      rgb(243 213 160 / 0.72) 52%,
+      rgb(255 255 255 / 0.25) 82%,
+      transparent 100%
+    );
   }
 
-  [data-season="noel"][data-theme="dark"] .noel-cta::before {
-    background: linear-gradient(90deg, #d43649 0%, #f5b942 50%, #1f8260 100%);
+  /* Thanh chia sẻ & lớp nổi */
+  [data-season="noel"][data-theme="dark"] :where(.popover, .dialog) {
+    border-color: rgb(255 250 240 / 0.12);
+    box-shadow:
+      inset 0 1px 0 rgb(255 248 235 / 0.08),
+      var(--shadow-lg);
   }
 }

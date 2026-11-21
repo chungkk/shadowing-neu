@@ -44,6 +44,7 @@
   --accent-dark: #1d4ed8;
   --accent-text: #1d4ed8;
   --accent-soft: #eff6ff;
+  --on-accent: #ffffff;
   --link: #1d4ed8;
   --link-soft: #eff6ff;
   --on-link: #ffffff;
@@ -130,6 +131,7 @@
   --accent-dark: #2563eb;
   --accent-text: #60a5fa;
   --accent-soft: #15223d;
+  --on-accent: #ffffff;
   --link: #60a5fa;
   --link-soft: #15223d;
   --on-link: #0b0d12;
@@ -237,6 +239,7 @@
   --accent-dark: #1d4ed8;
   --accent-text: #1d4ed8;
   --accent-soft: #eff6ff;
+  --on-accent: #ffffff;
   --ok: #16a34a;
   --ok-dark: #15803d;
   --ok-soft: #dcfce7;
@@ -309,6 +312,7 @@
   --color-accent-dark: var(--accent-dark);
   --color-accent-text: var(--accent-text);
   --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
   --color-on-link: var(--on-link);
   --color-amber: var(--amber);
   --color-amber-dark: var(--amber-dark);
@@ -618,7 +622,7 @@ select {
   .btn-primary {
     --fill: var(--accent);
     --fill-hover: var(--accent-dark);
-    color: #fff;
+    color: var(--on-accent);
   }
 
   .btn-amber {

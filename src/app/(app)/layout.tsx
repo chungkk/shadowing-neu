@@ -6,6 +6,7 @@ import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { DeutschSubnav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/auth/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
+import NoelAtmosphere, { NoelHeaderLights } from "@/components/NoelAtmosphere";
 import ShareBar from "@/components/ShareBar";
 import SiteFooter from "@/components/SiteFooter";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -88,6 +89,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd()) }} />
       </head>
       <body className="flex min-h-full">
+        <NoelAtmosphere />
         <Suspense fallback={<SidebarSkeleton />}>
           <SidebarWithUser />
         </Suspense>
@@ -98,7 +100,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <Mascot className="size-8 shrink-0 transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none" />
                 <span className="flex items-center gap-1 font-display text-[1.15rem] leading-none font-extrabold tracking-[-0.03em] sm:text-[1.22rem]">
                   Hallo
-                  <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-white">VN</span>
+                  <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-on-accent">VN</span>
                 </span>
               </Link>
               <Suspense fallback={<HeaderNavFrame />}>
@@ -111,6 +113,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 </Suspense>
               </div>
             </div>
+            <NoelHeaderLights />
           </header>
           <div className="share-gutter flex min-w-0 flex-1 flex-col">
             <Suspense>

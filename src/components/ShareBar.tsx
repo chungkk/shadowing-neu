@@ -96,7 +96,7 @@ export default function ShareBar() {
       aria-label="Chia sẻ trang này"
       className="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-2 rounded-l-2xl border border-r-0 border-line bg-card p-2 shadow-[var(--shadow-md)] max-md:hidden dark:border-border"
     >
-      <button title="Chia sẻ" aria-label="Chia sẻ" className={`${round} bg-accent-soft text-accent-text hover:bg-accent hover:text-white`} onClick={shareNative}>
+      <button title="Chia sẻ" aria-label="Chia sẻ" className={`${round} bg-accent-soft text-accent-text hover:bg-accent hover:text-on-accent`} onClick={shareNative}>
         <Share2 className="size-[18px]" />
       </button>
       <div className="h-px w-6 bg-line dark:bg-border" />
