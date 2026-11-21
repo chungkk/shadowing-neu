@@ -200,7 +200,7 @@ Phải thấy `PO Token Providers: … bgutil:script-node-2.0.2` và `Generating
   ẩn danh theo [hướng dẫn của yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
 - `YTDLP_PROXY=socks5://…`: proxy IP dân dụng.
 
-Cập nhật yt-dlp khi YouTube đổi: build lại image (Coolify: Redeploy, bỏ cache). Muốn đổi bản bgutil: sửa
+yt-dlp tự nâng cấp lúc chạy (mỗi 24 giờ, và ngay khi lệnh yt-dlp bị lỗi; tắt bằng `YTDLP_AUTO_UPDATE=0`) — xem `src/lib/ytdlp.ts`. Muốn đổi bản bgutil: sửa
 `ARG BGUTIL_VERSION` trong Dockerfile.
 
 ### B. Tự tạo PO token bằng JS (không cần Python)

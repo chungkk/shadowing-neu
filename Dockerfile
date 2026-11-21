@@ -38,11 +38,12 @@ FROM node:24-slim AS runner
 ARG BGUTIL_VERSION
 WORKDIR /app
 
-# yt-dlp (bản mới nhất lúc build) + plugin bgutil. Khi YouTube đổi cơ chế: build lại image để cập nhật.
+# yt-dlp + plugin bgutil. App tự nâng yt-dlp lúc chạy (src/lib/ytdlp.ts) → venv phải thuộc user node.
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/yt-dlp \
-    && /opt/yt-dlp/bin/pip install --no-cache-dir -U "yt-dlp[default]" "bgutil-ytdlp-pot-provider==${BGUTIL_VERSION}"
+    && /opt/yt-dlp/bin/pip install --no-cache-dir -U "yt-dlp[default]" "bgutil-ytdlp-pot-provider==${BGUTIL_VERSION}" \
+    && chown -R node:node /opt/yt-dlp
 COPY --from=bgutil --chown=node:node /opt/bgutil/server /opt/bgutil/server
 
 ENV NODE_ENV=production \
