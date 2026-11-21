@@ -331,6 +331,8 @@ function open() {
   if (!progressCols.some((c) => c.name === "dict_pick")) db.exec("ALTER TABLE progress ADD COLUMN dict_pick TEXT NOT NULL DEFAULT '[]'"); // [3, 17, 42, …]
   // Chính tả: lúc bắt đầu lượt đang làm (ms, 0 = chưa biết) → tính lại điểm của lượt khi mở lại bài
   if (!progressCols.some((c) => c.name === "dict_round_at")) db.exec("ALTER TABLE progress ADD COLUMN dict_round_at INTEGER NOT NULL DEFAULT 0");
+  // Chính tả: chữ đã gõ dở / từ đã xem của từng câu trong lượt → F5 hay vào lại không phải gõ lại
+  if (!progressCols.some((c) => c.name === "dict_drafts")) db.exec("ALTER TABLE progress ADD COLUMN dict_drafts TEXT NOT NULL DEFAULT '{}'"); // {"3": {"input": "…", "revealed": [1]}}
   // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
   const vocabCols = db.prepare("PRAGMA table_info(vocab)").all() as { name: string }[];
   if (!vocabCols.some((c) => c.name === "srs_stage")) {
@@ -1439,8 +1441,10 @@ export type Progress = {
   seen: number[]; // các câu đã thực sự nghe (Shadowing) — % tiến độ tính theo số này
   dictPick: number[]; // Chính tả: các câu của lượt đang làm ([] = chưa chọn)
   dictRoundAt: number; // lúc bắt đầu lượt đang làm (ms, 0 = chưa biết)
+  dictDrafts: Record<string, DictDraft>; // Chính tả: chữ đã gõ dở / từ đã xem của từng câu trong lượt
   updatedAt: number;
 };
+export type DictDraft = { input: string; revealed: number[] };
 
 type ProgressRow = {
   source: string;
@@ -1453,6 +1457,7 @@ type ProgressRow = {
   seen: string;
   dict_pick: string;
   dict_round_at: number;
+  dict_drafts: string;
   updated_at: number;
 };
 
@@ -1467,6 +1472,7 @@ const toProgress = (r: ProgressRow): Progress => ({
   seen: JSON.parse(r.seen ?? "[]"),
   dictPick: JSON.parse(r.dict_pick ?? "[]"),
   dictRoundAt: r.dict_round_at ?? 0,
+  dictDrafts: JSON.parse(r.dict_drafts ?? "{}"),
   updatedAt: r.updated_at,
 });
 
@@ -1485,13 +1491,14 @@ const MAX_PROGRESS = 300;
 export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
   conn()
     .prepare(
-      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, dict_pick, dict_round_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, dict_pick, dict_round_at, dict_drafts, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, source) DO UPDATE SET title = excluded.title, idx = excluded.idx, total = excluded.total,
          mode = excluded.mode, dict_level = excluded.dict_level, dict_done = excluded.dict_done, seen = excluded.seen,
-         dict_pick = excluded.dict_pick, dict_round_at = excluded.dict_round_at, updated_at = excluded.updated_at`,
+         dict_pick = excluded.dict_pick, dict_round_at = excluded.dict_round_at,
+         dict_drafts = excluded.dict_drafts, updated_at = excluded.updated_at`,
     )
-    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), JSON.stringify(p.dictPick), p.dictRoundAt, Date.now());
+    .run(userId, p.source, p.title, p.idx, p.total, p.mode, p.dictLevel, JSON.stringify(p.dictDone), JSON.stringify(p.seen), JSON.stringify(p.dictPick), p.dictRoundAt, JSON.stringify(p.dictDrafts), Date.now());
   // Chỉ giữ MAX_PROGRESS bài học gần nhất / người (source /watch/<id> là tuỳ ý → không giới hạn thì DB phình mãi)
   conn()
     .prepare(

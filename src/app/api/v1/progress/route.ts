@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { deleteProgress, getProgress, getRoundPoints, listProgress, saveProgress, type DictResult } from "@/lib/db";
+import { deleteProgress, getProgress, getRoundPoints, listProgress, saveProgress, type DictDraft, type DictResult } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { lockedSource } from "@/lib/access";
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   }
   // Danh sách: bỏ chi tiết từng câu, chỉ trả số câu chính tả đã làm / số câu đã nghe
   return Response.json({
-    progress: listProgress(user.id).map(({ dictDone, seen, ...p }) => ({ ...p, dictCount: Object.keys(dictDone).length, seenCount: seen.length })),
+    progress: listProgress(user.id).map(({ dictDone, seen, ...p }) => ({ ...p, dictDrafts: undefined, dictCount: Object.keys(dictDone).length, seenCount: seen.length })),
   });
 }
 
@@ -34,11 +34,12 @@ export async function GET(req: NextRequest) {
  * dictDone được GỘP với bản đã lưu (học trên 2 máy cùng lúc không mất câu nào); kết quả mới ghi đè câu trùng.
  * seen (các câu đã nghe) cũng GỘP, kèm câu đang học khi ở Shadowing — client cũ / web không gửi seen thì vẫn tăng dần.
  * dictPick (lượt chính tả đang làm) GHI ĐÈ — lượt mới thay lượt cũ; không gửi thì giữ lượt đã lưu. Đổi lượt → ghi lại lúc bắt đầu lượt.
+ * dictDrafts ({ [câu]: { input, revealed } } — chữ đã gõ dở) GHI ĐÈ; không gửi (app) thì giữ bản đã lưu, đổi lượt thì bỏ.
  */
 export async function PUT(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown; dictPick: unknown }>(req);
+  const b = await body<{ source: string; title: string; idx: number; total: number; mode: string; dictLevel: string; dictDone: unknown; seen: unknown; dictPick: unknown; dictDrafts: unknown }>(req);
   const source = str(b.source);
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
   if (source.startsWith("/watch/")) return fail(NOT_SAVED, 403);
@@ -65,6 +66,17 @@ export async function PUT(req: Request) {
   const dictPick = Array.isArray(b.dictPick)
     ? [...new Set(b.dictPick.slice(0, 10000).filter((v) => int(v) !== null && v < total) as number[])].sort((x, y) => x - y)
     : (prev?.dictPick ?? []).filter((i) => i < total);
+  const sameRound = !!prev && JSON.stringify(prev.dictPick) === JSON.stringify(dictPick);
+  let dictDrafts: Record<string, DictDraft> = sameRound ? prev.dictDrafts : {};
+  if (b.dictDrafts && typeof b.dictDrafts === "object") {
+    dictDrafts = {};
+    for (const [k, v] of Object.entries(b.dictDrafts as Record<string, DictDraft>).slice(0, 2000)) {
+      const i = Number(k);
+      if (!Number.isInteger(i) || i < 0 || i >= total || typeof v?.input !== "string" || !Array.isArray(v.revealed)) continue;
+      const revealed = [...new Set(v.revealed.slice(0, 500).filter((r) => int(r) !== null))];
+      if (v.input.trim() || revealed.length) dictDrafts[i] = { input: v.input.slice(0, 2000), revealed };
+    }
+  }
   saveProgress(user.id, {
     source,
     title: str(b.title).slice(0, 200),
@@ -75,7 +87,8 @@ export async function PUT(req: Request) {
     dictDone: { ...prev?.dictDone, ...incoming },
     seen: [...seen].sort((x, y) => x - y),
     dictPick,
-    dictRoundAt: prev && JSON.stringify(prev.dictPick) === JSON.stringify(dictPick) ? prev.dictRoundAt : Date.now(),
+    dictRoundAt: sameRound ? prev.dictRoundAt : Date.now(),
+    dictDrafts,
   });
   return Response.json({ progress: getProgress(user.id, source) });
 }

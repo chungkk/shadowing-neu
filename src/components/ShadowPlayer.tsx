@@ -91,6 +91,7 @@ type Progress = {
   dictPick?: number[];
   dictRoundPts?: Record<number, number>;
   dictRoundSpent?: Record<number, number>;
+  dictDrafts?: Record<string, DictDraft>;
 };
 type VocabItem = { id: number; word: string; meaning: string; context: string };
 
@@ -731,6 +732,12 @@ export default function ShadowPlayer({
         setDictDone(done);
         setEarned(p.dictRoundPts ?? {});
         setSpent(p.dictRoundSpent ?? {});
+        // Chữ đã gõ dở của lượt này (F5 / vào lại không phải gõ lại) → dựng lại ô chính tả đang mở
+        const drafts = Object.fromEntries(Object.entries(p.dictDrafts ?? {}).filter(([k]) => Number(k) < segments.length && round.includes(Number(k))));
+        if (Object.keys(drafts).length) {
+          setDictDrafts(drafts);
+          setDictEpoch((e) => e + 1);
+        }
         // Gộp (không ghi đè): có thể đã phát vài câu trong lúc chờ tải
         setSeen((s) => new Set([...s, ...(p.seen ?? []).filter((k) => k < segments.length)]));
         if (i > 0 || Object.keys(done).length) setResumed(i);
@@ -826,10 +833,11 @@ export default function ShadowPlayer({
       dictDone,
       seen: [...seen],
       dictPick,
+      dictDrafts,
     };
     const id = setTimeout(flushProgress, 1500);
     return () => clearTimeout(id);
-  }, [syncProgress, sourceUrl, title, idx, segments.length, settings.practice, settings.dictLevel, dictDone, seen, dictPick, flushProgress]);
+  }, [syncProgress, sourceUrl, title, idx, segments.length, settings.practice, settings.dictLevel, dictDone, seen, dictPick, dictDrafts, flushProgress]);
   useEffect(() => {
     window.addEventListener("pagehide", flushProgress);
     return () => {
