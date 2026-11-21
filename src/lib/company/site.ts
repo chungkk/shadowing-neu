@@ -8,7 +8,7 @@ export const SITE = {
   supportEmail: 'support@hallovn.de',
   contactEmail: 'support@hallovn.de',
   description:
-    'HalloVN ist die kostenlose Lernplattform für Vietnamesinnen und Vietnamesen in Deutschland: Deutsch lernen, Wortschatz, Führerscheintheorie, Leben in Deutschland und Lernspiele – im Web und als App.',
+    'HalloVN ist die kostenlose Lernplattform für Vietnamesinnen und Vietnamesen in Deutschland: Deutsch lernen, Wortschatz, Führerscheintheorie, Leben in Deutschland – im Web und als App.',
 } as const;
 
 /**

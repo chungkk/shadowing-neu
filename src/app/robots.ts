@@ -30,9 +30,6 @@ export default function robots(): MetadataRoute.Robots {
           "/leben-in-deutschland/danh-dau",
           "/leben-in-deutschland/thong-ke",
           "/leben-in-deutschland/cai-dat",
-          // Phòng chơi theo mã (noindex); trang giới thiệu /games/caro, /games/sudoku vẫn index
-          "/games/caro/",
-          "/games/sudoku/",
         ],
       },
       { userAgent: AI_BOTS, disallow: "/" },

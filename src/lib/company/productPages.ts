@@ -61,7 +61,7 @@ const web = (name: string): Screen => ({ src: `/apps/shadowing/${name}.webp`, wi
 const shadowing: ProductPage = {
     id: 'shadowing',
     shape: 'landscape',
-    screens: [web('home'), web('lesson'), web('vocab'), web('games')],
+    screens: [web('home'), web('lesson'), web('vocab')],
     hero: [1],
     sections: [[0], [1], [2], [], []],
     seo: {
@@ -94,7 +94,7 @@ const shadowing: ProductPage = {
                 {
                     title: 'Wortschatz, der bleibt',
                     body: 'Die Wortlisten folgen den Goethe-Niveaus A1, A2 und B1, dazu Aspekte neu für B2, Nomen-Verb-Verbindungen und Wortschatz für die Pflege. Alle Wörter haben eine vietnamesische Bedeutung. Was du behalten willst, kommt ins Vokabelheft und wird zur richtigen Zeit wiederholt.',
-                    points: ['Goethe A1, A2 und B1, Aspekte neu B2', 'Nomen-Verb-Verbindungen und Wortschatz Pflege', 'Vokabelheft mit Wiederholung (mit Konto)', 'Lernspiele für Wortschatz und der, die, das'],
+                    points: ['Goethe A1, A2 und B1, Aspekte neu B2', 'Nomen-Verb-Verbindungen und Wortschatz Pflege', 'Vokabelheft mit Wiederholung (mit Konto)'],
                     link: { href: '/vocab', label: 'Zum Wortschatz' },
                 },
                 {
@@ -114,7 +114,6 @@ const shadowing: ProductPage = {
                 'Startseite des Deutschbereichs mit Feld für einen YouTube-Link und der Bibliothek der Lektionen',
                 'Eine Lektion mit Video, aktuellem Satz, Aufnahme-Knopf und Transkript',
                 'Die Wortlisten Goethe A1, A2 und B1',
-                'Die Lernspiele Wortregen, Goldgräber, Wortpaare und Der, die, das',
             ],
             galleryTitle: 'Screenshots',
             faq: [
@@ -150,7 +149,7 @@ const shadowing: ProductPage = {
                 {
                     title: 'Vocabulary that sticks',
                     body: 'The word lists follow the Goethe levels A1, A2 and B1, plus Aspekte neu for B2, noun-verb collocations and vocabulary for nursing. Every word has a Vietnamese meaning. What you want to keep goes into your notebook and comes back for review at the right time.',
-                    points: ['Goethe A1, A2 and B1, Aspekte neu B2', 'Noun-verb collocations and nursing vocabulary', 'Notebook with spaced review (with an account)', 'Games for vocabulary and der, die, das'],
+                    points: ['Goethe A1, A2 and B1, Aspekte neu B2', 'Noun-verb collocations and nursing vocabulary', 'Notebook with spaced review (with an account)'],
                     link: { href: '/vocab', label: 'Go to vocabulary' },
                 },
                 {
@@ -170,7 +169,6 @@ const shadowing: ProductPage = {
                 'The German section with a field for a YouTube link and the lesson library',
                 'A lesson with video, current sentence, record button and transcript',
                 'The Goethe A1, A2 and B1 word lists',
-                'The games word rain, gold digger, word match and der, die, das',
             ],
             galleryTitle: 'Screenshots',
             faq: [
@@ -206,7 +204,7 @@ const shadowing: ProductPage = {
                 {
                     title: 'Từ vựng nhớ lâu',
                     body: 'Các bộ từ theo trình độ Goethe A1, A2, B1, thêm Aspekte neu cho B2, Nomen-Verb-Verbindungen và từ vựng điều dưỡng. Từ nào cũng có nghĩa tiếng Việt. Từ muốn nhớ thì lưu vào sổ từ và ôn đúng lúc.',
-                    points: ['Goethe A1, A2 và B1, Aspekte neu B2', 'Nomen-Verb-Verbindungen và từ vựng điều dưỡng', 'Sổ từ vựng có lịch ôn (cần tài khoản)', 'Game luyện từ vựng và der, die, das'],
+                    points: ['Goethe A1, A2 và B1, Aspekte neu B2', 'Nomen-Verb-Verbindungen và từ vựng điều dưỡng', 'Sổ từ vựng có lịch ôn (cần tài khoản)'],
                     link: { href: '/vocab', label: 'Xem từ vựng' },
                 },
                 {
@@ -226,7 +224,6 @@ const shadowing: ProductPage = {
                 'Trang tiếng Đức với ô dán link YouTube và thư viện bài học',
                 'Một bài học với video, câu hiện tại, nút ghi âm và transcript',
                 'Các bộ từ vựng Goethe A1, A2 và B1',
-                'Các game Mưa từ vựng, Đào vàng, Nối từ và Der Die Das',
             ],
             galleryTitle: 'Ảnh chụp màn hình',
             faq: [

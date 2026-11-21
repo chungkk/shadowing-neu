@@ -3,7 +3,7 @@
 Tên miền chính thức là **hallovn.de**. ckk.biz và ckk.pro (tên cũ) không dùng nữa, chỉ còn chuyển hướng về hallovn.de
 (và phục vụ `/api/*` cho app di động bản cũ — xem `src/proxy.ts`).
 
-Một app Next.js cho cả hallovn.de: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE · Game**,
+Một app Next.js cho cả hallovn.de: đăng ký / đăng nhập một lần rồi học theo tab **Tiếng Đức · Lái xe · Leben in DE**,
 cộng các trang doanh nghiệp / pháp lý của HalloVN (trước ở repo `ckk-biz`, nay đã gộp hẳn vào đây).
 
 ## Cấu trúc
@@ -12,17 +12,17 @@ cộng các trang doanh nghiệp / pháp lý của HalloVN (trước ở repo `c
 hallovn.de/                    # repo (GitHub: chungkk/shadowing-neu), máy Mac: ~/Code/hallovn/hallovn.de
 ├── src/
 │   ├── app/
-│   │   ├── (app)/             # app học: thanh tab, đăng nhập. / = Tiếng Đức, /lai-xe, /leben-in-deutschland, /games…
+│   │   ├── (app)/             # app học: thanh tab, đăng nhập. / = Tiếng Đức, /lai-xe, /leben-in-deutschland…
 │   │   ├── (company)/         # trang doanh nghiệp + pháp lý (DE/EN/VI): /about, /fuehrerschein, /lid, /privacy, /impressum…
 │   │   ├── api/v1/            # API cho web + app mobile HalloVN
 │   │   └── api/fuehrerschein/ # API câu hỏi cho app lái xe riêng (iOS/Android), đọc content/laixe/
 │   ├── components/
-│   │   ├── auth/  games/  quiz/  laixe/  lid/
+│   │   ├── auth/  quiz/  laixe/  lid/
 │   │   ├── company/           # giao diện trang doanh nghiệp (Header, Footer, LocaleContext, ProductPageView…)
 │   │   └── *.tsx              # phần tiếng Đức (ShadowPlayer, VocabList, DeckStudy…) + dùng chung
 │   ├── lib/
 │   │   ├── laixe/             # câu hỏi + luật chấm thi lái xe, catalog cho API (catalog.mjs), guard
-│   │   ├── lid/  quiz/  games/
+│   │   ├── lid/  quiz/
 │   │   ├── company/           # cấu hình site, SEO, trang sản phẩm, văn bản pháp lý
 │   │   └── *.ts               # lõi: db, auth, api, phần tiếng Đức (subtitles, srs, dictation…)
 │   ├── content/               # dữ liệu đóng gói: decks/, fuehrerschein/, lid/

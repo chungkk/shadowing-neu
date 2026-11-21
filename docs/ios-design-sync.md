@@ -80,7 +80,7 @@ Thay thế cặp `LIGHT` và `DARK` hiện tại của hệ *"Nhãn vở"* bằn
 | `<AuthForm>` 1 cột tối giản | Màn đăng nhập / đăng ký | Gỡ nửa bìa vở & bong bóng thoại; giữ nút Sign in with Apple chuẩn HIG (đen trên sáng, trắng trên tối). |
 | Linh vật tắc kè (`Mascot`) | EmptyState, Loading, Error, trang tổng quan | Giữ nguyên, xuất hiện tiết chế; **không** đặt trên từng thẻ danh sách. |
 | Điều hướng & Phản hồi | `NativeTabs`, `Alert`, `ActionSheet`, `haptic` | **Giữ nguyên 100%** thanh tab Liquid Glass native, `presentation: "modal"`, Haptics (`tap`, `select`, `success`, `error`, `firm`). |
-| Màn thi Lái xe & Game | `quiz/run.tsx`, `FallingWords` | **Giữ nguyên** giao diện mô phỏng phần mềm thi thật cho Lái xe và nền tối cho Game, chỉ cập nhật token màu & bo góc. |
+| Màn thi Lái xe | `quiz/run.tsx` | **Giữ nguyên** giao diện mô phỏng phần mềm thi thật, chỉ cập nhật token màu & bo góc. |
 
 ---
 

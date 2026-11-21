@@ -10,7 +10,7 @@ import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { shuffle } from "@/lib/review";
 import DeckWords from "./DeckWords";
-import { GuestTrialNote, GuestWall, useGuestQuota } from "./games/GuestQuota";
+import { GuestTrialNote, GuestWall, useGuestQuota } from "./GuestQuota";
 
 type Word = DeckWord & { saved: boolean; learned: boolean };
 type Mode = StudyMode | "list";

@@ -34,8 +34,8 @@ const de = (
     <>
         <h2 id="free">1. HalloVN ist kostenlos</h2>
         <p>
-            Die Website {SITE.domain} und die App {SITE.name} sind kostenlos: Deutsch lernen, Wortschatz, Führerscheintheorie, Leben in
-            Deutschland und Spiele. Es gibt dort keine kostenpflichtigen Käufe und keine Abonnements; die Website finanziert sich durch
+            Die Website {SITE.domain} und die App {SITE.name} sind kostenlos: Deutsch lernen, Wortschatz, Führerscheintheorie und Leben in
+            Deutschland. Es gibt dort keine kostenpflichtigen Käufe und keine Abonnements; die Website finanziert sich durch
             Werbung. Diamanten und andere Punkte in HalloVN sammeln Sie nur durch Lernen, sie können nicht mit Geld gekauft werden.
         </p>
 
@@ -98,8 +98,7 @@ const en = (
 
         <h2 id="free">1. HalloVN is free</h2>
         <p>
-            The website {SITE.domain} and the {SITE.name} app are free: German lessons, vocabulary, driving theory, Leben in Deutschland and
-            games. There are no paid purchases and no subscriptions; the website is funded by ads. Diamonds and other points in HalloVN are
+            The website {SITE.domain} and the {SITE.name} app are free: German lessons, vocabulary, driving theory and Leben in Deutschland. There are no paid purchases and no subscriptions; the website is funded by ads. Diamonds and other points in HalloVN are
             earned only by learning and cannot be bought with money.
         </p>
 
@@ -160,8 +159,7 @@ const vi = (
 
         <h2 id="free">1. HalloVN miễn phí</h2>
         <p>
-            Website {SITE.domain} và app {SITE.name} hoàn toàn miễn phí: học tiếng Đức, từ vựng, lý thuyết lái xe, Leben in Deutschland và
-            game. Ở đó không có giao dịch trả tiền và không có gói đăng ký; website được duy trì nhờ quảng cáo. Kim cương và các loại điểm
+            Website {SITE.domain} và app {SITE.name} hoàn toàn miễn phí: học tiếng Đức, từ vựng, lý thuyết lái xe và Leben in Deutschland. Ở đó không có giao dịch trả tiền và không có gói đăng ký; website được duy trì nhờ quảng cáo. Kim cương và các loại điểm
             khác trong HalloVN chỉ kiếm được bằng cách học, không mua được bằng tiền.
         </p>
 

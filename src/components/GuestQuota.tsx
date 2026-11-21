@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, BarChart3, Gem, LogIn, Star } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { LoginLink } from "../auth/LoginDialog";
-import Mascot from "../Mascot";
+import { LoginLink } from "./auth/LoginDialog";
+import Mascot from "./Mascot";
 
 /**
  * Khách (chưa đăng nhập) chỉ được học thử 1 số câu mỗi ngày ở từng khu; hết lượt thì hiện popup mời đăng nhập / đăng ký.

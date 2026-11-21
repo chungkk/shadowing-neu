@@ -1,12 +1,12 @@
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "./Mascot";
 
-export type Sec = "de" | "laixe" | "lid" | "game" | "ink";
+export type Sec = "de" | "laixe" | "lid" | "ink";
 
 /**
  * Đầu trang tối giản kiểu Linear / Notion:
  * - Không bìa màu lớn hay nhãn chồng; giải phóng không gian dọc trên điện thoại.
- * - sec:      màu nhấn nhẹ cho ô biểu tượng và thanh tiến độ bên trong (de · laixe · lid · game · ink)
+ * - sec:      màu nhấn nhẹ cho ô biểu tượng và thanh tiến độ bên trong (de · laixe · lid · ink)
  * - icon:     biểu tượng lucide nhỏ đặt cạnh tiêu đề
  * - meta:     thông tin bổ sung gọn (nhãn hạng, bang, lời nhắc…)
  * - actions:  cụm nút hành động nằm gọn bên phải (trên điện thoại tự xếp dưới)

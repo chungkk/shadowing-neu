@@ -34,10 +34,10 @@ const nextConfig: NextConfig = {
     { source: "/lid/:file(q[^/]+\\.[0-9a-f]{8}\\.jpg)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
     { source: "/lid/wappen/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
   ],
-  // Đường dẫn cũ của các game (tên tiếng Việt) → tên tiếng Anh
   redirects: async () => [
-    { source: "/games/mua-tu-vung", destination: "/games/word-rain", permanent: true },
-    { source: "/games/ong-danh-van", destination: "/games/spelling-bee", permanent: true },
+    // Khu Trò chơi đã bỏ: link cũ (đã được index) → Từ vựng
+    { source: "/games", destination: "/vocab", permanent: true },
+    { source: "/games/:path*", destination: "/vocab", permanent: true },
     // Tab Lái xe: link cũ của chương / ôn câu sai
     { source: "/lai-xe/:c(\\d\\.\\d\\.\\d{2})", destination: "/lai-xe/hoc/:c", permanent: true },
     { source: "/lai-xe/on-tap", destination: "/lai-xe/cau-sai", permanent: true },

@@ -40,7 +40,7 @@ const NETWORKS = [
 ];
 
 /** Chỉ hiện ở nơi có nội dung đáng chia sẻ: bài học (/watch/…, /<slug>) và bộ từ (/vocab/decks/…) */
-const RESERVED = /^\/(admin|settings|stats|vocab|games|leaderboard|sprechen|login|register|forgot-password|privacy|terms)(\/|$)/;
+const RESERVED = /^\/(admin|settings|stats|vocab|leaderboard|sprechen|login|register|forgot-password|privacy|terms)(\/|$)/;
 const shareable = (p: string) => /^\/(watch|vocab\/decks)\/./.test(p) || (/^\/[^/]+$/.test(p) && !RESERVED.test(p));
 
 /** Link trang đang xem (bỏ ?query) + tiêu đề trang */

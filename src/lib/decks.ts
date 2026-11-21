@@ -7,10 +7,8 @@ import {
   markDeckLearned,
   setSetting,
   vocabOverview,
-  type ArtikelWord,
   type NounGender,
 } from "./db";
-import { ARTIKEL_GOAL } from "./games/artikel";
 import aspekteNeuB2 from "@/content/decks/aspekte-neu-b2.json";
 import goetheA1 from "@/content/decks/goethe-a1.json";
 import goetheA2 from "@/content/decks/goethe-a2.json";
@@ -74,7 +72,6 @@ export type Deck = {
 export type DeckSummary = Omit<Deck, "words" | "topics"> & {
   wordCount: number;
   topicCount: number;
-  gameReady: boolean; // có từ đơn để chơi game chữ rơi (bộ toàn cụm từ như Nomen-Verb-Verbindungen thì không)
 };
 
 function toWord(w: RawDeck["words"][number]): DeckWord {
@@ -111,54 +108,8 @@ const DECKS: Deck[] = RAW.map((d) => ({
 
 const isArticle = (g: NounGender) => g === "der" || g === "die" || g === "das";
 
-/** Từ dùng được trong game chữ rơi: chỉ từ đơn (gõ được nhanh), có nghĩa */
-export const isGameWord = (w: Pick<DeckWord, "word" | "meaning">) => /^[\p{L}-]+$/u.test(w.word) && !!w.meaning;
-
 export const listDecks = (): DeckSummary[] =>
-  DECKS.map(({ words, topics, ...d }) => ({ ...d, wordCount: words.length, topicCount: topics.length, gameReady: words.some(isGameWord) }));
-
-/** Các bộ chơi được game, số từ / số mốc chỉ đếm phần game thật sự dùng (khớp /api/v1/games/words) */
-export const listGameDecks = () =>
-  DECKS.flatMap(({ slug, title, level, words, topics }) => {
-    const playable = words.filter(isGameWord);
-    if (!playable.length) return [];
-    const used = new Set(playable.map((w) => w.topic));
-    return [{ slug, title, level, wordCount: new Set(playable.map((w) => w.key)).size, topicCount: topics.filter((t) => used.has(t.id)).length }];
-  });
-
-/** Nghĩa ngắn cho game: phần đầu trước ";", bỏ chú thích trong ngoặc ("khóa (cửa); hoàn thành…" → "khóa") */
-export const shortMeaning = (m: string) => m.split(";")[0].replace(/\s*\([^)]*\)/g, "").trim() || m;
-
-/** Từ mà các bộ ghi nhiều mạo từ ("der / die See") — game Der Die Das bỏ qua, chọn mạo từ nào cũng có thể đúng */
-const ANY_GENDER = (() => {
-  const seen = new Map<string, NounGender>();
-  const clash = new Set<string>();
-  for (const w of DECKS.flatMap((d) => d.words)) {
-    if (!isArticle(w.gender)) continue;
-    const k = w.word.toLowerCase();
-    if (seen.has(k) && seen.get(k) !== w.gender) clash.add(k);
-    seen.set(k, w.gender);
-  }
-  return clash;
-})();
-
-/** Từ của bộ cho game Der Die Das: danh từ đơn có mạo từ rõ ràng, mỗi cách viết 1 lần */
-export function artikelWords(slug: string): ArtikelWord[] {
-  const words = new Map<string, ArtikelWord>();
-  for (const w of getDeck(slug)?.words ?? []) {
-    if (isGameWord(w) && isArticle(w.gender) && !ANY_GENDER.has(w.word.toLowerCase())) {
-      words.set(w.word.toLowerCase(), { word: w.word, gender: w.gender as ArtikelWord["gender"], meaning: shortMeaning(w.meaning) });
-    }
-  }
-  return [...words.values()];
-}
-
-/** Các bộ chơi được Der Die Das (bộ quá ít danh từ thì không đủ 1 ván) */
-export const listArtikelDecks = () =>
-  DECKS.flatMap(({ slug, title, level }) => {
-    const wordCount = artikelWords(slug).length;
-    return wordCount >= ARTIKEL_GOAL ? [{ slug, title, level, wordCount }] : [];
-  });
+  DECKS.map(({ words, topics, ...d }) => ({ ...d, wordCount: words.length, topicCount: topics.length }));
 
 export const getDeck = (slug: string): Deck | null => DECKS.find((d) => d.slug === slug) ?? null;
 

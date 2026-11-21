@@ -7,7 +7,7 @@ import { COMPANY, SITE } from '@/lib/company/site';
 export const metadata: Metadata = pageMetadata({
     title: 'Nutzungsbedingungen',
     description:
-        'Nutzungsbedingungen für die Website hallovn.de: kostenlose Lernangebote für Deutsch, Wortschatz, Führerschein-Theorie, Leben in Deutschland und Lernspiele.',
+        'Nutzungsbedingungen für die Website hallovn.de: kostenlose Lernangebote für Deutsch, Wortschatz, Führerschein-Theorie, Leben in Deutschland.',
     path: '/terms',
 });
 
@@ -24,7 +24,7 @@ const de = (
         <p>
             {SITE.name} stellt Lernmaterialien und Übungen bereit, insbesondere zum Deutschlernen (Lektionen, Hör- und Sprechübungen,
             Wortschatz), zur Vorbereitung auf die theoretische Fahrerlaubnisprüfung in Deutschland, zum Test „Leben in Deutschland“ /
-            Einbürgerungstest sowie Lernspiele. Die Nutzung ist kostenlos. Ein Anspruch auf bestimmte Inhalte oder Funktionen besteht nicht;
+            Einbürgerungstest. Die Nutzung ist kostenlos. Ein Anspruch auf bestimmte Inhalte oder Funktionen besteht nicht;
             wir können das Angebot jederzeit ändern, erweitern oder einschränken.
         </p>
         <p>
@@ -129,8 +129,7 @@ const en = (
         <h2 id="services">2. Description of services</h2>
         <p>
             {SITE.name} provides learning materials and exercises, in particular for learning German (lessons, listening and speaking
-            practice, vocabulary), for preparing for the German driving theory test and the “Leben in Deutschland” / citizenship test, as
-            well as learning games. Use is free of charge. There is no entitlement to specific content or features; we may change, extend or
+            practice, vocabulary), for preparing for the German driving theory test and the “Leben in Deutschland” / citizenship test. Use is free of charge. There is no entitlement to specific content or features; we may change, extend or
             restrict the service at any time.
         </p>
         <p>
@@ -234,7 +233,7 @@ const vi = (
         <h2 id="services">2. Mô tả dịch vụ</h2>
         <p>
             {SITE.name} cung cấp tài liệu học và bài luyện tập, đặc biệt để học tiếng Đức (bài học, luyện nghe và nói, từ vựng), ôn thi lý
-            thuyết lái xe tại Đức, ôn bài thi „Leben in Deutschland“ / nhập quốc tịch, cùng các trò chơi học tập. Dịch vụ miễn phí. Bạn không
+            thuyết lái xe tại Đức, ôn bài thi „Leben in Deutschland“ / nhập quốc tịch. Dịch vụ miễn phí. Bạn không
             có quyền yêu cầu một nội dung hay tính năng cụ thể; chúng tôi có thể thay đổi, mở rộng hoặc thu hẹp dịch vụ bất cứ lúc nào.
         </p>
         <p>

@@ -9,7 +9,7 @@ export default function Image() {
   return renderOgImage({
     eyebrow: "Tiếng Đức · Lái xe · Leben in Deutschland",
     title: "Học tiếng Đức cho người Việt",
-    subtitle: "Video thật, lý thuyết lái xe và Leben in Deutschland có bản dịch tiếng Việt, game luyện từ. Miễn phí.",
+    subtitle: "Video thật, lý thuyết lái xe và Leben in Deutschland có bản dịch tiếng Việt. Miễn phí.",
     accent: "#e5484d",
   });
 }

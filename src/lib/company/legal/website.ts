@@ -13,7 +13,7 @@ import type { Locale } from '@/components/company/LocaleContext';
  * - KI: src/lib/translate.ts, word.ts, punctuate.ts, whisper.ts · Sprachausgabe: src/lib/tts.ts
  * - Sprechräume (WebRTC, STUN von Google, optional TURN): src/lib/sprechen.ts
  * - E-Mail (SMTP, Standard Gmail): src/lib/mail.ts · Feedback/Support-Formular: /api/v1/feedback
- * - Cookies: session, play_guest, lx_class, lx_lang, lid_state · AdSense: (app)/layout.tsx
+ * - Cookies: session, lx_class, lx_lang, lid_state · AdSense: (app)/layout.tsx
  * - Backups: scripts/backup (täglich, 7 Stände auf dem Server, bis zu 60 Stände als Kopie beim Betreiber)
  */
 
@@ -25,7 +25,7 @@ const body: Record<Locale, LegalSection[]> = {
             id: 'overview',
             title: 'Geltungsbereich und Überblick',
             blocks: [
-                'Diese Erklärung gilt für die Website **hallovn.de** mit allen Bereichen (Deutsch lernen mit Videos, Wortschatz, Führerschein-Theorie, Leben in Deutschland, Lernspiele, Sprechräume) und für die App **HalloVN** für iOS und Android. Website und App nutzen dasselbe Konto und denselben Server.',
+                'Diese Erklärung gilt für die Website **hallovn.de** mit allen Bereichen (Deutsch lernen mit Videos, Wortschatz, Führerschein-Theorie, Leben in Deutschland, Sprechräume) und für die App **HalloVN** für iOS und Android. Website und App nutzen dasselbe Konto und denselben Server.',
                 {
                     list: [
                         'Die meisten Inhalte können Sie ohne Konto nutzen. Ein kostenloses Konto speichert Ihren Lernstand, damit Sie auf allen Geräten weiterlernen können.',
@@ -51,7 +51,7 @@ const body: Record<Locale, LegalSection[]> = {
                 'Für ein Konto speichern wir: E-Mail-Adresse, Anzeigename, Passwort (nur als gesalzener scrypt-Hash, für niemanden lesbar), Sprache der Oberfläche, Datum der Registrierung und optional ein Profilbild. Ihre E-Mail-Adresse bestätigen Sie mit einem Code, den wir nur als Hash und befristet speichern.',
                 `**Mit Google oder Apple anmelden:** Wir erhalten die Nutzerkennung des Anbieters und Ihre E-Mail-Adresse, bei Apple ggf. eine anonyme Weiterleitungsadresse. Bei Apple speichern wir zusätzlich ein Token, um die Verbindung beim Löschen Ihres Kontos bei Apple zu widerrufen. Erst wenn Sie den Anmeldedialog öffnen, werden die Anmeldeskripte von Google bzw. Apple geladen ([Datenschutzerklärung von Google](${GOOGLE_PRIVACY}), [Datenschutzrichtlinie von Apple](${APPLE_PRIVACY})).`,
                 '**Angemeldet bleiben:** Im Browser setzen wir das Cookie „session“ (HttpOnly, 30 Tage). Die App speichert ihr Anmeldetoken im geschützten Speicher des Geräts (iOS-Schlüsselbund bzw. Android Keystore). Wenn Sie Ihr Passwort ändern oder „Auf allen Geräten abmelden“ wählen, werden alle anderen Sitzungen ungültig.',
-                '**Wer sieht was:** Ihr Profilbild sehen nur Sie. Ihr Anzeigename und Ihre Punktzahl erscheinen in der Rangliste für andere angemeldete Nutzer. In Sprechräumen und Mehrspieler-Spielen sehen die anderen Teilnehmer Ihren Anzeigenamen. Die E-Mail-Adresse wird niemandem angezeigt.',
+                '**Wer sieht was:** Ihr Profilbild sehen nur Sie. Ihr Anzeigename und Ihre Punktzahl erscheinen in der Rangliste für andere angemeldete Nutzer. In Sprechräumen sehen die anderen Teilnehmer Ihren Anzeigenamen. Die E-Mail-Adresse wird niemandem angezeigt.',
                 'Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO).',
             ],
         },
@@ -64,11 +64,11 @@ const body: Record<Locale, LegalSection[]> = {
                     list: [
                         'Deutsch: Vokabelheft mit Notizen und Beispielsätzen, markierte Sätze, Fortschritt je Lektion und Video, Diktat-Ergebnisse, Wiederholungsplan und -verlauf, freigeschaltete Lektionen.',
                         'Führerschein-Theorie und Leben in Deutschland: beantwortete Fragen (richtig/falsch), Merkliste, Probeprüfungen und Einstellungen wie Führerscheinklasse oder Bundesland.',
-                        'Spiele und Motivation: Punkte, Diamanten, Lernserie und Spielrunden (z. B. Sudoku, Caro). Punkte und Diamanten haben keinen Geldwert.',
+                        'Motivation: Punkte, Diamanten und Lernserie. Punkte und Diamanten haben keinen Geldwert.',
                     ],
                 },
                 'Daraus erstellen wir die Erinnerungen in der Glocke (Website) und in der App. Tägliche Erinnerungen der App sind lokale Mitteilungen, die die App selbst auf Ihrem Gerät plant; einen Push-Dienst nutzen wir nicht.',
-                'Ohne Konto bleiben Einstellungen und Zwischenstände auf Ihrem Gerät (lokaler Speicher, siehe „Cookies und lokaler Speicher“). Wer ohne Konto Sudoku oder Caro mit anderen spielt, erhält einen zufälligen Gastnamen, der mit dem Cookie „play_guest“ (30 Tage) wiedererkannt wird.',
+                'Ohne Konto bleiben Einstellungen und Zwischenstände auf Ihrem Gerät (lokaler Speicher, siehe „Cookies und lokaler Speicher“).',
                 'Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.',
             ],
         },
@@ -139,7 +139,6 @@ const body: Record<Locale, LegalSection[]> = {
                 {
                     list: [
                         '„session“: hält Sie angemeldet (30 Tage).',
-                        '„play_guest“: erkennt Gäste in Mehrspieler-Spielen wieder (30 Tage).',
                         '„lx_class“, „lx_lang“, „lid_state“: gewählte Führerscheinklasse, Sprache der Fragen und Bundesland (1 Jahr).',
                     ],
                 },
@@ -173,7 +172,7 @@ const body: Record<Locale, LegalSection[]> = {
             blocks: [
                 'Konto- und Lerndaten speichern wir, solange Ihr Konto besteht. Bestätigungscodes verfallen nach kurzer Zeit.',
                 `**Datenkopie:** Unter Einstellungen → „Meine Daten herunterladen“ (Website) bzw. Einstellungen → Datenschutz (App) erhalten Sie eine Kopie aller Konto- und Lerndaten als JSON-Datei per E-Mail.`,
-                `**Konto löschen:** Auf der Website unter [Einstellungen](/settings) oder in der App unter Einstellungen → „Konto löschen“. Dabei werden Konto, Profilbild, Vokabelheft, Fortschritt, Antworten, Punkte, Spielplätze und Anmeldungen mit Google/Apple sofort und dauerhaft gelöscht; eine Anmeldung mit Apple wird bei Apple widerrufen. Bereits gesendetes Feedback bleibt ohne Verbindung zu Ihrem Konto und ohne E-Mail-Adresse erhalten. Alternativ genügt eine E-Mail an [${MAIL}](mailto:${MAIL}).`,
+                `**Konto löschen:** Auf der Website unter [Einstellungen](/settings) oder in der App unter Einstellungen → „Konto löschen“. Dabei werden Konto, Profilbild, Vokabelheft, Fortschritt, Antworten, Punkte und Anmeldungen mit Google/Apple sofort und dauerhaft gelöscht; eine Anmeldung mit Apple wird bei Apple widerrufen. Bereits gesendetes Feedback bleibt ohne Verbindung zu Ihrem Konto und ohne E-Mail-Adresse erhalten. Alternativ genügt eine E-Mail an [${MAIL}](mailto:${MAIL}).`,
                 '**Sicherungskopien:** Wir sichern die Datenbank täglich. Sicherungen werden verschlüsselt übertragen, nur vom Betreiber verwahrt und nach spätestens 60 Tagen überschrieben; gelöschte Daten verschwinden spätestens dann auch aus den Sicherungen.',
                 'Anfragen und Feedback löschen wir, wenn sie erledigt sind und keine gesetzlichen Aufbewahrungspflichten bestehen.',
             ],
@@ -184,7 +183,7 @@ const body: Record<Locale, LegalSection[]> = {
             id: 'overview',
             title: 'Scope and overview',
             blocks: [
-                'This policy applies to the website **hallovn.de** with all its sections (learning German with videos, vocabulary, driving theory, Leben in Deutschland, learning games, speaking rooms) and to the **HalloVN** app for iOS and Android. The website and the app share the same account and server.',
+                'This policy applies to the website **hallovn.de** with all its sections (learning German with videos, vocabulary, driving theory, Leben in Deutschland, speaking rooms) and to the **HalloVN** app for iOS and Android. The website and the app share the same account and server.',
                 {
                     list: [
                         'You can use most content without an account. A free account stores your learning progress so you can continue on any device.',
@@ -210,7 +209,7 @@ const body: Record<Locale, LegalSection[]> = {
                 'For an account we store: email address, display name, password (only as a salted scrypt hash, readable by no one), interface language, registration date and an optional profile picture. You confirm your email address with a code that we store only as a hash and for a limited time.',
                 `**Sign in with Google or Apple:** We receive the provider’s user ID and your email address, with Apple possibly an anonymous relay address. For Apple we also store a token so that the connection can be revoked at Apple when you delete your account. The sign-in scripts of Google or Apple are only loaded when you open the sign-in dialog ([Google’s privacy policy](${GOOGLE_PRIVACY}), [Apple’s privacy policy](${APPLE_PRIVACY})).`,
                 '**Staying signed in:** In the browser we set the cookie “session” (HttpOnly, 30 days). The app keeps its sign-in token in the device’s protected storage (iOS Keychain or Android Keystore). Changing your password or choosing “Sign out on all devices” invalidates all other sessions.',
-                '**Who sees what:** Only you see your profile picture. Your display name and score appear on the leaderboard for other signed-in users. In speaking rooms and multiplayer games, other participants see your display name. Your email address is never shown to anyone.',
+                '**Who sees what:** Only you see your profile picture. Your display name and score appear on the leaderboard for other signed-in users. In speaking rooms, other participants see your display name. Your email address is never shown to anyone.',
                 'The legal basis is the performance of the user agreement (Art. 6(1)(b) GDPR).',
             ],
         },
@@ -223,11 +222,11 @@ const body: Record<Locale, LegalSection[]> = {
                     list: [
                         'German: vocabulary book with notes and example sentences, starred sentences, progress per lesson and video, dictation results, review schedule and history, unlocked lessons.',
                         'Driving theory and Leben in Deutschland: answered questions (right/wrong), saved questions, mock exams and settings such as licence class or federal state.',
-                        'Games and motivation: points, diamonds, learning streak and game rounds (e.g. Sudoku, Caro). Points and diamonds have no monetary value.',
+                        'Motivation: points, diamonds and learning streak. Points and diamonds have no monetary value.',
                     ],
                 },
                 'We use this data for the reminders in the bell (website) and in the app. The app’s daily reminders are local notifications scheduled by the app on your device; we do not use a push service.',
-                'Without an account, settings and interim progress stay on your device (local storage, see “Cookies and local storage”). If you play Sudoku or Caro with others without an account, you get a random guest name that is recognised with the cookie “play_guest” (30 days).',
+                'Without an account, settings and interim progress stay on your device (local storage, see “Cookies and local storage”).',
                 'The legal basis is Art. 6(1)(b) GDPR.',
             ],
         },
@@ -298,7 +297,6 @@ const body: Record<Locale, LegalSection[]> = {
                 {
                     list: [
                         '“session”: keeps you signed in (30 days).',
-                        '“play_guest”: recognises guests in multiplayer games (30 days).',
                         '“lx_class”, “lx_lang”, “lid_state”: chosen licence class, question language and federal state (1 year).',
                     ],
                 },
@@ -332,7 +330,7 @@ const body: Record<Locale, LegalSection[]> = {
             blocks: [
                 'We keep account and learning data as long as your account exists. Verification codes expire after a short time.',
                 '**Data copy:** Under Settings → “Download my data” (website) or Settings → Privacy (app) you receive a copy of all account and learning data as a JSON file by email.',
-                `**Delete account:** On the website under [Settings](/settings) or in the app under Settings → “Delete account”. This immediately and permanently deletes your account, profile picture, vocabulary book, progress, answers, points, game seats and Google/Apple sign-in links; a Sign in with Apple link is revoked at Apple. Feedback you already sent is kept without any link to your account and without your email address. Alternatively, an email to [${MAIL}](mailto:${MAIL}) is enough.`,
+                `**Delete account:** On the website under [Settings](/settings) or in the app under Settings → “Delete account”. This immediately and permanently deletes your account, profile picture, vocabulary book, progress, answers, points and Google/Apple sign-in links; a Sign in with Apple link is revoked at Apple. Feedback you already sent is kept without any link to your account and without your email address. Alternatively, an email to [${MAIL}](mailto:${MAIL}) is enough.`,
                 '**Backups:** We back up the database daily. Backups are transferred encrypted, kept only by the operator and overwritten after 60 days at the latest; deleted data disappears from the backups by then at the latest.',
                 'We delete requests and feedback once they are handled and no statutory retention duties apply.',
             ],
@@ -343,7 +341,7 @@ const body: Record<Locale, LegalSection[]> = {
             id: 'overview',
             title: 'Phạm vi và tổng quan',
             blocks: [
-                'Chính sách này áp dụng cho trang web **hallovn.de** với mọi mục (học tiếng Đức qua video, từ vựng, lý thuyết lái xe, Leben in Deutschland, game học tập, phòng luyện nói) và cho ứng dụng **HalloVN** trên iOS và Android. Trang web và ứng dụng dùng chung một tài khoản và một máy chủ.',
+                'Chính sách này áp dụng cho trang web **hallovn.de** với mọi mục (học tiếng Đức qua video, từ vựng, lý thuyết lái xe, Leben in Deutschland, phòng luyện nói) và cho ứng dụng **HalloVN** trên iOS và Android. Trang web và ứng dụng dùng chung một tài khoản và một máy chủ.',
                 {
                     list: [
                         'Phần lớn nội dung dùng được mà không cần tài khoản. Tài khoản miễn phí lưu tiến độ học để bạn học tiếp trên mọi thiết bị.',
@@ -369,7 +367,7 @@ const body: Record<Locale, LegalSection[]> = {
                 'Với tài khoản, chúng tôi lưu: email, tên hiển thị, mật khẩu (chỉ dạng băm scrypt có muối, không ai đọc được), ngôn ngữ giao diện, ngày đăng ký và ảnh đại diện nếu bạn tải lên. Bạn xác nhận email bằng một mã; mã này chỉ được lưu dạng băm và có hạn.',
                 `**Đăng nhập bằng Google hoặc Apple:** Chúng tôi nhận mã người dùng của nhà cung cấp và email của bạn, với Apple có thể là địa chỉ chuyển tiếp ẩn danh. Với Apple, chúng tôi lưu thêm một mã để thu hồi liên kết phía Apple khi bạn xoá tài khoản. Mã đăng nhập (script) của Google hoặc Apple chỉ được tải khi bạn mở hộp đăng nhập ([chính sách bảo mật của Google](${GOOGLE_PRIVACY}), [chính sách bảo mật của Apple](${APPLE_PRIVACY})).`,
                 '**Giữ đăng nhập:** Trên trình duyệt, chúng tôi đặt cookie “session” (HttpOnly, 30 ngày). Ứng dụng lưu mã đăng nhập trong vùng bảo mật của thiết bị (Keychain trên iOS, Keystore trên Android). Khi bạn đổi mật khẩu hoặc chọn “Đăng xuất trên mọi thiết bị”, mọi phiên khác bị vô hiệu.',
-                '**Ai thấy gì:** Chỉ bạn thấy ảnh đại diện của mình. Tên hiển thị và điểm của bạn hiện trên bảng xếp hạng cho người dùng đã đăng nhập khác. Trong phòng luyện nói và game nhiều người, người cùng phòng thấy tên hiển thị của bạn. Email không bao giờ được hiện cho ai.',
+                '**Ai thấy gì:** Chỉ bạn thấy ảnh đại diện của mình. Tên hiển thị và điểm của bạn hiện trên bảng xếp hạng cho người dùng đã đăng nhập khác. Trong phòng luyện nói, người cùng phòng thấy tên hiển thị của bạn. Email không bao giờ được hiện cho ai.',
                 'Cơ sở pháp lý là thực hiện thoả thuận sử dụng (Điều 6 khoản 1 điểm b GDPR).',
             ],
         },
@@ -382,11 +380,11 @@ const body: Record<Locale, LegalSection[]> = {
                     list: [
                         'Tiếng Đức: sổ từ vựng kèm ghi chú và câu ví dụ, câu đã đánh dấu, tiến độ từng bài học và video, kết quả chép chính tả, lịch và lịch sử ôn tập, các bài đã mở khoá.',
                         'Lý thuyết lái xe và Leben in Deutschland: câu đã trả lời (đúng/sai), câu đã lưu, bài thi thử và cài đặt như hạng bằng lái hoặc bang.',
-                        'Game và động lực học: điểm, kim cương, chuỗi ngày học và các ván game (ví dụ Sudoku, Caro). Điểm và kim cương không có giá trị tiền tệ.',
+                        'Động lực học: điểm, kim cương và chuỗi ngày học. Điểm và kim cương không có giá trị tiền tệ.',
                     ],
                 },
                 'Từ dữ liệu này, chúng tôi tạo nhắc nhở ở biểu tượng chuông (trang web) và trong ứng dụng. Nhắc học hằng ngày của ứng dụng là thông báo cục bộ do ứng dụng tự lên lịch trên máy bạn; chúng tôi không dùng dịch vụ push.',
-                'Không có tài khoản thì cài đặt và tiến độ tạm nằm trên thiết bị của bạn (bộ nhớ cục bộ, xem mục “Cookie và bộ nhớ cục bộ”). Khi chơi Sudoku hoặc Caro với người khác mà không có tài khoản, bạn nhận một tên khách ngẫu nhiên, được nhận ra qua cookie “play_guest” (30 ngày).',
+                'Không có tài khoản thì cài đặt và tiến độ tạm nằm trên thiết bị của bạn (bộ nhớ cục bộ, xem mục “Cookie và bộ nhớ cục bộ”).',
                 'Cơ sở pháp lý là Điều 6 khoản 1 điểm b GDPR.',
             ],
         },
@@ -457,7 +455,6 @@ const body: Record<Locale, LegalSection[]> = {
                 {
                     list: [
                         '“session”: giữ bạn đăng nhập (30 ngày).',
-                        '“play_guest”: nhận ra khách trong game nhiều người (30 ngày).',
                         '“lx_class”, “lx_lang”, “lid_state”: hạng bằng lái, ngôn ngữ câu hỏi và bang bạn đã chọn (1 năm).',
                     ],
                 },
@@ -491,7 +488,7 @@ const body: Record<Locale, LegalSection[]> = {
             blocks: [
                 'Dữ liệu tài khoản và dữ liệu học được lưu khi tài khoản còn tồn tại. Mã xác nhận hết hạn sau thời gian ngắn.',
                 '**Bản sao dữ liệu:** Tại Cài đặt → “Tải dữ liệu của tôi” (trang web) hoặc Cài đặt → Quyền riêng tư (ứng dụng), bạn nhận bản sao toàn bộ dữ liệu tài khoản và dữ liệu học dạng tệp JSON qua email.',
-                `**Xoá tài khoản:** Trên trang web tại [Cài đặt](/settings) hoặc trong ứng dụng tại Cài đặt → “Xoá tài khoản”. Việc này xoá ngay và vĩnh viễn tài khoản, ảnh đại diện, sổ từ vựng, tiến độ, câu trả lời, điểm, chỗ ngồi trong game và liên kết đăng nhập Google/Apple; liên kết Đăng nhập bằng Apple được thu hồi phía Apple. Góp ý đã gửi được giữ lại nhưng không còn gắn với tài khoản và không kèm email. Bạn cũng có thể gửi email tới [${MAIL}](mailto:${MAIL}).`,
+                `**Xoá tài khoản:** Trên trang web tại [Cài đặt](/settings) hoặc trong ứng dụng tại Cài đặt → “Xoá tài khoản”. Việc này xoá ngay và vĩnh viễn tài khoản, ảnh đại diện, sổ từ vựng, tiến độ, câu trả lời, điểm và liên kết đăng nhập Google/Apple; liên kết Đăng nhập bằng Apple được thu hồi phía Apple. Góp ý đã gửi được giữ lại nhưng không còn gắn với tài khoản và không kèm email. Bạn cũng có thể gửi email tới [${MAIL}](mailto:${MAIL}).`,
                 '**Bản sao lưu:** Cơ sở dữ liệu được sao lưu hằng ngày. Bản sao lưu được truyền ở dạng mã hoá, chỉ người vận hành giữ và bị ghi đè sau tối đa 60 ngày; dữ liệu đã xoá chậm nhất khi đó cũng biến mất khỏi bản sao lưu.',
                 'Yêu cầu và góp ý được xoá khi đã giải quyết xong và không còn nghĩa vụ lưu trữ theo luật.',
             ],

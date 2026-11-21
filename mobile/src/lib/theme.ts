@@ -8,7 +8,7 @@ export type Scheme = "light" | "dark";
 /**
  * Design system "Nhãn vở" — cùng token với web (src/app/(app)/globals.css, DESIGN.md).
  * Mỗi màu một việc: xanh lam = thương hiệu / hành động chính / khu Tiếng Đức · vàng = Lái xe, thưởng ·
- * coral = Leben in Deutschland, ghi âm · tím = Game · ok (xanh lá) = ĐÚNG / đã xong · đỏ = SAI / xoá · gem = kim cương.
+ * coral = Leben in Deutschland, ghi âm · tím = trình độ C · ok (xanh lá) = ĐÚNG / đã xong · đỏ = SAI / xoá · gem = kim cương.
  * Tên khoá cũ (ink, inkLine, card2, bar…) giữ nguyên để mọi màn vẫn chạy; nghĩa mới ghi bên cạnh.
  */
 const LIGHT = {
@@ -181,25 +181,6 @@ export function stageBg(hex: string) {
   return `rgb(${r},${g},${b})`;
 }
 
-/** Màn chơi game: "giấy than tím đêm" như .theme-night của web — luôn tối, chung chữ / nút / bo góc với cả app */
-const NIGHT_BASE = {
-  background: "#120f24",
-  card: "#1a1533",
-  card2: "#231d42",
-  border: "#2f2852",
-  text: "#f1eeff",
-  muted: "#a9a2cc",
-  accent: "#6a4ae0",
-  accentDark: "#4f33bd",
-  amber: "#ffd36a",
-  phrase: "#7fd3f0",
-  red: "#e5484d",
-  redText: "#ff8a8f",
-  ok: "#2f9e5e",
-  okText: "#6fdc9c",
-};
-export const NIGHT = themed(() => NIGHT_BASE);
-
 /** Khung phẳng như .card của web: nền trắng + viền 1px, không bóng (chiều sâu = lớp màu dán chồng) */
 export const STICKER = themed(() => ({ borderWidth: 1, borderColor: C.border }));
 
@@ -209,14 +190,13 @@ export const FLOAT = themed(() => ({ boxShadow: isDark() ? "0 8px 24px rgba(0,0,
 /** Bo góc chung: khung 16 · ô / nút 12 · nhỏ 8 */
 export const R = { sm: 8, md: 12, lg: 16, xl: 24 } as const;
 
-/** Màu bìa theo khu vực (data-sec của web): de xanh lam · laixe vàng · lid coral · game tím · ink tài khoản / thông tin */
-export type Sec = "de" | "laixe" | "lid" | "game" | "ink";
+/** Màu bìa theo khu vực (data-sec của web): de xanh lam · laixe vàng · lid coral · ink tài khoản / thông tin */
+export type Sec = "de" | "laixe" | "lid" | "ink";
 export type SecColors = { sec: string; secDark: string; secSoft: string; secText: string; onSec: string };
 export const SEC = themed((): Record<Sec, SecColors> => ({
   de: { sec: C.accent, secDark: C.accentDark, secSoft: C.accentSoft, secText: C.accentText, onSec: "#ffffff" },
   laixe: { sec: C.gold, secDark: C.goldDark, secSoft: C.goldSoft, secText: C.amber, onSec: "#16203a" },
   lid: { sec: C.coral, secDark: C.coralDark, secSoft: C.coralSoft, secText: C.coralText, onSec: "#16203a" },
-  game: { sec: C.grape, secDark: C.grapeDark, secSoft: C.grapeSoft, secText: C.grapeText, onSec: "#ffffff" },
   ink: isDark()
     ? { sec: "#26314f", secDark: "#1a233d", secSoft: C.card2, secText: C.text, onSec: "#ffffff" }
     : { sec: "#16203a", secDark: "#0b1226", secSoft: C.card2, secText: C.text, onSec: "#ffffff" },

@@ -31,7 +31,7 @@ const ADSENSE_CLIENT = "ca-pub-5590145594898560";
 
 const SITE_TITLE = "HalloVN – Học tiếng Đức, thi lái xe & Leben in Deutschland cho người Việt";
 const SITE_DESCRIPTION =
-  "Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ vựng. Miễn phí cho người Việt tại Đức.";
+  "Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt. Miễn phí cho người Việt tại Đức.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

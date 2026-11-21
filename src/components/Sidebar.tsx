@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookMarked, Captions, Car, ChevronDown, Gamepad2, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
+import { BarChart3, BookMarked, Captions, Car, ChevronDown, House, Landmark, Languages, Layers, ListVideo, LogOut, MessageSquare, MonitorPlay, Settings, Trophy, Users } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
@@ -14,7 +14,6 @@ type Item = { href: string; label: string; short?: string; icon: ComponentType<{
 export function secOf(href: string): string | undefined {
   if (href.startsWith("/lai-xe")) return "laixe";
   if (href.startsWith("/leben-in-deutschland")) return "lid";
-  if (href.startsWith("/games")) return "game";
   if (href.startsWith("/admin") || href === "/stats" || href === "/settings") return "ink";
   if (href === "/") return undefined;
   return "de";
@@ -26,7 +25,6 @@ const ITEMS: Item[] = [
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
-  { href: "/games", label: "Trò chơi", short: "Game", icon: Gamepad2 },
 ];
 const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers };
 const DEUTSCH: Item[] = [
@@ -35,7 +33,7 @@ const DEUTSCH: Item[] = [
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
-const GUEST_BAR: Item[] = ITEMS.filter((it) => it.href !== "/games");
+const GUEST_BAR: Item[] = ITEMS;
 const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Tiến độ & thành tích", icon: BarChart3 },

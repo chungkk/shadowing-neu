@@ -13,7 +13,6 @@ const COLUMNS = [
       { href: "/vocab", label: "Từ vựng Goethe A1–B1" },
       { href: "/lai-xe", label: "Lý thuyết lái xe Đức" },
       { href: "/leben-in-deutschland", label: "Leben in Deutschland" },
-      { href: "/games", label: "Trò chơi luyện từ" },
     ],
   },
   {

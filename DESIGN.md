@@ -17,14 +17,14 @@ Chế độ **Tối** (`[data-theme="dark"]`, đổi qua `ThemeToggle`): nền t
 | Hành động chính / Thương hiệu | `--accent` · `-dark` · `-soft` · `-text` | `#2563EB` | `#3B82F6` | nút chính (tối đa 1/màn), link, focus, khu **Tiếng Đức** |
 | Khu Lái xe / Cảnh báo nhẹ | `--gold` · `-dark` · `-soft` · `--amber` | `#F59E0B` / `#92400E` | `#FBBF24` / `#FCD34D` | khu **Lái xe**, chuỗi ngày, điểm nhấn |
 | Khu LiD / Ghi âm | `--coral` · `-dark` · `-soft` · `-text` | `#EA580C` / `#C2410C` | `#FB923C` / `#FDBA74` | khu **Leben in Deutschland**, nút ghi âm |
-| Khu Game | `--grape` · `-dark` · `-soft` · `-text` | `#4F46E5` / `#4338CA` | `#818CF8` / `#A5B4FC` | khu **Trò chơi** |
+| Tím chàm | `--grape` · `-dark` · `-soft` · `-text` | `#4F46E5` / `#4338CA` | `#818CF8` / `#A5B4FC` | nhãn trình độ C |
 | Đúng / Thành công | `--ok` · `-dark` · `-soft` · `-text` | `#16A34A` / `#15803D` | `#22C55E` / `#4ADE80` | **chỉ dùng cho đúng / hoàn thành / đậu** — không dùng làm màu khu vực hay nút chính |
 | Sai / Xóa / Đang ghi âm | `--red` · `-dark` · `-soft` · `--red-400` | `#DC2626` / `#B91C1C` | `#EF4444` / `#F87171` | câu sai, xóa, lỗi, đang ghi âm |
 | Kim cương | `--gem` · `-dark` · `-soft` | `#0284C7` | `#38BDF8` | điểm kiếm được khi học |
 | Bước học transcript | `--aqua` nghe · `--candy` nói · `--sun` chép · `--leaf` đúng | pastel nhẹ | nền tối dịu | câu đang học trong `ShadowPlayer` |
 
 ### Màu nhận diện khu vực (`data-sec`)
-Đặt `data-sec="de|laixe|lid|game|ink"` trên khung trang/khu vực để cấp `--sec`, `--sec-dark`, `--sec-soft`, `--sec-text`, `--on-sec`.  
+Đặt `data-sec="de|laixe|lid|ink"` trên khung trang/khu vực để cấp `--sec`, `--sec-dark`, `--sec-soft`, `--sec-text`, `--on-sec`.  
 Nguyên tắc tối giản: **dùng màu khu vực tiết chế** (icon tint, gạch chân tab active, thanh tiến độ, badge nhỏ) — không tô mảng nền chói cả màn hình.
 
 ---
@@ -63,7 +63,6 @@ Nguyên tắc tối giản: **dùng màu khu vực tiết chế** (icon tint, g�
 ## 5. Màn đặc biệt được bảo toàn
 
 - **`.theme-fahrschule`** (màn câu hỏi & thi thử Lái xe): giữ giao diện sáng, rõ, mô phỏng phần mềm thi lý thuyết thật (luôn sáng kể cả khi bật Dark mode), đồng bộ font và bo góc với hệ mới.
-- **`.theme-night`** (màn chơi game): giữ nền tối tập trung, đồng bộ chữ, nút và token với chế độ tối mới.
 
 ---
 

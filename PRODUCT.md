@@ -23,7 +23,7 @@ Một tài khoản, miễn phí, viết cho người Việt: học tiếng Đứ
 - Tiếng Đức: danh sách video theo trình độ, màn học shadowing (transcript, ghi âm, chính tả), sổ từ vựng, bộ thẻ từ, ôn từ, nói (Sprechen).
 - Lái xe: học theo chương/hạng, câu sai, đánh dấu, đề mẫu, thi thử 30 câu (màn làm bài mô phỏng phần mềm thi thật), thống kê.
 - Leben in Deutschland: chọn bang, chủ đề, thi thử 33 câu, câu sai, đánh dấu, thống kê.
-- Game luyện từ (mưa từ, nối từ, ong đánh vần, der-die-das, caro, sudoku), bảng xếp hạng, kim cương chỉ kiếm từ học.
+- Bảng xếp hạng, kim cương chỉ kiếm từ học.
 - Tài khoản, cài đặt, thống kê; khu admin (bài học, transcript, người dùng, góp ý); các trang thông tin/pháp lý.
 - App mobile React Native riêng trong mobile/ (không thuộc phạm vi web).
 
@@ -33,7 +33,7 @@ Một tài khoản, miễn phí, viết cho người Việt: học tiếng Đứ
 - Giao diện tiếng Việt; nội dung học có tiếng Đức.
 - Giữ nguyên chức năng, API, DB và logic nghiệp vụ khi đổi giao diện.
 - Có chế độ sáng/tối (mặc định: sáng, có nút chuyển sang tối).
-- Màn làm bài Lái xe giữ tinh thần phần mềm thi thật; màn game giữ không khí riêng — cả hai dùng chung hệ token/nút/chữ.
+- Màn làm bài Lái xe giữ tinh thần phần mềm thi thật — dùng chung hệ token/nút/chữ.
 
 ## Brand Commitments
 
@@ -43,7 +43,7 @@ Một tài khoản, miễn phí, viết cho người Việt: học tiếng Đứ
 
 ## Evidence on Hand
 
-- Số liệu thật: 1.100+ câu lái xe hạng B, 460 câu LiD (300 chung + 10/bang), 6 game, miễn phí.
+- Số liệu thật: 1.100+ câu lái xe hạng B, 460 câu LiD (300 chung + 10/bang), miễn phí.
 - Chưa có người dùng thật ngoài chủ dự án (11/2026): không được bịa lời chứng thực, số người dùng hay đánh giá.
 
 ## Product Principles

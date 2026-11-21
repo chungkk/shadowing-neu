@@ -2,7 +2,6 @@
 /* CSS riêng từng khu vực — phải đứng trước mọi rule khác */
 @import "./styles/deutsch.css";
 @import "./styles/exams.css";
-@import "./styles/games.css";
 @import "./styles/account.css";
 /* Bỏ qua dữ liệu JSON lớn khi Tailwind quét tên class */
 @source not "../../../content";
@@ -19,7 +18,7 @@
    · xanh lam (accent)  = thương hiệu, hành động chính, link, focus, khu Tiếng Đức
    · hổ phách (gold)    = khu Lái xe, cảnh báo nhẹ, chuỗi ngày
    · cam đất (coral)    = khu Leben in Deutschland, nút ghi âm
-   · tím chàm (grape)   = khu Trò chơi
+   · tím chàm (grape)   = trình độ C1–C2
    · xanh lá (ok)       = ĐÚNG / hoàn thành / đậu — chỉ dùng cho kết quả, không làm màu khu vực
    · đỏ (red)           = SAI / xóa / lỗi / đang ghi âm
    · xanh ngọc (gem)    = kim cương kiếm từ học tập */
@@ -56,7 +55,7 @@
   --coral-dark: #c2410c;
   --coral-soft: #fff7ed;
   --coral-text: #c2410c;
-  /* Khu Game: tím chàm */
+  /* Tím chàm: nhãn trình độ C */
   --grape: #4f46e5;
   --grape-dark: #4338ca;
   --grape-soft: #eef2ff;
@@ -200,18 +199,6 @@
   --on-sec: #0b0d12;
 }
 
-[data-sec="game"] {
-  --sec: var(--grape);
-  --sec-dark: var(--grape-dark);
-  --sec-soft: var(--grape-soft);
-  --sec-text: var(--grape-text);
-  --on-sec: #ffffff;
-}
-
-[data-theme="dark"] [data-sec="game"] {
-  --on-sec: #0b0d12;
-}
-
 [data-sec="ink"] {
   --sec: #334155;
   --sec-dark: #1e293b;
@@ -223,49 +210,6 @@
 [data-theme="dark"] [data-sec="ink"] {
   --sec: #475569;
   --sec-dark: #334155;
-}
-
-/* Màn chơi game: nền tối tập trung, đồng bộ chữ & bo góc */
-.theme-night {
-  color-scheme: dark;
-  --background: #0b0d12;
-  --sidebar: #0f1219;
-  --foreground: #f1f5f9;
-  --ink: #2d3548;
-  --line: #1e2433;
-  --line-strong: #475569;
-  --card: #12151e;
-  --card-2: #1a1f2c;
-  --border: #2a3144;
-  --muted: #94a3b8;
-  --link: #fcd34d;
-  --link-soft: #2b210d;
-  --accent: #6366f1;
-  --accent-dark: #4f46e5;
-  --accent-text: #a5b4fc;
-  --accent-soft: #1c1e3d;
-  --amber: #fcd34d;
-  --amber-dark: #fde68a;
-  --gold: #fbbf24;
-  --gold-dark: #d97706;
-  --gold-soft: #2b210d;
-  --ok: #22c55e;
-  --ok-dark: #16a34a;
-  --ok-soft: #0e2619;
-  --ok-text: #4ade80;
-  --red: #ef4444;
-  --red-dark: #dc2626;
-  --red-soft: #2d1418;
-  --red-400: #f87171;
-  --red-300: #fca5a5;
-  --phrase: #38bdf8;
-  --gem: #38bdf8;
-  --gem-dark: #0284c7;
-  --gem-soft: #0d2233;
-  --shadow-color: 0 0 0;
-  --board: var(--card-2);
-  --cell: var(--card);
-  color: var(--foreground);
 }
 
 /* Màn làm câu hỏi Lái xe: bảo toàn tinh thần phần mềm thi lý thuyết thật (luôn sáng, rõ) */
@@ -306,7 +250,6 @@
 
 /* Bóng tinh tế cho lớp nổi */
 :root,
-.theme-night,
 .theme-fahrschule {
   --shadow-xs: 0 1px 2px rgb(var(--shadow-color) / 0.05);
   --shadow-sm: 0 1px 2px rgb(var(--shadow-color) / 0.04), 0 4px 10px -3px rgb(var(--shadow-color) / 0.08);
@@ -1693,26 +1636,7 @@ body:has(.lesson) .footer-legal {
   }
 }
 
-/* ───── Game & Mascot animations (giữ nguyên cho màn chơi game & loading) ───── */
-.rain-hit {
-  animation: rain-hit 700ms ease-out forwards;
-}
-
-@keyframes rain-hit {
-  25% {
-    transform: scale(1.15);
-  }
-
-  100% {
-    transform: scale(1.05) translateY(-28px);
-    opacity: 0;
-  }
-}
-
-.rain-miss {
-  animation: pt-fade 700ms ease-in forwards;
-}
-
+/* ───── Hiệu ứng nhỏ (rung khi sai, loading) ───── */
 .shake {
   animation: shake 300ms;
 }
@@ -1727,16 +1651,6 @@ body:has(.lesson) .footer-legal {
   }
 }
 
-.rain-streak {
-  animation: rain-fall linear infinite;
-}
-
-@keyframes rain-fall {
-  to {
-    transform: translateY(110vh);
-  }
-}
-
 .page-loader {
   animation: page-loader-in 200ms ease-out 250ms backwards;
 }
@@ -1745,59 +1659,6 @@ body:has(.lesson) .footer-legal {
   from {
     opacity: 0;
     transform: translateY(6px);
-  }
-}
-
-.bob {
-  animation: bob 2.4s ease-in-out infinite;
-}
-
-@keyframes bob {
-  50% {
-    transform: translateY(-4px) rotate(-2deg);
-  }
-}
-
-.hook-swing {
-  animation: hook-swing 2.6s ease-in-out infinite;
-}
-
-@keyframes hook-swing {
-
-  0%,
-  100% {
-    transform: rotate(14deg);
-  }
-
-  50% {
-    transform: rotate(-14deg);
-  }
-}
-
-.gold-pull {
-  animation: gold-pull 0.35s ease-in-out infinite;
-}
-
-@keyframes gold-pull {
-  50% {
-    transform: translateY(3px) rotate(-8deg);
-  }
-}
-
-.twinkle {
-  animation: twinkle 3s ease-in-out infinite;
-}
-
-@keyframes twinkle {
-
-  0%,
-  100% {
-    opacity: 0.15;
-  }
-
-  50% {
-    opacity: 1;
-    transform: translateY(-4px);
   }
 }
 
@@ -1811,43 +1672,6 @@ body:has(.lesson) .footer-legal {
   100% {
     opacity: 0;
   }
-}
-
-@keyframes play-drop {
-  from {
-    transform: translateY(-70%) scale(0.6);
-    opacity: 0.3;
-  }
-
-  60% {
-    transform: translateY(6%) scale(1.06);
-    opacity: 1;
-  }
-
-  to {
-    transform: none;
-  }
-}
-
-@keyframes play-bounce {
-
-  0%,
-  100% {
-    transform: none;
-  }
-
-  50% {
-    transform: translateY(-14%);
-  }
-}
-
-.play-drop {
-  display: inline-block;
-  animation: play-drop 0.3s cubic-bezier(0.3, 1.4, 0.6, 1) both;
-}
-
-.play-bounce {
-  animation: play-bounce 0.55s ease-in-out infinite;
 }
 
 @keyframes mascot-wow {
@@ -1949,9 +1773,6 @@ body:has(.lesson) .footer-legal {
 
 @media (prefers-reduced-motion: reduce) {
 
-  .hook-swing,
-  .gold-pull,
-  .bob,
   .page-loader,
   .shake,
   .sheet-fade,
@@ -1962,8 +1783,6 @@ body:has(.lesson) .footer-legal {
   .points-bump,
   .points-roll,
   .points-glow,
-  .play-drop,
-  .play-bounce,
   .mascot-wow,
   .mascot-cheer,
   .mascot-zzz,
@@ -1971,18 +1790,8 @@ body:has(.lesson) .footer-legal {
     animation: none;
   }
 
-  .twinkle {
-    animation: none;
-    opacity: 0.5;
-  }
-
-  .rain-streak,
   .pt-spark {
     display: none;
-  }
-
-  .rain-hit {
-    animation: pt-fade 700ms ease-out forwards;
   }
 
   .pt-plus {

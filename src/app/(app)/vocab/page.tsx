@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Check, ChevronRight, Gamepad2, Layers, Library } from "lucide-react";
+import { BookOpen, Check, ChevronRight, Layers, Library } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { vocabOverview } from "@/lib/db";
 import { deckCounts, deckMarks, getDeck, listDecks, type DeckSummary } from "@/lib/decks";
@@ -148,18 +148,7 @@ async function Decks() {
           </div>
         </section>
       ))}
-      {decks.length ? (
-        <Link href="/games" data-sec="game" className="group card card-link flex items-center gap-3.5 p-4 sm:px-5">
-          <span className="icon-bubble tint-sec size-10">
-            <Gamepad2 className="size-5" />
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground sm:text-base">Ôn từ nhanh bằng trò chơi</span>
-            <span className="text-xs text-muted sm:text-sm">Mưa từ vựng, Nối từ, Ong đánh vần, Der Die Das…</span>
-          </span>
-          <ArrowRight className="size-4 shrink-0 text-sec-text transition group-hover:translate-x-0.5 motion-reduce:transition-none" />
-        </Link>
-      ) : (
+      {!decks.length && (
         <div className="card empty">
           <Mascot className="size-20 opacity-90" />
           <p className="text-base font-semibold text-foreground">Chưa có bộ từ nào.</p>

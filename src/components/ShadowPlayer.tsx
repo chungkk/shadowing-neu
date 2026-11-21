@@ -42,7 +42,7 @@ import YouTubePlayer from "./YouTubePlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
 import Mascot from "./Mascot";
-import { GuestTrialNote, GuestWall, useGuestQuota } from "./games/GuestQuota";
+import { GuestTrialNote, GuestWall, useGuestQuota } from "./GuestQuota";
 import { Gem } from "./PointsBadge";
 import { SoundMark } from "./SoundBars";
 import WordPopup from "./WordPopup";

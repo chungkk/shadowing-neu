@@ -11,7 +11,7 @@ import type { QuizStat } from "@/lib/quiz/types";
 import { sendAnswer, watchOutbox } from "@/lib/quiz/outbox";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../games/GuestQuota";
+import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../GuestQuota";
 import { ProgressBar } from "../quiz/QuizParts";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useExamLeaveGuard } from "@/hooks/useExamLeaveGuard";

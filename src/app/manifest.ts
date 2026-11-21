@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'HalloVN – Học tiếng Đức, lái xe & Leben in Deutschland',
         short_name: 'HalloVN',
         description:
-            'Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ vựng. Miễn phí cho người Việt tại Đức.',
+            'Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt. Miễn phí cho người Việt tại Đức.',
         start_url: '/',
         scope: '/',
         display: 'browser',

@@ -7,7 +7,6 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
-  Gamepad2,
   Headphones,
   Landmark,
   Languages,
@@ -26,7 +25,7 @@ import { pageMeta } from "@/lib/page-meta";
 export const metadata: Metadata = pageMeta({
   title: { absolute: "HalloVN – Học tiếng Đức, ôn bằng lái và Leben in Deutschland" },
   description:
-    "Học tiếng Đức online cho người Việt: luyện nghe nói qua video YouTube, từ vựng Goethe A1–B1, game der die das; ôn lý thuyết lái xe, Leben in Deutschland. Miễn phí.",
+    "Học tiếng Đức online cho người Việt: luyện nghe nói qua video YouTube, từ vựng Goethe A1–B1; ôn lý thuyết lái xe, Leben in Deutschland. Miễn phí.",
   path: "/",
 });
 
@@ -36,7 +35,6 @@ const METRICS: { value: string; label: string }[] = [
   { value: "1.100+", label: "Câu lý thuyết lái xe hạng B" },
   { value: "460", label: "Câu Leben in Deutschland (BAMF)" },
   { value: "A1 – C2", label: "Video bản xứ & từ vựng Goethe" },
-  { value: "6", label: "Trò chơi luyện từ vựng" },
   { value: "0 €", label: "Miễn phí · một tài khoản" },
 ];
 
@@ -77,15 +75,6 @@ const HOW_IT_WORKS = [
     title: "Ôn lỗ hổng & thi thử",
     text: "Hệ thống tự gom câu sai, từ đến hạn ôn và đề thi thử đúng cấu trúc thật để bạn biết khi nào đã sẵn sàng.",
   },
-];
-
-const GAMES = [
-  { name: "Mưa từ vựng", href: "/games/word-rain" },
-  { name: "Nối từ", href: "/games/word-match" },
-  { name: "Ong đánh vần", href: "/games/spelling-bee" },
-  { name: "Der Die Das", href: "/games/der-die-das" },
-  { name: "Caro", href: "/games/caro" },
-  { name: "Sudoku", href: "/games/sudoku" },
 ];
 
 const HOME_FAQ = [
@@ -375,35 +364,6 @@ export default function Home() {
             </Link>
           </div>
         </article>
-      </section>
-
-      {/* ── Khu trò chơi: dải ngang gọn gàng ── */}
-      <section aria-labelledby="sec-games" data-sec="game" className={`${wrap} py-4`}>
-        <div className="card flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3.5">
-            <span className="icon-bubble tint-grape mt-0.5 size-10">
-              <Gamepad2 className="size-5" />
-            </span>
-            <div className="flex flex-col gap-1">
-              <h2 id="sec-games" className="section-title">
-                6 trò chơi luyện từ &amp; giống danh từ
-              </h2>
-              <p className="max-w-md text-sm text-muted">
-                Ôn từ vựng Goethe A1–B2 và nhớ nhanh der / die / das qua vài phút giải trí mỗi ngày.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            {GAMES.map((g) => (
-              <Link key={g.href} href={g.href} className="chip text-xs">
-                {g.name}
-              </Link>
-            ))}
-            <Link href="/games" className="btn btn-sm btn-soft">
-              Tất cả game <ArrowRight className="size-3.5" />
-            </Link>
-          </div>
-        </div>
       </section>
 
       {/* ── Cách hoạt động ── */}

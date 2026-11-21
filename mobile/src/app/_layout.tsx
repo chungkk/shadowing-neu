@@ -29,7 +29,6 @@ function AppStack() {
             <Stack.Screen name="vocab" options={{ title: "" }} />
             <Stack.Screen name="notebook" options={{ title: "" }} />
             <Stack.Screen name="deck/[slug]" options={{ title: "" }} />
-            <Stack.Screen name="game/[variant]" options={{ headerShown: false }} />
             <Stack.Screen name="privacy" options={{ title: "" }} />
             <Stack.Screen name="quiz/run" options={{ title: "" }} />
             <Stack.Screen name="quiz/stats" options={{ title: "" }} />
