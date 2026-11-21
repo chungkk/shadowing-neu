@@ -141,7 +141,7 @@ async function LevelCatalogView({ params }: PageProps<"/tieng-duc/trinh-do/[leve
           }
           actions={
             first && (
-              <Link href={`${lessonPath(first.slug)}?stage=1`} className="btn btn-primary btn-lg max-sm:w-full">
+              <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg max-sm:w-full">
                 Bắt đầu bài {lv} đầu tiên <ArrowRight className="size-5" />
               </Link>
             )

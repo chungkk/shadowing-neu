@@ -161,10 +161,10 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
           {lvInfo && <p className="text-xs leading-relaxed text-muted">{lvInfo.intro}</p>}
         </div>
 
-        {/* 3 bài tập cho bài học này */}
+        {/* 3 chế độ luyện cho bài học này */}
         <div className="grid gap-2.5 sm:grid-cols-3">
           {lesson.dictation && (
-            <Link href={`${lessonPath(lesson.slug)}?stage=1`} className="tile sticker-link flex items-start gap-2.5 p-3">
+            <div className="surface flex items-start gap-2.5 p-3">
               <span className="icon-bubble tint-accent size-8 shrink-0 rounded-lg">
                 <Ear className="size-4" />
               </span>
@@ -172,9 +172,9 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
                 <span className="block text-sm font-bold">Bài tập Dictation</span>
                 <span className="text-xs text-muted">Nghe từng câu và gõ chính tả tiếng Đức</span>
               </span>
-            </Link>
+            </div>
           )}
-          <Link href={`${lessonPath(lesson.slug)}?stage=2`} className="tile sticker-link flex items-start gap-2.5 p-3">
+          <div className="surface flex items-start gap-2.5 p-3">
             <span className="icon-bubble tint-sec size-8 shrink-0 rounded-lg">
               <Mic className="size-4" />
             </span>
@@ -182,8 +182,8 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
               <span className="block text-sm font-bold">Bài tập Shadowing</span>
               <span className="text-xs text-muted">Nói nhại theo ngữ điệu & ghi âm so sánh</span>
             </span>
-          </Link>
-          <Link href={`${lessonPath(lesson.slug)}?stage=3`} className="tile sticker-link flex items-start gap-2.5 p-3">
+          </div>
+          <div className="surface flex items-start gap-2.5 p-3">
             <span className="icon-bubble tint-gold size-8 shrink-0 rounded-lg">
               <Zap className="size-4" />
             </span>
@@ -191,7 +191,7 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
               <span className="block text-sm font-bold">Bài tập Nghe hiểu</span>
               <span className="text-xs text-muted">Ẩn phụ đề để luyện nghe phản xạ tự nhiên</span>
             </span>
-          </Link>
+          </div>
         </div>
       </section>
 
@@ -325,9 +325,8 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
 }
 
 /** Trang bài học: hallovn.de/tieng-duc/<slug> (link cũ hallovn.de/<slug> và /lesson/<id> chuyển hướng 308 về đây) */
-async function LessonView({ params, searchParams }: PageProps<"/tieng-duc/[slug]">) {
-  const [{ slug }, { stage }] = await Promise.all([params, searchParams]);
-  const initialStage = stage === "1" ? 1 : stage === "2" ? 2 : stage === "3" ? 3 : undefined;
+async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
+  const { slug } = await params;
   const lesson = getLessonBySlug(slug);
   // Bài nháp chỉ admin và người đã trả để mở xem được
   const user = await getCurrentUser();
@@ -362,7 +361,6 @@ async function LessonView({ params, searchParams }: PageProps<"/tieng-duc/[slug]
         sourceUrl={`/lesson/${lesson.id}`}
         allowDictation={lesson.dictation}
         earnPoints={!own}
-        initialStage={initialStage}
       >
         {(draft || own) && (
           <div className="surface flex flex-col gap-1.5 text-sm">

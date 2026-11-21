@@ -32,7 +32,6 @@ import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
 import { hasWords, pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
-import { stageSpec, type StageId } from "@/lib/learning-path";
 import { clientApi } from "@/lib/client-api";
 import { isSentence } from "@/lib/review";
 import { emitPoints } from "@/lib/points";
@@ -232,7 +231,6 @@ export default function ShadowPlayer({
   allowDictation = false,
   saveProgress = true,
   earnPoints = true,
-  initialStage,
   children,
 }: {
   title: string;
@@ -242,7 +240,6 @@ export default function ShadowPlayer({
   allowDictation?: boolean; // bài admin bật Chính tả; video tự dán chỉ Shadowing
   saveProgress?: boolean; // false: video tự dán — học thử, không lưu tiến độ (muốn lưu → tạo bài học riêng)
   earnPoints?: boolean; // false: bài riêng — chép chính tả không được / không mất kim cương
-  initialStage?: StageId; // mở từ Lộ trình học (?stage=1|2|3): áp dụng chế độ luyện tương ứng
   videoId: string;
   segments: Segment[];
   backHref?: string;
@@ -265,8 +262,6 @@ export default function ShadowPlayer({
   const [playing, setPlaying] = useState(false);
   const [gap, setGap] = useState<{ ms: number; id: number } | null>(null);
   const [panel, setPanel] = useState<"settings" | null>(null);
-  const [stageTipDismissed, setStageTipDismissed] = useState(false);
-  const appliedStage = useRef<StageId | null>(null);
   // Điện thoại đang gõ chính tả (bàn phím mở) → thu video về 0 (vẫn phát tiếng) để nhường chỗ cho ô gõ
   const [typing, setTyping] = useState(false);
   const [picked, setPicked] = useState<{ word: string; context: string; marks?: string[] } | null>(null); // bảng tra từ đang mở
@@ -728,11 +723,11 @@ export default function ShadowPlayer({
         if (dict && round.length && !round.includes(i)) i = round.find((k) => !done[k]) ?? round[0];
         setIdx(i);
         setDictPick(round);
-        // Chế độ + mức chính tả học lần trước (trên web hay app) — nếu mở từ Lộ trình (?stage=…) thì ưu tiên chế độ của giai đoạn
+        // Chế độ + mức chính tả học lần trước (trên web hay app) — 1 lần ghi để không đè nhau
         const patch: Partial<Settings> = {};
-        if (allowDictation && !initialStage) patch.practice = p.mode;
+        if (allowDictation) patch.practice = p.mode;
         if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") patch.dictLevel = p.dictLevel;
-        if (Object.keys(patch).length) update(patch);
+        update(patch);
         setDictDone(done);
         setEarned(p.dictRoundPts ?? {});
         setSpent(p.dictRoundSpent ?? {});
@@ -749,16 +744,7 @@ export default function ShadowPlayer({
     return () => {
       alive = false;
     };
-  }, [syncProgress, sourceUrl, segments.length, texts, allowDictation, initialStage, update]);
-
-  // Mở từ Lộ trình học (?stage=1|2|3) → đặt đúng chế độ luyện (1: Dictation · 2: Shadowing · 3: Shadowing ẩn phụ đề)
-  useEffect(() => {
-    if (!initialStage || appliedStage.current === initialStage) return;
-    appliedStage.current = initialStage;
-    if (initialStage === 1) update({ practice: allowDictation ? "dictation" : "shadow", hideText: false });
-    else if (initialStage === 2) update({ practice: "shadow", hideText: false, mode: "segment", gapFactor: 1.2 });
-    else update({ practice: "shadow", hideText: true, mode: "segment" });
-  }, [initialStage, allowDictation, update]);
+  }, [syncProgress, sourceUrl, segments.length, texts, allowDictation, update]);
 
   // ---- Điểm chính tả: gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 (cần tài khoản, như tiến độ) ----
   useEffect(() => {
@@ -1031,20 +1017,6 @@ export default function ShadowPlayer({
           {toggles}
         </div>
       </div>
-
-      {initialStage && !stageTipDismissed && (
-        <div className="alert alert-info items-center justify-between gap-3">
-          <span className="text-sm font-medium">{stageSpec(initialStage).playerTip}</span>
-          <button
-            type="button"
-            onClick={() => setStageTipDismissed(true)}
-            aria-label="Đóng gợi ý giai đoạn"
-            className="btn-icon size-7 shrink-0 text-muted hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
 
       {!loggedIn && <GuestTrialNote area="shadow" quota={quota} extra="tra từ, lưu tiến độ và nhận kim cương" />}
       <GuestWall area="shadow" quota={quota} backHref={backHref} />
