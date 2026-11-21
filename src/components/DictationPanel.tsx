@@ -256,10 +256,10 @@ export default function DictationPanel({
                 e.preventDefault();
                 onNextSentence();
               } else if (e.key === "Backspace" && !slots[active] && active > 0) {
-                // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
+                // Ô trống → lùi về ô chưa xong gần nhất phía trước; bỏ qua ô đã gõ đúng / đã xem (xoá quá tay không làm hỏng từ đúng)
                 e.preventDefault();
                 for (let k = active - 1; k >= 1; k--) {
-                  if (!revealed.has(k)) {
+                  if (isOpenWord(result.words[k])) {
                     setActive(k);
                     break;
                   }
