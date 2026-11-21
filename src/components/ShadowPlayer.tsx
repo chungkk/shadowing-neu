@@ -1416,8 +1416,11 @@ export default function ShadowPlayer({
           </div>
         )}
 
-        {/* Cột 3: transcript sạch, dính gọn dưới header sticky */}
-        <div className="card flex max-h-[75dvh] min-h-0 min-w-0 flex-col gap-2.5 max-md:max-h-none max-sm:p-3 lg:col-span-2 xl:sticky xl:top-20 xl:col-span-1 xl:max-h-[calc(100vh-6.5rem)]">
+        {/* Cột 3: transcript sạch, dính gọn dưới header sticky.
+            Màn rộng: khung ngoài không góp chiều cao (contain: size) → cao bằng 2 cột kia (tối thiểu 30rem), danh sách cuộn bên trong,
+            thay vì kéo dài theo số câu / chiều cao màn hình */}
+        <div className="min-w-0 lg:col-span-2 xl:col-span-1 xl:flex xl:min-h-[30rem] xl:flex-col xl:[contain:size]">
+          <div className="card flex max-h-[75dvh] min-h-0 min-w-0 flex-col gap-2.5 max-md:max-h-none max-sm:p-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6.5rem)]">
           <h2 className="label flex min-w-0 items-center gap-1.5 truncate text-foreground">
             <SoundMark className="text-base" />
             {dictation ? "Lượt chính tả" : starredOnly ? "Câu đã đánh dấu" : "Transcript"}
@@ -1510,6 +1513,7 @@ export default function ShadowPlayer({
                 <p className="text-sm text-muted">Chưa có câu nào được đánh dấu sao trong bài này.</p>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>
