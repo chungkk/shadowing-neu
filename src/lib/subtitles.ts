@@ -5,7 +5,8 @@ export type Segment = {
   words?: Word[]; // phụ đề tự động YouTube (srv3) có thời gian từng từ → cắt câu chính xác
 };
 
-export type Word = [start: number, text: string];
+// end: thời điểm hết từ (chỉ Whisper v2 có). Không có → coi như kéo tới lúc bắt đầu từ kế tiếp
+export type Word = [start: number, text: string, end?: number];
 
 const decodeEntities = (s: string) =>
   s
@@ -103,11 +104,12 @@ const MIN_SEC = 1.5; // ngắn hơn → ghép với câu bên cạnh
 const MIN_WORDS = 3;
 const LONG_SEC = 12; // dài thế này mà không có dấu phẩy → tách ở chỗ ngừng hơi dài nhất
 const SILENCE = 2; // im lặng lâu hơn → luôn ngắt câu
+const END_PAD = 0.15; // đệm sau thời điểm hết từ (Whisper hay báo hơi sớm → khỏi cụt âm cuối)
 
-type Tok = { t: number; end: number; w: string };
+export type Tok = { t: number; end: number; w: string };
 
 /** Trải mọi dòng phụ đề thành từng từ có thời gian (không có thời gian từng từ → chia theo số ký tự) */
-function tokenize(segs: Segment[]): Tok[] {
+export function tokenize(segs: Segment[]): Tok[] {
   const toks: Tok[] = [];
   for (const s of segs) {
     let words = s.words;
@@ -121,7 +123,11 @@ function tokenize(segs: Segment[]): Tok[] {
         return [start, w];
       });
     }
-    words.forEach(([t, w], i) => toks.push({ t, end: i < words.length - 1 ? words[i + 1][0] : s.end, w }));
+    words.forEach(([t, w, e], i) => {
+      const next = i < words.length - 1 ? words[i + 1][0] : s.end;
+      // Có thời điểm hết từ → câu dừng đúng lúc dứt lời, không kéo theo khoảng lặng phía sau
+      toks.push({ t, end: e === undefined ? next : Math.max(t, Math.min(e + END_PAD, next)), w });
+    });
   }
   return toks;
 }

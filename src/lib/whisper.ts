@@ -49,8 +49,11 @@ export function whisperFilename(head: Uint8Array, filename: string, mime: string
 /**
  * Phiên bản Whisper (biến WHISPER_VERSION, mặc định "v2"):
  * - v1: code cũ, chỉ lấy thời gian theo đoạn (segment) → cắt câu chia thời gian theo số ký tự
- * - v2: lấy thêm thời gian TỪNG TỪ (cắt câu chính xác như phụ đề tự động YouTube) + gửi tiêu đề
- *       video làm `prompt` (Whisper viết đúng tên riêng / thuật ngữ). v2 lỗi → tự chạy lại bằng v1.
+ * - v2: lấy thêm thời gian TỪNG TỪ (+ thời điểm hết từ) → cắt câu chính xác như phụ đề tự động YouTube.
+ *       v2 lỗi → tự chạy lại bằng v1.
+ * KHÔNG gửi tiêu đề video làm `prompt`: đo trên 9 video có phụ đề người làm (scripts/eval-whisper.mts),
+ * Whisper bắt chước văn phong của prompt (tiêu đề không dấu chấm, viết HOA…) → sai chữ tăng 8% → 19%,
+ * chấm câu ít đi rõ rệt.
  */
 export type WhisperVersion = "v1" | "v2";
 export const whisperVersion = (): WhisperVersion => (process.env.WHISPER_VERSION === "v1" ? "v1" : "v2");
@@ -114,7 +117,7 @@ async function transcribeV1(audio: Blob, name: string, offset: number): Promise<
   }));
 }
 
-// ---- v2: thời gian từng từ + prompt ----
+// ---- v2: thời gian từng từ (+ prompt tuỳ chọn — app KHÔNG dùng, xem ghi chú ở whisperVersion) ----
 
 type RawWord = { word: string; start: number; end: number };
 
@@ -149,7 +152,7 @@ async function transcribeV2(audio: Blob, name: string, offset: number, prompt?: 
       start: s.start + offset,
       end: s.end + offset,
       text,
-      ...(inSeg.length ? { words: attachWordTimes(text, inSeg, s.start, s.end).map(([t, w]): Word => [t + offset, w]) } : {}),
+      ...(inSeg.length ? { words: attachWordTimes(text, inSeg, s.start, s.end).map(([t, w, e]): Word => (e === undefined ? [t + offset, w] : [t + offset, w, e + offset])) } : {}),
     };
   });
 }
@@ -159,10 +162,12 @@ const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 /**
  * Chữ của segment (có dấu câu, chữ hoa) + thời gian từ API (từ thường không có dấu câu):
  * mỗi từ trong câu tìm từ khớp gần nhất phía trước (nhìn tới 3 từ); không khớp → nội suy giữa 2 từ khớp bên cạnh.
+ * Từ khớp được giữ cả thời điểm hết từ (để câu dừng đúng lúc dứt lời).
  */
 export function attachWordTimes(text: string, words: RawWord[], segStart: number, segEnd: number): Word[] {
   const toks = text.split(/\s+/).filter(Boolean);
   const times: (number | null)[] = toks.map(() => null);
+  const ends: (number | undefined)[] = toks.map(() => undefined); // thời điểm hết từ (chỉ từ khớp được)
   let j = 0;
   toks.forEach((tok, i) => {
     const n = norm(tok);
@@ -170,6 +175,7 @@ export function attachWordTimes(text: string, words: RawWord[], segStart: number
     for (let k = j; k < Math.min(j + 4, words.length); k++) {
       if (norm(words[k].word) === n) {
         times[i] = words[k].start;
+        if (Number.isFinite(words[k].end)) ends[i] = words[k].end;
         j = k + 1;
         return;
       }
@@ -187,7 +193,8 @@ export function attachWordTimes(text: string, words: RawWord[], segStart: number
     }
     t = Math.min(Math.max(t, prev), segEnd);
     prev = t;
-    return [t, tok];
+    const e = ends[i];
+    return e !== undefined && e > t ? [t, tok, Math.min(e, segEnd)] : [t, tok];
   });
 }
 

@@ -245,6 +245,15 @@ async function captions(videoId: string, track: { languageCode: string; auto: bo
   return file.name.endsWith(".vtt") ? parseSubtitleFile(text) : parseYouTubeXml(text);
 }
 
+/**
+ * Audio nhỏ nhất của track GỐC. Video được YouTube lồng tiếng AI có nhiều bản cùng itag ("139-0" tiếng Anh,
+ * "139-1" tiếng Đức gốc…) và "139" trơn có thể khớp bản lồng tiếng → ưu tiên format_note có "original".
+ * Video chỉ 1 track (không có "original") → 139 / 249 như cũ.
+ */
+export const AUDIO_FORMAT =
+  "ba[format_id^=139][format_note*=original]/ba[format_id^=249][format_note*=original][format_id!*=drc]/" +
+  "wa[format_note*=original][protocol^=http][format_id!*=drc]/139/249/wa[vcodec=none]/wa";
+
 /** Tải audio nhỏ nhất bằng yt-dlp (có PO token nên tải được trọn file) */
 export function ytdlpAudio(videoId: string, maxBytes: number): Promise<{ blob: Blob; filename: string }> {
   return withUpdate(() => audio(videoId, maxBytes));
@@ -253,7 +262,7 @@ export function ytdlpAudio(videoId: string, maxBytes: number): Promise<{ blob: B
 async function audio(videoId: string, maxBytes: number): Promise<{ blob: Blob; filename: string }> {
   const file = await runOnInfo(
     videoId,
-    ["-f", "139/249/worstaudio[vcodec=none]/worstaudio", "--max-filesize", String(maxBytes)],
+    ["-f", AUDIO_FORMAT, "--max-filesize", String(maxBytes)],
     300_000,
   );
   // --max-filesize: file quá lớn thì yt-dlp bỏ qua, không báo lỗi

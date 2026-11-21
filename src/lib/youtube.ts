@@ -4,6 +4,7 @@ import { normalize, parseYouTubeXml, type Segment } from "./subtitles";
 import { getCached, setCached } from "./db";
 import { transcribeAudio, whisperEnabled, whisperVersion, WHISPER_MAX_BYTES, type WhisperVersion } from "./whisper";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
+import { MIN_MATCH, transferPunctuation } from "./punct-transfer";
 import { YtdlpMissingError, ytdlpAudio, ytdlpCaptions, ytdlpVideo } from "./ytdlp";
 import { allow } from "./rate-limit";
 
@@ -13,6 +14,8 @@ export { extractVideoId } from "./youtube-id";
 export const WHISPER = "whisper";
 export const WHISPER_V2 = "whisper-v2";
 export const isWhisper = (code?: string) => code === WHISPER || code === WHISPER_V2;
+/** "Original + Whisper": chữ + thời gian của phụ đề YouTube tiếng Đức, dấu câu chép từ Whisper v2 */
+export const ORIGINAL_WHISPER = "original-whisper";
 const whisperCode = (v: WhisperVersion) => (v === "v1" ? WHISPER : WHISPER_V2);
 /** Mã Whisper mặc định (theo WHISPER_VERSION) — dùng khi tự tạo phụ đề bằng Whisper */
 export const defaultWhisper = () => whisperCode(whisperVersion());
@@ -33,13 +36,14 @@ const isGerman = (t: Track) => t.languageCode.startsWith("de");
 
 /** Bản cache cũ có thể lẫn track ngôn ngữ khác → lọc lại; track đang dùng không phải tiếng Đức thì bỏ cache */
 function germanOnly(t: Transcript | null): Transcript | null {
-  if (!t || (!isWhisper(t.track.languageCode) && !isGerman(t.track))) return null;
+  if (!t || (!isWhisper(t.track.languageCode) && t.track.languageCode !== ORIGINAL_WHISPER && !isGerman(t.track))) return null;
   const hasWhisper = t.tracks.some((x) => isWhisper(x.languageCode));
+  const hasMix = t.tracks.some((x) => x.languageCode === ORIGINAL_WHISPER);
   return {
     ...t,
     // Bản lưu cũ chỉ có 1 lựa chọn "Whisper (AI)" → luôn hiện đủ v1 + v2, tên track theo đúng phiên bản
     track: isWhisper(t.track.languageCode) ? WHISPER_TRACKS[t.track.languageCode === WHISPER ? "v1" : "v2"] : t.track,
-    tracks: [...t.tracks.filter(isGerman), ...(hasWhisper ? Object.values(WHISPER_TRACKS) : [])],
+    tracks: [...t.tracks.filter(isGerman), ...(hasMix ? [MIX_TRACK] : []), ...(hasWhisper ? Object.values(WHISPER_TRACKS) : [])],
   };
 }
 /** Khách (không phải admin) chỉ lấy được phụ đề mới cho video tối đa 30 phút (video dài: tải audio / Whisper hay lỗi, tốn tiền) */
@@ -49,6 +53,7 @@ const WHISPER_TRACKS: Record<WhisperVersion, Track> = {
   v1: { languageCode: WHISPER, name: "🤖 Whisper v1", auto: false },
   v2: { languageCode: WHISPER_V2, name: "🤖 Whisper v2", auto: false },
 };
+const MIX_TRACK: Track = { languageCode: ORIGINAL_WHISPER, name: "🤖 Original + Whisper", auto: false };
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
@@ -75,6 +80,8 @@ type AudioFormat = {
   contentLength?: string;
   bitrate?: number;
   isDrc?: boolean;
+  // Video có nhiều track audio (YouTube tự lồng tiếng AI sang ngôn ngữ khác): mỗi itag có 1 bản / track
+  audioTrack?: { displayName?: string; isAutoDubbed?: boolean };
 };
 
 // Client VISIONOS (giống yt-dlp 2026.08): khi gửi kèm visitorData, link audio tải được trọn file
@@ -186,7 +193,13 @@ class GeoBlockedError extends Error {
 
 function pickAudio(formats: AudioFormat[]): AudioFormat | undefined {
   // Bỏ bản DRC (đã nén dải động) — nghe khác bản gốc; 139 = m4a ~48kbps (≈21MB/giờ), 249 = webm opus ~50kbps
-  const ok = formats.filter((f) => f.mimeType.startsWith("audio/") && f.url && f.contentLength && !f.isDrc);
+  const all = formats.filter((f) => f.mimeType.startsWith("audio/") && f.url && f.contentLength && !f.isDrc);
+  // Chỉ lấy giọng GỐC: bản lồng tiếng (vd. tiếng Anh do AI) cùng itag 139 hay đứng trước → Whisper nghe tiếng Anh
+  // rồi "dịch" sang tiếng Đức. Track gốc có xtags "acont=original" trong link.
+  const original = all.filter(
+    (f) => !f.audioTrack || /acont(%3D|=)original/.test(f.url ?? "") || /original/i.test(f.audioTrack.displayName ?? ""),
+  );
+  const ok = original.length ? original : all.filter((f) => !f.audioTrack?.isAutoDubbed);
   return (
     ok.find((f) => f.itag === 139) ??
     ok.find((f) => f.itag === 249) ??
@@ -418,7 +431,49 @@ async function fetchTranscript(
   const canWhisper = whisper && whisperEnabled();
   // App học tiếng Đức → chỉ dùng phụ đề tiếng Đức (bỏ các track ngôn ngữ khác)
   const de = allTracks.filter((t) => isGerman(t.track));
-  const tracks = [...de.map((t) => t.track), ...(canWhisper ? Object.values(WHISPER_TRACKS) : [])];
+  const tracks = [
+    ...de.map((t) => t.track),
+    ...(canWhisper && de.length ? [MIX_TRACK] : []),
+    ...(canWhisper ? Object.values(WHISPER_TRACKS) : []),
+  ];
+
+  /** Chạy Whisper (tính hạn mức / ngày), lưu kết quả theo phiên bản thật đã dùng */
+  const runWhisper = async (want: WhisperVersion): Promise<Transcript> => {
+    if (quotaKey && !allow(`whisper:${quotaKey}`, WHISPER_PER_DAY, 24 * 3600_000)) {
+      throw new Error(`Mỗi ngày chỉ tạo được ${WHISPER_PER_DAY} phụ đề bằng Whisper. Mai thử lại nhé.`);
+    }
+    const { blob, filename } = await audio();
+    // v2 lỗi thì transcribeAudio tự chạy v1 → lưu theo phiên bản thật đã dùng
+    const r = await transcribeAudio(blob, filename, 0, { version: want });
+    const { version } = r;
+    let { segments } = r;
+    // v2: Whisper đôi khi viết liền một mạch, ít dấu chấm → không cắt được câu. Thêm dấu câu bằng LLM
+    // (giữ nguyên chữ + thời gian từng từ), giống phụ đề tự động của YouTube. v1 giữ nguyên như cũ.
+    if (version === "v2" && punctuationEnabled() && lacksPunctuation(segments)) segments = await addPunctuation(segments);
+    if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
+    const result = { videoId, title, track: WHISPER_TRACKS[version], tracks, segments };
+    setCached(`yt:${videoId}:${whisperCode(version)}`, result, null);
+    return result;
+  };
+
+  // "Original + Whisper": phụ đề YouTube (ưu tiên bản tự động "Original") + dấu câu của Whisper v2
+  if (lang === ORIGINAL_WHISPER) {
+    const base = de.find((t) => t.track.auto) ?? de[0];
+    if (!base) throw new Error("Video này không có phụ đề YouTube tiếng Đức để kết hợp với Whisper.");
+    if (!whisper) throw new Error("Đăng nhập để dùng Original + Whisper.");
+    if (!whisperEnabled()) throw new Error("Whisper chưa được bật.");
+    const yt = await base.load();
+    if (!yt.length) throw new Error("Phụ đề YouTube rỗng hoặc không đọc được.");
+    // Đã có Whisper v2 của video → dùng lại, khỏi tốn lượt
+    const wh = germanOnly(getCached<Transcript>(`yt:${videoId}:${WHISPER_V2}`)) ?? (await runWhisper("v2"));
+    const { segments, matched } = transferPunctuation(yt, wh.segments);
+    if (matched < MIN_MATCH) {
+      throw new Error(`Whisper nghe khác phụ đề YouTube quá nhiều (chỉ khớp ${Math.round(matched * 100)}% số từ) — không ghép được.`);
+    }
+    const result = { videoId, title, track: MIX_TRACK, tracks, segments };
+    setCached(cacheKey, result, null);
+    return result;
+  }
 
   // Phụ đề YouTube có sẵn được ưu tiên (miễn phí, nhanh); Whisper chỉ là phương án sau
   let picked: (typeof de)[number] | undefined;
@@ -462,17 +517,7 @@ async function fetchTranscript(
         " Cấu hình Whisper (TRANSCRIBE_API_KEY hoặc TRANSCRIBE_API_URL) trong .env.local để tự tạo phụ đề.",
     );
   }
-  if (quotaKey && !allow(`whisper:${quotaKey}`, WHISPER_PER_DAY, 24 * 3600_000)) {
-    throw new Error(`Mỗi ngày chỉ tạo được ${WHISPER_PER_DAY} phụ đề bằng Whisper. Mai thử lại nhé.`);
-  }
-  const { blob, filename } = await audio();
-  const want: WhisperVersion = lang === WHISPER ? "v1" : lang === WHISPER_V2 ? "v2" : whisperVersion();
-  // v2 lỗi thì transcribeAudio tự chạy v1 → lưu theo phiên bản thật đã dùng
-  const { segments, version } = await transcribeAudio(blob, filename, 0, { version: want, prompt: title });
-  if (!segments.length) throw new Error("Whisper không nhận dạng được câu nào.");
-  const result = { videoId, title, track: WHISPER_TRACKS[version], tracks, segments };
-  setCached(`yt:${videoId}:${whisperCode(version)}`, result, null);
-  return result;
+  return runWhisper(lang === WHISPER ? "v1" : lang === WHISPER_V2 ? "v2" : whisperVersion());
 }
 
 /** Phụ đề đã lưu (không gọi YouTube) — app hỏi trước khi tự lấy trên điện thoại */

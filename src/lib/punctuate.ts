@@ -1,5 +1,5 @@
 import "server-only";
-import type { Segment } from "./subtitles";
+import type { Segment, Word } from "./subtitles";
 
 /**
  * Thêm dấu câu cho phụ đề tự động của YouTube (nhiều video không có dấu chấm, phẩy nào
@@ -123,7 +123,7 @@ export async function addPunctuation(segs: Segment[]): Promise<Segment[]> {
   let k = 0;
   return segs.map((s) => {
     if (s.words) {
-      const ws = s.words.map(([t]): [number, string] => [t, fixed[k++]]);
+      const ws = s.words.map(([t, , e]): Word => (e === undefined ? [t, fixed[k++]] : [t, fixed[k++], e]));
       return { ...s, words: ws, text: ws.map(([, w]) => w).join(" ") };
     }
     const n = s.text.split(" ").length;
