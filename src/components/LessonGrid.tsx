@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, CircleCheck, Clock, ExternalLink, Lock } from "lucide-react";
+import { ChevronDown, CircleCheck, Clock, ExternalLink, Lock, Search, X } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
@@ -61,48 +61,48 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
         e.preventDefault();
         onLocked(l);
       }}
-      className={`group sticker sticker-link flex flex-col overflow-hidden ${className}`}
+      className={`group card card-link flex flex-col overflow-hidden p-0 ${className}`}
     >
-      <div className="relative m-2 mb-0 aspect-video overflow-hidden rounded-[calc(var(--radius-lg)-6px)] bg-card-2">
+      <div className="relative aspect-video overflow-hidden bg-card-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className={`size-full object-cover transition duration-300 group-hover:scale-105 motion-reduce:transition-none ${l.access === "locked" ? "opacity-75 saturate-50" : ""}`}
+          className={`size-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none ${l.access === "locked" ? "opacity-75 saturate-50" : ""}`}
         />
-        {l.access === "free" && <span className="badge absolute top-2 left-2 border border-line bg-card text-ok-text">Miễn phí</span>}
+        {l.access === "free" && <span className="badge absolute top-2 left-2 border border-line bg-card/95 text-ok-text">Miễn phí</span>}
         <LevelBadge level={l.level} className="absolute top-2 right-2" />
         {l.access === "locked" && (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-12 items-center justify-center rounded-full border border-line bg-card text-foreground">
-              <Lock className="size-5" />
+          <span className="absolute inset-0 flex items-center justify-center bg-black/15">
+            <span className="flex size-10 items-center justify-center rounded-full border border-line bg-card text-foreground shadow-sm">
+              <Lock className="size-4" />
               <span className="sr-only">Khoá</span>
             </span>
           </span>
         )}
-        {l.isNew && <span className="badge absolute bottom-2 left-2 bg-gold text-[#16203a]">Mới</span>}
+        {l.isNew && <span className="badge absolute bottom-2 left-2 bg-gold text-[#0f172a]">Mới</span>}
         {l.duration > 0 && (
           <span className="pill absolute right-2 bottom-2 bg-black/75 text-white tabular-nums">
-            <Clock className="size-3.5" /> {formatDuration(l.duration)}
+            <Clock className="size-3" /> {formatDuration(l.duration)}
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <h3 className="line-clamp-2 min-h-[2.75em] font-display leading-snug font-bold tracking-[-0.01em] transition-colors group-hover:text-accent-text">{l.title}</h3>
-        {l.description && <p className="line-clamp-2 text-xs text-muted">{l.description}</p>}
-        <div className="mt-auto flex flex-col gap-2">
-          <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-muted">
-            Shadowing{l.dictation && " · Dictation"} · {l.sentences} câu
+      <div className="flex flex-1 flex-col gap-1.5 p-3.5">
+        <h3 className="line-clamp-2 min-h-[2.6em] text-sm leading-snug font-semibold text-foreground transition-colors group-hover:text-accent-text sm:text-[0.9375rem]">{l.title}</h3>
+        {l.description && <p className="line-clamp-2 text-xs leading-relaxed text-muted">{l.description}</p>}
+        <div className="mt-auto flex flex-col gap-2 pt-2">
+          <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+            Shadowing{l.dictation && " · Chính tả"} · {l.sentences} câu
           </p>
           {l.percent >= 100 ? (
-            <p className="flex items-center gap-1 text-xs font-bold text-ok-text">
-              <CircleCheck className="size-4" /> Đã học xong
+            <p className="flex items-center gap-1 text-xs font-semibold text-ok-text">
+              <CircleCheck className="size-3.5" /> Đã hoàn thành
             </p>
           ) : (
             l.percent > 0 && (
-              <div className="flex items-center gap-2 text-xs font-bold text-sec-text tabular-nums">
-                <div className="progress h-2 flex-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-sec-text tabular-nums">
+                <div className="progress h-1.5 flex-1">
                   <div className="progress-bar" style={{ width: `${l.percent}%` }} />
                 </div>
                 {l.percent}%
@@ -216,68 +216,105 @@ function ChannelSection({ g, onLocked }: { g: Group; onLocked?: (l: Item) => voi
  */
 export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
   const searchParams = useSearchParams();
-  const [opening, setOpening] = useState<Item | null>(null); // bài khoá đang hiện popup mở khoá
+  const [opening, setOpening] = useState<Item | null>(null);
+  const [query, setQuery] = useState("");
   const top = useRef<HTMLElement>(null);
 
-  // Trang được giữ lại khi rời đi (cacheComponents) → đóng popup lúc rời, không thì bấm Back vẫn thấy popup mở khoá cũ
   useLayoutEffect(() => () => setOpening(null), []);
 
   if (!lessons.length)
     return (
       <div className="card empty">
-        <Mascot className="size-28" />
-        <p className="font-display text-lg font-bold">Chưa có bài học nào.</p>
+        <Mascot className="size-20 opacity-90" />
+        <p className="text-base font-semibold text-foreground">Chưa có bài học nào.</p>
         <p className="text-sm text-muted">Bài mới sẽ hiện ở đây ngay khi được đăng.</p>
       </div>
     );
 
-  // Chỉ hiện cấp độ có bài, kèm số bài
   const levels = LEVELS.map((lv) => ({ level: lv, count: lessons.filter((l) => l.level === lv).length })).filter((g) => g.count);
   const param = searchParams.get("level");
-  const level = levels.some((g) => g.level === param) ? param : null; // cấp độ lạ / không còn bài → như chưa lọc
+  const level = levels.some((g) => g.level === param) ? param : null;
   const setLevel = (lv: string | null) => {
     if (lv === level) return;
     const params = new URLSearchParams(searchParams.toString());
     if (lv) params.set("level", lv);
     else params.delete("level");
-    const query = params.toString();
-    window.history.pushState(null, "", query ? `?${query}` : window.location.pathname);
+    const q = params.toString();
+    window.history.pushState(null, "", q ? `?${q}` : window.location.pathname);
   };
-  const shown = level ? lessons.filter((l) => l.level === level) : lessons;
+  const qNorm = query.trim().toLowerCase();
+  const byLevel = level ? lessons.filter((l) => l.level === level) : lessons;
+  const shown = qNorm
+    ? byLevel.filter(
+        (l) =>
+          l.title.toLowerCase().includes(qNorm) ||
+          l.description.toLowerCase().includes(qNorm) ||
+          (l.channel?.toLowerCase().includes(qNorm) ?? false),
+      )
+    : byLevel;
   const groups = byChannel(shown);
-  const flat = groups.length === 1 && groups[0].name === OTHER; // chưa biết kênh nào → 1 lưới liền như trước
-  // Admin học được mọi bài → bấm thẻ khoá vẫn vào thẳng bài
+  const flat = groups.length === 1 && groups[0].name === OTHER;
   const onLocked = lock?.enabled && !admin ? setOpening : undefined;
 
   const chip = (lv: string | null, count: number) => (
-    <button key={lv ?? "all"} onClick={() => setLevel(lv)} aria-pressed={level === lv} className="chip">
+    <button key={lv ?? "all"} onClick={() => setLevel(lv)} aria-pressed={level === lv} className="chip text-xs">
       {lv ?? "Tất cả"}
       <span className={`tabular-nums ${level === lv ? "opacity-80" : "text-muted"}`}>{count}</span>
     </button>
   );
 
   return (
-    <section id="lessons" ref={top} data-sec="de" className="flex scroll-mt-4 flex-col gap-4 sm:gap-5">
-      <SectionHeader title="Thư viện bài học" count={lessons.length}>
-        {/* Điện thoại: 1 hàng cuộn ngang sát mép màn hình thay vì xuống nhiều dòng */}
-        <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
-          {chip(null, lessons.length)}
-          {levels.map((g) => chip(g.level, g.count))}
-        </div>
-      </SectionHeader>
+    <section id="lessons" ref={top} data-sec="de" className="flex scroll-mt-20 flex-col gap-4 sm:gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SectionHeader title="Thư viện bài học" count={shown.length} />
+        <label className="input-group w-full sm:w-64">
+          <Search className="size-4 shrink-0 text-muted" aria-hidden />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Tìm bài học hoặc kênh…"
+            aria-label="Tìm bài học hoặc kênh"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery("")} aria-label="Xóa từ khóa" className="text-muted hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          )}
+        </label>
+      </div>
+      <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+        {chip(null, lessons.length)}
+        {levels.map((g) => chip(g.level, g.count))}
+      </div>
       {lock?.enabled && <LockNote lock={lock} admin={admin} />}
       {!flat && groups.length > 1 && (
         <nav aria-label="Nhảy tới kênh" className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
           <span className="label shrink-0">Kênh</span>
           {groups.map((g) => (
-            <a key={g.key} href={`#${anchor(g.key)}`} className="chip">
+            <a key={g.key} href={`#${anchor(g.key)}`} className="chip text-xs">
               {g.name}
               <span className="text-muted tabular-nums">{g.lessons.length}</span>
             </a>
           ))}
         </nav>
       )}
-      {flat ? (
+      {!shown.length ? (
+        <div className="card empty">
+          <p className="font-semibold text-foreground">Không tìm thấy bài học phù hợp</p>
+          <p className="text-sm text-muted">Thử từ khóa khác hoặc bỏ bộ lọc trình độ.</p>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => {
+              setQuery("");
+              setLevel(null);
+            }}
+          >
+            Xóa bộ lọc
+          </button>
+        </div>
+      ) : flat ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((l) => (
             <LessonCard key={l.id} l={l} onLocked={onLocked} />

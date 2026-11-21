@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { dueCount, getPoints } from "@/lib/db";
 import PointsBadge from "./PointsBadge";
@@ -5,7 +6,7 @@ import ReminderBell from "./ReminderBell";
 import { LoginLink } from "./auth/LoginDialog";
 import Sidebar, { DeutschOnly, HeaderNav, ReviewPill, UserDropdown } from "./Sidebar";
 
-/** Thanh dưới đáy (điện thoại) có thông tin người dùng (đọc cookie lúc request → đặt trong <Suspense>) */
+/** Thanh dưới đáy (điện thoại) có thông tin người dùng */
 export async function SidebarWithUser() {
   const user = await getCurrentUser();
   return <Sidebar user={user && { id: user.id, name: user.name, role: user.role, avatarAt: user.avatarAt }} due={user ? dueCount(user.id) : 0} />;
@@ -13,23 +14,27 @@ export async function SidebarWithUser() {
 
 /** Lối tắt thanh trên cùng (máy tính) */
 export async function HeaderNavWithUser() {
-  await getCurrentUser(); // đọc cookie lúc request (giữ trong <Suspense> như trước)
+  await getCurrentUser();
   return <HeaderNav />;
 }
 
-/** Góc phải thanh trên cùng: nút đăng nhập, hoặc điểm chính tả + tên + vai trò */
+/** Góc phải thanh trên cùng */
 export default async function UserMenu() {
   const user = await getCurrentUser();
-  // Chỉ 1 nút: popup đăng nhập đã có nút chuyển sang đăng ký
   if (!user) {
     return (
-      <LoginLink href="/login" className="btn max-sm:px-3">
-        Đăng nhập
-      </LoginLink>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <LoginLink href="/login" className="btn btn-ghost btn-sm text-foreground">
+          Đăng nhập
+        </LoginLink>
+        <Link href="/tieng-duc" className="btn btn-primary btn-sm max-sm:hidden">
+          Bắt đầu học
+        </Link>
+      </div>
     );
   }
   return (
-    <div className="flex items-center gap-2 sm:gap-3">
+    <div className="flex items-center gap-1.5 sm:gap-2.5">
       <DeutschOnly>
         <ReviewPill due={dueCount(user.id)} />
         <PointsBadge initial={getPoints(user.id).total} />

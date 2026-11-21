@@ -22,12 +22,12 @@ export default function YouTubeUrlForm({ secondary = false }: { secondary?: bool
         startTransition(() => router.push(`/watch/${id}`));
       }}
     >
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-2.5 sm:flex-row">
         <input
           className="input min-w-0 flex-1"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "yt-url-error" : undefined}
-          placeholder="Dán link video YouTube…"
+          placeholder="Dán link video YouTube (ví dụ: https://youtu.be/…)"
           aria-label="Link video YouTube"
           inputMode="url"
           autoCapitalize="off"
@@ -36,7 +36,7 @@ export default function YouTubeUrlForm({ secondary = false }: { secondary?: bool
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className={`btn btn-lg ${secondary ? "btn-soft" : "btn-primary"}`} disabled={pending}>
+        <button className={`btn ${secondary ? "btn-soft" : "btn-primary"}`} disabled={pending}>
           {pending ? "Đang lấy phụ đề…" : secondary ? "Mở video" : "Bắt đầu"}
         </button>
       </div>

@@ -67,11 +67,11 @@ export default function PointsBadge({ initial }: { initial: number }) {
   return (
     <span
       title="Điểm chính tả — mỗi từ gõ đúng +1, mỗi từ bấm xem −2"
-      className="relative inline-flex h-10 items-center gap-1.5 rounded-full border border-gem/25 bg-gem-soft pr-3 pl-1.5 font-extrabold text-gem tabular-nums select-none"
+      className="relative inline-flex h-8 items-center gap-1.5 rounded-lg border border-gem/20 bg-gem-soft pr-2.5 pl-1.5 text-sm font-bold text-gem tabular-nums select-none"
     >
       <span className="relative inline-flex">
         <span key={`c${bump}`} className={bump ? "points-bump" : undefined}>
-          <Gem className="size-6 sm:size-7" />
+          <Gem className="size-5" />
         </span>
         {pop && (
           <span key={pop.id} className="pt-burst top-1/2 left-1/2" aria-hidden>

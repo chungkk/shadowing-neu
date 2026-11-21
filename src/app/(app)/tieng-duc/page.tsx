@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Languages } from "lucide-react";
+import { ArrowRight, BookMarked, Languages, Layers, Link2 } from "lucide-react";
 import { connection } from "next/server";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
-import { LEVELS, listChannels, listProgress } from "@/lib/db";
+import { dueCount, LEVELS, listChannels, listProgress } from "@/lib/db";
 import { fillLessonChannels } from "@/lib/channels";
 import YouTubeUrlForm from "@/components/YouTubeUrlForm";
 import LessonGrid from "@/components/LessonGrid";
@@ -19,7 +19,6 @@ import { lessonPath } from "@/lib/slug";
 import { levelCatalogPath } from "@/lib/lesson-seo";
 import OwnLessons from "@/components/OwnLessons";
 
-// Link đã lọc (/tieng-duc?level=B1) vẫn là trang học tiếng Đức với Google
 export const metadata: Metadata = pageMeta({
   title: "Học tiếng Đức qua video YouTube – Luyện nghe nói A1–C2",
   description:
@@ -27,18 +26,15 @@ export const metadata: Metadata = pageMeta({
   path: "/tieng-duc",
 });
 
-const NEW_MS = 3 * 86_400_000; // bài đăng trong 3 ngày → nhãn "Mới" (lâu hơn thì gần như bài nào cũng "Mới")
+const NEW_MS = 3 * 86_400_000;
 
-/** Dữ liệu thẻ bài: chỉ gửi xuống trình duyệt những gì thẻ cần */
 function lessonItems(user: User | null) {
   const now = Date.now();
-  // Admin học được mọi bài, nhưng thẻ bài hiện nhãn như khách thấy (🔒 / Miễn phí) để admin kiểm tra
   const access = accessOf(user?.role === "admin" ? null : user);
   const progress = new Map(user ? listProgress(user.id).map((p) => [p.source, p]) : []);
-  // Ảnh kênh: chỉ kênh admin đã lưu (khớp theo @handle trong link kênh)
   const avatars = new Map(listChannels().flatMap((c) => (c.handle && c.avatar ? [[c.handle.toLowerCase(), c.avatar] as const] : [])));
   const items = lessonsFor(user?.role === "admin" ? null : (user?.id ?? null)).map((l) => {
-    const p = progress.get(`/lesson/${l.id}`); // khoá tiến độ của bài vẫn theo id
+    const p = progress.get(`/lesson/${l.id}`);
     return {
       id: l.id,
       title: l.title,
@@ -57,15 +53,14 @@ function lessonItems(user: User | null) {
       channelAvatar: avatars.get(l.channelUrl?.match(/\/(@[^/?#]+)/)?.[1]?.toLowerCase() ?? "") ?? null,
     };
   });
-  // Bài học được ngay (miễn phí / đã mở) lên đầu, trong mỗi nhóm vẫn mới nhất trước
   return items.sort((x, y) => +(x.access === "locked") - +(y.access === "locked"));
 }
 
 async function Lessons() {
-  await connection(); // đọc DB lúc request, không prerender
+  await connection();
   const user = await getCurrentUser();
   const admin = user?.role === "admin";
-  fillLessonChannels(); // bài chưa biết kênh → lấy nền sau khi trả trang
+  fillLessonChannels();
   return <LessonGrid lessons={lessonItems(user)} lock={lockInfo(admin ? null : user)} admin={admin} />;
 }
 
@@ -74,42 +69,44 @@ const levelRank = (lv: string) => {
   return i < 0 ? LEVELS.length : i;
 };
 
-/** Ô dán link YouTube — lựa chọn phụ: người mới nên bắt đầu từ bài có sẵn */
+/** Ô dán link YouTube: gọn, đặt dưới thư viện bài học */
 function OwnVideo() {
   return (
-    <section aria-labelledby="own-video" className="surface flex flex-col gap-3 p-4 sm:p-5">
-      <h2 id="own-video" className="text-sm font-semibold text-muted">
-        Hoặc luyện với video YouTube bất kỳ có phụ đề tiếng Đức
-      </h2>
+    <section aria-labelledby="own-video" className="card flex flex-col gap-3 p-5">
+      <div className="flex items-center gap-2">
+        <Link2 className="size-4 text-accent-text" aria-hidden />
+        <h2 id="own-video" className="text-sm font-semibold text-foreground">
+          Luyện với video YouTube bất kỳ có phụ đề tiếng Đức
+        </h2>
+      </div>
       <YouTubeUrlForm secondary />
-      <p className="text-xs text-muted">Học thử miễn phí, không lưu tiến độ — muốn lưu thì đổi kim cương để tạo bài học riêng.</p>
+      <p className="text-xs text-muted">Học thử miễn phí (không lưu tiến độ) — hoặc đổi kim cương để lưu thành bài học riêng.</p>
     </section>
   );
 }
 
-/** Khách: bìa vở giới thiệu, nút chính = bài dễ nhất học được ngay, chip trình độ lọc thư viện */
 function GuestHero({ first, levels }: { first?: { slug: string; title: string; level: string }; levels: string[] }) {
   return (
     <PageHeader
       sec="de"
       icon={Languages}
       mascot
-      title="Luyện nói tiếng Đức với video thật"
-      sub="Nghe từng câu, nói theo và ghi âm để so với người bản xứ."
-      meta={<span className="max-sm:hidden">Shadowing · Chính tả · A1 – C2</span>}
+      title="Học tiếng Đức qua video thật"
+      sub="Nghe từng câu, nói theo (shadowing), ghi âm so sánh và chép chính tả cùng bản dịch tiếng Việt."
+      meta={<span className="badge badge-accent max-sm:hidden">A1 – C2</span>}
       actions={
         first && (
-          <Link href={lessonPath(first.slug)} className="btn btn-primary btn-lg max-sm:w-full">
-            Thử bài {first.level} đầu tiên <ArrowRight className="size-5" />
+          <Link href={lessonPath(first.slug)} className="btn btn-primary max-sm:w-full">
+            Thử bài {first.level} đầu tiên <ArrowRight className="size-4" />
           </Link>
         )
       }
     >
       {levels.length > 1 && (
-        <div className="nhan-line flex flex-wrap items-center gap-2 pb-2">
-          <span className="text-sm font-semibold text-muted">Trình độ của bạn:</span>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <span className="text-xs font-semibold text-muted">Chọn trình độ:</span>
           {levels.map((lv) => (
-            <Link key={lv} href={levelCatalogPath(lv)} className="chip hit-44">
+            <Link key={lv} href={levelCatalogPath(lv)} className="chip hit-44 text-xs">
               {lv}
             </Link>
           ))}
@@ -119,14 +116,31 @@ function GuestHero({ first, levels }: { first?: { slug: string; title: string; l
   );
 }
 
-/** Đầu trang: đã đăng nhập → bìa vở chào + bài học dở + bài riêng; khách → bìa giới thiệu */
 async function Top() {
   await connection();
   const user = await getCurrentUser();
   if (user) {
+    const due = dueCount(user.id);
     return (
       <>
-        <PageHeader sec="de" icon={Languages} mascot title={`Hallo, ${user.name}!`} sub="Hôm nay học gì? Học tiếp bài dở, ôn từ đến hạn hoặc chọn bài mới." />
+        <PageHeader
+          sec="de"
+          icon={Languages}
+          mascot
+          title={`Chào ${user.name}`}
+          sub="Tiếp tục bài học đang dở, ôn từ đến hạn hoặc chọn một video mới theo trình độ của bạn."
+          actions={
+            due > 0 ? (
+              <Link href="/vocab/notebook?review=1" className="btn btn-primary btn-sm">
+                <Layers className="size-4" /> Ôn {due} từ đến hạn
+              </Link>
+            ) : (
+              <Link href="/vocab" className="btn btn-sm">
+                <BookMarked className="size-4 text-muted" /> Kho từ vựng
+              </Link>
+            )
+          }
+        />
         <ContinueLearning userId={user.id} />
         <OwnLessons userId={user.id} />
       </>
@@ -145,8 +159,8 @@ async function Top() {
 
 export default function Home() {
   return (
-    <main className="page gap-8 md:gap-10">
-      <Suspense fallback={<div className="skeleton h-56 rounded-[var(--radius-lg)]" />}>
+    <main className="page gap-7 md:gap-8">
+      <Suspense fallback={<div className="skeleton h-32 rounded-[var(--radius-lg)]" />}>
         <Top />
       </Suspense>
 
@@ -154,7 +168,6 @@ export default function Home() {
         <Lessons />
       </Suspense>
 
-      {/* Ô dán link nằm dưới thư viện (lựa chọn phụ) */}
       <OwnVideo />
     </main>
   );

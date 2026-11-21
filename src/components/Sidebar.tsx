@@ -8,9 +8,9 @@ import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";
 
-type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> }; // short: nhãn ở thanh dưới đáy
+type Item = { href: string; label: string; short?: string; icon: ComponentType<{ className?: string }> };
 
-/** Màu bìa vở của từng khu (data-sec → --sec trong globals.css) */
+/** Màu nhận diện khu vực (data-sec → --sec trong globals.css) */
 export function secOf(href: string): string | undefined {
   if (href.startsWith("/lai-xe")) return "laixe";
   if (href.startsWith("/leben-in-deutschland")) return "lid";
@@ -21,8 +21,6 @@ export function secOf(href: string): string | undefined {
 }
 type NavUser = AvatarUser & { role: string };
 
-// Các phần lớn của HalloVN (tab trên cùng / thanh dưới đáy). "/" = Trang chủ (trang giới thiệu tĩnh — chỉ khớp đúng "/");
-// "Tiếng Đức" sáng cho mọi trang không thuộc phần nào khác (bài học hallovn.de/<slug>, /watch, /vocab…) — xem useCurrent
 const ITEMS: Item[] = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
@@ -30,17 +28,13 @@ const ITEMS: Item[] = [
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
   { href: "/games", label: "Trò chơi", short: "Game", icon: Gamepad2 },
 ];
-const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers }; // sổ từ; có từ đến hạn → vào thẳng buổi ôn
-// Các trang con của phần Tiếng Đức (hàng tab nhỏ dưới thanh trên cùng — DeutschSubnav)
+const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers };
 const DEUTSCH: Item[] = [
-  { href: "/tieng-duc", label: "Bài học", icon: MonitorPlay }, // bài học video — trụ cột của phần tiếng Đức
-  { href: "/vocab", label: "Từ vựng", icon: BookMarked }, // kho bộ từ xem được khi chưa đăng nhập
+  { href: "/tieng-duc", label: "Bài học", icon: MonitorPlay },
+  { href: "/vocab", label: "Từ vựng", icon: BookMarked },
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
 ];
-// Thanh dưới đáy điện thoại (tối đa 4–5 ô để chạm một tay thoải mái):
-// khách thấy các khu chính; đã đăng nhập thì Ôn tập (có chấm đỏ số từ đến hạn) thay Trang chủ (logo ở trên vẫn về "/").
-// Luyện nói (/sprechen) chưa ra mắt → không có trong menu nào
 const GUEST_BAR: Item[] = ITEMS.filter((it) => it.href !== "/games");
 const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3]];
 const USER_ITEMS: Item[] = [
@@ -59,32 +53,23 @@ const ADMIN_ITEMS: Item[] = [
   { href: "/admin/feedback", label: "Góp ý", icon: MessageSquare },
 ];
 
-// Trang không thuộc phần Tiếng Đức (các trang khác không khớp mục nào thì coi là bài học → sáng "Tiếng Đức")
-// Trang thông tin chung (src/app/(app)/(info)): giới thiệu, hỗ trợ, pháp lý, trang sản phẩm
 const INFO_PAGES = ["about", "shadowing", "support", "privacy", "terms", "impressum", "refund", "calendar", "deutsch-redewendung"];
 const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing", ...INFO_PAGES]);
 
-/** href của mục đang chọn — mục khớp dài nhất (/admin/users → "Người dùng", không phải "Quản lý bài học") */
 function useCurrent(items: Item[]) {
   const pathname = usePathname();
-  // "/" (Trang chủ) chỉ khớp đúng trang chủ. Trang không thuộc mục nào (/watch/…) → "Tiếng Đức"
   const matches = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
   const best = items.filter((it) => matches(it.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   if (best) return best;
   const first = pathname.split("/")[1] ?? "";
-  if (!first) return undefined; // trang chủ khi danh sách không có mục "/" (thanh trên cùng máy tính)
+  if (!first) return undefined;
   return items.some((it) => it.href === "/tieng-duc") && !NOT_DEUTSCH.has(first) ? "/tieng-duc" : undefined;
 }
 
-/**
- * Thanh icon dưới đáy — chỉ trên điện thoại (máy tính dùng menu thả xuống ở avatar). Chỉ giữ các trang chính:
- * Cài đặt + Đăng xuất nằm ở avatar → /settings, Đăng nhập là nút ở thanh trên cùng, trang con admin có nút trong /admin.
- */
-/** Số từ đến hạn ôn: chấm đỏ trên mục "Từ vựng" — bấm vào là vào thẳng buổi ôn */
 function DueBadge({ due, className = "" }: { due: number; className?: string }) {
   if (!due) return null;
   return (
-    <span className={`flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 text-[11px] leading-none font-bold text-white tabular-nums ring-2 ring-card ${className}`}>
+    <span className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red px-1 text-[10px] leading-none font-bold text-white tabular-nums ring-2 ring-card ${className}`}>
       {due > 99 ? "99+" : due}
     </span>
   );
@@ -93,82 +78,77 @@ const reviewHref = (href: string, due: number) => (href === REVIEW.href && due ?
 
 export default function Sidebar({ user, due = 0 }: { user: NavUser | null; due?: number }) {
   const items = [...(user ? USER_BAR : GUEST_BAR), ...(user?.role === "admin" ? ADMIN_ITEMS.slice(0, 1) : [])];
-  const current = useCurrent([...ITEMS, ...items, ...USER_ITEMS]); // ITEMS, USER_ITEMS: ở /games, /settings… không sáng nhầm "Trang chủ"
+  const current = useCurrent([...ITEMS, ...items, ...USER_ITEMS]);
 
   return (
     <SidebarFrame>
-      {items.map((it) => (
-        <Link
-          key={it.href}
-          href={reviewHref(it.href, due)}
-          data-sec={secOf(it.href)}
-          aria-label={`${it.short && it.short !== it.label ? `${it.short} – ${it.label}` : it.label}${it.href === REVIEW.href && due ? ` — ${due} từ đến hạn ôn` : ""}`}
-          aria-current={it.href === current ? "page" : undefined}
-          className={`group relative flex h-14 min-w-15 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 transition-colors ${
-            it.href === current ? "text-foreground" : "text-muted active:text-foreground"
-          }`}
-        >
-          <span
-            className={`flex h-8 w-14 items-center justify-center rounded-[10px] transition-all duration-300 ease-[var(--ease-spring)] motion-reduce:transition-none ${
-              it.href === current ? "scale-100 bg-sec text-on-sec" : "scale-90 group-active:scale-95 group-active:bg-foreground/5"
+      {items.map((it) => {
+        const active = it.href === current;
+        return (
+          <Link
+            key={it.href}
+            href={reviewHref(it.href, due)}
+            data-sec={secOf(it.href)}
+            aria-label={`${it.short && it.short !== it.label ? `${it.short} – ${it.label}` : it.label}${it.href === REVIEW.href && due ? ` — ${due} từ đến hạn ôn` : ""}`}
+            aria-current={active ? "page" : undefined}
+            className={`group relative flex h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 transition-colors ${
+              active ? "text-foreground" : "text-muted active:text-foreground"
             }`}
           >
-            <it.icon className="size-[22px]" />
-          </span>
-          <span className={`text-[11px] leading-none ${it.href === current ? "font-bold" : "font-medium"}`}>{it.short ?? it.label}</span>
-          {it.href === REVIEW.href && <DueBadge due={due} className="absolute top-0 left-1/2 ml-2" />}
-        </Link>
-      ))}
+            <span
+              className={`flex h-7 w-12 items-center justify-center rounded-lg transition-colors duration-150 ${
+                active ? "bg-sec-soft text-sec-text" : "group-active:bg-card-2"
+              }`}
+            >
+              <it.icon className="size-5" />
+            </span>
+            <span className={`text-[11px] leading-none ${active ? "font-semibold text-foreground" : "font-medium"}`}>{it.short ?? it.label}</span>
+            {it.href === REVIEW.href && <DueBadge due={due} className="absolute top-1 left-1/2 ml-1.5" />}
+          </Link>
+        );
+      })}
     </SidebarFrame>
   );
 }
 
 function SidebarFrame({ children }: { children?: ReactNode }) {
   return (
-    // bottom-nav: màn học (.lesson) ẩn thanh này, thay bằng thanh điều khiển của trình phát (globals.css)
-    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-card px-1.5 pb-[env(safe-area-inset-bottom)] *:shrink-0 md:hidden dark:bg-sidebar">
+    <nav className="bottom-nav fixed inset-x-0 bottom-0 z-40 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center justify-around gap-0.5 overflow-x-auto border-t border-line bg-card/95 px-1.5 pb-[env(safe-area-inset-bottom)] backdrop-blur-md *:shrink-0 md:hidden dark:bg-sidebar/95">
       {children}
     </nav>
   );
 }
 
-/** Khung trống hiện trong lúc chờ đọc phiên đăng nhập (không dùng usePathname → được prerender) */
 export function SidebarSkeleton() {
   return <SidebarFrame />;
 }
 
-// Máy tính: logo đã là nút về trang chủ → thanh trên cùng gồm 4 khu chính (Tiếng Đức · Lái xe · Leben in DE · Trò chơi)
 const HEADER_ITEMS = ITEMS.slice(1);
 
-/** Lối tắt ở thanh trên cùng — chỉ trên máy tính (điện thoại đã có ở thanh dưới đáy). Ôn tập là nút riêng ở góc phải (ReviewPill) */
 export function HeaderNav() {
-  // Truyền đủ ITEMS: ở /games khớp mục Game (không hiện trên thanh) → không sáng nhầm "Tiếng Đức"
   return <HeaderNavFrame current={useCurrent([...ITEMS, REVIEW, ...USER_ITEMS])} />;
 }
 
-/** Máy tính: nút "Ôn N" ở góc phải thanh trên cùng — chỉ hiện khi có từ đến hạn, bấm là vào thẳng buổi ôn */
 export function ReviewPill({ due }: { due: number }) {
   if (!due) return null;
   return (
-    <Link href="/vocab/notebook?review=1" title={`${due} từ đến hạn ôn — bấm để ôn ngay`} className="btn gap-1.5 max-md:hidden">
-      <Layers className="size-4" /> Ôn
-      <DueBadge due={due} />
+    <Link href="/vocab/notebook?review=1" title={`${due} từ đến hạn ôn — bấm để ôn ngay`} className="btn btn-sm gap-1.5 max-md:hidden">
+      <Layers className="size-3.5 text-muted" /> Ôn tập
+      <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red px-1 text-[10px] leading-none font-bold text-white tabular-nums">
+        {due > 99 ? "99+" : due}
+      </span>
     </Link>
   );
 }
 
-/** Chỉ hiện phần con khi đang ở phần Tiếng Đức (bài học, từ vựng, ôn tập, xếp hạng) — nút "Ôn N" và kim cương là của riêng phần này.
- *  Ẩn bằng CSS chứ không gỡ ra: huy hiệu kim cương giữ nguyên số điểm đang đếm khi chuyển qua lại giữa các phần */
 export function DeutschOnly({ children }: { children: ReactNode }) {
   const current = useCurrent([...ITEMS, REVIEW, ...USER_ITEMS]);
   return <div className={current === "/tieng-duc" || current === REVIEW.href ? "contents" : "hidden"}>{children}</div>;
 }
 
-/** Bản không tô sáng mục đang chọn — hiện trong lúc chờ (không dùng usePathname → được prerender) */
 export function HeaderNavFrame({ current }: { current?: string }) {
   return (
-    // Tab mục lục vở: dính vào mép dưới thanh trên cùng, tab đang mở tô màu bìa của khu đó
-    <nav aria-label="Các phần chính" className="flex items-stretch gap-1 self-stretch max-md:hidden">
+    <nav aria-label="Các phần chính" className="flex items-center gap-1 max-md:hidden">
       {HEADER_ITEMS.map((it) => {
         const on = it.href === current;
         return (
@@ -177,12 +157,11 @@ export function HeaderNavFrame({ current }: { current?: string }) {
             href={it.href}
             data-sec={secOf(it.href)}
             aria-current={on ? "page" : undefined}
-            // Nền tab là lớp ::before (từ cách mép trên 10px xuống sát mép dưới) → chữ vẫn căn giữa thanh
-            className={`group relative isolate -mb-px flex h-full items-center gap-2 px-3.5 text-sm font-semibold transition-colors duration-200 before:absolute before:inset-x-0 before:top-2.5 before:bottom-0 before:-z-10 before:rounded-t-xl before:transition-[background-color,top] before:duration-300 before:ease-[var(--ease-out)] lg:px-4 ${
-              on ? "text-on-sec before:top-2 before:bg-sec" : "text-foreground/75 hover:text-foreground hover:before:bg-sec-soft"
+            className={`group relative flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors duration-150 ${
+              on ? "bg-sec-soft font-semibold text-sec-text" : "font-medium text-muted hover:bg-card-2 hover:text-foreground"
             }`}
           >
-            <it.icon className={`size-[18px] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-rotate-6 ${on ? "" : "text-sec-text"}`} />
+            <it.icon className={`size-4 ${on ? "text-sec-text" : "text-muted group-hover:text-foreground"}`} />
             {it.label}
           </Link>
         );
@@ -191,7 +170,6 @@ export function HeaderNavFrame({ current }: { current?: string }) {
   );
 }
 
-// Lời chào theo giờ máy người dùng. Server không biết giờ địa phương → render "Xin chào", lên client mới đổi (khỏi lệch hydrate)
 function greetingNow() {
   const h = new Date().getHours();
   if (h >= 5 && h < 11) return "Chào buổi sáng";
@@ -207,10 +185,6 @@ function useGreeting() {
   return useSyncExternalStore(subscribeMinute, greetingNow, () => "Xin chào");
 }
 
-/**
- * Góc phải thanh trên cùng: avatar + tên. Máy tính: rê chuột (hoặc bấm — màn cảm ứng) để mở menu các trang.
- * Điện thoại: chỉ là link tới Cài đặt (trang chính đã có ở thanh dưới đáy, Đăng xuất nằm trong Cài đặt).
- */
 export function UserDropdown({ user }: { user: NavUser }) {
   const admin = user.role === "admin";
   const greeting = useGreeting();
@@ -220,7 +194,6 @@ export function UserDropdown({ user }: { user: NavUser }) {
   const box = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Rời chuột một chút mới đóng — khỏi tắt khi chuột lướt qua khe giữa avatar và menu
   const show = () => {
     clearTimeout(timer.current);
     setOpen(true);
@@ -230,7 +203,6 @@ export function UserDropdown({ user }: { user: NavUser }) {
     timer.current = setTimeout(() => setOpen(false), 150);
   };
 
-  // Chuyển trang thì đóng menu
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) {
     setLastPath(pathname);
@@ -252,10 +224,10 @@ export function UserDropdown({ user }: { user: NavUser }) {
   const trigger = (
     <>
       <span className="flex flex-col items-end leading-tight max-sm:hidden">
-        <span className="text-xs text-muted">{greeting}</span>
-        <span className="max-w-40 truncate font-semibold">{user.name}</span>
+        <span className="text-[11px] text-muted">{greeting}</span>
+        <span className="max-w-36 truncate text-sm font-semibold">{user.name}</span>
       </span>
-      <Avatar user={user} className="size-9 text-lg sm:size-10" />
+      <Avatar user={user} className="size-8 text-sm sm:size-9" />
     </>
   );
 
@@ -267,34 +239,33 @@ export function UserDropdown({ user }: { user: NavUser }) {
       aria-current={it.href === current ? "page" : undefined}
       className="menu-item"
     >
-      <it.icon className={`size-[18px] ${it.href === current ? "" : "text-muted"}`} />
+      <it.icon className={`size-4 ${it.href === current ? "" : "text-muted"}`} />
       {it.label}
     </Link>
   );
 
   return (
     <>
-      <Link href="/stats" title="Thành tích & cài đặt" className="flex items-center gap-3 rounded-full p-0.5 transition hover:bg-foreground/5 md:hidden">
+      <Link href="/stats" title="Thành tích & cài đặt" className="flex items-center gap-2 rounded-lg p-1 transition hover:bg-card-2 md:hidden">
         {trigger}
       </Link>
       <div ref={box} className="relative max-md:hidden" onPointerEnter={(e) => e.pointerType === "mouse" && show()} onPointerLeave={(e) => e.pointerType === "mouse" && hide()}>
         <button
-          className={`flex cursor-pointer items-center gap-2.5 rounded-full py-1 pr-2.5 pl-3 transition-colors hover:bg-foreground/[0.06] ${open ? "bg-foreground/[0.06]" : ""}`}
+          className={`flex cursor-pointer items-center gap-2 rounded-lg py-1 pr-2 pl-2.5 transition-colors hover:bg-card-2 ${open ? "bg-card-2" : ""}`}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
         >
           {trigger}
-          <ChevronDown className={`size-4 text-muted transition ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`size-3.5 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
         </button>
         {open && (
-          // pt-2: khe trong suốt vẫn thuộc vùng rê chuột
-          <div className="absolute top-full right-0 z-50 w-64 pt-2">
+          <div className="absolute top-full right-0 z-50 w-64 pt-1.5">
             <div role="menu" className="popover flex max-h-[calc(100dvh-6rem)] flex-col gap-0.5 overflow-y-auto">
-              <div className="mb-1 flex items-center gap-3 rounded-ui bg-card-2 px-3 py-3">
-                <Avatar user={user} className="size-11 text-lg ring-2 ring-card" />
+              <div className="mb-1 flex items-center gap-2.5 rounded-lg bg-card-2 px-3 py-2.5">
+                <Avatar user={user} className="size-10 text-base ring-1 ring-line" />
                 <div className="min-w-0">
-                  <p className="truncate font-display text-base leading-tight font-bold">{user.name}</p>
+                  <p className="truncate text-sm leading-tight font-semibold">{user.name}</p>
                   <p className={`badge mt-1 ${admin ? "badge-gold" : "badge-accent"}`}>{admin ? "Quản trị viên" : "Học viên"}</p>
                 </div>
               </div>
@@ -316,7 +287,7 @@ export function UserDropdown({ user }: { user: NavUser }) {
                   role="menuitem"
                   className="menu-item text-red-400 hover:bg-red-soft focus-visible:bg-red-soft"
                 >
-                  <LogOut className="size-[18px]" /> Đăng xuất
+                  <LogOut className="size-4" /> Đăng xuất
                 </button>
               </form>
             </div>
@@ -327,11 +298,10 @@ export function UserDropdown({ user }: { user: NavUser }) {
   );
 }
 
-/** Trang thuộc phần Tiếng Đức có hàng tab con (không hiện ở màn học /watch, /tieng-duc/<slug> — màn đó cần chỗ cho trình phát) */
 const showDeutschSubnav = (p: string) =>
   p === "/tieng-duc" || p.startsWith("/tieng-duc/trinh-do/") || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
 
-/** Hàng tab con của phần Tiếng Đức: Bài học · Từ vựng · Ôn tập · Xếp hạng */
+/** Hàng tab con của khu Tiếng Đức: gạch chân gọn gàng dưới thanh đầu trang */
 export function DeutschSubnav() {
   const pathname = usePathname();
   const current = pathname.startsWith("/tieng-duc/trinh-do/")
@@ -339,18 +309,20 @@ export function DeutschSubnav() {
     : DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   if (!showDeutschSubnav(pathname)) return null;
   return (
-    <nav aria-label="Tiếng Đức" className="scroll-row mx-auto flex w-full max-w-6xl gap-2 px-4 pt-4 md:px-6 md:pt-5">
-      {DEUTSCH.map((it) => (
-        <Link
-          key={it.href}
-          href={it.href}
-          aria-current={it.href === current ? "page" : undefined}
-          className="chip"
-        >
-          <it.icon className={`size-4 ${it.href === current ? "" : "text-muted"}`} />
-          {it.label}
-        </Link>
-      ))}
-    </nav>
+    <div data-sec="de" className="border-b border-line bg-card/70 dark:bg-sidebar/70">
+      <nav aria-label="Tiếng Đức" className="tabs-line mx-auto w-full max-w-6xl border-b-0 px-3 sm:px-4 md:px-6">
+        {DEUTSCH.map((it) => (
+          <Link
+            key={it.href}
+            href={it.href}
+            aria-current={it.href === current ? "page" : undefined}
+            className="tab px-2.5 py-2.5 text-[13px] sm:px-3 sm:text-sm"
+          >
+            <it.icon className={`size-3.5 sm:size-4 ${it.href === current ? "text-sec-text" : "text-muted"}`} />
+            {it.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }

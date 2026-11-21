@@ -1,17 +1,29 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Car, Gamepad2, Headphones, Landmark, Languages, Mic, PencilLine, Smartphone } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Car,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Gamepad2,
+  Headphones,
+  Landmark,
+  Languages,
+  Mic,
+  PencilLine,
+  Smartphone,
+} from "lucide-react";
 import type { ComponentType, CSSProperties } from "react";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
 import { pageMeta } from "@/lib/page-meta";
 
-// Trang chủ = trang giới thiệu TĨNH: không đọc DB / cookie → được dựng sẵn lúc build.
-// Việc học hằng ngày (học tiếp, ôn từ…) ở trang của từng phần.
-// Thế giới "Nhãn vở" (DESIGN.md): ba cuốn vở bìa màu là điều hướng chính, dải "obi" số liệu vắt ngang trang.
+// Trang chủ TĨNH: không đọc DB / cookie → dựng sẵn lúc build.
+// Phong cách Tối giản & Chuyên nghiệp (DESIGN.md): tập trung vào giao diện sản phẩm thật, số liệu thật, phân cấp rõ ràng.
 
 export const metadata: Metadata = pageMeta({
-  // Trang chủ: tự ghi tên thương hiệu lên đầu (absolute → không qua template của layout)
   title: { absolute: "HalloVN – Học tiếng Đức, ôn bằng lái và Leben in Deutschland" },
   description:
     "Học tiếng Đức online cho người Việt: luyện nghe nói qua video YouTube, từ vựng Goethe A1–B1, game der die das; ôn lý thuyết lái xe, Leben in Deutschland. Miễn phí.",
@@ -20,167 +32,267 @@ export const metadata: Metadata = pageMeta({
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
 
-/** Ba cuốn vở ở đầu trang — mỗi cuốn là một khu học */
-const HEFTE: { href: string; sec: string; icon: Icon; subject: string; line: string; style: CSSProperties }[] = [
-  { href: "/leben-in-deutschland", sec: "lid", icon: Landmark, subject: "Leben in DE", line: "460 câu · tiếng Việt", style: { "--r": "5deg", "--x": "56%", "--y": "1%", "--fr": "8deg", "--fx": "60%", "--fy": "-1%" } as CSSProperties },
-  { href: "/lai-xe", sec: "laixe", icon: Car, subject: "Lái xe", line: "Hạng B · 1.100+ câu", style: { "--r": "-1deg", "--x": "28.5%", "--y": "18%", "--fr": "-2deg", "--fx": "28%", "--fy": "17%" } as CSSProperties },
-  { href: "/tieng-duc", sec: "de", icon: Languages, subject: "Tiếng Đức", line: "Video · A1 – B1", style: { "--r": "-6deg", "--x": "1%", "--y": "37%", "--fr": "-10deg", "--fx": "-4%", "--fy": "38%" } as CSSProperties },
+const METRICS: { value: string; label: string }[] = [
+  { value: "1.100+", label: "Câu lý thuyết lái xe hạng B" },
+  { value: "460", label: "Câu Leben in Deutschland (BAMF)" },
+  { value: "A1 – C2", label: "Video bản xứ & từ vựng Goethe" },
+  { value: "6", label: "Trò chơi luyện từ vựng" },
+  { value: "0 €", label: "Miễn phí · một tài khoản" },
 ];
 
-/** Dải obi: số liệu thật, xếp dày như dòng credit trên băng giấy quấn bìa đĩa */
-const OBI: [string, string][] = [
-  ["1.100+", "câu lý thuyết lái xe hạng B"],
-  ["30", "câu một đề thi thử, chấm lỗi như thi thật"],
-  ["460", "câu Leben in Deutschland"],
-  ["300 + 10", "câu chung và câu riêng của bang"],
-  ["17 / 33", "câu đúng là đậu"],
-  ["6", "game luyện từ vựng"],
-  ["A1 – B1", "từ vựng theo Goethe"],
-  ["0 €", "một tài khoản cho tất cả"],
-];
-
-const STEPS: { icon: Icon; tint: string; title: string; text: string }[] = [
-  { icon: Headphones, tint: "tint-accent", title: "Nghe", text: "Nghe từng câu trong video thật, tua lại và nghe chậm bao nhiêu lần tuỳ ý." },
-  { icon: Mic, tint: "tint-coral", title: "Nói theo", text: "Nhại lại ngay sau người nói, ghi âm và nghe lại để sửa phát âm, ngữ điệu." },
-  { icon: PencilLine, tint: "tint-gold", title: "Chép chính tả", text: "Gõ lại câu vừa nghe để chắc từ và chính tả, từ mới lưu vào sổ để ôn." },
-];
-
-const EXAMS: { href: string; sec: string; icon: Icon; title: string; label: string; text: string; points: string[]; cta: string }[] = [
+const GERMAN_STEPS: { icon: Icon; tint: string; title: string; text: string }[] = [
   {
-    href: "/lai-xe",
-    sec: "laixe",
-    icon: Car,
-    label: "Lái xe hạng B",
-    title: "Ôn lý thuyết thi bằng lái",
-    text: "Bộ câu hỏi thi lý thuyết ở Đức, kèm bản dịch tiếng Việt cho từng câu.",
-    points: ["Ôn theo chương, xem lại câu đang sai", "Thi thử 30 câu, chấm điểm lỗi như thi thật", "Tiến độ được lưu theo tài khoản"],
-    cta: "Ôn lý thuyết lái xe",
+    icon: Headphones,
+    tint: "tint-accent",
+    title: "Nghe từng câu",
+    text: "Phụ đề đồng bộ từng câu trong video bản xứ, điều chỉnh tốc độ 0,5×–1,25× và lặp lại ngay.",
   },
   {
-    href: "/leben-in-deutschland",
-    sec: "lid",
-    icon: Landmark,
-    label: "Leben in Deutschland",
-    title: "Ôn thi nhập quốc tịch",
-    text: "300 câu chung và 10 câu riêng của từng bang, có tiếng Việt.",
-    points: ["Chọn bang của bạn để ôn đúng bộ câu hỏi", "Thi thử 33 câu, đúng 17 câu là đậu", "Ôn lại riêng những câu hay sai"],
-    cta: "Ôn Leben in Deutschland",
+    icon: Mic,
+    tint: "tint-coral",
+    title: "Nói theo (Shadowing)",
+    text: "Nhại lại ngữ điệu người bản xứ, ghi âm trực tiếp và nghe lại để tự sửa phát âm.",
+  },
+  {
+    icon: PencilLine,
+    tint: "tint-gold",
+    title: "Chép chính tả & Sổ từ",
+    text: "Gõ lại câu vừa nghe để nhớ mặt chữ; chạm bất kỳ từ nào để xem IPA, giống danh từ và lưu ôn SRS.",
   },
 ];
 
-const GAMES = ["Mưa từ vựng", "Nối từ", "Ong đánh vần", "Der Die Das", "Caro", "Sudoku"];
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Chọn đúng mục tiêu",
+    text: "Bắt đầu ngay với Tiếng Đức (A1–C2), chọn hạng bằng lái xe Đức hoặc chọn bang đang sống cho Leben in Deutschland.",
+  },
+  {
+    step: "02",
+    title: "Luyện 10 phút mỗi ngày",
+    text: "Giao diện tối ưu cho điện thoại để bạn học trên tàu, giờ nghỉ trưa hay buổi tối mà không bị phân tâm.",
+  },
+  {
+    step: "03",
+    title: "Ôn lỗ hổng & thi thử",
+    text: "Hệ thống tự gom câu sai, từ đến hạn ôn và đề thi thử đúng cấu trúc thật để bạn biết khi nào đã sẵn sàng.",
+  },
+];
+
+const GAMES = [
+  { name: "Mưa từ vựng", href: "/games/word-rain" },
+  { name: "Nối từ", href: "/games/word-match" },
+  { name: "Ong đánh vần", href: "/games/spelling-bee" },
+  { name: "Der Die Das", href: "/games/der-die-das" },
+  { name: "Caro", href: "/games/caro" },
+  { name: "Sudoku", href: "/games/sudoku" },
+];
+
+const HOME_FAQ = [
+  {
+    q: "HalloVN có miễn phí thật không?",
+    a: "Có. Bạn dùng miễn phí toàn bộ chức năng cốt lõi bằng một tài khoản duy nhất. Khi luyện chép chính tả bạn kiếm thêm kim cương để mở thêm bài học hoặc lưu bài từ video YouTube riêng.",
+  },
+  {
+    q: "Có cần tạo tài khoản trước khi học thử không?",
+    a: "Không cần. Bạn có thể mở ngay bài học tiếng Đức miễn phí, xem kho từ vựng Goethe, làm thử câu hỏi lái xe hoặc Leben in Deutschland. Khi muốn lưu tiến độ, câu sai và sổ từ giữa các thiết bị thì mới cần đăng ký.",
+  },
+  {
+    q: "Bộ câu hỏi Lái xe và Leben in Deutschland có đúng đề chính thức không?",
+    a: "Có. Lái xe dùng bộ câu hỏi lý thuyết chính thức của Đức (hơn 1.100 câu hạng B và các hạng khác, chấm điểm lỗi đúng quy định). Leben in Deutschland bám sát danh mục BAMF 2025 gồm 300 câu chung + 10 câu riêng cho từng bang.",
+  },
+  {
+    q: "Mọi câu hỏi đều có bản dịch tiếng Việt chứ?",
+    a: "Có. Câu gốc tiếng Đức luôn hiển thị trước; bạn bật hoặc tắt bản dịch tiếng Việt và giải thích bất cứ lúc nào khi luyện tập. Ở chế độ thi thử, bản dịch mặc định ẩn để sát điều kiện thi thật.",
+  },
+];
 
 const wrap = "mx-auto w-full max-w-6xl px-4 md:px-6";
 
 export default function Home() {
   return (
-    <main className="home flex flex-col">
-      {/* ── Mở đầu: chữ bên trái, chồng vở bên phải (chồng vở = lối vào ba khu) ── */}
-      <section className={`${wrap} grid items-center gap-10 pt-8 pb-14 sm:pt-12 md:grid-cols-[1.1fr_1fr] md:gap-8 md:pt-16 md:pb-20`}>
-        <div className="flex flex-col items-start gap-6">
-          <h1 className="display max-w-[13ch]">
-            Tiếng Đức, bằng lái, quốc tịch — <span className="highlight">bằng tiếng Việt</span>.
-          </h1>
-          <p className="lead max-w-[46ch]">
-            Video bài học với người bản xứ, hơn 1.100 câu lý thuyết lái xe và 460 câu Leben in Deutschland có bản dịch. Một tài khoản cho tất cả.
-          </p>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Link href="/tieng-duc" className="btn btn-primary btn-lg">
-              Bắt đầu học <ArrowRight className="size-5" />
-            </Link>
-            <LoginLink href="/register" className="btn btn-lg">
-              Đăng ký miễn phí
-            </LoginLink>
-          </div>
-          <p className="text-sm text-muted">Miễn phí, dành cho người Việt ở Đức — học thử được ngay, chưa cần tài khoản.</p>
-        </div>
+    <main className="flex flex-col">
+      {/* ── Hero: tối giản, rõ ràng, minh họa bằng preview giao diện thật ── */}
+      <section className="border-b border-line bg-card/60 dark:bg-sidebar/40">
+        <div className={`${wrap} grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12 lg:py-16`}>
+          <div className="flex flex-col items-start gap-5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted">
+              <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+              Dành cho người Việt tại Đức · Miễn phí 0 €
+            </span>
 
-        <nav aria-label="Ba khu học" className="heft-stack" tabIndex={-1}>
-          <Mascot animated className="heft-mascot" />
-          {HEFTE.map((h) => (
-            <Link key={h.href} href={h.href} data-sec={h.sec} className="heft" style={h.style}>
-              <span className="nhan heft-label">
-                <span className="font-display text-[1.05em] leading-tight font-bold tracking-[-0.02em]">{h.subject}</span>
-                <span className="nhan-line pb-0.5 text-[0.72em] text-muted">{h.line}</span>
-              </span>
-              <h.icon className="heft-icon self-end" strokeWidth={2.25} />
-            </Link>
-          ))}
-        </nav>
-      </section>
+            <h1 className="display max-w-[18ch]">
+              Học tiếng Đức. Thi bằng lái. Tự tin hòa nhập tại Đức.
+            </h1>
 
-      {/* ── Dải obi: băng giấy xanh vắt chéo, dày đặc số liệu ── */}
-      <section aria-label="HalloVN có gì" className="obi-wrap">
-        <div className="obi">
-          <ul className={`${wrap} grid grid-cols-2 gap-x-6 gap-y-4 py-7 sm:grid-cols-4 lg:grid-cols-8 lg:gap-x-4`}>
-            {OBI.map(([n, t]) => (
-              <li key={t} className="flex flex-col gap-1 border-l border-white/30 pl-3">
-                <span className="font-display text-2xl leading-none font-extrabold tracking-[-0.03em] tabular-nums lg:text-[1.65rem]">{n}</span>
-                <span className="text-[0.8rem] leading-snug text-white/80">{t}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ── Tiếng Đức: bìa xanh + trang ô ly minh hoạ một câu đi qua 3 bước ── */}
-      <section aria-labelledby="tieng-duc" data-sec="de" className={`${wrap} pt-20 pb-6 md:pt-28`}>
-        <div className="grid overflow-hidden rounded-[var(--radius-xl)] border border-line bg-card lg:grid-cols-[0.9fr_1.1fr] dark:border-border">
-          <div className="cover flex flex-col gap-5 rounded-none py-8 pr-6 pl-10 sm:py-10 sm:pr-10 sm:pl-14">
-            <Languages className="size-10" strokeWidth={2.25} />
-            <h2 id="tieng-duc" className="font-display text-[clamp(2rem,1.4rem+2.2vw,3.25rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
-              Học tiếng Đức với video của người bản xứ
-            </h2>
-            <p className="max-w-[40ch] text-base leading-relaxed text-white/85 sm:text-lg">
-              Chọn một video theo trình độ rồi luyện từng câu theo phương pháp shadowing — nghe được, nói được rồi mới viết được.
+            <p className="lead max-w-[48ch]">
+              HalloVN đồng hành cùng người Việt tại Đức với video bản xứ, hơn 1.100 câu lý thuyết lái xe và 460 câu Leben in Deutschland — tất cả đều có bản dịch tiếng Việt rõ ràng.
             </p>
-            <div className="mt-auto flex flex-wrap gap-3 pt-2">
-              <Link href="/tieng-duc" className="btn btn-lg border-transparent bg-white text-[#16203a] hover:bg-white/90">
-                Xem bài học <ArrowRight className="size-5" />
+
+            <div className="flex w-full flex-col gap-2.5 pt-1 sm:w-auto sm:flex-row">
+              <Link href="/tieng-duc" className="btn btn-primary btn-lg">
+                Bắt đầu học miễn phí <ArrowRight className="size-4" />
               </Link>
-              <Link href="/vocab" className="btn btn-lg border-white/40 bg-transparent text-white hover:border-white hover:bg-white/10">
-                Từ vựng A1–B1
+              <a href="#san-pham" className="btn btn-lg">
+                Khám phá HalloVN
+              </a>
+            </div>
+
+            <p className="text-xs text-muted">Học thử ngay không cần tài khoản · Một tài khoản đồng bộ Web & App.</p>
+          </div>
+
+          {/* Product UI Preview Composition: mô phỏng 3 màn hình sản phẩm thật */}
+          <div className="flex flex-col gap-3" aria-label="Xem trước 3 sản phẩm trên HalloVN">
+            {/* Preview 1: Tiếng Đức */}
+            <Link href="/tieng-duc" data-sec="de" className="group card card-link flex flex-col gap-3 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-2 text-xs font-semibold text-sec-text">
+                  <span className="icon-bubble tint-sec size-6 rounded-md">
+                    <Languages className="size-3.5" />
+                  </span>
+                  Tiếng Đức · Shadowing
+                </span>
+                <span className="font-mono text-[11px] text-muted tabular-nums">Câu 3 / 24 · 0,75×</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 shrink-0 items-end gap-[2.5px]" aria-hidden>
+                  {[35, 75, 50, 95, 65, 85, 45, 70].map((h, i) => (
+                    <i key={i} className="wave-bar w-[3px] rounded-full bg-accent" style={{ height: `${h}%`, "--i": i } as CSSProperties} />
+                  ))}
+                </span>
+                <div className="min-w-0">
+                  <p lang="de" className="text-sm font-semibold text-foreground sm:text-[0.9375rem]">
+                    Ich hätte gern einen Kaffee, bitte.
+                  </p>
+                  <p className="text-xs text-muted">Cho tôi một ly cà phê nhé.</p>
+                </div>
+              </div>
+            </Link>
+
+            {/* Preview 2 & 3: Lái xe + LiD */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link href="/lai-xe" data-sec="laixe" className="group card card-link flex flex-col gap-2.5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sec-text">
+                    <span className="icon-bubble tint-sec size-6 rounded-md">
+                      <Car className="size-3.5" />
+                    </span>
+                    Führerschein
+                  </span>
+                  <span className="badge badge-gold tabular-nums">Hạng B</span>
+                </div>
+                <p className="text-sm leading-snug font-semibold text-foreground">Thi thử 30 câu · 45 phút</p>
+                <p className="text-xs leading-relaxed text-muted">Chấm điểm lỗi chuẩn đề Đức, ôn theo chương &amp; giải thích tiếng Việt.</p>
+                <span className="mt-auto inline-flex items-center gap-1 pt-1 text-xs font-semibold text-sec-text">
+                  Luyện ngay <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+
+              <Link href="/leben-in-deutschland" data-sec="lid" className="group card card-link flex flex-col gap-2.5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sec-text">
+                    <span className="icon-bubble tint-sec size-6 rounded-md">
+                      <Landmark className="size-3.5" />
+                    </span>
+                    Leben in DE
+                  </span>
+                  <span className="badge badge-coral tabular-nums">17 / 33 đậu</span>
+                </div>
+                <p className="text-sm leading-snug font-semibold text-foreground">300 câu chung + 10 câu bang</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="progress h-1.5">
+                    <div className="progress-bar" style={{ width: "68%" }} />
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-sec-text">
+                    Ôn thi LiD <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Dải số liệu thật: phẳng, sắc nét, phân cách bằng hairline ── */}
+      <section aria-label="Số liệu nền tảng" className="border-b border-line bg-background">
+        <ul className={`${wrap} grid grid-cols-2 divide-y divide-line sm:grid-cols-3 lg:grid-cols-5 lg:divide-x lg:divide-y-0`}>
+          {METRICS.map((m) => (
+            <li key={m.label} className="flex flex-col gap-1 py-4 sm:px-5 sm:py-5 first:sm:pl-0">
+              <span className="font-display text-xl font-bold tracking-[-0.02em] text-foreground tabular-nums sm:text-2xl">{m.value}</span>
+              <span className="text-xs leading-snug text-muted">{m.label}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── Sản phẩm 1: Tiếng Đức ── */}
+      <section id="san-pham" aria-labelledby="sec-de" data-sec="de" className={`${wrap} scroll-mt-20 pt-14 pb-8 sm:pt-16`}>
+        <div className="card grid gap-8 p-6 sm:p-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-10">
+          <div className="flex flex-col items-start gap-4">
+            <span className="badge badge-accent">
+              <Languages className="size-3.5" /> Tiếng Đức A1 – C2
+            </span>
+            <h2 id="sec-de" className="font-display text-2xl leading-snug font-bold tracking-[-0.025em] sm:text-3xl">
+              Học tiếng Đức tự nhiên qua video của người bản xứ
+            </h2>
+            <p className="text-sm leading-relaxed text-muted sm:text-[0.9375rem]">
+              Không học thuộc lòng khô khan. Chọn bài theo trình độ hoặc dán link YouTube bạn thích để luyện nghe, nói theo (shadowing), chép chính tả và lưu từ mới vào sổ ôn tập.
+            </p>
+            <ul className="grid w-full gap-2 text-sm text-foreground sm:grid-cols-2">
+              {["Video bản xứ có phụ đề từng câu", "Ghi âm & so sánh phát âm", "Chép chính tả kiểm tra từng từ", "Kho từ Goethe A1–B1 & ôn SRS"].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 shrink-0 text-accent-text" aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2.5 pt-2">
+              <Link href="/tieng-duc" className="btn btn-primary">
+                Khám phá Tiếng Đức <ArrowRight className="size-4" />
+              </Link>
+              <Link href="/vocab" className="btn">
+                <BookOpen className="size-4 text-muted" /> Kho từ vựng
               </Link>
             </div>
           </div>
 
-          {/* Trang vở ô ly: một câu thật đi qua ba bước */}
-          <div className="o-ly flex flex-col gap-6 p-6 sm:p-10">
-            <figure className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 items-end gap-[3px]" aria-hidden>
-                  {[40, 75, 55, 95, 65, 85, 45, 70, 30].map((h, i) => (
-                    <i key={i} className="wave-bar w-[4px] rounded-full bg-accent" style={{ height: `${h}%`, "--i": i } as CSSProperties} />
-                  ))}
-                </span>
-                <span className="text-xs font-semibold text-muted">Câu 3 / 24 · Nghe lại 0,75×</span>
+          {/* Minh họa trực quan quy trình 3 bước của 1 câu */}
+          <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-background p-5">
+            <div className="flex flex-col gap-2 border-b border-line pb-4">
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span className="font-semibold text-foreground">Luyện chép chính tả</span>
+                <span className="font-mono tabular-nums">A1 · Alltag</span>
               </div>
-              <blockquote lang="de" className="font-display text-[clamp(1.5rem,1.2rem+1.2vw,2.1rem)] leading-tight font-bold tracking-[-0.02em]">
-                Ich hätte gern einen <span className="highlight">Kaffee</span>, bitte.
-              </blockquote>
-              <figcaption className="text-base text-muted">Cho tôi một ly cà phê nhé.</figcaption>
-            </figure>
-
-            <p lang="de" aria-label="Chép chính tả: Ich hätte gern einen Kaffee, bitte." className="flex flex-wrap gap-1.5 font-mono text-sm">
-              {["Ich", "hätte", "gern", "einen", "K_ff_e", "bitte"].map((w, i) => (
-                <span key={w} className={`rounded-md border px-2 py-1 ${i === 4 ? "border-dashed border-gold bg-gold-soft text-amber" : "border-ok/30 bg-ok-soft text-ok-text"}`}>
-                  {w}
-                </span>
-              ))}
-            </p>
-
-            <ol className="grid gap-4 border-t border-line pt-6 sm:grid-cols-3">
-              {STEPS.map((s, i) => (
-                <li key={s.title} className="flex flex-col gap-2">
-                  <span className="flex items-center gap-2">
-                    <span className={`icon-bubble size-9 ${s.tint}`}>
-                      <s.icon className="size-[18px]" />
-                    </span>
-                    <span className="font-display text-base leading-tight font-bold">
-                      <span className="text-muted tabular-nums">{i + 1}.</span> {s.title}
-                    </span>
+              <p lang="de" className="text-base font-semibold text-foreground">
+                Ich hätte gern einen Kaffee, bitte.
+              </p>
+              <div lang="de" aria-label="Ví dụ ô chép chính tả" className="flex flex-wrap gap-1.5 pt-1 font-mono text-xs">
+                {["Ich", "hätte", "gern", "einen", "K_ff_e", "bitte"].map((w, i) => (
+                  <span
+                    key={w}
+                    className={`rounded-md border px-2 py-1 font-medium ${
+                      i === 4 ? "border-dashed border-gold-dark bg-gold-soft text-amber" : "border-ok/30 bg-ok-soft text-ok-text"
+                    }`}
+                  >
+                    {w}
                   </span>
-                  <p className="text-sm leading-relaxed text-muted">{s.text}</p>
+                ))}
+              </div>
+            </div>
+
+            <ol className="flex flex-col divide-y divide-line">
+              {GERMAN_STEPS.map((s, i) => (
+                <li key={s.title} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className={`icon-bubble size-8 shrink-0 ${s.tint}`}>
+                    <s.icon className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      <span className="mr-1 font-mono text-xs text-muted">{i + 1}.</span>
+                      {s.title}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted">{s.text}</p>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -188,77 +300,181 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Hai bộ thi: hai cuốn vở cạnh nhau, nhãn vở là tiêu đề ── */}
-      <section aria-label="Ôn thi" className={`${wrap} grid gap-6 py-10 md:grid-cols-2 md:gap-8`}>
-        {EXAMS.map((e) => (
-          <Link key={e.href} href={e.href} data-sec={e.sec} className="exam-heft group flex flex-col">
-            <div className="cover flex min-h-36 items-start justify-between pt-6 pr-6 pb-16 pl-10">
-              <e.icon className="size-10" strokeWidth={2.25} />
-              <span className="text-sm font-semibold">{e.label}</span>
-            </div>
-            <div className="relative z-10 mx-4 -mt-12 flex flex-1 flex-col sm:mx-6">
-              <div className="nhan flex flex-1 flex-col gap-3 pb-5">
-                <h2 className="font-display text-2xl leading-tight font-extrabold tracking-[-0.025em] sm:text-[1.75rem]">{e.title}</h2>
-                <p className="text-muted">{e.text}</p>
-                <ul className="flex flex-col">
-                  {e.points.map((pt) => (
-                    <li key={pt} className="nhan-line py-2 text-[0.95rem]">
-                      {pt}
-                    </li>
-                  ))}
-                </ul>
-                <span className="mt-auto inline-flex items-center gap-1.5 pt-2 font-semibold text-sec-text">
-                  {e.cta} <ArrowRight className="size-4 transition-transform duration-300 ease-[var(--ease-out)] group-hover:translate-x-1" />
-                </span>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </section>
-
-      {/* ── Game: dải tím, tên game như nhãn dán ── */}
-      <section aria-labelledby="game" data-sec="game" className={`${wrap} py-6`}>
-        <Link href="/games" className="cover group flex flex-col gap-6 py-8 pr-6 pl-10 sm:flex-row sm:items-center sm:justify-between sm:py-10 sm:pr-10 sm:pl-14">
-          <div className="flex flex-col gap-2">
-            <Gamepad2 className="size-9" strokeWidth={2.25} />
-            <h2 id="game" className="font-display text-3xl leading-tight font-extrabold tracking-[-0.03em]">
-              Chơi mà nhớ từ
-            </h2>
-            <p className="max-w-[38ch] text-white/85">Vài phút mỗi ngày với trò chơi luyện từ vựng và giống của danh từ.</p>
+      {/* ── Sản phẩm 2 & 3: Führerschein & Leben in Deutschland (tách biệt rõ ràng) ── */}
+      <section aria-label="Luyện thi lý thuyết và quốc tịch" className={`${wrap} grid gap-6 py-4 md:grid-cols-2`}>
+        {/* Führerschein */}
+        <article data-sec="laixe" className="card flex flex-col gap-5 p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-3">
+            <span className="badge badge-gold">
+              <Car className="size-3.5" /> Führerschein · Hạng B &amp; các hạng khác
+            </span>
+            <span className="font-mono text-xs text-muted tabular-nums">1.100+ câu</span>
           </div>
-          <ul className="flex max-w-md flex-wrap gap-2 sm:justify-end" aria-label="Các game">
-            {GAMES.map((g, i) => (
-              <li
-                key={g}
-                className="game-sticker rounded-lg bg-white px-3 py-1.5 text-sm font-bold text-[#2b1d6b]"
-                style={{ "--t": `${(i % 3) - 1}deg` } as CSSProperties}
-              >
-                {g}
+          <div className="flex flex-col gap-2">
+            <h2 className="font-display text-xl font-bold tracking-[-0.02em] sm:text-2xl">Luyện thi lý thuyết bằng lái xe Đức</h2>
+            <p className="text-sm leading-relaxed text-muted">
+              Bộ câu hỏi chính thức kèm hình ảnh, video tình huống, bản dịch tiếng Việt và giải thích chi tiết từng đáp án.
+            </p>
+          </div>
+          <ul className="flex flex-col divide-y divide-line text-sm">
+            {[
+              "Học theo chương Grundstoff & Zusatzstoff, xem rõ tỷ lệ đúng",
+              "Đề mẫu chính thức (Musterbögen) & thi thử 30 câu / 45 phút",
+              "Chấm điểm lỗi như thi thật (tối đa 10 điểm lỗi, 2 câu 5đ trượt)",
+              "Tự động gom câu sai và câu đánh dấu để ôn tập trung",
+            ].map((pt) => (
+              <li key={pt} className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0">
+                <Check className="mt-0.5 size-4 shrink-0 text-sec-text" aria-hidden />
+                <span className="text-foreground/90">{pt}</span>
               </li>
             ))}
           </ul>
-        </Link>
+          <div className="mt-auto flex flex-wrap gap-2.5 pt-2">
+            <Link href="/lai-xe" className="btn btn-primary">
+              Luyện thi bằng lái <ArrowRight className="size-4" />
+            </Link>
+            <Link href="/lai-xe/thi-thu" className="btn">
+              Thi thử 30 câu
+            </Link>
+          </div>
+        </article>
+
+        {/* Leben in Deutschland */}
+        <article data-sec="lid" className="card flex flex-col gap-5 p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-3">
+            <span className="badge badge-coral">
+              <Landmark className="size-3.5" /> Leben in Deutschland · BAMF 2025
+            </span>
+            <span className="font-mono text-xs text-muted tabular-nums">300 + 10 câu</span>
+          </div>
+          <div className="flex flex-col gap-2">
+            <h2 className="font-display text-xl font-bold tracking-[-0.02em] sm:text-2xl">Ôn thi nhập tịch &amp; hội nhập</h2>
+            <p className="text-sm leading-relaxed text-muted">
+              Trọn bộ 300 câu hỏi chung cùng 10 câu riêng của từng bang trong 16 bang của Đức, dịch sát nghĩa và dễ nhớ.
+            </p>
+          </div>
+          <ul className="flex flex-col divide-y divide-line text-sm">
+            {[
+              "Chọn đúng bang bạn đang sống để học đủ 310 câu cần thiết",
+              "Chia nhỏ theo bộ 30 câu và chủ đề chính trị, lịch sử, xã hội",
+              "Thi thử 33 câu trong 60 phút — đạt từ 17/33 câu là đậu",
+              "Bật/tắt bản dịch tiếng Việt linh hoạt, ôn nhanh câu hay sai",
+            ].map((pt) => (
+              <li key={pt} className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0">
+                <Check className="mt-0.5 size-4 shrink-0 text-sec-text" aria-hidden />
+                <span className="text-foreground/90">{pt}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-auto flex flex-wrap gap-2.5 pt-2">
+            <Link href="/leben-in-deutschland" className="btn btn-primary">
+              Ôn thi LiD <ArrowRight className="size-4" />
+            </Link>
+            <Link href="/leben-in-deutschland/thi-thu" className="btn">
+              Thi thử 33 câu
+            </Link>
+          </div>
+        </article>
       </section>
 
-      {/* ── App + kêu gọi cuối trang ── */}
-      <section className={`${wrap} grid gap-6 pt-14 pb-6 md:grid-cols-[1fr_1.3fr] md:items-stretch`}>
-        <Link href="/about" className="group card card-link flex flex-col justify-between gap-6 p-6 sm:p-8">
-          <Smartphone className="size-9 text-accent-text" strokeWidth={2} />
-          <div className="flex flex-col gap-2">
-            <h2 className="section-title">Có cả app cho điện thoại</h2>
-            <p className="text-muted">Các app học tiếng Đức, lý thuyết lái xe và Leben in Deutschland của HalloVN cho iOS và Android.</p>
-            <span className="mt-2 inline-flex items-center gap-1.5 font-semibold text-link">
-              Xem các app <ArrowRight className="size-4 transition-transform duration-300 ease-[var(--ease-out)] group-hover:translate-x-1" />
+      {/* ── Khu trò chơi: dải ngang gọn gàng ── */}
+      <section aria-labelledby="sec-games" data-sec="game" className={`${wrap} py-4`}>
+        <div className="card flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3.5">
+            <span className="icon-bubble tint-grape mt-0.5 size-10">
+              <Gamepad2 className="size-5" />
+            </span>
+            <div className="flex flex-col gap-1">
+              <h2 id="sec-games" className="section-title">
+                6 trò chơi luyện từ &amp; giống danh từ
+              </h2>
+              <p className="max-w-md text-sm text-muted">
+                Ôn từ vựng Goethe A1–B2 và nhớ nhanh der / die / das qua vài phút giải trí mỗi ngày.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {GAMES.map((g) => (
+              <Link key={g.href} href={g.href} className="chip text-xs">
+                {g.name}
+              </Link>
+            ))}
+            <Link href="/games" className="btn btn-sm btn-soft">
+              Tất cả game <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Cách hoạt động ── */}
+      <section aria-labelledby="sec-how" className={`${wrap} py-12 sm:py-14`}>
+        <div className="mb-6 flex flex-col gap-1">
+          <p className="label">Lộ trình đơn giản</p>
+          <h2 id="sec-how" className="font-display text-2xl font-bold tracking-[-0.02em]">
+            Tập trung học, không mất thời gian sắp xếp
+          </h2>
+        </div>
+        <ol className="grid gap-4 md:grid-cols-3">
+          {HOW_IT_WORKS.map((item) => (
+            <li key={item.step} className="card flex flex-col gap-2 p-5">
+              <span className="font-mono text-xs font-semibold text-accent-text">{item.step}</span>
+              <h3 className="text-base font-bold text-foreground">{item.title}</h3>
+              <p className="text-sm leading-relaxed text-muted">{item.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ── Câu hỏi thường gặp ── */}
+      <section aria-labelledby="sec-faq" className={`${wrap} py-4`}>
+        <div className="card p-6 sm:p-7">
+          <div className="mb-4 flex flex-col gap-1">
+            <p className="label">Giải đáp nhanh</p>
+            <h2 id="sec-faq" className="section-title">
+              Câu hỏi thường gặp
+            </h2>
+          </div>
+          <div className="flex flex-col divide-y divide-line">
+            {HOME_FAQ.map((f) => (
+              <details key={f.q} className="faq-item group py-1">
+                <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-4 py-2 text-sm font-semibold text-foreground sm:text-[0.9375rem]">
+                  <span>{f.q}</span>
+                  <ChevronDown className="size-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" aria-hidden />
+                </summary>
+                <p className="max-w-[70ch] pb-3 text-sm leading-relaxed text-muted">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── App di động + CTA cuối trang ── */}
+      <section className={`${wrap} grid gap-5 pt-10 pb-2 md:grid-cols-[0.85fr_1.15fr]`}>
+        <Link href="/about" className="group card card-link flex flex-col justify-between gap-5 p-6">
+          <span className="icon-bubble tint-accent size-10">
+            <Smartphone className="size-5" />
+          </span>
+          <div className="flex flex-col gap-1.5">
+            <h2 className="section-title">Đồng bộ với app điện thoại</h2>
+            <p className="text-sm leading-relaxed text-muted">
+              Học tiếng Đức, lý thuyết lái xe và Leben in Deutschland trên iOS &amp; Android với chung một tài khoản HalloVN.
+            </p>
+            <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-link">
+              Tìm hiểu thêm <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </span>
           </div>
         </Link>
 
-        <div className="o-ly relative flex flex-col items-start gap-5 overflow-hidden rounded-[var(--radius-xl)] border border-line p-6 sm:p-10 dark:border-border">
-          <h2 className="max-w-[16ch] font-display text-[clamp(1.75rem,1.3rem+1.6vw,2.6rem)] leading-[1.08] font-extrabold tracking-[-0.03em]">
-            Bắt đầu hôm nay — <span className="highlight">mười phút</span> mỗi ngày là đủ.
-          </h2>
-          <p className="max-w-[44ch] text-muted">Tạo tài khoản để lưu tiến độ, sổ từ và điểm thi thử trên mọi thiết bị. Chưa muốn đăng ký thì cứ học thử trước.</p>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        <div className="card relative flex flex-col items-start justify-between gap-5 overflow-hidden p-6 sm:p-8">
+          <div className="flex max-w-[44ch] flex-col gap-2">
+            <h2 className="font-display text-2xl leading-snug font-bold tracking-[-0.02em]">
+              Bắt đầu hôm nay — 10 phút mỗi ngày là đủ.
+            </h2>
+            <p className="text-sm leading-relaxed text-muted">
+              Tạo tài khoản miễn phí để lưu tiến độ, sổ từ và lịch sử thi thử trên mọi thiết bị. Bạn cũng có thể vào học thử ngay lập tức.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
             <LoginLink href="/register" className="btn btn-primary btn-lg">
               Đăng ký miễn phí
             </LoginLink>
@@ -266,7 +482,7 @@ export default function Home() {
               Thi thử lái xe ngay
             </Link>
           </div>
-          <Mascot className="pointer-events-none absolute -right-4 -bottom-6 size-36 rotate-[-8deg] max-sm:hidden lg:size-44" />
+          <Mascot className="pointer-events-none absolute right-5 bottom-4 hidden size-20 opacity-90 sm:block" />
         </div>
       </section>
     </main>

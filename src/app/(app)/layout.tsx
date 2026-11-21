@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import type { Metadata, Viewport } from "next";
-import { Be_Vietnam_Pro, Bricolage_Grotesque, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { DeutschSubnav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/auth/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
@@ -15,20 +15,12 @@ import { SITE_URL } from "@/lib/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-// Chữ thân: Be Vietnam Pro — do người Việt thiết kế, dấu tiếng Việt chuẩn và rõ ở cỡ nhỏ
-const body = Be_Vietnam_Pro({
+// Plus Jakarta Sans: tối giản, sắc nét, hỗ trợ đầy đủ dấu tiếng Việt và ký tự Đức (ä, ö, ü, ß)
+const body = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
 });
-
-// Chữ tiêu đề: Bricolage Grotesque (biến thiên opsz) — tiêu đề lớn có cá tính, cỡ nhỏ vẫn gọn
-const heading = Bricolage_Grotesque({
-  variable: "--font-heading",
-  subsets: ["latin", "vietnamese"],
-  axes: ["opsz"],
-});
-
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -41,10 +33,6 @@ const SITE_TITLE = "HalloVN – Học tiếng Đức, thi lái xe & Leben in Deu
 const SITE_DESCRIPTION =
   "Học tiếng Đức qua video thật, ôn lý thuyết lái xe Đức và Leben in Deutschland có bản dịch tiếng Việt, chơi game luyện từ vựng. Miễn phí cho người Việt tại Đức.";
 
-// Chỉ đặt phần chung cho cả nhóm trang. KHÔNG đặt alternates.canonical / openGraph.url / openGraph.title ở đây:
-// trang con không tự khai báo sẽ thừa kế nguyên giá trị → mọi trang trỏ canonical / og:url về trang chủ.
-// og:title / og:description / twitter tự lấy theo title + description của từng trang; ảnh chia sẻ mặc định
-// là src/app/(app)/opengraph-image.tsx. Canonical "/" đặt ở page.tsx trang chủ.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_TITLE, template: "%s | HalloVN" },
@@ -78,23 +66,19 @@ export const metadata: Metadata = {
   other: { "google-adsense-account": ADSENSE_CLIENT },
 };
 
-// viewport-fit=cover: thanh dưới đáy (điện thoại) kéo xuống sát mép, chừa chỗ thanh home bằng env(safe-area-inset-*)
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#fbfaf7",
+  themeColor: "#f8fafc",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${body.variable} ${heading.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="vi" className={`${body.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
-        {/* Áp giao diện đã chọn trước khi trình duyệt vẽ trang, tránh nháy nền sáng */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* Tải sẵn linh vật của màn tải trang: mạng chậm mới hiện màn này, lúc đó không kịp tải hình nữa */}
         <link rel="prefetch" href="/mascot-loading.svg" as="image" />
-        {/* JSON-LD Organization + WebSite của HalloVN (một lần cho mọi trang) */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd()) }} />
       </head>
       <body className="flex min-h-full">
@@ -102,20 +86,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SidebarWithUser />
         </Suspense>
         <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-          {/* z-30: menu thả xuống ở avatar nổi trên nội dung trang */}
-          <header className="site-header relative z-30 border-b border-line bg-card dark:bg-sidebar">
-            <div className="flex h-14 items-center gap-3 px-3 sm:h-16 sm:gap-5 sm:px-4 md:px-6">
-              <Link href="/" aria-label="HalloVN — trang chủ" className="group flex min-w-0 shrink-0 items-center gap-2 rounded-xl pr-1">
-                <Mascot className="size-9 shrink-0 transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-rotate-8 group-hover:scale-110 motion-reduce:transition-none sm:size-10" />
-                <span className="flex items-baseline font-display text-[1.3rem] leading-none font-extrabold tracking-[-0.03em] sm:text-[1.45rem]">
+          <header className="site-header sticky top-0 z-30 border-b border-line bg-card/90 backdrop-blur-md dark:bg-sidebar/90">
+            <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:h-15 sm:gap-6 md:px-6">
+              <Link href="/" aria-label="HalloVN — trang chủ" className="group flex min-w-0 shrink-0 items-center gap-2 rounded-lg pr-1">
+                <Mascot className="size-8 shrink-0 transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none" />
+                <span className="flex items-center gap-1 font-display text-[1.15rem] leading-none font-extrabold tracking-[-0.03em] sm:text-[1.22rem]">
                   Hallo
-                  <span className="ml-0.5 -rotate-3 rounded-[5px] bg-gold px-1 py-0.5 text-[0.8em] text-[#16203a] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:rotate-3">VN</span>
+                  <span className="rounded bg-accent px-1.5 py-0.5 text-[0.68em] font-bold tracking-normal text-white">VN</span>
                 </span>
               </Link>
               <Suspense fallback={<HeaderNavFrame />}>
                 <HeaderNavWithUser />
               </Suspense>
-              <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+              <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
                 <ThemeToggle />
                 <Suspense>
                   <UserMenu />
@@ -123,7 +106,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </div>
             </div>
           </header>
-          {/* share-gutter: chừa lề phải khi thanh chia sẻ đang mở (globals.css) */}
           <div className="share-gutter flex min-w-0 flex-1 flex-col">
             <Suspense>
               <DeutschSubnav />
@@ -135,14 +117,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense>
           <ShareBar />
         </Suspense>
-        {/* Google AdSense: tải lúc trình duyệt rảnh (không chặn trang, không chèn vào <head> trước khi hydrate → hết lệch HTML);
-            xác minh site dùng thẻ meta google-adsense-account trong metadata */}
         <Script
           strategy="lazyOnload"
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
           crossOrigin="anonymous"
         />
-        {/* Popup đăng nhập / đăng ký: bấm nút đăng nhập ở trang nào cũng hiện đè lên trang đó */}
         <Suspense>
           <LoginDialogSlot />
         </Suspense>
