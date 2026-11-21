@@ -235,17 +235,21 @@ export default function DictationPanel({
             }}
             onKeyDown={(e) => {
               if (e.nativeEvent.isComposing) return;
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && e.shiftKey && !result.done) {
+                e.preventDefault();
+                reveal([active]); // Shift+Enter = xem từ ở ô đang gõ (như bấm mắt)
+              } else if (e.key === "Enter") {
                 e.preventDefault();
                 submit();
               } else if (e.key === "Escape") {
                 e.currentTarget.blur(); // thoát ô gõ (bàn phím / trình đọc màn hình không bị kẹt)
-              } else if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                e.preventDefault();
-                onReplay(); // Tab = nghe lại; Shift+Tab / Esc vẫn rời ô như bình thường
+              } else if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault(); // Tab / Shift+Tab = sang ô chưa xong kế tiếp / trước đó; Esc vẫn rời ô như bình thường
+                setActive(nextOpenSlot(result.words, active, e.shiftKey ? -1 : 1));
               } else if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
-                onTogglePlay();
+                if (e.shiftKey) onReplay(); // Shift+Space = nghe lại
+                else onTogglePlay();
               } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
                 e.preventDefault();
                 setActive(nextOpenSlot(result.words, active, e.key === "ArrowRight" ? 1 : -1));
@@ -344,7 +348,7 @@ export default function DictationPanel({
             : "Sửa lại các ô đỏ / vàng rồi Enter để kiểm tra lại."
           : touch
             ? `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô để đổi ô, "Xem từ" để hiện từ đang chọn (${hintCost}).`
-            : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Bấm ô hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, Tab nghe lại, Esc thoát ô, bấm mắt để xem từ (${hintCost}).`}
+            : `Gõ đúng tự sang ô sau (ae/oe/ue/ss thay ä/ö/ü/ß cũng được). Tab / Shift+Tab hoặc ← → để đổi ô, ↑ ↓ để đổi câu, Space phát / dừng, Shift+Space nghe lại, Esc thoát ô, bấm mắt hoặc Shift+Enter để xem từ (${hintCost}).`}
       </p>
 
       {/* Nút chính (Kiểm tra / Câu tiếp theo) đứng trước và rộng hơn; "Hiện tất cả" (bỏ cuộc) chỉ là nút phụ cạnh bên
