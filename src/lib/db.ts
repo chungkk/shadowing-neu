@@ -1892,19 +1892,22 @@ export function learningPathStats(userId: number, now = Date.now()): {
   const since = now - DAY;
   const d = conn().prepare("SELECT COUNT(*) AS n FROM dict_points WHERE user_id = ? AND at >= ?").get(userId, since) as { n: number };
   const r = conn().prepare("SELECT COUNT(*) AS n FROM review_events WHERE user_id = ? AND at >= ?").get(userId, since) as { n: number };
-  const weakWords = conn()
-    .prepare(
-      `SELECT v.id, v.word, v.meaning, v.context, v.source_url AS sourceUrl, v.source_title AS sourceTitle,
-              v.lapses, v.srs_stage AS stage,
-              (SELECT COUNT(*) FROM vocab_examples ve WHERE ve.vocab_id = v.id) AS exampleCount
-       FROM vocab v
-       WHERE v.user_id = ?
-         AND (v.source_url LIKE '/lesson/%' OR v.source_url LIKE '/watch/%')
-         AND (v.lapses > 0 OR v.srs_stage <= 2)
-       ORDER BY v.lapses DESC, exampleCount DESC, v.srs_stage ASC, v.id DESC
-       LIMIT 8`,
-    )
-    .all(userId) as WeakVideoWord[];
+  // node:sqlite trả object có null prototype → trải qua { ...r } để React Server Component serialize sang Client Component không lỗi
+  const weakWords = (
+    conn()
+      .prepare(
+        `SELECT v.id, v.word, v.meaning, v.context, v.source_url AS sourceUrl, v.source_title AS sourceTitle,
+                v.lapses, v.srs_stage AS stage,
+                (SELECT COUNT(*) FROM vocab_examples ve WHERE ve.vocab_id = v.id) AS exampleCount
+         FROM vocab v
+         WHERE v.user_id = ?
+           AND (v.source_url LIKE '/lesson/%' OR v.source_url LIKE '/watch/%')
+           AND (v.lapses > 0 OR v.srs_stage <= 2)
+         ORDER BY v.lapses DESC, exampleCount DESC, v.srs_stage ASC, v.id DESC
+         LIMIT 8`,
+      )
+      .all(userId) as WeakVideoWord[]
+  ).map((r) => ({ ...r }));
   return { sentencesToday: d.n, reviewsToday: r.n, weakWords };
 }
 
