@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, CircleCheck, Clock, ExternalLink, Lock, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, CircleCheck, Clock, ExternalLink, Lock, Search, X } from "lucide-react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
@@ -157,7 +157,8 @@ function byChannel(lessons: Item[]): Group[] {
   );
 }
 
-const anchor = (name: string) => `kenh-${name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x"}`;
+const channelSlug = (name: string) => name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
+const anchor = (name: string) => `kenh-${channelSlug(name)}`;
 
 function ChannelAvatar({ g }: { g: Group }) {
   if (g.avatar)
@@ -170,8 +171,8 @@ function ChannelAvatar({ g }: { g: Group }) {
   );
 }
 
-/** 1 kênh: tiêu đề gọn + 1 hàng thẻ vuốt / cuộn ngang (có nút mũi tên ‹ › trên màn hình rộng) */
-function ChannelSection({ g, onLocked }: { g: Group; onLocked?: (l: Item) => void }) {
+/** 1 kênh: tiêu đề bấm được để mở toàn bộ danh sách bài + 1 hàng thẻ vuốt / cuộn ngang (có nút mũi tên ‹ › trên màn hình rộng) */
+function ChannelSection({ g, onLocked, onOpen }: { g: Group; onLocked?: (l: Item) => void; onOpen: () => void }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [nav, setNav] = useState({ left: false, right: false });
 
@@ -202,11 +203,22 @@ function ChannelSection({ g, onLocked }: { g: Group; onLocked?: (l: Item) => voi
   return (
     <section id={anchor(g.key)} aria-labelledby={`${anchor(g.key)}-h`} className="flex scroll-mt-20 flex-col gap-2.5">
       <div className="flex items-center gap-2">
-        <ChannelAvatar g={g} />
-        <h3 id={`${anchor(g.key)}-h`} className="min-w-0 truncate font-display text-base font-bold tracking-[-0.015em]">
-          {g.name}
-        </h3>
-        <span className="badge badge-muted shrink-0 tabular-nums">{g.lessons.length} bài</span>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="group/ch flex min-w-0 cursor-pointer items-center gap-2 rounded-lg py-0.5 pr-1 text-left transition-colors hover:text-accent-text"
+          title={`Xem tất cả ${g.lessons.length} bài của ${g.name}`}
+        >
+          <ChannelAvatar g={g} />
+          <h3 id={`${anchor(g.key)}-h`} className="min-w-0 truncate font-display text-base font-bold tracking-[-0.015em]">
+            {g.name}
+          </h3>
+          <span className="badge badge-muted shrink-0 tabular-nums">{g.lessons.length} bài</span>
+          <ChevronRight
+            className="size-4 shrink-0 text-muted transition-transform duration-150 group-hover/ch:translate-x-0.5 group-hover/ch:text-accent-text motion-reduce:transition-none"
+            aria-hidden
+          />
+        </button>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {g.url && (
             <a href={g.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost text-muted max-sm:px-2" title={`Kênh ${g.name} trên YouTube`}>
@@ -257,8 +269,8 @@ function ChannelSection({ g, onLocked }: { g: Group; onLocked?: (l: Item) => voi
 }
 
 /**
- * Thư viện bài học chia theo kênh YouTube, lọc theo cấp độ (lưu trên URL: ?level=B1 → chia sẻ link / tải lại trang vẫn giữ).
- * Nhiều kênh → hàng chip nhảy tới từng kênh.
+ * Thư viện bài học chia theo kênh / chủ đề, lọc theo cấp độ và kênh (lưu trên URL: ?level=B1&channel=easy-german).
+ * Mặc định mỗi kênh hiển thị gọn 1 hàng lướt ngang; bấm vào tên kênh hoặc chip kênh sẽ mở toàn bộ danh sách bài của kênh đó.
  */
 export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; lock?: LockInfo; admin?: boolean }) {
   const searchParams = useSearchParams();
@@ -280,14 +292,34 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   const levels = LEVELS.map((lv) => ({ level: lv, count: lessons.filter((l) => l.level === lv).length })).filter((g) => g.count);
   const param = searchParams.get("level");
   const level = levels.some((g) => g.level === param) ? param : null;
-  const setLevel = (lv: string | null) => {
-    if (lv === level) return;
+  const allGroups = byChannel(lessons);
+  const channelParam = searchParams.get("channel");
+  const selectedChannel = allGroups.some((g) => channelSlug(g.key) === channelParam) ? channelParam : null;
+
+  const pushParams = (mutate: (p: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (lv) params.set("level", lv);
-    else params.delete("level");
+    mutate(params);
     const q = params.toString();
     window.history.pushState(null, "", q ? `?${q}` : window.location.pathname);
   };
+
+  const setLevel = (lv: string | null) => {
+    if (lv === level) return;
+    pushParams((p) => {
+      if (lv) p.set("level", lv);
+      else p.delete("level");
+    });
+  };
+
+  const setChannel = (slug: string | null) => {
+    if (slug === selectedChannel) return;
+    pushParams((p) => {
+      if (slug) p.set("channel", slug);
+      else p.delete("channel");
+    });
+    if (slug) top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const qNorm = query.trim().toLowerCase();
   const byLevel = level ? lessons.filter((l) => l.level === level) : lessons;
   const shown = qNorm
@@ -298,8 +330,12 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
           (l.channel?.toLowerCase().includes(qNorm) ?? false),
       )
     : byLevel;
+  const navGroups = byChannel(byLevel);
   const groups = byChannel(shown);
-  const flat = groups.length === 1 && groups[0].name === OTHER;
+  const flat = allGroups.length === 1 && allGroups[0].name === OTHER;
+  const activeMeta = selectedChannel ? (allGroups.find((g) => channelSlug(g.key) === selectedChannel) ?? null) : null;
+  const activeGroup = selectedChannel ? (groups.find((g) => channelSlug(g.key) === selectedChannel) ?? null) : null;
+  const displayCount = activeMeta ? (activeGroup?.lessons.length ?? 0) : shown.length;
   const onLocked = lock?.enabled && !admin ? setOpening : undefined;
 
   const chip = (lv: string | null, count: number) => (
@@ -312,7 +348,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
   return (
     <section id="lessons" ref={top} data-sec="de" className="flex scroll-mt-20 flex-col gap-4 sm:gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SectionHeader title="Thư viện bài học" count={shown.length} />
+        <SectionHeader title="Thư viện bài học" count={displayCount} />
         <label className="input-group w-full sm:w-64">
           <Search className="size-4 shrink-0 text-muted" aria-hidden />
           <input
@@ -334,18 +370,85 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
         {levels.map((g) => chip(g.level, g.count))}
       </div>
       {lock?.enabled && <LockNote lock={lock} admin={admin} />}
-      {!flat && groups.length > 1 && (
-        <nav aria-label="Nhảy tới kênh" className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+      {!flat && navGroups.length > 1 && (
+        <nav aria-label="Lọc theo kênh" className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
           <span className="label shrink-0">Kênh</span>
-          {groups.map((g) => (
-            <a key={g.key} href={`#${anchor(g.key)}`} className="chip text-xs">
-              {g.name}
-              <span className="text-muted tabular-nums">{g.lessons.length}</span>
-            </a>
-          ))}
+          <button type="button" onClick={() => setChannel(null)} aria-pressed={selectedChannel === null} className="chip text-xs">
+            Tất cả
+          </button>
+          {navGroups.map((g) => {
+            const slug = channelSlug(g.key);
+            const active = selectedChannel === slug;
+            return (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setChannel(active ? null : slug)}
+                aria-pressed={active}
+                className="chip text-xs"
+              >
+                {g.name}
+                <span className={`tabular-nums ${active ? "opacity-80" : "text-muted"}`}>{g.lessons.length}</span>
+              </button>
+            );
+          })}
         </nav>
       )}
-      {!shown.length ? (
+      {activeMeta ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+            <button type="button" onClick={() => setChannel(null)} className="btn btn-sm btn-ghost -ml-2 text-muted hover:text-foreground">
+              <ArrowLeft className="size-4" /> Tất cả kênh
+            </button>
+            <span className="h-4 w-px bg-line max-sm:hidden" aria-hidden />
+            <div className="flex min-w-0 items-center gap-2">
+              <ChannelAvatar g={activeMeta} />
+              <h3 className="min-w-0 truncate font-display text-base font-bold tracking-[-0.015em] sm:text-lg">{activeMeta.name}</h3>
+              <span className="badge badge-muted shrink-0 tabular-nums">{activeGroup?.lessons.length ?? 0} bài</span>
+            </div>
+            {activeMeta.url && (
+              <a
+                href={activeMeta.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-ghost ml-auto shrink-0 text-muted max-sm:px-2"
+                title={`Kênh ${activeMeta.name} trên YouTube`}
+              >
+                <ExternalLink className="size-3.5" /> <span className="max-sm:sr-only">YouTube</span>
+              </a>
+            )}
+          </div>
+          {!activeGroup?.lessons.length ? (
+            <div className="card empty">
+              <p className="font-semibold text-foreground">Không có bài nào khớp bộ lọc trong {activeMeta.name}</p>
+              <p className="text-sm text-muted">Thử chọn lại trình độ khác hoặc xem toàn bộ kênh.</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {(level || query) && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => {
+                      setQuery("");
+                      setLevel(null);
+                    }}
+                  >
+                    Bỏ lọc trình độ
+                  </button>
+                )}
+                <button type="button" className="btn btn-sm btn-primary" onClick={() => setChannel(null)}>
+                  Xem tất cả kênh
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {activeGroup.lessons.map((l) => (
+                <LessonCard key={l.id} l={l} onLocked={onLocked} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : !shown.length ? (
         <div className="card empty">
           <p className="font-semibold text-foreground">Không tìm thấy bài học phù hợp</p>
           <p className="text-sm text-muted">Thử từ khóa khác hoặc bỏ bộ lọc trình độ.</p>
@@ -361,7 +464,7 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
           </button>
         </div>
       ) : flat ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((l) => (
             <LessonCard key={l.id} l={l} onLocked={onLocked} />
           ))}
@@ -369,7 +472,12 @@ export default function LessonGrid({ lessons, lock, admin }: { lessons: Item[]; 
       ) : (
         <div className="flex flex-col gap-6 sm:gap-7">
           {groups.map((g) => (
-            <ChannelSection key={`${level}-${g.key}`} g={g} onLocked={onLocked} />
+            <ChannelSection
+              key={`${level}-${g.key}`}
+              g={g}
+              onLocked={onLocked}
+              onOpen={() => setChannel(channelSlug(g.key))}
+            />
           ))}
         </div>
       )}
