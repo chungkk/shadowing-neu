@@ -10,7 +10,13 @@ Code thật: `src/app/(app)/globals.css` (token + primitive), `src/components/Pa
 ## 1. Hệ màu
 
 Mặc định giao diện **Sáng** (nền `#F8FAFC`, bề mặt `#FFFFFF`, mực `#0F172A`, viền `#E2E8F0`).  
-Chế độ **Tối** (`[data-theme="dark"]`, đổi qua `ThemeToggle`): nền than `#0B0D12`, bề mặt `#12151E`, chữ `#F1F5F9`, viền `#222836`. Cùng hệ tên token.
+Chế độ **Tối** (`[data-theme="dark"]`, đổi qua `ThemeToggle`; tạm khoá luôn tối bằng `FORCE_DARK` trong `src/lib/theme.ts`): nền than `#090B10`, card `#13171F`, card-2 `#1C212D`, lớp nổi `--raised` `#191E29`, chữ `#F1F5F9`, đường kẻ `#232A39`, viền ô điều khiển `#353E53`. Cùng hệ tên token.
+
+Nguyên tắc tối:
+- **Phân tầng bằng độ sáng, không bằng bóng:** nền → card → card-2 / `--raised` mỗi bậc sáng hơn rõ; card có mép trên hắt sáng `inset 0 1px 0 rgb(255 255 255 / .035)`; card bấm được sáng lên 3% khi hover.
+- **Lớp nổi** (`.popover`, `.dialog`) dùng `--raised` thay cho `--card`.
+- **Ô nhập lõm xuống:** nền `.input` / `.input-group` trộn 55% `--background` vào `--card`.
+- **Màu nhấn sáng cho chữ/viền, bậc `-dark` cho mảng nền dưới chữ trắng:** `.btn-primary`, `.btn-red`, `.btn-record`, `.btn-recording` dùng `--accent-dark` / `--red-dark` / `--coral-dark` để chữ trắng đạt ≥ 4.5:1.
 
 | Vai trò | Token | Sáng | Tối | Dùng cho |
 |---|---|---|---|---|

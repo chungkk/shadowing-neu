@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { FORCE_DARK, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./(app)/globals.css";
 
 const body = Plus_Jakarta_Sans({ variable: "--font-body", subsets: ["latin", "vietnamese"], weight: ["400", "500", "600", "700", "800"] });
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Không tìm thấy trang | HalloVN",
 
 export default function GlobalNotFound() {
   return (
-    <html lang="vi" className={`${body.variable} antialiased`} suppressHydrationWarning>
+    <html lang="vi" data-theme={FORCE_DARK ? "dark" : undefined} className={`${body.variable} antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

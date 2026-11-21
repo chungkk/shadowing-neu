@@ -71,18 +71,19 @@
 
 :root[data-season="noel"][data-theme="dark"] {
   /* Đêm đông xanh đen sâu, chữ ấm rõ nét */
-  --background: #0c1117;
-  --sidebar: #0f161e;
+  --background: #0a0f15;
+  --sidebar: #0e151d;
   --foreground: #f5f2eb;
   --ink: #2c3a4a;
   --ink-strong: #f5f2eb;
-  --line: #212e3c;
-  --line-strong: #4d6075;
-  --card: #131b24;
-  --card-2: #1a2430;
-  --border: #2c3b4c;
-  --muted: #a3b1c2;
-  --stripe: #131b24;
+  --line: #253342;
+  --line-strong: #5a6e85;
+  --card: #141d27;
+  --card-2: #1d2834;
+  --raised: #1a2430;
+  --border: #374a5e;
+  --muted: #a8b5c5;
+  --stripe: #141d27;
   --shadow-color: 0 0 0;
 
   /* Đỏ berry ấm tương phản tốt với chữ trắng trên .btn-primary */

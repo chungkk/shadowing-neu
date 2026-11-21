@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { THEME_COLOR } from '@/lib/theme';
+import { DEFAULT_THEME, THEME_COLOR } from '@/lib/theme';
 
 // Một manifest chung cho cả site. start_url "/" là trang học tiếng Việt (nhóm (app)) nên tên / mô tả / màu
 // theo nhóm này; các trang doanh nghiệp tiếng Đức (/about, /impressum…) cũng dùng chung icon HalloVN.
@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
         start_url: '/',
         scope: '/',
         display: 'browser',
-        background_color: THEME_COLOR.light,
-        theme_color: THEME_COLOR.light,
+        background_color: THEME_COLOR[DEFAULT_THEME],
+        theme_color: THEME_COLOR[DEFAULT_THEME],
         lang: 'vi',
         dir: 'ltr',
         categories: ['education'],

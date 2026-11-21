@@ -12,7 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu, { HeaderNavWithUser, SidebarWithUser } from "@/components/UserMenu";
 import { siteJsonLd, serializeJsonLd } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
-import { SEASONAL_THEME, THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
+import { DEFAULT_THEME, FORCE_DARK, SEASONAL_THEME, THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 // Plus Jakarta Sans: tối giản, sắc nét, hỗ trợ đầy đủ dấu tiếng Việt và ký tự Đức (ä, ö, ü, ß)
@@ -70,7 +70,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: THEME_COLOR.light,
+  themeColor: THEME_COLOR[DEFAULT_THEME],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -78,6 +78,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="vi"
       data-season={SEASONAL_THEME ?? undefined}
+      data-theme={FORCE_DARK ? "dark" : undefined}
       className={`${body.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
@@ -104,7 +105,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <HeaderNavWithUser />
               </Suspense>
               <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
-                <ThemeToggle />
+                {!FORCE_DARK && <ThemeToggle />}
                 <Suspense>
                   <UserMenu />
                 </Suspense>

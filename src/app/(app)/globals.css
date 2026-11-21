@@ -35,6 +35,8 @@
   --line-strong: #94a3b8;
   --card: #ffffff;
   --card-2: #f1f5f9;
+  /* Bề mặt lớp nổi (popover, dialog); trên nền tối sáng hơn card một bậc */
+  --raised: #ffffff;
   --border: #cbd5e1;
   --muted: #475569;
   /* Thương hiệu & khu Tiếng Đức: xanh lam sắc nét */
@@ -111,17 +113,19 @@
 /* Chế độ tối: than tối sạch, tương phản chữ cao, viền hairline rõ */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #0b0d12;
-  --sidebar: #0f1219;
+  /* Thang bề mặt: nền → card → card-2 → --raised (popover/dialog). Mỗi bậc sáng hơn rõ, vì bóng đổ gần như vô hình trên nền tối */
+  --background: #090b10;
+  --sidebar: #0e1118;
   --foreground: #f1f5f9;
   --ink: #2d3548;
   --ink-strong: #f1f5f9;
-  --line: #1e2433;
-  --line-strong: #475569;
-  --card: #12151e;
-  --card-2: #1a1f2c;
-  --border: #2a3144;
-  --muted: #94a3b8;
+  --line: #232a39;
+  --line-strong: #5b6680;
+  --card: #13171f;
+  --card-2: #1c212d;
+  --raised: #191e29;
+  --border: #353e53;
+  --muted: #9aa8bc;
   --accent: #3b82f6;
   --accent-dark: #2563eb;
   --accent-text: #60a5fa;
@@ -135,7 +139,7 @@
   --amber: #fcd34d;
   --amber-dark: #fde68a;
   --coral: #fb923c;
-  --coral-dark: #ea580c;
+  --coral-dark: #c2410c;
   --coral-soft: #2c1a10;
   --coral-text: #fdba74;
   --grape: #818cf8;
@@ -160,7 +164,7 @@
   --candy-dark: #5c3522;
   --sun: #302510;
   --leaf: #112b1d;
-  --stripe: #12151e;
+  --stripe: #13171f;
   --shadow-color: 0 0 0;
   scrollbar-color: var(--border) var(--sidebar);
 }
@@ -224,6 +228,7 @@
   --line-strong: #4a7360;
   --card: #ffffff;
   --card-2: #d8eee0;
+  --raised: #ffffff;
   --border: #b9dcc6;
   --muted: #3b5a4b;
   --link: #1d4ed8;
@@ -270,6 +275,7 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-2: var(--card-2);
+  --color-raised: var(--raised);
   --color-border: var(--border);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
@@ -411,8 +417,9 @@ select {
     border: 1px solid var(--line);
   }
 
+  /* Nền tối: mép trên hắt sáng rất nhẹ để khối nổi khỏi nền mà không cần bóng */
   [data-theme="dark"] :where(.sticker, .card, .tile) {
-    border-color: var(--line);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
   }
 
   .sticker,
@@ -450,6 +457,12 @@ select {
     .card-link:hover {
       border-color: color-mix(in srgb, var(--foreground) 22%, var(--line));
       box-shadow: var(--shadow-sm);
+    }
+  }
+
+  @media (hover: hover) {
+    [data-theme="dark"] :where(.sticker-link, .card-link):hover {
+      background-color: color-mix(in srgb, var(--foreground) 3%, var(--card));
     }
   }
 
@@ -656,6 +669,27 @@ select {
       border-color: color-mix(in srgb, var(--accent) 30%, transparent);
       background-color: color-mix(in srgb, var(--accent) 14%, var(--accent-soft));
     }
+  }
+
+  /* Nền tối: màu nhấn sáng để làm chữ/viền, còn mảng nền dưới chữ trắng dùng bậc đậm để đạt AA (≥4.5:1) */
+  [data-theme="dark"] :where(.btn-primary) {
+    --fill: var(--accent-dark);
+    --fill-hover: color-mix(in srgb, var(--accent-dark) 86%, #000);
+  }
+
+  [data-theme="dark"] :where(.btn-red) {
+    --fill: var(--red-dark);
+    --fill-hover: color-mix(in srgb, var(--red-dark) 86%, #000);
+  }
+
+  [data-theme="dark"] :where(.btn-record) {
+    --fill: var(--coral-dark);
+    --fill-hover: color-mix(in srgb, var(--coral-dark) 86%, #000);
+  }
+
+  [data-theme="dark"] :where(.btn-recording) {
+    --fill: var(--red-dark);
+    --fill-hover: var(--red-dark);
   }
 
   .btn-ghost {
@@ -903,6 +937,11 @@ select {
       box-shadow var(--dur-fast);
   }
 
+  /* Nền tối: ô nhập lõm xuống (tối hơn card) để nhận ra là chỗ gõ */
+  [data-theme="dark"] :where(.input, .input-group) {
+    background-color: color-mix(in srgb, var(--background) 55%, var(--card));
+  }
+
   .input-group:hover:not(:focus-within) {
     border-color: var(--line-strong);
   }
@@ -1099,7 +1138,7 @@ select {
   .dialog {
     @apply relative flex max-h-[92dvh] w-full max-w-md flex-col gap-4 overflow-y-auto p-5 text-foreground sm:p-6;
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
-    background-color: var(--card);
+    background-color: var(--raised);
     border: 1px solid var(--line);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: var(--shadow-lg);
@@ -1154,7 +1193,7 @@ select {
 
   .popover {
     @apply z-40 min-w-48 p-1.5 text-sm text-foreground;
-    background-color: var(--card);
+    background-color: var(--raised);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
@@ -1169,7 +1208,7 @@ select {
 
   .menu-item:hover,
   .menu-item:focus-visible {
-    background-color: var(--card-2);
+    background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
   }
 
   .menu-item[aria-current="page"] {
