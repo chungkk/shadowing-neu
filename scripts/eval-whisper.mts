@@ -228,6 +228,7 @@ for (const id of ids) {
     if (MIX && r.version === "v2") {
       const mix = transferPunctuation(v.auto, segs);
       const mixr = transferPunctuation(v.auto, segs, { mode: "replace" });
+      const mixu = transferPunctuation(v.auto, segs, { mode: "union" });
       // Mô phỏng video YouTube chấm câu kém: xoá hết dấu câu của bản Original rồi khôi phục bằng Whisper / LLM
       const bare = v.auto.map((sg) => {
         const st = (w: string) => w.replace(/[.,!?;:…]+(?=["»“”']?$)/u, "");
@@ -239,6 +240,7 @@ for (const id of ids) {
         ["yt", v.auto],
         ["mix", mix.segments],
         ["mix-thay", mixr.segments],
+        ["mix-hợp", mixu.segments],
         ["trần", bare],
         ["trần+whisper", mixBare.segments],
         ["trần+LLM", llmBare],
@@ -256,7 +258,7 @@ const f = (x: number, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : "–");
 const avg = (xs: number[]) => xs.filter(Number.isFinite).reduce((a, b) => a + b, 0) / xs.filter(Number.isFinite).length;
 console.log(`\n=== Trung bình (${new Set(rows.map((r) => r.id)).size} video, ${CLIP}s đầu mỗi video) ===`);
 console.log("bản | WER% | lệch từ (trung vị/p90) | từ ≤0.3s | lệch đầu câu (trung vị/p90) | đầu câu ≤0.3s | số câu | dài câu (s) | câu >8s | cuối câu→lời kế (s) | lấn câu sau | dấu chấm/100 từ (đáp án) | ngắt câu P/R/F1");
-for (const ver of [...VERSIONS, ...(MIX ? ["yt", "mix", "mix-thay", "trần", "trần+whisper", "trần+LLM"] : [])]) {
+for (const ver of [...VERSIONS, ...(MIX ? ["yt", "mix", "mix-thay", "mix-hợp", "trần", "trần+whisper", "trần+LLM"] : [])]) {
   const rs = rows.filter((r) => r.version === ver);
   const a = (k: keyof Row) => avg(rs.map((r) => r[k] as number));
   console.log(

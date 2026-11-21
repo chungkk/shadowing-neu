@@ -8,11 +8,11 @@ import { tokenize, type Segment, type Word } from "./subtitles";
  * (đi tuần tự, không quay lui). Dấu câu của từ Whisper gắn vào từ YouTube tương ứng; từ Whisper không khớp
  * (nghe sai) thì gắn dấu câu vào từ YouTube gần nhất về thời gian.
  *
- * Hai chế độ:
- * - "fill" (mặc định): GIỮ dấu câu YouTube; chỉ câu YouTube quá dài (> 16 từ / > 8 giây) mới được chèn thêm
- *   dấu câu Whisper bên trong. Đo trên phụ đề người làm: dấu câu YouTube thường đã tốt (chấm câu đủ),
- *   Whisper chấm ít hơn (hay nối câu bằng dấu phẩy) → thay hết thì tệ hơn; chỉ bổ sung chỗ YouTube viết liền.
- * - "replace": bỏ hết dấu câu YouTube, dùng hoàn toàn dấu câu (+ chữ hoa) của Whisper.
+ * Chế độ (đo trên 9 video có phụ đề người làm, ngắt câu khớp đáp án — F1, scripts/eval-whisper.mts):
+ * - "union" (mặc định, 93%): GIỮ dấu câu YouTube + thêm mọi dấu kết câu của Whisper (cách câu có sẵn > 2 từ).
+ *   Whisper hay tách câu ghép mà YouTube nối bằng dấu phẩy ("…ich hatte Glück. Ich habe…").
+ * - "fill" (92%): GIỮ dấu câu YouTube; chỉ câu YouTube quá dài (> 16 từ / > 8 giây) mới chèn dấu câu Whisper.
+ * - "replace" (85%): bỏ hết dấu câu YouTube, dùng hoàn toàn dấu câu (+ chữ hoa) của Whisper.
  * Khớp được quá ít (Whisper nghe khác hẳn) → trả nguyên bản YouTube.
  */
 
@@ -32,7 +32,7 @@ const EDGE = 2; // không chèn sát đầu / cuối câu (tránh câu cụt 1�
 export function transferPunctuation(
   yt: Segment[],
   wh: Segment[],
-  { mode = "fill" }: { mode?: "fill" | "replace" } = {},
+  { mode = "union" }: { mode?: "fill" | "union" | "replace" } = {},
 ): { segments: Segment[]; matched: number } {
   // Từ YouTube theo từng dòng (giữ cấu trúc dòng + thời gian gốc)
   const perSeg = yt.map((s) => tokenize([s]));
@@ -87,6 +87,16 @@ export function transferPunctuation(
   if (mode === "replace") {
     punct = wp;
     out.splice(0, out.length, ...cased);
+  } else if (mode === "union") {
+    // Giữ dấu câu YouTube + thêm mọi dấu KẾT CÂU của Whisper (không quá sát câu có sẵn)
+    punct = A.map((a) => tail(a.w));
+    const ended = punct.map((p) => isEnd(p));
+    for (let x = 0; x < A.length; x++) {
+      if (!isEnd(wp[x]) || isEnd(punct[x])) continue;
+      let near = false;
+      for (let y = Math.max(0, x - EDGE); y <= Math.min(A.length - 1, x + EDGE); y++) if (ended[y]) near = true;
+      if (!near) punct[x] = wp[x];
+    }
   } else {
     punct = A.map((a) => tail(a.w));
     let s0 = 0;
