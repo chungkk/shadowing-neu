@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { slugify } from "@/lib/slug";
-import { mergeIntoSentences, parseSubtitleFile } from "@/lib/subtitles";
+import { formatTime, mergeIntoSentences, parseSubtitleFile } from "@/lib/subtitles";
 import { fetchSubtitles, saveLesson, type FetchResult } from "./actions";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -46,11 +46,13 @@ function LessonFormInner({ initial, presetUrl }: Props) {
   const [description, setDescription] = useState(initial?.description ?? "");
   const [published, setPublished] = useState(initial?.published ?? true);
   const [dictation, setDictation] = useState(initial?.dictation ?? true);
-  // Số câu người học sẽ thấy (người học xem bản đã gộp câu của các dòng này)
+  // Các câu người học sẽ thấy (người học xem bản đã gộp câu của các dòng này)
   const counts = useMemo(() => {
     const lines = parseSubtitleFile(srt);
-    return lines.length ? { lines: lines.length, sentences: mergeIntoSentences(lines).length } : null;
+    return lines.length ? { lines: lines.length, sentences: mergeIntoSentences(lines) } : null;
   }, [srt]);
+  // Chỉ đổi cách XEM: dữ liệu lưu vẫn là các dòng SRT gốc (người học tự gộp thành câu lúc phát)
+  const [bySentence, setBySentence] = useState(false);
   const [info, setInfo] = useState<Extract<FetchResult, { srt: string }> | null>(null);
   const [fetchError, setFetchError] = useState("");
 
@@ -181,22 +183,55 @@ function LessonFormInner({ initial, presetUrl }: Props) {
         </label>
       </div>
 
-      <label className="field card text-sm">
-        Phụ đề (SRT) — sửa trực tiếp nội dung hoặc thời gian nếu cần. Để trống sẽ tự lấy khi lưu.
-        <textarea
-          name="srt"
-          rows={16}
-          className="input font-mono text-base text-foreground md:text-xs"
-          value={srt}
-          onChange={(e) => setSrt(e.target.value)}
-          spellCheck={false}
-        />
+      <div className="field card text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label htmlFor="lesson-srt">
+            {bySentence
+              ? "Phụ đề theo câu — đúng như người học thấy (chỉ xem; muốn sửa thì quay lại SRT)."
+              : "Phụ đề (SRT) — sửa trực tiếp nội dung hoặc thời gian nếu cần. Để trống sẽ tự lấy khi lưu."}
+          </label>
+          {counts && (
+            <div className="flex gap-1.5" role="group" aria-label="Cách xem phụ đề">
+              <button type="button" className="chip text-xs" aria-pressed={!bySentence} onClick={() => setBySentence(false)}>
+                SRT
+              </button>
+              <button type="button" className="chip text-xs" aria-pressed={bySentence} onClick={() => setBySentence(true)}>
+                Xem theo câu
+              </button>
+            </div>
+          )}
+        </div>
+        {bySentence && counts ? (
+          <>
+            {/* Vẫn gửi SRT gốc khi lưu */}
+            <input type="hidden" name="srt" value={srt} />
+            <ol className="input max-h-96 overflow-y-auto text-foreground">
+              {counts.sentences.map((s, i) => (
+                <li key={i} className="flex gap-3 border-b border-line py-1.5 last:border-0">
+                  <span className="w-10 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
+                  <span className="w-12 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
+                  <span className="min-w-0">{s.text}</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <textarea
+            id="lesson-srt"
+            name="srt"
+            rows={16}
+            className="input font-mono text-base text-foreground md:text-xs"
+            value={srt}
+            onChange={(e) => setSrt(e.target.value)}
+            spellCheck={false}
+          />
+        )}
         {counts && (
           <span className="field-hint">
-            {counts.lines} dòng → người học thấy {counts.sentences} câu (tự gộp theo dấu câu và chỗ ngừng)
+            {counts.lines} dòng → người học thấy {counts.sentences.length} câu (tự gộp theo dấu câu và chỗ ngừng)
           </span>
         )}
-      </label>
+      </div>
 
       {state.error && (
         <p role="alert" className="alert alert-err">
