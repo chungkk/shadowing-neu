@@ -7,6 +7,7 @@ import { translateForDubbing, translationEnabled } from "@/lib/translate";
 type CreateBody = {
   url: unknown;
   title?: unknown;
+  outputMode?: unknown; // "mp3" | "mp4"
   subSource?: unknown; // "youtube" | "whisper" | "custom"
   subLang?: unknown;
   subAuto?: unknown;
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
   const url = `https://www.youtube.com/watch?v=${videoId}`;
 
   const subSource = str(b.subSource) || "youtube";
+  const outputMode = str(b.outputMode) === "mp4" ? "mp4" : "mp3";
   const subLang = str(b.subLang) || "de";
   const subAuto = Boolean(b.subAuto);
   const voice = str(b.voice) || "Lạc Phi";
@@ -86,9 +88,11 @@ export async function POST(req: Request) {
       method: "POST",
       body: {
         url,
+        video_id: videoId,
         title: title || videoId,
         cues,
         voice,
+        output_mode: outputMode,
         base_speed: baseSpeed,
         max_speed: Math.max(1.45, baseSpeed + 0.25),
         orig_vol: origVol,

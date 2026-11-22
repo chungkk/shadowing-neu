@@ -15,7 +15,7 @@ async function DubPageInner() {
       <AdminPageHeader
         crumbs={[{ label: "Nội dung học tập" }, { label: "Thuyết minh YouTube" }]}
         title="Thuyết minh YouTube (VieNeu-TTS)"
-        description="Dán link YouTube bất kỳ → tự lấy hoặc dịch phụ đề sang tiếng Việt → đọc bằng giọng Lạc Phi / VieNeu-TTS và ghép thành file MP4 tải về. Chỉ Admin mới thấy và dùng được."
+        description="Dán link YouTube → tự lấy & dịch phụ đề sang tiếng Việt → tạo file MP3 giọng Lạc Phi rồi phát song song đồng bộ với video YouTube (hoặc xuất MP4 tải về). Chỉ Admin mới dùng được."
       />
       <DubClient />
     </>

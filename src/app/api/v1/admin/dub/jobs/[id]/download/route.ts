@@ -10,12 +10,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!/^[a-f0-9]{6,32}$/i.test(id)) return fail("Mã job không hợp lệ.");
 
   const url = new URL(req.url);
-  const isSrt = url.searchParams.get("type") === "srt";
-  const upstreamUrl = dubEndpoint(isSrt ? `/jobs/${id}/srt` : `/jobs/${id}/download`);
+  const type = url.searchParams.get("type") || "mp4";
+  const upstreamPath =
+    type === "srt"
+      ? `/jobs/${id}/srt`
+      : type === "mp3"
+        ? `/jobs/${id}/mp3`
+        : type === "cues"
+          ? `/jobs/${id}/cues`
+          : `/jobs/${id}/download`;
+
   const range = req.headers.get("range");
   const headers = dubHeaders(range ? { Range: range } : undefined);
 
-  const upstream = await fetch(upstreamUrl, { headers, cache: "no-store" });
+  const upstream = await fetch(dubEndpoint(upstreamPath), { headers, cache: "no-store" });
   if (!upstream.ok && upstream.status !== 206) {
     return fail(`Không tải được file (${upstream.status}).`, upstream.status);
   }
@@ -26,8 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (v) outHeaders.set(h, v);
   }
   outHeaders.set("Cache-Control", "private, no-store");
-  if (!isSrt && url.searchParams.get("dl") !== "1") {
-    // Allow inline playback in <video> unless dl=1 is explicitly requested
+  if ((type === "mp4" || type === "mp3") && url.searchParams.get("dl") !== "1") {
     outHeaders.delete("content-disposition");
   }
 

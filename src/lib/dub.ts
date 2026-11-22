@@ -15,8 +15,10 @@ export type DubVoice = {
 export type DubJob = {
   id: string;
   url: string;
+  video_id?: string;
   title: string;
   voice: string;
+  output_mode?: "mp3" | "mp4";
   base_speed: number;
   max_speed: number;
   orig_vol: number;

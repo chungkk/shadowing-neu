@@ -6,6 +6,7 @@ import {
   Download,
   FileText,
   Film,
+  Headphones,
   Loader2,
   Mic,
   Play,
@@ -16,6 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import SectionCard from "../_components/SectionCard";
+import SyncedPlayer from "./SyncedPlayer";
 
 type DubVoice = { id: string; label: string; cloned?: boolean };
 type DubHealth = {
@@ -29,8 +31,10 @@ type DubHealth = {
 type DubJob = {
   id: string;
   url: string;
+  video_id?: string;
   title: string;
   voice: string;
+  output_mode?: "mp3" | "mp4";
   base_speed: number;
   orig_vol: number;
   dub_vol: number;
@@ -82,6 +86,11 @@ function fmtSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function videoIdFromUrl(u: string): string {
+  const m = u.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : "";
+}
+
 const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);
 
 export default function DubClient() {
@@ -92,9 +101,12 @@ export default function DubClient() {
   const [probe, setProbe] = useState<ProbeInfo | null>(null);
   const [probeErr, setProbeErr] = useState("");
 
+  // Mode: mp3 (fast, no video download, plays synced with YouTube) | mp4 (muxed file)
+  const [outputMode, setOutputMode] = useState<"mp3" | "mp4">("mp3");
+
   // Subtitle source selection
   const [subSource, setSubSource] = useState<"youtube" | "whisper" | "custom">("youtube");
-  const [subTrackKey, setSubTrackKey] = useState(""); // `${lang}|${auto ? 1 : 0}`
+  const [subTrackKey, setSubTrackKey] = useState("");
   const [customSub, setCustomSub] = useState("");
   const [translateCustom, setTranslateCustom] = useState(false);
 
@@ -133,7 +145,6 @@ export default function DubClient() {
     return () => clearTimeout(id);
   }, [refresh]);
 
-  // Poll every 2.5s while any job is active or model is still booting
   useEffect(() => {
     const hasActive =
       status?.jobs.some((j) => ACTIVE_STATUSES.has(j.status)) ||
@@ -195,6 +206,7 @@ export default function DubClient() {
         body: JSON.stringify({
           url: url.trim(),
           title: probe?.title || "",
+          outputMode,
           subSource,
           subLang: subLang || "de",
           subAuto: subAutoFlag === "1",
@@ -209,6 +221,7 @@ export default function DubClient() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (data.job?.id) setPreviewId(data.job.id);
       await refresh();
     } catch (err) {
       setSubmitErr((err as Error).message);
@@ -229,7 +242,6 @@ export default function DubClient() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Service status banner */}
       {loadErr && (
         <div role="alert" className="alert alert-err flex items-center justify-between gap-3">
           <span className="flex items-center gap-2">
@@ -270,7 +282,7 @@ export default function DubClient() {
       {/* Step 1: YouTube URL + Probe */}
       <SectionCard
         title="1. Dán link YouTube"
-        description="Hỗ trợ video YouTube mọi ngôn ngữ (Đức, Anh, Trung, Nhật, Việt…). Tự lấy phụ đề, dịch sang tiếng Việt rồi ghép giọng thuyết minh."
+        description="Hỗ trợ video YouTube mọi ngôn ngữ. Lấy phụ đề → dịch sang tiếng Việt → tạo MP3 giọng thuyết minh phát song song video YouTube."
       >
         <form onSubmit={handleProbe} className="flex flex-col gap-3 sm:flex-row">
           <input
@@ -316,13 +328,29 @@ export default function DubClient() {
         )}
       </SectionCard>
 
-      {/* Step 2: Subtitle & Voice Settings */}
+      {/* Step 2: Mode, Subtitle & Voice Settings */}
       <SectionCard
-        title="2. Phụ đề & Giọng thuyết minh"
-        description="Chọn nguồn phụ đề, giọng đọc (mặc định Lạc Phi), tốc độ đọc và tỷ lệ trộn âm."
+        title="2. Chế độ, Phụ đề & Giọng thuyết minh"
+        description="Mặc định chỉ tạo file MP3 (~1 MB/phút, bỏ qua bước tải & ghép video) rồi phát đồng bộ trực tiếp với YouTube."
       >
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`btn btn-sm ${outputMode === "mp3" ? "btn-primary" : ""}`}
+            onClick={() => setOutputMode("mp3")}
+          >
+            <Headphones className="size-3.5" /> Nhanh: Tạo MP3 & phát song song YouTube
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${outputMode === "mp4" ? "btn-primary" : ""}`}
+            onClick={() => setOutputMode("mp4")}
+          >
+            <Film className="size-3.5" /> Đầy đủ: Tải & ghép sẵn file MP4 tải về
+          </button>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Subtitle source */}
           <div className="flex flex-col gap-3">
             <label className="field text-sm">
               Nguồn phụ đề
@@ -372,11 +400,7 @@ export default function DubClient() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted">Dán nội dung .SRT / .ASS hoặc chọn file:</span>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <button type="button" className="btn btn-sm" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="size-3.5" /> Chọn file .srt / .ass
                   </button>
                   <input
@@ -406,15 +430,10 @@ export default function DubClient() {
             )}
           </div>
 
-          {/* Voice & mixing controls */}
           <div className="flex flex-col gap-3">
             <label className="field text-sm">
               Giọng thuyết minh
-              <select
-                className="input text-foreground"
-                value={voice}
-                onChange={(e) => setVoice(e.target.value)}
-              >
+              <select className="input text-foreground" value={voice} onChange={(e) => setVoice(e.target.value)}>
                 {voices.length ? (
                   voices.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -441,43 +460,59 @@ export default function DubClient() {
                 />
               </label>
 
-              <label className="field text-sm">
-                Chất lượng video
-                <select
-                  className="input text-foreground"
-                  value={maxHeight}
-                  onChange={(e) => setMaxHeight(Number(e.target.value) === 1080 ? 1080 : 720)}
-                >
-                  <option value={720}>720p (nhanh, nhẹ)</option>
-                  <option value={1080}>1080p Full HD</option>
-                </select>
-              </label>
+              {outputMode === "mp4" ? (
+                <label className="field text-sm">
+                  Chất lượng MP4
+                  <select
+                    className="input text-foreground"
+                    value={maxHeight}
+                    onChange={(e) => setMaxHeight(Number(e.target.value) === 1080 ? 1080 : 720)}
+                  >
+                    <option value={720}>720p (nhanh, nhẹ)</option>
+                    <option value={1080}>1080p Full HD</option>
+                  </select>
+                </label>
+              ) : (
+                <label className="field text-sm">
+                  Âm gốc YouTube mặc định ({origVol}%)
+                  <input
+                    type="range"
+                    min={0}
+                    max={80}
+                    step={5}
+                    value={origVol}
+                    onChange={(e) => setOrigVol(Number(e.target.value))}
+                  />
+                </label>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="field text-sm">
-                Âm gốc ({origVol}%)
-                <input
-                  type="range"
-                  min={0}
-                  max={80}
-                  step={5}
-                  value={origVol}
-                  onChange={(e) => setOrigVol(Number(e.target.value))}
-                />
-              </label>
-              <label className="field text-sm">
-                Giọng thuyết minh ({dubVol}%)
-                <input
-                  type="range"
-                  min={60}
-                  max={180}
-                  step={10}
-                  value={dubVol}
-                  onChange={(e) => setDubVol(Number(e.target.value))}
-                />
-              </label>
-            </div>
+            {outputMode === "mp4" && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="field text-sm">
+                  Âm gốc ({origVol}%)
+                  <input
+                    type="range"
+                    min={0}
+                    max={80}
+                    step={5}
+                    value={origVol}
+                    onChange={(e) => setOrigVol(Number(e.target.value))}
+                  />
+                </label>
+                <label className="field text-sm">
+                  Giọng thuyết minh ({dubVol}%)
+                  <input
+                    type="range"
+                    min={60}
+                    max={180}
+                    step={10}
+                    value={dubVol}
+                    onChange={(e) => setDubVol(Number(e.target.value))}
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
@@ -495,10 +530,16 @@ export default function DubClient() {
             onClick={() => void handleStartDub()}
           >
             {submitting ? <Loader2 className="size-4 animate-spin" /> : <Mic className="size-4" />}
-            {submitting ? "Đang lấy & dịch phụ đề…" : "Bắt đầu thuyết minh MP4"}
+            {submitting
+              ? "Đang lấy & dịch phụ đề…"
+              : outputMode === "mp3"
+                ? "Tạo MP3 & xem song song YouTube"
+                : "Bắt đầu ghép file MP4"}
           </button>
           <span className="text-xs text-muted">
-            Video sau khi ghép lưu 24 giờ trên VPS (còn giữ track âm gốc làm track phụ).
+            {outputMode === "mp3"
+              ? "Không cần tải video về VPS — chỉnh âm lượng gốc & thuyết minh trực tiếp khi xem."
+              : "Tải video + trộn âm trên VPS, giữ track âm gốc làm track phụ."}
           </span>
         </div>
       </SectionCard>
@@ -506,7 +547,7 @@ export default function DubClient() {
       {/* Step 3: Jobs list */}
       <SectionCard
         title={`3. Video đã & đang xử lý (${jobs.length})`}
-        description="Tiến độ tự cập nhật mỗi 2.5 giây. Khi xong có thể xem trực tiếp hoặc tải file MP4 / SRT."
+        description="Khi xong bấm “Xem song song” để phát YouTube đồng bộ với giọng thuyết minh MP3 (có chỉnh âm lượng & độ trễ trực tiếp)."
         flush
       >
         {jobs.length === 0 ? (
@@ -516,15 +557,22 @@ export default function DubClient() {
             {jobs.map((j) => {
               const pct = j.total_cues > 0 ? Math.min(100, Math.round((j.done_cues / j.total_cues) * 100)) : 0;
               const isActive = ACTIVE_STATUSES.has(j.status);
+              const mode = j.output_mode ?? "mp4";
+              const vid = j.video_id || videoIdFromUrl(j.url);
               return (
                 <div key={j.id} className="flex flex-col gap-3 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Film className="size-4 shrink-0 text-muted" />
+                        {mode === "mp3" ? (
+                          <Headphones className="size-4 shrink-0 text-accent" />
+                        ) : (
+                          <Film className="size-4 shrink-0 text-muted" />
+                        )}
                         <p className="truncate font-semibold text-foreground" title={j.title}>
                           {j.title}
                         </p>
+                        <span className="badge">{mode.toUpperCase()}</span>
                         <span
                           className={`badge ${
                             j.status === "done"
@@ -540,7 +588,7 @@ export default function DubClient() {
                       </div>
                       <p className="mt-1 text-xs text-muted">
                         Giọng: <span className="font-medium text-foreground">{j.voice}</span> · {j.base_speed}× ·{" "}
-                        {j.max_height}p · {j.done_cues}/{j.total_cues} câu
+                        {j.done_cues}/{j.total_cues} câu
                         {j.size_bytes > 0 ? ` · ${fmtSize(j.size_bytes)}` : ""}
                         {j.elapsed_s ? ` · xong trong ${fmtDuration(j.elapsed_s)}` : ""}
                         {isActive && j.eta_s ? ` · còn ~${fmtDuration(j.eta_s)}` : ""}
@@ -552,16 +600,17 @@ export default function DubClient() {
                         <>
                           <button
                             type="button"
-                            className="btn btn-sm"
+                            className="btn btn-sm btn-primary"
                             onClick={() => setPreviewId(previewId === j.id ? null : j.id)}
                           >
-                            <Play className="size-3.5" /> {previewId === j.id ? "Ẩn" : "Xem thử"}
+                            <Play className="size-3.5" />
+                            {previewId === j.id ? "Ẩn trình phát" : mode === "mp3" ? "Xem song song" : "Xem thử"}
                           </button>
                           <a
-                            href={`/api/v1/admin/dub/jobs/${j.id}/download?dl=1`}
-                            className="btn btn-sm btn-primary"
+                            href={`/api/v1/admin/dub/jobs/${j.id}/download?type=${mode === "mp3" ? "mp3" : "mp4"}&dl=1`}
+                            className="btn btn-sm"
                           >
-                            <Download className="size-3.5" /> Tải MP4
+                            <Download className="size-3.5" /> Tải {mode.toUpperCase()}
                           </a>
                           <a
                             href={`/api/v1/admin/dub/jobs/${j.id}/download?type=srt`}
@@ -601,13 +650,22 @@ export default function DubClient() {
                   )}
 
                   {previewId === j.id && j.status === "done" && (
-                    <video
-                      key={j.id}
-                      controls
-                      preload="metadata"
-                      className="mt-1 aspect-video w-full max-w-2xl rounded-xl border border-line bg-black"
-                      src={`/api/v1/admin/dub/jobs/${j.id}/download`}
-                    />
+                    mode === "mp3" && vid ? (
+                      <SyncedPlayer
+                        key={j.id}
+                        jobId={j.id}
+                        videoId={vid}
+                        initialOrigVol={Math.round((j.orig_vol ?? 0.25) * 100)}
+                      />
+                    ) : (
+                      <video
+                        key={j.id}
+                        controls
+                        preload="metadata"
+                        className="mt-1 aspect-video w-full max-w-2xl rounded-xl border border-line bg-black"
+                        src={`/api/v1/admin/dub/jobs/${j.id}/download`}
+                      />
+                    )
                   )}
                 </div>
               );
