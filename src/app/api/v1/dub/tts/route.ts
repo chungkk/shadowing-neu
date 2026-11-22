@@ -25,18 +25,18 @@ export async function GET(req: Request) {
   if (!text) return fail("Thiếu câu cần đọc.");
   if (text.length > EDGE_TTS_MAX_CHARS) return fail("Câu quá dài.", 413);
 
-  // Cache hit trên đĩa → trả ngay, không tính hạn mức
-  if (!hasEdgeDubSpeech(voice, speed, text)) {
-    const user = await getCurrentUser();
-    if (user?.role !== "admin") {
-      const key = user ? `u:${user.id}` : `ip:${await clientIp()}`;
-      if (!allow(`dubtts:${key}`, user ? 450 : 200, WINDOW_MS)) {
-        return fail("Bạn tạo giọng đọc quá nhanh trong thời gian ngắn, thử lại sau ít phút nhé.", 429);
+  try {
+    // Cache hit trên đĩa → trả ngay, không tính hạn mức
+    if (!hasEdgeDubSpeech(voice, speed, text)) {
+      const user = await getCurrentUser();
+      if (user?.role !== "admin") {
+        const key = user ? `u:${user.id}` : `ip:${await clientIp()}`;
+        if (!allow(`dubtts:${key}`, user ? 450 : 200, WINDOW_MS)) {
+          return fail("Bạn tạo giọng đọc quá nhanh trong thời gian ngắn, thử lại sau ít phút nhé.", 429);
+        }
       }
     }
-  }
 
-  try {
     const mp3 = await synthesizeEdgeDub(text, voice, speed);
     return new Response(new Uint8Array(mp3), {
       headers: {
@@ -45,6 +45,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e) {
-    return fail((e as Error).message, 502);
+    console.error("[dub/tts]", e);
+    return fail((e as Error).message || "Không tạo được giọng đọc Edge TTS.", 502);
   }
 }
