@@ -22,7 +22,6 @@ type DubHealth = {
   model_ready: boolean;
   precision: string;
   edge_tts?: boolean;
-  elevenlabs_keys?: number;
   voices_count: number;
 };
 type DubJob = {
@@ -89,7 +88,6 @@ function shortVoiceName(voiceId: string, voices: DubVoice[]): string {
   const found = voices.find((v) => v.id === voiceId);
   if (found) return found.label.split("(")[0].trim();
   if (voiceId.startsWith("edge:")) return voiceId.includes("HoaiMy") ? "Edge · Hoài My" : "Edge · Nam Minh";
-  if (voiceId.startsWith("el:")) return "ElevenLabs";
   return voiceId;
 }
 
@@ -268,7 +266,6 @@ export default function DubClient() {
           <span className="text-[11px] text-muted">
             Kokoro Lite (trình duyệt) ✓
             {status?.health?.edge_tts ? " · Edge ✓" : ""}
-            {status?.health?.elevenlabs_keys ? ` · ElevenLabs (${status.health.elevenlabs_keys} key)` : ""}
             {status?.health?.model_ready ? " · Lạc Phi ✓" : ""}
           </span>
         </div>
@@ -277,7 +274,7 @@ export default function DubClient() {
         {showAdv && (
           <div className="mt-1 grid gap-3 border-t border-line pt-3 sm:grid-cols-3">
             <label className="field text-xs">
-              Chế độ server (Edge / ElevenLabs / Lạc Phi)
+              Chế độ server (Edge / Lạc Phi)
               <select
                 className="input text-foreground"
                 value={outputMode}
