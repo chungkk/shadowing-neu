@@ -56,6 +56,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...listDecks().map((d) => ({ url: `${SITE_URL}/vocab/decks/${d.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
     { url: `${SITE_URL}/lai-xe`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/leben-in-deutschland`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/thuyet-minh`, changeFrequency: "weekly", priority: 0.85 },
     { url: `${SITE_URL}/leben-in-deutschland/chu-de`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/leben-in-deutschland/thi-thu`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/thi-thu`, changeFrequency: "monthly", priority: 0.7 },

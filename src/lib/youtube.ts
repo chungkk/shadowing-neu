@@ -592,3 +592,46 @@ export async function saveUploadedTranscript(
   setCached(`ytp:${videoId}:${track.languageCode}`, result, null);
   return result;
 }
+
+/**
+ * Lấy phụ đề của video YouTube ở BẤT KỲ ngôn ngữ nào (dùng cho thuyết minh tiếng Việt).
+ * Ưu tiên: phụ đề thủ công tiếng Việt → phụ đề thủ công ngôn ngữ khác → phụ đề tự động tiếng Việt → phụ đề tự động khác.
+ */
+export async function fetchAnyYouTubeSubtitles(
+  videoId: string,
+  { maxSeconds }: { maxSeconds?: number } = {},
+): Promise<{ title: string; duration?: number; lang: string; auto: boolean; segments: Segment[] } | null> {
+  await connection();
+  const { title, duration, tracks } = await orYtdlp(
+    () => fromInnertube(videoId),
+    () => fromYtdlp(videoId),
+  );
+  if (maxSeconds && duration && duration > maxSeconds) throw new VideoTooLongError(duration, maxSeconds);
+  if (!tracks.length) return null;
+
+  const isVi = (t: Track) => t.languageCode.toLowerCase().startsWith("vi");
+  const ordered = [
+    ...tracks.filter((x) => !x.track.auto && isVi(x.track)),
+    ...tracks.filter((x) => !x.track.auto && !isVi(x.track)),
+    ...tracks.filter((x) => x.track.auto && isVi(x.track)),
+    ...tracks.filter((x) => x.track.auto && !isVi(x.track)),
+  ];
+
+  for (const cand of ordered) {
+    try {
+      const segments = await cand.load();
+      if (segments.length) {
+        return {
+          title,
+          duration,
+          lang: cand.track.languageCode,
+          auto: cand.track.auto,
+          segments,
+        };
+      }
+    } catch {
+      // Thử track kế tiếp
+    }
+  }
+  return null;
+}

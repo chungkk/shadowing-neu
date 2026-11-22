@@ -8,6 +8,7 @@ import {
   ChristmasAdminIcon as ShieldCheck,
   ChristmasBookIcon as BookOpen,
   ChristmasCarIcon as Car,
+  ChristmasChannelIcon as TvPlay,
   ChristmasChartIcon as BarChart3,
   ChristmasDeutschIcon as Languages,
   ChristmasFileStackIcon as FileStack,
@@ -31,6 +32,7 @@ type Item = { href: string; label: string; short?: string; icon: ComponentType<{
 export function secOf(href: string): string | undefined {
   if (href.startsWith("/lai-xe")) return "laixe";
   if (href.startsWith("/leben-in-deutschland")) return "lid";
+  if (href.startsWith("/thuyet-minh")) return "dub";
   if (href.startsWith("/admin") || href === "/stats" || href === "/settings") return "ink";
   if (href === "/") return undefined;
   return "de";
@@ -42,6 +44,7 @@ const ITEMS: Item[] = [
   { href: "/tieng-duc", label: "Tiếng Đức", icon: Languages },
   { href: "/lai-xe", label: "Lái xe", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in DE", short: "LiD", icon: Landmark },
+  { href: "/thuyet-minh", label: "Thuyết minh", short: "Thuyết minh", icon: TvPlay },
 ];
 const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers };
 const DEUTSCH: Item[] = [
@@ -65,7 +68,7 @@ const LID_NAV: Item[] = [
   { href: "/leben-in-deutschland/thong-ke", label: "Thống kê", icon: BarChart3 },
 ];
 const GUEST_BAR: Item[] = ITEMS;
-const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3]];
+const USER_BAR: Item[] = [ITEMS[1], REVIEW, ITEMS[2], ITEMS[3], ITEMS[4]];
 const USER_ITEMS: Item[] = [
   { href: "/stats", label: "Tiến độ & thành tích", icon: BarChart3 },
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
@@ -80,7 +83,7 @@ const LEARN_QUICK: Item[] = [
 const ADMIN_ITEMS: Item[] = [{ href: "/admin", label: "Trang quản trị", short: "Admin", icon: ShieldCheck }];
 
 const INFO_PAGES = ["about", "shadowing", "support", "privacy", "terms", "impressum", "refund", "calendar", "deutsch-redewendung"];
-const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing", ...INFO_PAGES]);
+const NOT_DEUTSCH = new Set(["login", "register", "forgot-password", "admin", "settings", "stats", "deutsch-shadowing", "thuyet-minh", ...INFO_PAGES]);
 
 function useCurrent(items: Item[]) {
   const pathname = usePathname();

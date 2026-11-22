@@ -1,21 +1,15 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
-import { dubEnabled, dubJson, parseSubtitleText, type DubCue } from "@/lib/dub";
+import { parseSubtitleText, type DubCue } from "@/lib/dub";
+import { prepareLiveDub } from "@/lib/dub-live";
 import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
 import { mergeIntoSentences } from "@/lib/subtitles";
 import { translateForDubbing, translationEnabled } from "@/lib/translate";
-import { whisperEnabled } from "@/lib/whisper";
 
 type PrepareBody = {
   url: unknown;
   subSource?: unknown; // "auto" | "whisper" | "custom"
   customSub?: unknown;
   translateCustom?: unknown;
-};
-
-type ProbeRes = {
-  video_id: string;
-  title: string;
-  subtitles: { lang: string; name: string; auto: boolean }[];
 };
 
 /**
@@ -29,16 +23,23 @@ export async function POST(req: Request) {
   const b = await body<PrepareBody>(req);
   const videoId = extractVideoId(str(b.url).trim());
   if (!videoId) return fail("Link YouTube không hợp lệ.");
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-  let subSource = str(b.subSource) || "auto";
-  let subLang = "";
-  let subAuto = false;
-  let title = "";
-  let cues: DubCue[] = [];
-  let needTranslateLang: string | null = null;
+  const subSource = str(b.subSource) || "auto";
 
   try {
+    if (subSource === "auto") {
+      const res = await prepareLiveDub(videoId, {
+        allowWhisper: true,
+        quotaKey: `admin:${admin.id}`,
+        maxCues: 2500,
+      });
+      return Response.json(res);
+    }
+
+    let title = "";
+    let cues: (DubCue & { orig?: string })[] = [];
+    let needTranslateLang: string | null = null;
+
     if (subSource === "custom") {
       cues = parseSubtitleText(str(b.customSub));
       if (!cues.length) return fail("Không đọc được câu thoại nào từ file phụ đề.");
@@ -55,40 +56,6 @@ export async function POST(req: Request) {
         text: s.text,
       }));
       needTranslateLang = "auto";
-    } else {
-      // Auto mode: prefer vieneu-dub Innertube (all languages), fallback to HalloVN's own getYouTubeTranscript
-      if (dubEnabled()) {
-        const info = await dubJson<ProbeRes>("/probe", { method: "POST", body: { url }, timeoutMs: 25_000 });
-        title = info.title || "";
-        if (info.subtitles?.length) {
-          subLang = info.subtitles[0].lang;
-          subAuto = info.subtitles[0].auto;
-          const subRes = await dubJson<{ lang: string; cues: DubCue[] }>("/subtitles", {
-            method: "POST",
-            body: { url, lang: subLang, auto: subAuto },
-            timeoutMs: 35_000,
-          });
-          cues = subRes.cues;
-          const actualLang = (subRes.lang || subLang).toLowerCase();
-          if (!actualLang.startsWith("vi")) needTranslateLang = actualLang || "auto";
-        } else if (whisperEnabled()) {
-          subSource = "whisper";
-        }
-      }
-
-      if (!cues.length) {
-        const tr = await getYouTubeTranscript(videoId, subSource === "whisper" ? "whisper" : undefined, {
-          whisper: whisperEnabled(),
-          quotaKey: `admin:${admin.id}`,
-        });
-        title = title || tr.title;
-        cues = mergeIntoSentences(tr.segments).map((s) => ({
-          start_ms: Math.max(0, Math.round(s.start * 1000)),
-          end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
-          text: s.text,
-        }));
-        needTranslateLang = tr.track.languageCode.startsWith("vi") ? null : "auto";
-      }
     }
 
     if (!cues.length) return fail("Không tìm thấy phụ đề cho video này.");
@@ -100,12 +67,13 @@ export async function POST(req: Request) {
         cues.map((c) => c.text),
         needTranslateLang,
       );
-      cues = cues.map((c, i) => ({ ...c, text: translated[i] || c.text }));
+      cues = cues.map((c, i) => ({ ...c, text: translated[i] || c.text, orig: c.text }));
     }
 
     return Response.json({
       videoId,
       title: title || videoId,
+      sourceLang: needTranslateLang ?? "vi",
       cues,
     });
   } catch (e) {

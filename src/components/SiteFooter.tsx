@@ -14,6 +14,7 @@ const COLUMNS = [
       { href: "/vocab", label: "Từ vựng Goethe A1–B1" },
       { href: "/lai-xe", label: "Lý thuyết lái xe Đức" },
       { href: "/leben-in-deutschland", label: "Leben in Deutschland" },
+      { href: "/thuyet-minh", label: "Xem YouTube thuyết minh" },
     ],
   },
   {

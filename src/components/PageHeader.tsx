@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import Mascot from "./Mascot";
 
-export type Sec = "de" | "laixe" | "lid" | "ink";
+export type Sec = "de" | "laixe" | "lid" | "dub" | "ink";
 
 /**
  * Đầu trang tối giản kiểu Linear / Notion:

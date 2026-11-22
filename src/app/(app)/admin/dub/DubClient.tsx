@@ -14,7 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import SyncedPlayer from "./SyncedPlayer";
-import KokoroLivePlayer, { type LiveCue } from "./KokoroLivePlayer";
+import KokoroLivePlayer, { type LiveCue } from "@/components/KokoroLivePlayer";
 
 type DubVoice = { id: string; label: string; cloned?: boolean };
 type DubHealth = {
@@ -369,6 +369,7 @@ export default function DubClient() {
             initialVoice={liveSession.voiceIdx}
             initialSpeed={baseSpeed}
             initialOrigVol={origVol}
+            showDebugMeta
           />
         </div>
       )}

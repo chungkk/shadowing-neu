@@ -257,6 +257,18 @@
   --on-sec: #0b0f14;
 }
 
+[data-sec="dub"] {
+  --sec: var(--grape);
+  --sec-dark: var(--grape-dark);
+  --sec-soft: var(--grape-soft);
+  --sec-text: var(--grape-text);
+  --on-sec: #ffffff;
+}
+
+[data-theme="dark"] [data-sec="dub"] {
+  --on-sec: #0b0f14;
+}
+
 [data-sec="ink"] {
   --sec: #334155;
   --sec-dark: #1e293b;

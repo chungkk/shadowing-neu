@@ -1,10 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import {
+  Check,
+  Captions,
+  ListMusic,
+  Loader2,
+  Pause,
+  Play,
+  RotateCcw,
+  Share2,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { ensureKokoroLoaded, synthesizeKokoro, type KokoroProgress } from "@/lib/kokoro-vi/engine";
+import { formatTime } from "@/lib/subtitles";
 
-export type LiveCue = { start_ms: number; end_ms: number; text: string };
+export type LiveCue = {
+  start_ms: number;
+  end_ms: number;
+  text: string;
+  orig?: string;
+};
 
 type YTPlayerEx = {
   playVideo(): void;
@@ -45,16 +62,22 @@ export default function KokoroLivePlayer({
   videoId,
   title,
   cues,
+  sourceLang,
   initialVoice = 1,
   initialSpeed = 1.15,
   initialOrigVol = 25,
+  shareUrl,
+  showDebugMeta = false,
 }: {
   videoId: string;
   title: string;
   cues: LiveCue[];
+  sourceLang?: string;
   initialVoice?: 0 | 1; // 0 = Diễm Trinh (nữ), 1 = Đức Duy (nam)
   initialSpeed?: number;
   initialOrigVol?: number;
+  shareUrl?: string;
+  showDebugMeta?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const ytRef = useRef<YTPlayerEx | null>(null);
@@ -66,10 +89,11 @@ export default function KokoroLivePlayer({
   const inflightRef = useRef<Map<string, Promise<AudioBuffer | null>>>(new Map());
   const lastSpokenIdxRef = useRef<number>(-1);
   const lastYtTimeRef = useRef<number>(0);
+  const activeRowRef = useRef<HTMLButtonElement | null>(null);
 
   const [ytReady, setYtReady] = useState(false);
   const [modelReady, setModelReady] = useState(false);
-  const [progress, setProgress] = useState<KokoroProgress>({ stage: "Đang khởi tạo Kokoro Lite…", pct: 0 });
+  const [progress, setProgress] = useState<KokoroProgress>({ stage: "Đang khởi tạo giọng đọc AI…", pct: 0 });
   const [modelErr, setModelErr] = useState("");
 
   const [playing, setPlaying] = useState(false);
@@ -78,13 +102,39 @@ export default function KokoroLivePlayer({
   const [origVol, setOrigVol] = useState(initialOrigVol);
   const [dubVol, setDubVol] = useState(110);
   const [dubMuted, setDubMuted] = useState(false);
-  const [caption, setCaption] = useState("");
+  const [activeCueIdx, setActiveCueIdx] = useState<number>(-1);
+  const [showOrig, setShowOrig] = useState(false);
+  const [showScript, setShowScript] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [lastSynthMs, setLastSynthMs] = useState<number | null>(null);
+
+  const hasOrig = cues.some((c) => Boolean(c.orig));
+  const activeCue = activeCueIdx >= 0 ? cues[activeCueIdx] : null;
 
   const stateRef = useRef({ voiceIdx, speed, origVol, dubVol, dubMuted, modelReady, cues });
   useEffect(() => {
     stateRef.current = { voiceIdx, speed, origVol, dubVol, dubMuted, modelReady, cues };
   });
+
+  // Reset audio cache when video/cues change, and close AudioContext on unmount
+  useEffect(() => {
+    const cache = bufCacheRef.current;
+    const inflight = inflightRef.current;
+    return () => {
+      cache.clear();
+      inflight.clear();
+    };
+  }, [videoId, cues]);
+
+  useEffect(() => {
+    return () => {
+      if (ctxRef.current) {
+        void ctxRef.current.close().catch(() => {});
+        ctxRef.current = null;
+        gainRef.current = null;
+      }
+    };
+  }, []);
 
   const getAudioCtx = useCallback((): AudioContext => {
     if (!ctxRef.current) {
@@ -151,8 +201,8 @@ export default function KokoroLivePlayer({
       .then(() => {
         if (active) {
           setModelReady(true);
-          // Warm up first 3 cues immediately so Play starts with 0ms delay!
           stateRef.current.modelReady = true;
+          // Warm up first 3 cues immediately so Play starts with near-0ms delay
           for (let k = 0; k < Math.min(3, cues.length); k++) {
             void getCueBuffer(k, stateRef.current.voiceIdx, stateRef.current.speed);
           }
@@ -183,6 +233,13 @@ export default function KokoroLivePlayer({
       gainRef.current.gain.value = dubMuted ? 0 : Math.min(1.8, Math.max(0, dubVol / 100));
     }
   }, [dubVol, dubMuted]);
+
+  // Auto-scroll active line in transcript drawer
+  useEffect(() => {
+    if (showScript && activeRowRef.current) {
+      activeRowRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [activeCueIdx, showScript]);
 
   // Mount YouTube IFrame Player
   useEffect(() => {
@@ -248,7 +305,6 @@ export default function KokoroLivePlayer({
 
       const buf = await getCueBuffer(cueIndex, vIdx, spd);
       if (!buf) return;
-      // Re-check player is still playing and hasn't jumped elsewhere
       if (!ytRef.current || ytRef.current.getPlayerState?.() !== 1) return;
       if (lastSpokenIdxRef.current !== cueIndex) return;
 
@@ -301,7 +357,6 @@ export default function KokoroLivePlayer({
         lastSpokenIdxRef.current = -1;
       }
 
-      // Find cue covering current time (or just started)
       let curIdx = -1;
       for (let i = 0; i < list.length; i++) {
         const c = list[i];
@@ -312,10 +367,10 @@ export default function KokoroLivePlayer({
         }
       }
 
+      setActiveCueIdx((prev) => (prev === curIdx ? prev : curIdx));
+
       if (curIdx !== -1) {
-        setCaption(list[curIdx].text);
         if (curIdx !== lastSpokenIdxRef.current) {
-          // If seeking into the middle of a cue (>2.5s late), only play if cue still has >1s left
           const lateMs = tMs - list[curIdx].start_ms;
           const remainingMs = list[curIdx].end_ms - tMs;
           if (!jumped || lateMs < 2500 || remainingMs > 1200) {
@@ -323,8 +378,6 @@ export default function KokoroLivePlayer({
             void speakCue(curIdx, jumped);
           }
         }
-      } else {
-        setCaption("");
       }
     }, 100);
 
@@ -349,84 +402,148 @@ export default function KokoroLivePlayer({
     getAudioCtx();
     stopSpeech();
     lastSpokenIdxRef.current = -1;
+    setActiveCueIdx(-1);
     yt.seekTo(0, true);
     yt.playVideo();
   };
 
+  const seekToCue = (idx: number) => {
+    const yt = ytRef.current;
+    const cue = cues[idx];
+    if (!yt || !cue) return;
+    getAudioCtx();
+    stopSpeech();
+    lastSpokenIdxRef.current = -1;
+    setActiveCueIdx(idx);
+    yt.seekTo(cue.start_ms / 1000, true);
+    yt.playVideo();
+  };
+
+  const copyShare = async () => {
+    if (!shareUrl) return;
+    const full = shareUrl.startsWith("http") ? shareUrl : `${window.location.origin}${shareUrl}`;
+    try {
+      await navigator.clipboard.writeText(full);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3">
+      {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-foreground">{title}</p>
+          <h2 className="truncate text-base font-bold text-foreground sm:text-lg">{title}</h2>
           <p className="text-xs text-muted">
-            🚀 Kokoro Lite trên trình duyệt (0đ server · {cues.length} câu)
-            {lastSynthMs !== null ? ` · tạo câu trong ${lastSynthMs}ms` : ""}
+            {showDebugMeta ? (
+              <>
+                Kokoro Lite trên trình duyệt (0đ server · {cues.length} câu)
+                {lastSynthMs !== null ? ` · tạo câu trong ${lastSynthMs}ms` : ""}
+              </>
+            ) : (
+              <>
+                Thuyết minh tiếng Việt trực tiếp · {cues.length} câu
+                {sourceLang && sourceLang !== "auto" && !sourceLang.startsWith("vi") ? ` · dịch từ ${sourceLang.toUpperCase()}` : ""}
+              </>
+            )}
           </p>
         </div>
-        <select
-          className="input h-8 w-auto py-1 text-xs text-foreground"
-          value={voiceIdx}
-          onChange={(e) => {
-            stopSpeech();
-            lastSpokenIdxRef.current = -1;
-            setVoiceIdx(Number(e.target.value) === 0 ? 0 : 1);
-          }}
-          aria-label="Giọng Kokoro"
-        >
-          <option value={1}>Đức Duy (Nam)</option>
-          <option value={0}>Diễm Trinh (Nữ)</option>
-        </select>
+
+        <div className="flex items-center gap-1.5">
+          <select
+            className="input h-8 w-auto py-1 text-xs text-foreground"
+            value={voiceIdx}
+            onChange={(e) => {
+              stopSpeech();
+              lastSpokenIdxRef.current = -1;
+              setVoiceIdx(Number(e.target.value) === 0 ? 0 : 1);
+            }}
+            aria-label="Giọng thuyết minh"
+          >
+            <option value={1}>Đức Duy (Nam)</option>
+            <option value={0}>Diễm Trinh (Nữ)</option>
+          </select>
+
+          {shareUrl && (
+            <button type="button" className="btn btn-sm" onClick={() => void copyShare()} title="Chép link xem thuyết minh">
+              {copied ? <Check className="size-3.5 text-ok-text" /> : <Share2 className="size-3.5" />}
+              <span className="max-sm:hidden">{copied ? "Đã chép" : "Chia sẻ"}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Model download / init progress (1-time, cached in browser) */}
       {!modelReady && !modelErr && (
         <div className="space-y-1.5 rounded-lg border border-line bg-card-2/60 p-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="inline-flex items-center gap-1.5 text-foreground">
-              <Loader2 className="size-3.5 animate-spin text-accent" />
-              {progress.stage}
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
+              <Loader2 className="size-3.5 shrink-0 animate-spin text-sec-text" />
+              <span className="truncate">{progress.stage}</span>
             </span>
-            <span className="font-mono text-muted">{progress.pct}%</span>
+            <span className="shrink-0 font-mono text-muted tabular-nums">{progress.pct}%</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-card">
-            <div className="h-full rounded-full bg-accent transition-all duration-300" style={{ width: `${Math.max(5, progress.pct)}%` }} />
+            <div
+              className="h-full rounded-full bg-sec transition-all duration-300"
+              style={{ width: `${Math.max(5, progress.pct)}%` }}
+            />
           </div>
         </div>
       )}
 
       {modelErr && (
         <p role="alert" className="alert alert-err text-xs">
-          Lỗi nạp Kokoro Lite trên trình duyệt: {modelErr}
+          Lỗi nạp giọng đọc AI trên trình duyệt: {modelErr}
         </p>
       )}
 
+      {/* YouTube Player */}
       <div
         ref={hostRef}
         className="aspect-video w-full overflow-hidden rounded-lg bg-black [&_iframe]:h-full [&_iframe]:w-full"
       />
 
-      {/* Live Vietnamese caption */}
-      <div className="min-h-11 rounded-lg bg-card-2/80 px-4 py-2.5 text-center text-sm font-medium text-foreground">
-        {caption || (
+      {/* Live Vietnamese (+ optional original) caption */}
+      <div className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg bg-card-2/80 px-4 py-2.5 text-center">
+        {activeCue ? (
+          <>
+            <p className="text-sm leading-snug font-semibold text-foreground sm:text-[0.95rem]">{activeCue.text}</p>
+            {showOrig && activeCue.orig && (
+              <p className="text-xs leading-snug text-muted">{activeCue.orig}</p>
+            )}
+          </>
+        ) : (
           <span className="text-xs text-muted">
-            {modelReady ? "Bấm “Phát” để nghe thuyết minh trực tiếp (tua thoải mái, tự bắt nhịp ~0.5s)" : "Đang nạp model giọng đọc…"}
+            {modelReady
+              ? "Bấm “Phát” để xem YouTube với giọng thuyết minh tiếng Việt (tua thoải mái, tự bắt nhịp)"
+              : "Đang nạp giọng đọc AI lần đầu (tự lưu trong trình duyệt cho các lần sau)…"}
           </span>
         )}
       </div>
 
-      {/* Compact controls */}
-      <div className="flex flex-wrap items-center gap-3 text-xs">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2.5 text-xs sm:gap-3">
         <button type="button" className="btn btn-sm btn-primary" disabled={!ytReady || !modelReady} onClick={togglePlay}>
           {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
           {playing ? "Tạm dừng" : "Phát"}
         </button>
-        <button type="button" className="btn btn-sm" disabled={!ytReady || !modelReady} onClick={restart} title="Từ đầu">
+        <button type="button" className="btn btn-sm" disabled={!ytReady || !modelReady} onClick={restart} title="Xem lại từ đầu">
           <RotateCcw className="size-3.5" />
         </button>
 
         <label className="flex items-center gap-1.5 text-muted">
           <span>Gốc {origVol}%</span>
-          <input type="range" min={0} max={100} step={5} value={origVol} onChange={(e) => setOrigVol(Number(e.target.value))} className="w-20" />
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={origVol}
+            onChange={(e) => setOrigVol(Number(e.target.value))}
+            className="w-18 sm:w-20"
+          />
         </label>
 
         <label className="flex items-center gap-1.5 text-muted">
@@ -449,11 +566,11 @@ export default function KokoroLivePlayer({
               setDubMuted(false);
               setDubVol(Number(e.target.value));
             }}
-            className="w-20"
+            className="w-18 sm:w-20"
           />
         </label>
 
-        <label className="ml-auto flex items-center gap-1.5 text-muted">
+        <label className="flex items-center gap-1.5 text-muted" title="Tốc độ giọng thuyết minh">
           <span>{speed.toFixed(2)}×</span>
           <input
             type="range"
@@ -465,7 +582,62 @@ export default function KokoroLivePlayer({
             className="w-16"
           />
         </label>
+
+        <div className="ml-auto flex items-center gap-1.5">
+          {hasOrig && (
+            <button
+              type="button"
+              className={`btn btn-sm ${showOrig ? "btn-soft" : ""}`}
+              onClick={() => setShowOrig((v) => !v)}
+              title="Hiện thêm câu gốc bên dưới bản dịch tiếng Việt"
+            >
+              <Captions className="size-3.5" />
+              Song ngữ
+            </button>
+          )}
+          <button
+            type="button"
+            className={`btn btn-sm ${showScript ? "btn-soft" : ""}`}
+            onClick={() => setShowScript((v) => !v)}
+            title="Xem toàn bộ lời thoại & bấm để tua nhanh"
+          >
+            <ListMusic className="size-3.5" />
+            Lời thoại
+          </button>
+        </div>
       </div>
+
+      {/* Collapsible clickable transcript */}
+      {showScript && (
+        <div className="max-h-72 overflow-y-auto rounded-lg border border-line bg-background/60 p-1.5">
+          <div className="flex flex-col gap-0.5">
+            {cues.map((c, idx) => {
+              const active = idx === activeCueIdx;
+              return (
+                <button
+                  key={`${c.start_ms}-${idx}`}
+                  ref={active ? activeRowRef : undefined}
+                  type="button"
+                  onClick={() => seekToCue(idx)}
+                  className={`flex items-start gap-2.5 rounded-md px-2.5 py-2 text-left text-xs transition-colors ${
+                    active ? "bg-sec-soft text-foreground" : "text-muted hover:bg-card-2/70 hover:text-foreground"
+                  }`}
+                >
+                  <span className="mt-0.5 shrink-0 font-mono text-[11px] tabular-nums opacity-75">
+                    {formatTime(c.start_ms / 1000)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block leading-snug ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
+                      {c.text}
+                    </span>
+                    {showOrig && c.orig && <span className="mt-0.5 block text-[11px] text-muted">{c.orig}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

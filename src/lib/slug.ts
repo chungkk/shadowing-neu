@@ -3,7 +3,7 @@
 /** Tên thư mục / file ở gốc app — slug bài không được trùng (route tĩnh luôn thắng route [slug]) */
 const RESERVED = new Set([
   "admin", "api", "lesson", "login", "register", "settings", "vocab", "watch", "forgot-password", "privacy", "terms", "leaderboard",
-  "sitemap", "robots", "favicon", "icon", "apple-icon", "_next", "lai-xe", "lid", "games", "stats", "sprechen", "leben-in-deutschland", "deutsch-shadowing", "about", "tieng-duc", "tin-tuc", "huong-dan",
+  "sitemap", "robots", "favicon", "icon", "apple-icon", "_next", "lai-xe", "lid", "games", "stats", "sprechen", "leben-in-deutschland", "deutsch-shadowing", "about", "tieng-duc", "tin-tuc", "huong-dan", "thuyet-minh",
   "fuehrerschein", "shadowing", "calendar", "deutsch-redewendung", "impressum", "refund", "support", "delete-account", "manifest", "download", "ckk", "apps", "brand", "deals", "praha",
   "trinh-do", "kenh", "a1", "a2", "b1", "b2", "c1", "c2",
 ]);
