@@ -3,10 +3,10 @@
 import config from "./config.json";
 import { SeaDictionary, phonemizeChunks } from "./frontend";
 
-const CACHE_NAME = "kokoro-vi-lite-v1";
-const MODEL_URL = "https://huggingface.co/loanhviet/Kokoro-Vietnamese-Lite/resolve/main/kokoro_vi_lite.onnx";
-const DICT_URL = "https://raw.githubusercontent.com/pnnbao97/sea-g2p/e825173f/python/sea_g2p/sea_g2p.bin";
-const ORT_WASM_CDN = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/";
+const CACHE_NAME = "kokoro-vi-lite-v2";
+const MODEL_URL = "/download/media/kokoro/kokoro_vi_lite.onnx";
+const DICT_URL = "/download/media/kokoro/sea_g2p.bin";
+const ORT_WASM_PATH = "/download/media/kokoro/ort/";
 
 export const KOKORO_SAMPLE_RATE = 24_000;
 
@@ -99,7 +99,7 @@ export async function ensureKokoroLoaded(onProgress?: (p: KokoroProgress) => voi
     try {
       onProgress?.({ stage: "Đang nạp ONNX Runtime (WASM)…", pct: 5 });
       const ort = await import("onnxruntime-web");
-      ort.env.wasm.wasmPaths = ORT_WASM_CDN;
+      ort.env.wasm.wasmPaths = ORT_WASM_PATH;
       ort.env.wasm.numThreads = 1; // Single-thread WASM needs no COOP/COEP headers (safe with YouTube iframe)
       ortMod = ort;
 
