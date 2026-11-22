@@ -134,7 +134,7 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
         .slice(0, 5);
 
   return (
-    <article aria-label={`Nội dung bài học ${lesson.title}`} className="flex flex-col gap-5 pt-2">
+    <article aria-label={`Nội dung bài học ${lesson.title}`} className="flex flex-col gap-5 pt-2 max-md:hidden">
       <section className="card flex flex-col p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
           <Link href="/tieng-duc" className="font-bold hover:text-foreground">
