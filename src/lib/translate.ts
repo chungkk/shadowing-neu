@@ -393,16 +393,26 @@ const SMART_DUB_BATCH = 20;
  */
 export async function translateForDubbingSmart(
   items: DubTranslateItem[],
-  { title = "", sourceLang = "auto" }: { title?: string; sourceLang?: string } = {},
+  {
+    title = "",
+    sourceLang = "auto",
+    onProgress,
+  }: {
+    title?: string;
+    sourceLang?: string;
+    onProgress?: (info: { phase: "style" | "translate"; done: number; total: number }) => void;
+  } = {},
 ): Promise<{ translations: string[]; style: DubStyleCard | null }> {
   const lang = (sourceLang || "auto").toLowerCase();
   if (!items.length || lang === "vi" || lang.startsWith("vi-")) {
     return { translations: items.map((x) => x.text), style: null };
   }
 
+  onProgress?.({ phase: "style", done: 0, total: items.length });
   const style = await buildDubStyleCard(items, title, sourceLang || "auto");
   const systemPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style);
   const out: string[] = new Array(items.length);
+  onProgress?.({ phase: "translate", done: 0, total: items.length });
 
   for (let i = 0; i < items.length; i += SMART_DUB_BATCH) {
     const chunk = items.slice(i, i + SMART_DUB_BATCH);
@@ -416,6 +426,7 @@ export async function translateForDubbingSmart(
     translated.forEach((t, k) => {
       out[i + k] = t;
     });
+    onProgress?.({ phase: "translate", done: Math.min(items.length, i + chunk.length), total: items.length });
   }
 
   return { translations: out, style };

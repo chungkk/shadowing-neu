@@ -106,6 +106,7 @@ export default function DubClient() {
   const [translateCustom, setTranslateCustom] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [prep, setPrep] = useState<{ pct: number; stage: string } | null>(null);
   const [err, setErr] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
@@ -141,10 +142,11 @@ export default function DubClient() {
     setErr("");
     try {
       if (voice.startsWith("kokoro:")) {
-        // Browser-side Kokoro Lite: server only fetches & translates subtitles (~2-4s), browser runs TTS live!
-        const res = await fetch("/api/v1/admin/dub/prepare-live", {
+        // Browser-side Kokoro Lite: server streams subtitle fetch & translation progress (0% -> 100%)
+        setPrep({ pct: 3, stage: "Đang kết nối…" });
+        const res = await fetch("/api/v1/admin/dub/prepare-live?stream=1", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
           body: JSON.stringify({
             url: url.trim(),
             subSource,
@@ -152,8 +154,39 @@ export default function DubClient() {
             translateCustom,
           }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error((errData as { error?: string }).error || `HTTP ${res.status}`);
+        }
+        let data: { videoId: string; title: string; cues: LiveCue[] } | null = null;
+        if ((res.headers.get("content-type") ?? "").includes("ndjson") && res.body) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            let nl = buf.indexOf("\n");
+            while (nl !== -1) {
+              const line = buf.slice(0, nl).trim();
+              buf = buf.slice(nl + 1);
+              if (line) {
+                const msg = JSON.parse(line) as
+                  | { type: "progress"; pct: number; stage: string }
+                  | { type: "done"; data: { videoId: string; title: string; cues: LiveCue[] } }
+                  | { type: "error"; error: string };
+                if (msg.type === "progress") setPrep({ pct: msg.pct, stage: msg.stage });
+                else if (msg.type === "error") throw new Error(msg.error);
+                else if (msg.type === "done") data = msg.data;
+              }
+              nl = buf.indexOf("\n");
+            }
+          }
+        } else {
+          data = await res.json();
+        }
+        if (!data) throw new Error("Kết nối bị gián đoạn trước khi hoàn tất.");
         setActiveId(null);
         setLiveSession({
           videoId: data.videoId,
@@ -191,6 +224,7 @@ export default function DubClient() {
       setErr((e2 as Error).message);
     } finally {
       setSubmitting(false);
+      setPrep(null);
     }
   };
 
@@ -243,13 +277,37 @@ export default function DubClient() {
           </select>
           <button
             type="submit"
-            className="btn btn-primary shrink-0"
+            className="btn btn-primary relative shrink-0 overflow-hidden tabular-nums"
             disabled={submitting || !url.trim() || (!voice.startsWith("kokoro:") && status?.enabled === false)}
           >
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-            {submitting ? "Đang dịch…" : "Thuyết minh"}
+            {submitting && prep && (
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 bg-white/15 transition-all duration-300"
+                style={{ width: `${Math.max(4, prep.pct)}%` }}
+              />
+            )}
+            {submitting ? <Loader2 className="relative size-4 animate-spin" /> : <Play className="size-4" />}
+            <span className="relative">{submitting ? (prep ? `Đang dịch ${prep.pct}%` : "Đang dịch…") : "Thuyết minh"}</span>
           </button>
         </div>
+
+        {submitting && prep && (
+          <div className="space-y-1.5 rounded-lg border border-line bg-card-2/60 p-2.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-accent" />
+                <span className="truncate">{prep.stage}</span>
+              </span>
+              <span className="shrink-0 font-mono font-semibold text-accent tabular-nums">{prep.pct}%</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-card">
+              <div
+                className="h-full rounded-full bg-accent transition-all duration-300"
+                style={{ width: `${Math.max(4, prep.pct)}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Minimal footer row */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">

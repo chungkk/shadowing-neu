@@ -26,8 +26,82 @@ type LiveSession = {
   voiceIdx: 0 | 1;
 };
 
+type PrepProgress = {
+  pct: number;
+  stage: string;
+  done?: number;
+  total?: number;
+};
+
+type PrepareResult = {
+  videoId: string;
+  title?: string;
+  sourceLang?: string;
+  cues: LiveCue[];
+};
+
 const RECENT_KEY = "hallovn-dub-recent";
 const EMPTY_RECENT: RecentDub[] = [];
+
+async function fetchPrepareStream(
+  endpoint: string,
+  payload: object,
+  onProgress: (p: PrepProgress) => void,
+  signal?: AbortSignal,
+): Promise<PrepareResult> {
+  const res = await fetch(`${endpoint}?stream=1`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/x-ndjson",
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error((errData as { error?: string }).error || `HTTP ${res.status}`);
+  }
+
+  const ct = res.headers.get("content-type") ?? "";
+  if (!ct.includes("ndjson") || !res.body) {
+    return (await res.json()) as PrepareResult;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let result: PrepareResult | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl = buf.indexOf("\n");
+    while (nl !== -1) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (line) {
+        const msg = JSON.parse(line) as
+          | { type: "progress"; pct: number; stage: string; done?: number; total?: number }
+          | { type: "done"; data: PrepareResult }
+          | { type: "error"; error: string };
+        if (msg.type === "progress") {
+          onProgress({ pct: msg.pct, stage: msg.stage, done: msg.done, total: msg.total });
+        } else if (msg.type === "error") {
+          throw new Error(msg.error);
+        } else if (msg.type === "done") {
+          result = msg.data;
+        }
+      }
+      nl = buf.indexOf("\n");
+    }
+  }
+
+  if (!result) throw new Error("Kết nối bị gián đoạn trước khi hoàn tất. Vui lòng thử lại.");
+  return result;
+}
 
 export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: DubSuggestion[] }) {
   const searchParams = useSearchParams();
@@ -36,14 +110,21 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const [url, setUrl] = useState(initialV ? `https://youtu.be/${initialV}` : "");
   const [voiceIdx, setVoiceIdx] = useState<0 | 1>(1);
   const [loading, setLoading] = useState(false);
+  const [prep, setPrep] = useState<PrepProgress | null>(null);
+  const [showPrepDetail, setShowPrepDetail] = useState(true);
   const [err, setErr] = useState("");
   const [session, setSession] = useState<LiveSession | null>(null);
   const [recent, setRecent] = useLocalStorage<RecentDub[]>(RECENT_KEY, EMPTY_RECENT);
+  const abortRef = useRef<AbortController | null>(null);
 
   const recentRef = useRef(recent);
   useEffect(() => {
     recentRef.current = recent;
   }, [recent]);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
 
   const loadVideo = useCallback(
     async (rawInput: string, voice: 0 | 1) => {
@@ -53,16 +134,21 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
         return;
       }
 
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+
       setLoading(true);
+      setShowPrepDetail(true);
+      setPrep({ pct: 3, stage: "Đang kết nối…" });
       setErr("");
       try {
-        const res = await fetch("/api/v1/dub/prepare", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoId }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        const data = await fetchPrepareStream(
+          "/api/v1/dub/prepare",
+          { videoId },
+          (p) => setPrep(p),
+          ac.signal,
+        );
 
         const nextSession: LiveSession = {
           videoId: data.videoId,
@@ -82,11 +168,21 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
 
         // Lưu vào lịch sử xem gần đây
         const cur = recentRef.current;
-        setRecent([{ videoId: nextSession.videoId, title: nextSession.title }, ...cur.filter((r) => r.videoId !== nextSession.videoId)].slice(0, 8));
+        setRecent(
+          [{ videoId: nextSession.videoId, title: nextSession.title }, ...cur.filter((r) => r.videoId !== nextSession.videoId)].slice(
+            0,
+            8,
+          ),
+        );
       } catch (e) {
-        setErr((e as Error).message);
+        if ((e as Error).name !== "AbortError") {
+          setErr((e as Error).message);
+        }
       } finally {
-        setLoading(false);
+        if (abortRef.current === ac) {
+          setLoading(false);
+          setPrep(null);
+        }
       }
     },
     [setRecent],
@@ -108,6 +204,13 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
     void loadVideo(url, voiceIdx);
   };
 
+  const cancelLoad = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
+    setPrep(null);
+  };
+
   const openQuick = (videoId: string) => {
     setUrl(`https://youtu.be/${videoId}`);
     void loadVideo(videoId, voiceIdx);
@@ -117,6 +220,8 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const removeRecent = (videoId: string) => {
     setRecent(recent.filter((r) => r.videoId !== videoId));
   };
+
+  const pct = prep?.pct ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -145,14 +250,59 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             <option value={1}>Giọng Đức Duy (Nam)</option>
             <option value={0}>Giọng Diễm Trinh (Nữ)</option>
           </select>
-          <button type="submit" className="btn btn-primary shrink-0" disabled={loading || !url.trim()}>
-            {loading ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-            {loading ? "Đang chuẩn bị…" : "Xem thuyết minh"}
-          </button>
+
+          {loading ? (
+            <button
+              type="button"
+              onClick={() => setShowPrepDetail((v) => !v)}
+              className="btn btn-primary relative shrink-0 overflow-hidden tabular-nums"
+              title="Bấm để ẩn/hiện chi tiết tiến trình"
+            >
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 bg-white/15 transition-all duration-300"
+                style={{ width: `${Math.max(4, pct)}%` }}
+              />
+              <Loader2 className="relative size-4 animate-spin" />
+              <span className="relative">Đang xử lý {pct}%</span>
+            </button>
+          ) : (
+            <button type="submit" className="btn btn-primary shrink-0" disabled={!url.trim()}>
+              <Play className="size-4" />
+              Xem thuyết minh
+            </button>
+          )}
         </div>
 
+        {/* Thanh tiến trình chi tiết theo thời gian thực */}
+        {loading && prep && showPrepDetail && (
+          <div className="space-y-2 rounded-lg border border-line bg-card-2/60 p-3">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground">
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-sec-text" />
+                <span className="truncate">{prep.stage}</span>
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="font-mono font-semibold text-sec-text tabular-nums">{pct}%</span>
+                <button
+                  type="button"
+                  onClick={cancelLoad}
+                  className="rounded px-1.5 py-0.5 text-[11px] text-muted transition hover:bg-card hover:text-foreground"
+                >
+                  Huỷ
+                </button>
+              </div>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-card">
+              <div
+                className="h-full rounded-full bg-sec transition-all duration-300"
+                style={{ width: `${Math.max(4, pct)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         <p className="text-xs text-muted">
-          Tự động lấy phụ đề YouTube, dịch sang tiếng Việt và đọc trực tiếp ngay trên trình duyệt. Lần đầu sẽ tải nhẹ giọng đọc AI vào bộ nhớ trình duyệt để lần sau phát tức thì.
+          Tự động gộp câu, dịch theo ngữ cảnh toàn video và đọc thuyết minh tiếng Việt trực tiếp trên trình duyệt. Lần đầu sẽ tải nhẹ giọng đọc AI vào bộ nhớ trình duyệt để lần sau phát tức thì.
         </p>
 
         {err && (
@@ -188,7 +338,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Hỗ trợ nhiều ngôn ngữ</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">
-                Xem video tiếng Đức, Anh, Nhật, Hàn… tự động dịch sang tiếng Việt tự nhiên như lời nói.
+                Xem video tiếng Đức, Anh, Nhật, Hàn… tự động gộp câu và dịch sang tiếng Việt tự nhiên như lời nói.
               </p>
             </div>
           </div>

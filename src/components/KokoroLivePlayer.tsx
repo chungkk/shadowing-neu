@@ -525,9 +525,23 @@ export default function KokoroLivePlayer({
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2.5 text-xs sm:gap-3">
-        <button type="button" className="btn btn-sm btn-primary" disabled={!ytReady || !modelReady} onClick={togglePlay}>
-          {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-          {playing ? "Tạm dừng" : "Phát"}
+        <button
+          type="button"
+          className="btn btn-sm btn-primary tabular-nums"
+          disabled={!ytReady || !modelReady}
+          onClick={togglePlay}
+        >
+          {!modelReady ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" />
+              Đang nạp {progress.pct}%
+            </>
+          ) : (
+            <>
+              {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+              {playing ? "Tạm dừng" : "Phát"}
+            </>
+          )}
         </button>
         <button type="button" className="btn btn-sm" disabled={!ytReady || !modelReady} onClick={restart} title="Xem lại từ đầu">
           <RotateCcw className="size-3.5" />
