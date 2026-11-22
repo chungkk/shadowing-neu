@@ -267,7 +267,7 @@ const SMART_DUB_SYSTEM = (lang: string, title: string, style: DubStyleCard | nul
     `Bạn là biên dịch viên thuyết minh video (voice-over) chuyên nghiệp từ ngôn ngữ "${lang}" sang tiếng Việt.\n` +
     (ctxLines ? `Ngữ cảnh toàn video:\n${ctxLines}\n` : "") +
     "Đầu vào JSON gồm:\n" +
-    '- "prev" (tuỳ chọn): vài câu ngay trước đó kèm bản dịch tiếng Việt — chỉ để nối mạch và giữ đúng xưng hô, KHÔNG dịch lại.\n' +
+    '- "prev" (tuỳ chọn): vài câu ngay trước đó — chỉ để nối mạch và giữ đúng xưng hô, KHÔNG dịch lại.\n' +
     '- "items": danh sách câu cần dịch dạng {"1": {"s": số giây, "max": số từ tiếng Việt tối đa nên dùng, "text": câu gốc}, …}.\n' +
     '- "next" (tuỳ chọn): vài câu tiếp theo — chỉ để biết mạch câu sắp nói, KHÔNG dịch lại.\n' +
     "Quy tắc bắt buộc:\n" +
@@ -285,45 +285,52 @@ async function callSmartDubProvider(
   payload: object,
   expectedCount: number,
 ): Promise<string[]> {
-  const res = await fetch(p.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
-    body: JSON.stringify({
-      model: p.model,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(payload) },
-      ],
-      ...p.extra,
-    }),
-    signal: AbortSignal.timeout(45_000),
-  });
-  if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-  const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
-  const t: unknown = parsed.t;
-  const out = Array.from({ length: expectedCount }, (_, i) => {
-    const x = Array.isArray(t) ? (t.length === expectedCount ? t[i] : undefined) : (t as Record<string, unknown>)?.[i + 1];
-    return typeof x === "string" ? x.trim() : undefined;
-  });
-  if (!out.every((x) => x !== undefined)) {
-    throw new FormatError(`${p.name}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${expectedCount} câu)`);
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(p.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
+      body: JSON.stringify({
+        model: p.model,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(payload) },
+        ],
+        ...p.extra,
+      }),
+      signal: AbortSignal.timeout(35_000),
+    });
+    // Rate limit ngắn → đợi rất nhanh 1 lần rồi thử lại, nếu vẫn 429 thì nhường provider kế tiếp
+    if (res.status === 429 && attempt < 1) {
+      const wait = Math.min(Number(res.headers.get("retry-after")) || 1.5, 4);
+      await new Promise((r) => setTimeout(r, wait * 1000));
+      continue;
+    }
+    if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const data: { choices?: { message?: { content?: string } }[] } = await res.json();
+    const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+    const t: unknown = parsed.t;
+    const out = Array.from({ length: expectedCount }, (_, i) => {
+      const x = Array.isArray(t) ? (t.length === expectedCount ? t[i] : undefined) : (t as Record<string, unknown>)?.[i + 1];
+      return typeof x === "string" ? x.trim() : undefined;
+    });
+    if (!out.every((x) => x !== undefined)) {
+      throw new FormatError(`${p.name}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${expectedCount} câu)`);
+    }
+    return out as string[];
   }
-  return out as string[];
 }
 
 function dubProviders(): Provider[] {
-  const all = providers();
-  const small = process.env.TRANSLATE_MODEL ?? "openai/gpt-oss-20b";
-  // Ưu tiên mô hình lớn (Groq 120b → OpenAI → Groq 20b) để dịch mượt, giữ xưng hô & căn thời lượng chuẩn
-  const rank = (p: Provider) => (p.model === small ? 2 : p.name === "openai" ? 1 : 0);
-  return [...all].sort((a, b) => rank(a) - rank(b));
+  // Style Card đã dùng mô hình lớn (120b) để định hướng phong cách + xưng hô + thuật ngữ.
+  // Các lô câu chạy song song ưu tiên mô hình nhanh (Groq 20b → Groq 120b → OpenAI) để tốc độ ~4–5× nhanh hơn,
+  // câu nào chưa dịch đạt chuẩn tự động đẩy sang mô hình lớn dịch lại.
+  return providers();
 }
 
 async function translateSmartDubChunk(
   chunk: DubTranslateItem[],
-  prevCtx: { orig: string; vi: string }[],
+  prevCtx: string[],
   nextCtx: string[],
   systemPrompt: string,
 ): Promise<string[]> {
@@ -340,7 +347,7 @@ async function translateSmartDubChunk(
       indices.map((idx, pos) => {
         const it = chunk[idx];
         const s = Math.max(0.6, Math.round(it.availSec * 10) / 10);
-        // Kokoro đọc tự nhiên ở ~3.8 từ tiếng Việt / giây → đặt trần gọn gàng
+        // Kokoro / Edge đọc tự nhiên ở ~3.8 từ tiếng Việt / giây → đặt trần gọn gàng
         const max = Math.max(4, Math.min(48, Math.round(s * 3.8)));
         return [pos + 1, { s, max, text: it.text }];
       }),
@@ -383,13 +390,16 @@ async function translateSmartDubChunk(
   return result.map((r, i) => r || chunk[i].text);
 }
 
-const SMART_DUB_BATCH = 20;
+const FIRST_DUB_BATCH = 20; // Lô đầu 20 câu (~2 phút đầu) xong ngay để phát liền
+const NEXT_DUB_BATCH = 30; // Các lô sau 30 câu, chạy song song 4 luồng
+const DUB_CONCURRENCY = 4;
 
 /**
- * Dịch thuyết minh thông minh (Combo 1 + 2 + 3):
+ * Dịch thuyết minh thông minh (Combo 1 + 2 + 3 + Song song & Cuốn chiếu):
  * - Bước 1: Sinh Style Card (chủ đề, văn phong, xưng hô, bảng thuật ngữ) từ tiêu đề + trích đoạn video.
- * - Bước 2: Dịch theo cửa sổ trượt (gửi kèm 3 câu trước đã dịch + 2 câu sau làm lookahead)
- *   và căn ngân sách số từ theo thời lượng từng câu để giọng đọc khớp hình, tự nhiên.
+ * - Bước 2: Dịch ngay lô đầu 20 câu → gọi `onChunk` để phát video liền sau ~2–3 giây.
+ * - Bước 3: Chạy song song 4 luồng dịch toàn bộ các lô còn lại (gửi kèm 2 câu trước + 2 câu sau + ngân sách từ theo thời lượng),
+ *   cập nhật từng lô qua `onChunk` và `onProgress`.
  */
 export async function translateForDubbingSmart(
   items: DubTranslateItem[],
@@ -397,10 +407,12 @@ export async function translateForDubbingSmart(
     title = "",
     sourceLang = "auto",
     onProgress,
+    onChunk,
   }: {
     title?: string;
     sourceLang?: string;
     onProgress?: (info: { phase: "style" | "translate"; done: number; total: number }) => void;
+    onChunk?: (info: { start: number; translations: string[]; done: number; total: number }) => void;
   } = {},
 ): Promise<{ translations: string[]; style: DubStyleCard | null }> {
   const lang = (sourceLang || "auto").toLowerCase();
@@ -414,19 +426,48 @@ export async function translateForDubbingSmart(
   const out: string[] = new Array(items.length);
   onProgress?.({ phase: "translate", done: 0, total: items.length });
 
-  for (let i = 0; i < items.length; i += SMART_DUB_BATCH) {
-    const chunk = items.slice(i, i + SMART_DUB_BATCH);
-    const prevCtx: { orig: string; vi: string }[] = [];
-    for (let p = Math.max(0, i - 3); p < i; p++) {
-      if (out[p]) prevCtx.push({ orig: items[p].text, vi: out[p] });
+  // Chia lô: lô đầu nhỏ (20 câu) để phát tức thì, các lô sau 30 câu chạy song song
+  const ranges: { start: number; end: number }[] = [];
+  if (items.length > 0) {
+    const firstEnd = Math.min(items.length, FIRST_DUB_BATCH);
+    ranges.push({ start: 0, end: firstEnd });
+    for (let s = firstEnd; s < items.length; s += NEXT_DUB_BATCH) {
+      ranges.push({ start: s, end: Math.min(items.length, s + NEXT_DUB_BATCH) });
     }
-    const nextCtx = items.slice(i + SMART_DUB_BATCH, i + SMART_DUB_BATCH + 2).map((x) => x.text);
+  }
 
+  let doneCount = 0;
+
+  const runRange = async (r: { start: number; end: number }) => {
+    const chunk = items.slice(r.start, r.end);
+    const prevCtx = items.slice(Math.max(0, r.start - 2), r.start).map((x) => x.text);
+    const nextCtx = items.slice(r.end, r.end + 2).map((x) => x.text);
     const translated = await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
     translated.forEach((t, k) => {
-      out[i + k] = t;
+      out[r.start + k] = t;
     });
-    onProgress?.({ phase: "translate", done: Math.min(items.length, i + chunk.length), total: items.length });
+    doneCount += chunk.length;
+    onChunk?.({ start: r.start, translations: translated, done: doneCount, total: items.length });
+    onProgress?.({ phase: "translate", done: doneCount, total: items.length });
+  };
+
+  // Lô 0 chạy ưu tiên trước để trình phát mở ngay lập tức sau ~2–3 giây
+  if (ranges.length > 0) {
+    await runRange(ranges[0]);
+  }
+
+  // Các lô còn lại chạy song song 4 luồng
+  const rest = ranges.slice(1);
+  if (rest.length > 0) {
+    let cursor = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(DUB_CONCURRENCY, rest.length) }, async () => {
+        while (cursor < rest.length) {
+          const r = rest[cursor++];
+          await runRange(r);
+        }
+      }),
+    );
   }
 
   return { translations: out, style };

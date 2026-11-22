@@ -63,7 +63,9 @@ export async function POST(req: Request) {
   };
 
   if (wantStream) {
-    return streamPrepareResponse((emit) => prepareLiveDub(videoId, { ...runOpts, onProgress: emit }));
+    return streamPrepareResponse((emit, emitEvent) =>
+      prepareLiveDub(videoId, { ...runOpts, onProgress: emit, onEvent: emitEvent }),
+    );
   }
 
   try {

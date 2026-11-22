@@ -21,6 +21,8 @@ export type LiveCue = {
   end_ms: number;
   text: string;
   orig?: string;
+  /** true = đang dịch ngầm, chưa có bản tiếng Việt */
+  pending?: boolean;
 };
 
 export type LiveVoiceId =
@@ -92,6 +94,7 @@ export default function KokoroLivePlayer({
   initialOrigVol = 25,
   shareUrl,
   showDebugMeta = false,
+  bgProgress = null,
 }: {
   videoId: string;
   title: string;
@@ -102,6 +105,7 @@ export default function KokoroLivePlayer({
   initialOrigVol?: number;
   shareUrl?: string;
   showDebugMeta?: boolean;
+  bgProgress?: { pct: number; done: number; total: number } | null;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const ytRef = useRef<YTPlayerEx | null>(null);
@@ -142,7 +146,7 @@ export default function KokoroLivePlayer({
     stateRef.current = { voiceId, speed, origVol, dubVol, dubMuted, voiceReady, cues };
   });
 
-  // Reset audio cache when video/cues change, and close AudioContext on unmount
+  // Chỉ xoá cache audio khi đổi sang video khác (KHÔNG xoá khi nhận thêm chunk dịch ngầm)
   useEffect(() => {
     const cache = bufCacheRef.current;
     const inflight = inflightRef.current;
@@ -150,7 +154,7 @@ export default function KokoroLivePlayer({
       cache.clear();
       inflight.clear();
     };
-  }, [videoId, cues]);
+  }, [videoId]);
 
   useEffect(() => {
     return () => {
@@ -190,7 +194,7 @@ export default function KokoroLivePlayer({
   const getCueBuffer = useCallback(
     async (cueIndex: number, vId: LiveVoiceId, spd: number): Promise<AudioBuffer | null> => {
       const cue = stateRef.current.cues[cueIndex];
-      if (!cue) return null;
+      if (!cue || cue.pending || !cue.text.trim()) return null;
       if (isKokoroVoice(vId) && !stateRef.current.voiceReady) return null;
 
       const normSpd = Math.round(spd * 20) / 20;
@@ -436,9 +440,10 @@ export default function KokoroLivePlayer({
       setActiveCueIdx((prev) => (prev === curIdx ? prev : curIdx));
 
       if (curIdx !== -1) {
-        if (curIdx !== lastSpokenIdxRef.current) {
-          const lateMs = tMs - list[curIdx].start_ms;
-          const remainingMs = list[curIdx].end_ms - tMs;
+        const curCue = list[curIdx];
+        if (!curCue.pending && curCue.text.trim() && curIdx !== lastSpokenIdxRef.current) {
+          const lateMs = tMs - curCue.start_ms;
+          const remainingMs = curCue.end_ms - tMs;
           if (!jumped || lateMs < 2500 || remainingMs > 1200) {
             lastSpokenIdxRef.current = curIdx;
             void speakCue(curIdx, jumped);
@@ -575,11 +580,29 @@ export default function KokoroLivePlayer({
         className="aspect-video w-full overflow-hidden rounded-lg bg-black [&_iframe]:h-full [&_iframe]:w-full"
       />
 
+      {/* Background translation progress bar (khi đã phát cuốn chiếu từ 20 câu đầu) */}
+      {bgProgress && bgProgress.done < bgProgress.total && (
+        <div className="space-y-1 rounded-lg border border-line bg-card-2/50 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
+            <span className="inline-flex items-center gap-1.5 text-foreground">
+              <Loader2 className="size-3 animate-spin text-sec-text" />
+              Đang dịch ngầm phần còn lại ({bgProgress.done}/{bgProgress.total} câu) — bạn đã có thể bấm Phát ngay
+            </span>
+            <span className="font-mono font-semibold text-sec-text tabular-nums">{bgProgress.pct}%</span>
+          </div>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-card">
+            <div className="h-full rounded-full bg-sec transition-all duration-300" style={{ width: `${bgProgress.pct}%` }} />
+          </div>
+        </div>
+      )}
+
       {/* Live Vietnamese (+ optional original) caption */}
       <div className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg bg-card-2/80 px-4 py-2.5 text-center">
         {activeCue ? (
           <>
-            <p className="text-sm leading-snug font-semibold text-foreground sm:text-[0.95rem]">{activeCue.text}</p>
+            <p className="text-sm leading-snug font-semibold text-foreground sm:text-[0.95rem]">
+              {activeCue.pending ? "Đang dịch câu này…" : activeCue.text}
+            </p>
             {showOrig && activeCue.orig && (
               <p className="text-xs leading-snug text-muted">{activeCue.orig}</p>
             )}
@@ -712,7 +735,7 @@ export default function KokoroLivePlayer({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`block leading-snug ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
-                      {c.text}
+                      {c.pending ? <span className="italic text-muted">Đang dịch…</span> : c.text}
                     </span>
                     {showOrig && c.orig && <span className="mt-0.5 block text-[11px] text-muted">{c.orig}</span>}
                   </span>

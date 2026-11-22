@@ -33,6 +33,12 @@ type PrepProgress = {
   total?: number;
 };
 
+type BgProgress = {
+  pct: number;
+  done: number;
+  total: number;
+};
+
 type PrepareResult = {
   videoId: string;
   title?: string;
@@ -46,7 +52,11 @@ const EMPTY_RECENT: RecentDub[] = [];
 async function fetchPrepareStream(
   endpoint: string,
   payload: object,
-  onProgress: (p: PrepProgress) => void,
+  callbacks: {
+    onProgress: (p: PrepProgress) => void;
+    onReady: (data: PrepareResult, bg: BgProgress) => void;
+    onChunk: (start: number, translations: string[], bg: BgProgress) => void;
+  },
   signal?: AbortSignal,
 ): Promise<PrepareResult> {
   const res = await fetch(`${endpoint}?stream=1`, {
@@ -85,10 +95,16 @@ async function fetchPrepareStream(
       if (line) {
         const msg = JSON.parse(line) as
           | { type: "progress"; pct: number; stage: string; done?: number; total?: number }
+          | { type: "ready"; data: PrepareResult; pct: number; done: number; total: number }
+          | { type: "chunk"; start: number; translations: string[]; pct: number; done: number; total: number }
           | { type: "done"; data: PrepareResult }
           | { type: "error"; error: string };
         if (msg.type === "progress") {
-          onProgress({ pct: msg.pct, stage: msg.stage, done: msg.done, total: msg.total });
+          callbacks.onProgress({ pct: msg.pct, stage: msg.stage, done: msg.done, total: msg.total });
+        } else if (msg.type === "ready") {
+          callbacks.onReady(msg.data, { pct: msg.pct, done: msg.done, total: msg.total });
+        } else if (msg.type === "chunk") {
+          callbacks.onChunk(msg.start, msg.translations, { pct: msg.pct, done: msg.done, total: msg.total });
         } else if (msg.type === "error") {
           throw new Error(msg.error);
         } else if (msg.type === "done") {
@@ -111,6 +127,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const [voiceId, setVoiceId] = useState<LiveVoiceId>("edge:vi-VN-NamMinhNeural");
   const [loading, setLoading] = useState(false);
   const [prep, setPrep] = useState<PrepProgress | null>(null);
+  const [bgProgress, setBgProgress] = useState<BgProgress | null>(null);
   const [showPrepDetail, setShowPrepDetail] = useState(true);
   const [err, setErr] = useState("");
   const [session, setSession] = useState<LiveSession | null>(null);
@@ -126,6 +143,19 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
     return () => abortRef.current?.abort();
   }, []);
 
+  const recordOpen = useCallback(
+    (vid: string, title: string) => {
+      if (typeof window !== "undefined") {
+        const u = new URL(window.location.href);
+        u.searchParams.set("v", vid);
+        window.history.replaceState(null, "", u.pathname + u.search);
+      }
+      const cur = recentRef.current;
+      setRecent([{ videoId: vid, title }, ...cur.filter((r) => r.videoId !== vid)].slice(0, 8));
+    },
+    [setRecent],
+  );
+
   const loadVideo = useCallback(
     async (rawInput: string, voice: LiveVoiceId) => {
       const videoId = extractVideoId(rawInput.trim());
@@ -140,40 +170,65 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
 
       setLoading(true);
       setShowPrepDetail(true);
+      setBgProgress(null);
       setPrep({ pct: 3, stage: "Đang kết nối…" });
       setErr("");
+      let becameReady = false;
+
       try {
         const data = await fetchPrepareStream(
           "/api/v1/dub/prepare",
           { videoId },
-          (p) => setPrep(p),
+          {
+            onProgress: (p) => setPrep(p),
+            onReady: (partial, bg) => {
+              becameReady = true;
+              const title = partial.title || partial.videoId;
+              setSession({
+                videoId: partial.videoId,
+                title,
+                sourceLang: partial.sourceLang,
+                cues: partial.cues,
+                voiceId: voice,
+              });
+              setBgProgress(bg);
+              setLoading(false);
+              setPrep(null);
+              recordOpen(partial.videoId, title);
+            },
+            onChunk: (start, translations, bg) => {
+              setBgProgress(bg);
+              setSession((prev) => {
+                if (!prev || prev.videoId !== videoId) return prev;
+                const nextCues = prev.cues.slice();
+                translations.forEach((tr, k) => {
+                  const idx = start + k;
+                  if (nextCues[idx]) {
+                    nextCues[idx] = {
+                      start_ms: nextCues[idx].start_ms,
+                      end_ms: nextCues[idx].end_ms,
+                      text: tr || nextCues[idx].orig || nextCues[idx].text,
+                      orig: nextCues[idx].orig,
+                    };
+                  }
+                });
+                return { ...prev, cues: nextCues };
+              });
+            },
+          },
           ac.signal,
         );
 
-        const nextSession: LiveSession = {
+        const title = data.title || data.videoId;
+        setSession({
           videoId: data.videoId,
-          title: data.title || data.videoId,
+          title,
           sourceLang: data.sourceLang,
           cues: data.cues,
           voiceId: voice,
-        };
-        setSession(nextSession);
-
-        // Cập nhật ?v=... để người dùng có thể copy URL / F5 xem tiếp
-        if (typeof window !== "undefined") {
-          const u = new URL(window.location.href);
-          u.searchParams.set("v", data.videoId);
-          window.history.replaceState(null, "", u.pathname + u.search);
-        }
-
-        // Lưu vào lịch sử xem gần đây
-        const cur = recentRef.current;
-        setRecent(
-          [{ videoId: nextSession.videoId, title: nextSession.title }, ...cur.filter((r) => r.videoId !== nextSession.videoId)].slice(
-            0,
-            8,
-          ),
-        );
+        });
+        setBgProgress(null);
+        if (!becameReady) recordOpen(data.videoId, title);
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
           setErr((e as Error).message);
@@ -182,10 +237,11 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
         if (abortRef.current === ac) {
           setLoading(false);
           setPrep(null);
+          setBgProgress(null);
         }
       }
     },
-    [setRecent],
+    [recordOpen],
   );
 
   // Tự mở khi truy cập link có ?v=...
@@ -209,6 +265,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
     abortRef.current = null;
     setLoading(false);
     setPrep(null);
+    setBgProgress(null);
   };
 
   const openQuick = (videoId: string) => {
@@ -305,7 +362,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
         )}
 
         <p className="text-xs text-muted">
-          Tự động gộp câu, dịch theo ngữ cảnh toàn video và đọc thuyết minh song song. Giọng <strong>Edge (Nam Minh / Hoài My)</strong> phát tức thì; giọng <strong>Kokoro</strong> chạy hoàn toàn trên trình duyệt.
+          Tự động gộp câu, dịch theo ngữ cảnh và phát cuốn chiếu ngay sau vài giây đầu. Giọng <strong>Edge (Nam Minh / Hoài My)</strong> phát tức thì; giọng <strong>Kokoro</strong> chạy hoàn toàn trên trình duyệt.
         </p>
 
         {err && (
@@ -327,6 +384,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             cues={session.cues}
             initialVoice={session.voiceId}
             shareUrl={`/thuyet-minh?v=${session.videoId}`}
+            bgProgress={bgProgress}
           />
         </section>
       )}
@@ -361,9 +419,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               <Sparkles className="size-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Miễn phí trên trình duyệt</p>
+              <p className="text-sm font-semibold text-foreground">Phát nhanh cuốn chiếu</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">
-                Giọng đọc AI tiếng Việt chạy trực tiếp ngay trong trình duyệt — không cần cài tiện ích mở rộng.
+                Dịch xong 20 câu đầu là xem ngay, phần còn lại dịch song song ở nền cực nhanh.
               </p>
             </div>
           </div>

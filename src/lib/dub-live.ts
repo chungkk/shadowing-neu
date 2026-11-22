@@ -11,6 +11,8 @@ import { fetchAnyYouTubeSubtitles, transcribeAnyYouTubeAudio, VideoTooLongError 
 export type LiveDubCue = DubCue & {
   /** Câu gốc trước khi dịch (nếu video không phải tiếng Việt) */
   orig?: string;
+  /** true = đang dịch ngầm ở server (chỉ có trong gói `ready` cuốn chiếu) */
+  pending?: boolean;
 };
 
 export type LiveDubResult = {
@@ -28,6 +30,13 @@ export type PrepareProgress = {
   total?: number;
 };
 
+export type PrepareStreamEvent =
+  | ({ type: "progress" } & PrepareProgress)
+  | { type: "ready"; data: LiveDubResult; pct: number; done: number; total: number }
+  | { type: "chunk"; start: number; translations: string[]; pct: number; done: number; total: number }
+  | { type: "done"; data: LiveDubResult & { cached: boolean } }
+  | { type: "error"; error: string };
+
 type ProbeRes = {
   video_id: string;
   title: string;
@@ -37,8 +46,9 @@ type ProbeRes = {
 
 type FlightEntry = {
   promise: Promise<LiveDubResult>;
-  listeners: Set<(p: PrepareProgress) => void>;
-  last?: PrepareProgress;
+  listeners: Set<(ev: PrepareStreamEvent) => void>;
+  lastProgress?: PrepareProgress;
+  partial?: { data: LiveDubResult; pct: number; done: number; total: number };
 };
 
 // v2: gộp câu hoàn chỉnh + thêm dấu câu đa ngôn ngữ + dịch theo ngữ cảnh (Style Card + cửa sổ trượt) + căn thời lượng
@@ -82,7 +92,7 @@ async function ensurePunctuatedCues(
     text: c.text,
   }));
   if (!lacksPunctuation(segs)) return cues;
-  emit?.({ pct: 26, stage: "Đang khôi phục dấu câu cho phụ đề tự động…" });
+  emit?.({ pct: 24, stage: "Đang khôi phục dấu câu cho phụ đề tự động…" });
   const fixed = await addPunctuation(segs, lang);
   return fixed.map((s) => ({
     start_ms: Math.max(0, Math.round(s.start * 1000)),
@@ -111,6 +121,7 @@ export async function prepareLiveDub(
     maxSeconds?: number;
     maxCues?: number;
     onProgress?: (p: PrepareProgress) => void;
+    onEvent?: (ev: PrepareStreamEvent) => void;
   } = {},
 ): Promise<LiveDubResult & { cached: boolean }> {
   await connection();
@@ -120,32 +131,49 @@ export async function prepareLiveDub(
     return { ...hit, cached: true };
   }
 
+  const forward = (ev: PrepareStreamEvent) => {
+    if (ev.type === "progress") opts.onProgress?.({ pct: ev.pct, stage: ev.stage, done: ev.done, total: ev.total });
+    opts.onEvent?.(ev);
+  };
+
   const pending = inflight.get(videoId);
   if (pending) {
-    if (opts.onProgress) {
-      if (pending.last) opts.onProgress(pending.last);
-      pending.listeners.add(opts.onProgress);
+    if (pending.partial) {
+      forward({
+        type: "ready",
+        data: pending.partial.data,
+        pct: pending.partial.pct,
+        done: pending.partial.done,
+        total: pending.partial.total,
+      });
+    } else if (pending.lastProgress) {
+      forward({ type: "progress", ...pending.lastProgress });
     }
+    pending.listeners.add(forward);
     try {
       return { ...(await pending.promise), cached: false };
     } finally {
-      if (opts.onProgress) pending.listeners.delete(opts.onProgress);
+      pending.listeners.delete(forward);
     }
   }
 
   const entry: FlightEntry = {
     promise: Promise.resolve() as unknown as Promise<LiveDubResult>,
-    listeners: new Set(opts.onProgress ? [opts.onProgress] : []),
+    listeners: new Set([forward]),
   };
 
-  const emit = (p: PrepareProgress) => {
-    entry.last = p;
+  const broadcast = (ev: PrepareStreamEvent) => {
+    if (ev.type === "progress") {
+      entry.lastProgress = { pct: ev.pct, stage: ev.stage, done: ev.done, total: ev.total };
+    }
     for (const fn of entry.listeners) {
       try {
-        fn(p);
+        fn(ev);
       } catch {}
     }
   };
+
+  const emitProgress = (p: PrepareProgress) => broadcast({ type: "progress", ...p });
 
   const run = (async (): Promise<LiveDubResult> => {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
@@ -155,7 +183,7 @@ export async function prepareLiveDub(
     let rawCues: DubCue[] = [];
     let isAutoSub = false;
 
-    emit({ pct: 6, stage: "Đang kiểm tra video & danh sách phụ đề…" });
+    emitProgress({ pct: 6, stage: "Đang kiểm tra video & danh sách phụ đề…" });
 
     // 1. Ưu tiên dịch vụ vieneu-dub (Innertube mọi ngôn ngữ) nếu đã cấu hình
     if (dubEnabled()) {
@@ -167,7 +195,7 @@ export async function prepareLiveDub(
         }
         if (info.subtitles?.length) {
           const chosen = pickProbeSub(info.subtitles);
-          emit({ pct: 16, stage: `Đang tải phụ đề (${chosen.lang.toUpperCase()})…` });
+          emitProgress({ pct: 16, stage: `Đang tải phụ đề (${chosen.lang.toUpperCase()})…` });
           const subRes = await dubJson<{ lang: string; cues: DubCue[] }>("/subtitles", {
             method: "POST",
             body: { url, lang: chosen.lang, auto: chosen.auto },
@@ -179,13 +207,12 @@ export async function prepareLiveDub(
         }
       } catch (e) {
         if (e instanceof VideoTooLongError) throw e;
-        // Lỗi probe/subtitles từ sidecar → thử tiếp bằng Innertube / yt-dlp tích hợp của HalloVN
       }
     }
 
     // 2. Dự phòng: lấy phụ đề mọi ngôn ngữ trực tiếp bằng Innertube / yt-dlp của HalloVN
     if (!rawCues.length) {
-      emit({ pct: 16, stage: "Đang tải phụ đề YouTube…" });
+      emitProgress({ pct: 16, stage: "Đang tải phụ đề YouTube…" });
       const anySub = await fetchAnyYouTubeSubtitles(videoId, { maxSeconds: opts.maxSeconds }).catch((e) => {
         if (e instanceof VideoTooLongError) throw e;
         return null;
@@ -200,7 +227,7 @@ export async function prepareLiveDub(
 
     // 3. Nếu video hoàn toàn không có phụ đề trên YouTube → Whisper tự nhận diện ngôn ngữ (chỉ khi được phép)
     if (!rawCues.length && opts.allowWhisper && whisperEnabled()) {
-      emit({ pct: 18, stage: "Video không có phụ đề — đang nhận dạng giọng nói bằng AI (Whisper)…" });
+      emitProgress({ pct: 18, stage: "Video không có phụ đề — đang nhận dạng giọng nói bằng AI (Whisper)…" });
       const tr = await transcribeAnyYouTubeAudio(videoId, {
         quotaKey: opts.quotaKey,
         maxSeconds: opts.maxSeconds,
@@ -218,9 +245,9 @@ export async function prepareLiveDub(
       );
     }
 
-    // Bước 1 (Combo 1): Thêm dấu câu cho phụ đề tự động rồi gộp các mảnh vụn thành câu trọn vẹn
-    const punctuated = isAutoSub ? await ensurePunctuatedCues(rawCues, sourceLang, emit) : rawCues;
-    emit({ pct: 32, stage: "Đang gộp thành câu hoàn chỉnh…" });
+    // Bước 1: Thêm dấu câu cho phụ đề tự động rồi gộp các mảnh vụn thành câu trọn vẹn
+    const punctuated = isAutoSub ? await ensurePunctuatedCues(rawCues, sourceLang, emitProgress) : rawCues;
+    emitProgress({ pct: 30, stage: "Đang gộp thành câu hoàn chỉnh…" });
     const merged = mergeDubCues(punctuated);
 
     if (!merged.length) throw new Error("Không tìm thấy lời thoại hợp lệ trong phụ đề.");
@@ -228,25 +255,68 @@ export async function prepareLiveDub(
       throw new Error(`Phụ đề video quá dài (${merged.length} câu, tối đa ${maxCues} câu). Hãy chọn video ngắn hơn nhé.`);
     }
 
-    // Bước 2 & 3 (Combo 2 + 3): Dịch có ngữ cảnh toàn video (Style Card + cửa sổ trượt) & căn theo thời lượng câu
+    // Bước 2 & 3: Dịch có ngữ cảnh + chạy song song 4 luồng + phát cuốn chiếu ngay khi xong lô đầu
     let cues: LiveDubCue[] = merged;
     let style: DubStyleCard | null = null;
     if (!sourceLang.startsWith("vi")) {
       if (!translationEnabled()) throw new Error("Server chưa cấu hình AI dịch phụ đề.");
+
+      const workingCues: LiveDubCue[] = merged.map((c) => ({
+        start_ms: c.start_ms,
+        end_ms: c.end_ms,
+        text: "",
+        orig: c.text,
+        pending: true,
+      }));
+      let sentReady = false;
+
       const res = await translateForDubbingSmart(buildTranslateItems(merged), {
         title,
         sourceLang,
         onProgress: ({ phase, done, total }) => {
           if (phase === "style") {
-            emit({ pct: 36, stage: "Đang phân tích ngữ cảnh & phong cách video…", done: 0, total });
+            emitProgress({ pct: 34, stage: "Đang phân tích ngữ cảnh & phong cách video…", done: 0, total });
           } else {
-            const pct = total > 0 ? Math.min(98, 42 + Math.round((done / total) * 56)) : 90;
-            emit({
+            const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 90;
+            emitProgress({
               pct,
-              stage: done > 0 ? `Đang dịch tiếng Việt (${done}/${total} câu)…` : `Đang bắt đầu dịch ${total} câu sang tiếng Việt…`,
+              stage: done > 0 ? `Đang dịch tiếng Việt (${done}/${total} câu)…` : `Đang dịch 20 câu đầu để phát ngay…`,
               done,
               total,
             });
+          }
+        },
+        onChunk: ({ start, translations, done, total }) => {
+          translations.forEach((tr, k) => {
+            const idx = start + k;
+            workingCues[idx] = {
+              start_ms: merged[idx].start_ms,
+              end_ms: merged[idx].end_ms,
+              text: tr || merged[idx].text,
+              orig: merged[idx].text,
+            };
+          });
+          const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 98;
+          if (!sentReady && start === 0 && done < total) {
+            sentReady = true;
+            const snapshot: LiveDubResult = {
+              videoId,
+              title: title || videoId,
+              sourceLang,
+              cues: workingCues.map((c) => ({ ...c })),
+            };
+            entry.partial = { data: snapshot, pct, done, total };
+            broadcast({ type: "ready", data: snapshot, pct, done, total });
+          } else if (sentReady) {
+            if (entry.partial) {
+              entry.partial.pct = pct;
+              entry.partial.done = done;
+              translations.forEach((tr, k) => {
+                const idx = start + k;
+                entry.partial!.data.cues[idx] = { ...workingCues[idx] };
+              });
+            }
+            broadcast({ type: "chunk", start, translations, pct, done, total });
           }
         },
       });
@@ -267,7 +337,7 @@ export async function prepareLiveDub(
       cues,
     };
     setCached(`${CACHE_PREFIX}${videoId}`, result, null);
-    emit({ pct: 100, stage: "Hoàn tất!" });
+    emitProgress({ pct: 100, stage: "Hoàn tất!" });
     return result;
   })().finally(() => {
     inflight.delete(videoId);
@@ -278,9 +348,9 @@ export async function prepareLiveDub(
   return { ...(await run), cached: false };
 }
 
-/** Tạo Response NDJSON streaming tiến trình chuẩn bị thuyết minh (0% → 100%) */
+/** Tạo Response NDJSON streaming tiến trình chuẩn bị thuyết minh (hỗ trợ cả phát cuốn chiếu `ready` + `chunk` + `done`) */
 export function streamPrepareResponse(
-  executor: (emit: (p: PrepareProgress) => void) => Promise<unknown>,
+  executor: (emit: (p: PrepareProgress) => void, emitEvent: (ev: PrepareStreamEvent) => void) => Promise<unknown>,
 ): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -291,7 +361,12 @@ export function streamPrepareResponse(
         } catch {}
       };
       try {
-        const data = await executor((p) => send({ type: "progress", ...p }));
+        const data = await executor(
+          (p) => send({ type: "progress", ...p }),
+          (ev) => {
+            if (ev.type === "ready" || ev.type === "chunk") send(ev);
+          },
+        );
         send({ type: "done", data });
       } catch (e) {
         send({ type: "error", error: (e as Error).message || "Không thể chuẩn bị thuyết minh lúc này." });
