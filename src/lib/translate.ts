@@ -65,6 +65,13 @@ const PROMPT =
   "Một câu có thể bị ngắt sang nhiều dòng: khi đó mỗi dòng chỉ dịch phần chữ của chính nó (bản dịch cũng dở dang theo), TUYỆT ĐỐI không gộp nội dung dòng sau vào dòng trước. " +
   'Trả về đúng JSON {"t": {"1": bản dịch dòng 1, "2": bản dịch dòng 2, …}}: đủ mọi khóa có trong đầu vào, khóa nào dịch đúng dòng có khóa đó, không giải thích.';
 
+const DUB_PROMPT = (lang: string) =>
+  `Bạn là biên dịch viên thuyết minh video chuyên nghiệp, dịch phụ đề từ ngôn ngữ "${lang}" sang tiếng Việt tự nhiên để đọc thuyết minh (voice-over). ` +
+  'Nhận JSON {"s": {"1": dòng 1, "2": dòng 2, …}} là các dòng phụ đề liên tiếp trong video. ' +
+  "Dịch từng dòng sang tiếng Việt ngắn gọn, tự nhiên như lời nói, dễ đọc bằng giọng AI (viết số và đơn vị tự nhiên như 'euro', 'phần trăm', 'giờ'). " +
+  "Giữ nguyên số lượng và thứ tự khóa: mỗi khóa dịch đúng dòng tương ứng, không gộp hay bỏ sót dòng. " +
+  'Trả về đúng JSON {"t": {"1": bản dịch dòng 1, "2": bản dịch dòng 2, …}}, không giải thích.';
+
 const BATCH = 25; // số câu mỗi lần gọi AI
 
 const VI_CHARS = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
@@ -83,7 +90,7 @@ export function looksTranslated(source: string, translation: string): boolean {
 
 const keyOf = (text: string) => "vi:" + createHash("sha1").update(text.trim()).digest("hex");
 
-async function callProvider(p: Provider, sentences: string[]): Promise<string[]> {
+async function callProvider(p: Provider, sentences: string[], systemPrompt = PROMPT): Promise<string[]> {
   const res = await fetch(p.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
@@ -91,7 +98,7 @@ async function callProvider(p: Provider, sentences: string[]): Promise<string[]>
       model: p.model,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: JSON.stringify({ s: Object.fromEntries(sentences.map((x, i) => [i + 1, x])) }) },
       ],
       ...p.extra,
@@ -120,7 +127,10 @@ class FormatError extends Error {}
  * cho nhà cung cấp kế tiếp. Nhà cung cấp nào cũng gộp câu (sai định dạng) → chia đôi lô, dịch lại.
  * Trả về bản dịch ("" = chưa dịch được) + tên nhà cung cấp.
  */
-async function translateBatch(sentences: string[]): Promise<{ out: string; provider: string }[]> {
+async function translateBatch(
+  sentences: string[],
+  systemPrompt = PROMPT,
+): Promise<{ out: string; provider: string }[]> {
   const result = sentences.map(() => ({ out: "", provider: "" }));
   let todo = sentences.map((_, i) => i);
   let formatError = false;
@@ -133,6 +143,7 @@ async function translateBatch(sentences: string[]): Promise<{ out: string; provi
       const out = await callProvider(
         p,
         todo.map((i) => sentences[i]),
+        systemPrompt,
       );
       todo.forEach((i, k) => {
         if (looksTranslated(sentences[i], out[k])) result[i] = { out: out[k], provider: p.name };
@@ -147,7 +158,10 @@ async function translateBatch(sentences: string[]): Promise<{ out: string; provi
   if (formatError && todo.length > 1) {
     const mid = Math.ceil(todo.length / 2);
     for (const part of [todo.slice(0, mid), todo.slice(mid)]) {
-      const res = await translateBatch(part.map((i) => sentences[i])).catch(() => null);
+      const res = await translateBatch(
+        part.map((i) => sentences[i]),
+        systemPrompt,
+      ).catch(() => null);
       part.forEach((i, k) => {
         if (res?.[k].out) result[i] = res[k];
       });
@@ -156,6 +170,28 @@ async function translateBatch(sentences: string[]): Promise<{ out: string; provi
   }
   if (todo.length === sentences.length) throw new Error("Không dịch được lúc này.");
   return result;
+}
+
+/** Dịch phụ đề ngôn ngữ bất kỳ → tiếng Việt tự nhiên để thuyết minh (dùng chung kho cache SQLite). */
+export async function translateForDubbing(sentences: string[], sourceLang = "auto"): Promise<string[]> {
+  const lang = (sourceLang || "auto").toLowerCase();
+  if (lang === "vi" || lang.startsWith("vi-")) return sentences;
+  const prompt = DUB_PROMPT(sourceLang || "auto");
+  const keyFn = (text: string) => `dub:vi:${lang}:` + createHash("sha1").update(text.trim()).digest("hex");
+  const keys = sentences.map(keyFn);
+  const cached = getTranslations(keys);
+  const missing = [...new Set(sentences.filter((_, i) => !cached.has(keys[i])).map((s) => s.trim()))].filter(Boolean);
+
+  for (let i = 0; i < missing.length; i += BATCH) {
+    const chunk = missing.slice(i, i + BATCH);
+    const res = await translateBatch(chunk, prompt);
+    const rows = chunk
+      .map((text, k) => ({ key: keyFn(text), text, translation: res[k].out, provider: res[k].provider }))
+      .filter((r) => r.translation);
+    saveTranslations(rows);
+    for (const r of rows) cached.set(r.key, r.translation);
+  }
+  return keys.map((k, i) => cached.get(k) || sentences[i]);
 }
 
 /** Dịch danh sách câu (giữ thứ tự). Câu đã có trong kho thì không gọi AI. "" = chưa dịch được. */

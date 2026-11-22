@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Menu, X } from "lucide-react";
+import { ArrowLeft, Menu, Mic, X } from "lucide-react";
 import {
   ChristmasAdminIcon as ShieldCheck,
   ChristmasCaptionsIcon as Captions,
@@ -77,6 +77,12 @@ const GROUPS: NavGroup[] = [
         href: "/admin/catalog",
         label: "Kho nội dung chuẩn",
         icon: BookOpenCheck,
+      },
+      {
+        href: "/admin/dub",
+        label: "Thuyết minh YouTube",
+        icon: Mic,
+        badge: () => ({ text: "Beta", tone: "ok" }),
       },
     ],
   },
