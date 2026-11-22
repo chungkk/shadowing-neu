@@ -243,46 +243,87 @@ function LessonFormInner({ initial, presetUrl }: Props) {
             </div>
           )}
         </div>
-        {preview.open && videoId && <LessonPreviewPanel videoId={videoId} sentences={sentences} preview={preview} />}
-        {bySentence && counts ? (
+        {preview.open && videoId ? (
+          <div className="grid gap-4 xl:grid-cols-[1fr_360px] xl:items-start">
+            <div className="order-2 min-w-0 xl:order-1">
+              {bySentence && counts ? (
+                <>
+                  {/* Vẫn gửi SRT gốc khi lưu */}
+                  <input type="hidden" name="srt" value={srt} />
+                  <ol ref={sentenceListRef} className="input max-h-[30rem] overflow-y-auto p-1 text-foreground">
+                    {counts.sentences.map((s, i) => {
+                      const isActive = preview.open && preview.activeIdx === i;
+                      const isPlaying = isActive && preview.playing;
+                      return (
+                        <li key={i} data-active={isActive ? "true" : undefined} className="border-b border-line last:border-0">
+                          <button
+                            type="button"
+                            onClick={() => preview.toggleSentence(i)}
+                            className={`flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors ${
+                              isActive ? "bg-accent-soft text-foreground" : "hover:bg-accent-soft/40"
+                            }`}
+                          >
+                            <span className="mt-0.5 flex w-4 shrink-0 items-center justify-center text-muted">
+                              {isPlaying ? (
+                                <Pause className="size-3.5 text-accent" aria-hidden />
+                              ) : (
+                                <Play className={`size-3.5 ${isActive ? "text-accent" : "opacity-60"}`} aria-hidden />
+                              )}
+                            </span>
+                            <span className="w-7 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
+                            <span className="w-11 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
+                            <span className={`min-w-0 flex-1 ${isActive ? "font-medium" : ""}`}>{s.text}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </>
+              ) : (
+                <textarea
+                  id="lesson-srt"
+                  name="srt"
+                  rows={18}
+                  className="input font-mono text-base text-foreground md:text-xs"
+                  value={srt}
+                  onChange={(e) => setSrt(e.target.value)}
+                  spellCheck={false}
+                />
+              )}
+            </div>
+            <div className="order-1 xl:sticky xl:top-20 xl:order-2">
+              <LessonPreviewPanel videoId={videoId} sentences={sentences} preview={preview} />
+            </div>
+          </div>
+        ) : bySentence && counts ? (
           <>
             {/* Vẫn gửi SRT gốc khi lưu */}
             <input type="hidden" name="srt" value={srt} />
             <ol ref={sentenceListRef} className="input max-h-96 overflow-y-auto p-1 text-foreground">
-              {counts.sentences.map((s, i) => {
-                const isActive = preview.open && preview.activeIdx === i;
-                const isPlaying = isActive && preview.playing;
-                return (
-                  <li key={i} data-active={isActive ? "true" : undefined} className="border-b border-line last:border-0">
-                    {videoId ? (
-                      <button
-                        type="button"
-                        onClick={() => preview.toggleSentence(i)}
-                        className={`flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors ${
-                          isActive ? "bg-accent-soft text-foreground" : "hover:bg-accent-soft/40"
-                        }`}
-                      >
-                        <span className="mt-0.5 flex w-4 shrink-0 items-center justify-center text-muted">
-                          {isPlaying ? (
-                            <Pause className="size-3.5 text-accent" aria-hidden />
-                          ) : (
-                            <Play className={`size-3.5 ${isActive ? "text-accent" : "opacity-60"}`} aria-hidden />
-                          )}
-                        </span>
-                        <span className="w-7 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
-                        <span className="w-11 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
-                        <span className={`min-w-0 flex-1 ${isActive ? "font-medium" : ""}`}>{s.text}</span>
-                      </button>
-                    ) : (
-                      <div className="flex gap-3 px-2 py-1.5">
-                        <span className="w-10 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
-                        <span className="w-12 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
-                        <span className="min-w-0">{s.text}</span>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
+              {counts.sentences.map((s, i) => (
+                <li key={i} className="border-b border-line last:border-0">
+                  {videoId ? (
+                    <button
+                      type="button"
+                      onClick={() => preview.toggleSentence(i)}
+                      className="flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent-soft/40"
+                    >
+                      <span className="mt-0.5 flex w-4 shrink-0 items-center justify-center text-muted">
+                        <Play className="size-3.5 opacity-60" aria-hidden />
+                      </span>
+                      <span className="w-7 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
+                      <span className="w-11 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
+                      <span className="min-w-0 flex-1">{s.text}</span>
+                    </button>
+                  ) : (
+                    <div className="flex gap-3 px-2 py-1.5">
+                      <span className="w-10 shrink-0 text-right font-mono text-xs text-muted tabular-nums">{i + 1}</span>
+                      <span className="w-12 shrink-0 font-mono text-xs text-muted tabular-nums">{formatTime(s.start)}</span>
+                      <span className="min-w-0">{s.text}</span>
+                    </div>
+                  )}
+                </li>
+              ))}
             </ol>
           </>
         ) : (
@@ -314,7 +355,7 @@ function LessonFormInner({ initial, presetUrl }: Props) {
         <button className="btn btn-lg btn-primary" disabled={saving || fetching}>
           {saving ? "Đang lưu…" : "Lưu bài học"}
         </button>
-        <Link href="/admin" className="btn btn-lg">
+        <Link href="/admin/lessons" className="btn btn-lg">
           Huỷ
         </Link>
       </div>

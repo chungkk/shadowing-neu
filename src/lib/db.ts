@@ -33,7 +33,7 @@ export type LessonSummary = Omit<Lesson, "segments"> & {
   duration?: number; // giây, tính đến hết dòng phụ đề cuối — chỉ có trong danh sách bài
 };
 
-const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
+export const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "shadow.db");
 /** Ảnh đại diện lưu thành file cạnh DB (cùng volume dữ liệu trên VPS) */
 export const AVATAR_DIR = path.join(path.dirname(DB_PATH), "avatars");
 /** Giọng đọc mẫu (mp3) đã tạo — mỗi câu chỉ tạo 1 lần, dùng chung cho mọi người học */
@@ -377,6 +377,9 @@ function open() {
       throw e;
     }
   }
+  // Cột trạng thái xử lý góp ý ('open' | 'resolved') cho trang quản trị
+  const fbCols = db.prepare("PRAGMA table_info(feedback)").all() as { name: string }[];
+  if (!fbCols.some((c) => c.name === "status")) db.exec("ALTER TABLE feedback ADD COLUMN status TEXT NOT NULL DEFAULT 'open'");
   return db;
 }
 
@@ -872,12 +875,14 @@ export function exportUserData(id: number): Record<string, unknown> | null {
 
 export type FeedbackKind = "idea" | "bug" | "content" | "other";
 export const FEEDBACK_KINDS: readonly FeedbackKind[] = ["idea", "bug", "content", "other"];
+export type FeedbackStatus = "open" | "resolved";
 
 export type Feedback = {
   id: number;
   userId: number | null;
   userName: string | null;
   kind: FeedbackKind;
+  status: FeedbackStatus;
   message: string;
   email: string;
   device: string;
@@ -894,7 +899,7 @@ export function saveFeedback(f: { userId: number | null; kind: FeedbackKind; mes
 export function listFeedback(limit = 200): Feedback[] {
   const rows = conn()
     .prepare(
-      `SELECT f.id, f.user_id, u.name AS user_name, f.kind, f.message, f.email, f.device, f.created_at
+      `SELECT f.id, f.user_id, u.name AS user_name, f.kind, f.status, f.message, f.email, f.device, f.created_at
        FROM feedback f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.id DESC LIMIT ?`,
     )
     .all(limit) as {
@@ -902,6 +907,7 @@ export function listFeedback(limit = 200): Feedback[] {
     user_id: number | null;
     user_name: string | null;
     kind: FeedbackKind;
+    status: string | null;
     message: string;
     email: string;
     device: string;
@@ -912,11 +918,16 @@ export function listFeedback(limit = 200): Feedback[] {
     userId: r.user_id,
     userName: r.user_name,
     kind: r.kind,
+    status: r.status === "resolved" ? "resolved" : "open",
     message: r.message,
     email: r.email,
     device: r.device,
     createdAt: r.created_at,
   }));
+}
+
+export function setFeedbackStatus(id: number, status: FeedbackStatus) {
+  conn().prepare("UPDATE feedback SET status = ? WHERE id = ?").run(status, id);
 }
 
 export function deleteFeedback(id: number) {
@@ -2036,4 +2047,277 @@ export function setUserEmailVerified(id: number, verified: boolean) {
 /** Mốc hoạt động gần nhất (ms) của 1 người, null = chưa học gì */
 export function userLastActive(userId: number): number | null {
   return (conn().prepare(`SELECT ${LAST_ACTIVE_SQL} AS t FROM users u WHERE u.id = ?`).get(userId) as { t: number | null } | undefined)?.t ?? null;
+}
+
+// ---- Admin: tổng quan, kho nội dung chuẩn & hệ thống ----
+
+/** Badge đếm nhanh trên Admin Sidebar */
+export function adminSidebarCounts(): { draftLessons: number; openFeedback: number } {
+  const db = conn();
+  const draftLessons = (db.prepare("SELECT COUNT(*) AS n FROM lessons WHERE owner_id IS NULL AND published = 0").get() as { n: number }).n;
+  const openFeedback = (db.prepare("SELECT COUNT(*) AS n FROM feedback WHERE status != 'resolved'").get() as { n: number }).n;
+  return { draftLessons, openFeedback };
+}
+
+export type AdminDashboardStats = {
+  users: { total: number; new7: number; active7: number; active30: number; unverified: number };
+  lessons: { total: number; published: number; draft: number; dictation: number; ownTotal: number; channels: number; byLevel: Record<Level, number> };
+  quizzes: { exams30: number; passed30: number; laixeExams: number; laixePassed: number; lidExams: number; lidPassed: number; answersTotal: number };
+  learning: { vocabTotal: number; deckLearnedTotal: number; reviewEvents30: number };
+  feedback: { total: number; open: number; bugOpen: number };
+  transcripts: number;
+};
+
+/** Toàn cảnh số liệu cho Bảng điều khiển /admin */
+export function adminDashboardStats(now = Date.now()): AdminDashboardStats {
+  const db = conn();
+  const since7 = now - 7 * DAY;
+  const since30 = now - 30 * DAY;
+  const sql7 = new Date(since7).toISOString().slice(0, 19).replace("T", " ");
+
+  const uRow = db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+         SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS new7,
+         SUM(CASE WHEN email_verified = 0 THEN 1 ELSE 0 END) AS unverified
+       FROM users`,
+    )
+    .get(sql7) as { total: number; new7: number | null; unverified: number | null };
+
+  const activeRows = db.prepare(`SELECT ${LAST_ACTIVE_SQL} AS t FROM users u`).all() as { t: number | null }[];
+  let active7 = 0;
+  let active30 = 0;
+  for (const r of activeRows) {
+    if (r.t && r.t >= since7) active7++;
+    if (r.t && r.t >= since30) active30++;
+  }
+
+  const lRow = db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN owner_id IS NULL THEN 1 ELSE 0 END) AS total,
+         SUM(CASE WHEN owner_id IS NULL AND published = 1 THEN 1 ELSE 0 END) AS published,
+         SUM(CASE WHEN owner_id IS NULL AND published = 0 THEN 1 ELSE 0 END) AS draft,
+         SUM(CASE WHEN owner_id IS NULL AND dictation = 1 THEN 1 ELSE 0 END) AS dictation,
+         SUM(CASE WHEN owner_id IS NOT NULL THEN 1 ELSE 0 END) AS own_total
+       FROM lessons`,
+    )
+    .get() as { total: number | null; published: number | null; draft: number | null; dictation: number | null; own_total: number | null };
+
+  const byLevel: Record<Level, number> = { A1: 0, A2: 0, B1: 0, B2: 0, C1: 0, C2: 0 };
+  for (const r of db.prepare("SELECT level, COUNT(*) AS n FROM lessons WHERE owner_id IS NULL GROUP BY level").all() as { level: Level; n: number }[]) {
+    if (r.level in byLevel) byLevel[r.level] = r.n;
+  }
+  const channels = (db.prepare("SELECT COUNT(*) AS n FROM yt_channels").get() as { n: number }).n;
+
+  const qRow = db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN at >= ? THEN 1 ELSE 0 END) AS exams30,
+         SUM(CASE WHEN at >= ? AND passed = 1 THEN 1 ELSE 0 END) AS passed30,
+         SUM(CASE WHEN module = 'fuehrerschein' THEN 1 ELSE 0 END) AS lx_exams,
+         SUM(CASE WHEN module = 'fuehrerschein' AND passed = 1 THEN 1 ELSE 0 END) AS lx_passed,
+         SUM(CASE WHEN module = 'lid' THEN 1 ELSE 0 END) AS lid_exams,
+         SUM(CASE WHEN module = 'lid' AND passed = 1 THEN 1 ELSE 0 END) AS lid_passed
+       FROM quiz_exams`,
+    )
+    .get(since30, since30) as {
+    exams30: number | null;
+    passed30: number | null;
+    lx_exams: number | null;
+    lx_passed: number | null;
+    lid_exams: number | null;
+    lid_passed: number | null;
+  };
+  const answersTotal = (db.prepare("SELECT COALESCE(SUM(correct + wrong), 0) AS n FROM quiz_answers").get() as { n: number }).n;
+
+  const vocabTotal = (db.prepare("SELECT COUNT(*) AS n FROM vocab").get() as { n: number }).n;
+  const deckLearnedTotal = (db.prepare("SELECT COUNT(*) AS n FROM deck_learned").get() as { n: number }).n;
+  const reviewEvents30 = (db.prepare("SELECT COUNT(*) AS n FROM review_events WHERE at >= ?").get(since30) as { n: number }).n;
+
+  const fbRow = db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+         SUM(CASE WHEN status != 'resolved' THEN 1 ELSE 0 END) AS open_n,
+         SUM(CASE WHEN status != 'resolved' AND kind = 'bug' THEN 1 ELSE 0 END) AS bug_open
+       FROM feedback`,
+    )
+    .get() as { total: number; open_n: number | null; bug_open: number | null };
+
+  const transcripts = (db.prepare(`SELECT COUNT(DISTINCT json_extract(data, '$.videoId')) AS n FROM transcript_cache WHERE ${SAVED_WHERE}`).get() as { n: number }).n;
+
+  return {
+    users: { total: uRow.total, new7: uRow.new7 ?? 0, active7, active30, unverified: uRow.unverified ?? 0 },
+    lessons: {
+      total: lRow.total ?? 0,
+      published: lRow.published ?? 0,
+      draft: lRow.draft ?? 0,
+      dictation: lRow.dictation ?? 0,
+      ownTotal: lRow.own_total ?? 0,
+      channels,
+      byLevel,
+    },
+    quizzes: {
+      exams30: qRow.exams30 ?? 0,
+      passed30: qRow.passed30 ?? 0,
+      laixeExams: qRow.lx_exams ?? 0,
+      laixePassed: qRow.lx_passed ?? 0,
+      lidExams: qRow.lid_exams ?? 0,
+      lidPassed: qRow.lid_passed ?? 0,
+      answersTotal,
+    },
+    learning: { vocabTotal, deckLearnedTotal, reviewEvents30 },
+    feedback: { total: fbRow.total, open: fbRow.open_n ?? 0, bugOpen: fbRow.bug_open ?? 0 },
+    transcripts,
+  };
+}
+
+export type AdminActivityDay = { day: string; deutsch: number; laixe: number; lid: number; total: number };
+
+/** Số lượt học toàn hệ thống mỗi ngày (UTC) trong `days` ngày gần nhất, tách theo 3 trụ cột */
+export function adminActivityDays(days = 30, now = Date.now()): AdminActivityDay[] {
+  const db = conn();
+  const since = now - days * DAY;
+  const deRows = db
+    .prepare(
+      `SELECT date(at / 1000, 'unixepoch') AS day, COUNT(*) AS n FROM (
+         SELECT at FROM review_events WHERE at >= ?
+         UNION ALL SELECT at FROM dict_points WHERE at >= ?
+         UNION ALL SELECT at FROM deck_learned WHERE at >= ?
+       ) GROUP BY day`,
+    )
+    .all(since, since, since) as { day: string; n: number }[];
+  const quizRows = db
+    .prepare(
+      `SELECT date(at / 1000, 'unixepoch') AS day, module, COUNT(*) AS n FROM (
+         SELECT at, module FROM quiz_answers WHERE at >= ?
+         UNION ALL SELECT at, module FROM quiz_exams WHERE at >= ?
+       ) GROUP BY day, module`,
+    )
+    .all(since, since) as { day: string; module: QuizModule; n: number }[];
+
+  const deMap = new Map(deRows.map((r) => [r.day, r.n]));
+  const lxMap = new Map<string, number>();
+  const lidMap = new Map<string, number>();
+  for (const r of quizRows) {
+    if (r.module === "fuehrerschein") lxMap.set(r.day, r.n);
+    else if (r.module === "lid") lidMap.set(r.day, r.n);
+  }
+
+  return Array.from({ length: days }, (_, i) => {
+    const day = new Date(now - (days - 1 - i) * DAY).toISOString().slice(0, 10);
+    const deutsch = deMap.get(day) ?? 0;
+    const laixe = lxMap.get(day) ?? 0;
+    const lid = lidMap.get(day) ?? 0;
+    return { day, deutsch, laixe, lid, total: deutsch + laixe + lid };
+  });
+}
+
+export type AdminOwnLessonRow = LessonSummary & { ownerName: string; ownerEmail: string };
+
+/** Danh sách bài riêng do học viên tự tạo (owner_id IS NOT NULL) */
+export function adminListOwnLessons(limit = 100): AdminOwnLessonRow[] {
+  const rows = conn()
+    .prepare(
+      `SELECT l.id, l.title, l.slug, l.video_id, l.description, l.level, l.published, l.dictation, l.owner_id,
+              l.channel_title, l.channel_url, l.created_at, json_array_length(l.segments) AS segment_count,
+              u.name AS owner_name, u.email AS owner_email
+       FROM lessons l LEFT JOIN users u ON u.id = l.owner_id
+       WHERE l.owner_id IS NOT NULL
+       ORDER BY l.created_at DESC, l.id DESC LIMIT ?`,
+    )
+    .all(limit) as (Row & { owner_name: string | null; owner_email: string | null })[];
+  return rows.map((r) => ({
+    ...toSummary(r),
+    ...lessonStats(r.id),
+    ownerName: r.owner_name ?? `User #${r.owner_id}`,
+    ownerEmail: r.owner_email ?? "",
+  }));
+}
+
+export type AdminQuizModuleStats = {
+  exams: number;
+  passed: number;
+  answers: number;
+  uniqueUsers: number;
+  bookmarks: number;
+  topWrong: { qid: string; wrong: number; correct: number; users: number }[];
+};
+
+/** Thống kê học thật cho Kho nội dung chuẩn (/admin/catalog) */
+export function adminCatalogStats(): {
+  laixe: AdminQuizModuleStats;
+  lid: AdminQuizModuleStats & { statePrefs: { state: string; count: number }[] };
+  decks: Record<string, { learnedCount: number; users: number }>;
+} {
+  const db = conn();
+  const quizMod = (module: QuizModule): AdminQuizModuleStats => {
+    const e = db
+      .prepare("SELECT COUNT(*) AS exams, COALESCE(SUM(passed), 0) AS passed FROM quiz_exams WHERE module = ?")
+      .get(module) as { exams: number; passed: number };
+    const a = db
+      .prepare("SELECT COALESCE(SUM(correct + wrong), 0) AS answers, COUNT(DISTINCT user_id) AS users FROM quiz_answers WHERE module = ?")
+      .get(module) as { answers: number; users: number };
+    const b = db.prepare("SELECT COUNT(*) AS n FROM quiz_bookmarks WHERE module = ?").get(module) as { n: number };
+    const topWrong = db
+      .prepare(
+        `SELECT qid, SUM(wrong) AS wrong, SUM(correct) AS correct, COUNT(*) AS users
+         FROM quiz_answers WHERE module = ? AND wrong > 0
+         GROUP BY qid ORDER BY wrong DESC, users DESC LIMIT 10`,
+      )
+      .all(module) as { qid: string; wrong: number; correct: number; users: number }[];
+    return { exams: e.exams, passed: e.passed, answers: a.answers, uniqueUsers: a.users, bookmarks: b.n, topWrong };
+  };
+
+  const statePrefs = db
+    .prepare("SELECT value AS state, COUNT(*) AS count FROM quiz_prefs WHERE module = 'lid' AND key = 'state' GROUP BY value ORDER BY count DESC")
+    .all() as { state: string; count: number }[];
+
+  const deckRows = db
+    .prepare("SELECT deck, COUNT(*) AS learned_count, COUNT(DISTINCT user_id) AS users FROM deck_learned GROUP BY deck")
+    .all() as { deck: string; learned_count: number; users: number }[];
+  const decks: Record<string, { learnedCount: number; users: number }> = {};
+  for (const r of deckRows) decks[r.deck] = { learnedCount: r.learned_count, users: r.users };
+
+  return {
+    laixe: quizMod("fuehrerschein"),
+    lid: { ...quizMod("lid"), statePrefs },
+    decks,
+  };
+}
+
+/** Số liệu bảng SQLite và cache cho trang Hệ thống (/admin/system) */
+export function adminSystemStats() {
+  const db = conn();
+  const countOf = (table: string) => (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n;
+  const tables = [
+    { name: "users", label: "Người dùng", count: countOf("users") },
+    { name: "lessons", label: "Bài học (site + riêng)", count: countOf("lessons") },
+    { name: "yt_channels", label: "Kênh YouTube", count: countOf("yt_channels") },
+    { name: "vocab", label: "Mục sổ từ vựng", count: countOf("vocab") },
+    { name: "review_events", label: "Lượt ôn tập SRS", count: countOf("review_events") },
+    { name: "progress", label: "Tiến độ bài học", count: countOf("progress") },
+    { name: "quiz_answers", label: "Câu Lái xe / LiD đã làm", count: countOf("quiz_answers") },
+    { name: "quiz_exams", label: "Đề thi thử đã nộp", count: countOf("quiz_exams") },
+    { name: "lesson_unlocks", label: "Lượt mở khoá bài", count: countOf("lesson_unlocks") },
+    { name: "feedback", label: "Góp ý & báo lỗi", count: countOf("feedback") },
+  ];
+  const byProvider = db
+    .prepare("SELECT COALESCE(NULLIF(provider, ''), 'khác') AS provider, COUNT(*) AS count FROM translations GROUP BY provider ORDER BY count DESC")
+    .all() as { provider: string; count: number }[];
+  const translationsTotal = byProvider.reduce((s, r) => s + r.count, 0);
+  const trRow = db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+         SUM(CASE WHEN key LIKE 'yt:%:whisper%' THEN 1 ELSE 0 END) AS whisper,
+         SUM(CASE WHEN key LIKE 'ytp:%' THEN 1 ELSE 0 END) AS youtube
+       FROM transcript_cache`,
+    )
+    .get() as { total: number; whisper: number | null; youtube: number | null };
+
+  return {
+    tables,
+    translations: { total: translationsTotal, byProvider },
+    transcriptCache: { total: trRow.total, whisper: trRow.whisper ?? 0, youtube: trRow.youtube ?? 0 },
+  };
 }

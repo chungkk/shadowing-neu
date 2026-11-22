@@ -1,21 +1,20 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Play } from "lucide-react";
+import { ArrowLeft, Play } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getCached, savedTranscriptKeys } from "@/lib/db";
 import { toSrt } from "@/lib/subtitles";
 import type { Transcript } from "@/lib/youtube";
 import TranscriptForm from "../TranscriptForm";
+import AdminPageHeader from "../../_components/AdminPageHeader";
 import { FormSkeleton } from "@/components/Skeleton";
-import AdminNav from "../../AdminNav";
 
 async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[videoId]">) {
   await requireAdmin();
   const { videoId } = await params;
   const { key: wanted } = await searchParams;
 
-  // Mỗi track chỉ hiện 1 lựa chọn (bản "mặc định" và bản theo mã track là một)
   const entries: { key: string; t: Transcript }[] = [];
   for (const key of savedTranscriptKeys(videoId).sort((a, b) => Number(b.endsWith(":default")) - Number(a.endsWith(":default")))) {
     const t = getCached<Transcript>(key);
@@ -28,10 +27,26 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
 
   return (
     <>
+      <AdminPageHeader
+        crumbs={[
+          { label: "Nội dung học tập" },
+          { label: "Kho phụ đề", href: "/admin/transcripts" },
+          { label: videoId },
+        ]}
+        title="Sửa phụ đề đã lưu"
+        description={current.t.title}
+        actions={
+          <>
+            <Link href={`/watch/${videoId}`} className="btn btn-ghost btn-sm">
+              <Play className="size-4" aria-hidden /> Xem video
+            </Link>
+            <Link href="/admin/transcripts" className="btn btn-sm">
+              <ArrowLeft className="size-4" aria-hidden /> Kho phụ đề
+            </Link>
+          </>
+        }
+      />
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={`/watch/${videoId}`} className="btn btn-sm">
-          <Play className="size-4" /> Xem video
-        </Link>
         {entries.length > 1 &&
           entries.map((e) => (
             <Link
@@ -43,7 +58,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
               {label(e.t)}
             </Link>
           ))}
-        <span className="badge badge-muted">
+        <span className="badge badge-muted font-mono tabular-nums">
           {label(current.t)} · {current.t.segments.length} dòng
         </span>
       </div>
@@ -52,7 +67,7 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
         videoId={videoId}
         storageKey={current.key}
         title={current.t.title}
-        srt={toSrt(current.t.segments)} /* dòng gốc — gộp sẵn rồi lưu sẽ mất thời gian từng từ và bị gộp lần nữa */
+        srt={toSrt(current.t.segments)}
       />
     </>
   );
@@ -60,12 +75,8 @@ async function Edit({ params, searchParams }: PageProps<"/admin/transcripts/[vid
 
 export default function EditTranscriptPage(props: PageProps<"/admin/transcripts/[videoId]">) {
   return (
-    <main className="page page-narrow">
-      <AdminNav />
-      <h1 className="page-title">Sửa phụ đề đã lưu</h1>
-      <Suspense fallback={<FormSkeleton fields={1} />}>
-        <Edit {...props} />
-      </Suspense>
-    </main>
+    <Suspense fallback={<FormSkeleton fields={1} />}>
+      <Edit {...props} />
+    </Suspense>
   );
 }

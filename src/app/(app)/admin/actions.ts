@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { adminSetPassword, envAdminEmail, requireAdmin } from "@/lib/auth";
-import { createLesson, deleteFeedback, deleteLesson, getLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setLessonPublished, setUserRole, updateLesson, bumpSessionVersion, emailTaken, resetQuiz, setUserEmailVerified, setVerifiedEmail, updateUserName, QUIZ_MODULES, type Level, type QuizModule, type Role } from "@/lib/db";
+import { createLesson, deleteFeedback, deleteLesson, getLesson, getUserById, LEVELS, deleteSavedTranscripts, getCached, savedTranscriptKeys, setCached, setFeedbackStatus, setLessonPublished, setUserRole, updateLesson, bumpSessionVersion, emailTaken, resetQuiz, setUserEmailVerified, setVerifiedEmail, updateUserName, QUIZ_MODULES, type FeedbackStatus, type Level, type QuizModule, type Role } from "@/lib/db";
 import { extractVideoId, getYouTubeTranscript, type Transcript } from "@/lib/youtube";
 import { keepWordTimings, parseSubtitleFile, toSrt, type Segment } from "@/lib/subtitles";
 import { prewarmPhrases } from "@/lib/phrases";
@@ -97,7 +97,7 @@ export async function saveLesson(_: FormState, formData: FormData): Promise<Form
   if (id) updateLesson(id, lesson);
   else createLesson(lesson);
   prewarmPhrases(segments);
-  redirect("/admin");
+  redirect("/admin/lessons");
 }
 
 export async function removeLesson(id: number) {
@@ -173,6 +173,13 @@ export async function logoutUser(id: number) {
 export async function resetUserQuiz(id: number, module: QuizModule, all: boolean) {
   if (!QUIZ_MODULES.includes(module)) return;
   if (await editableUser(id)) resetQuiz(id, module, all);
+  refresh();
+}
+
+export async function toggleFeedbackStatus(id: number, status: FeedbackStatus) {
+  await requireAdmin();
+  if (status !== "open" && status !== "resolved") return;
+  setFeedbackStatus(id, status);
   refresh();
 }
 
