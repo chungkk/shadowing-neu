@@ -1,8 +1,8 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
-import { dubEnabled, dubJson, parseSubtitleText, type DubCue, type DubJob } from "@/lib/dub";
-import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
-import { mergeIntoSentences } from "@/lib/subtitles";
-import { translateForDubbing, translationEnabled } from "@/lib/translate";
+import { dubEnabled, dubJson, mergeDubCues, parseSubtitleText, type DubCue, type DubJob } from "@/lib/dub";
+import { buildTranslateItems } from "@/lib/dub-live";
+import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
+import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 import { whisperEnabled } from "@/lib/whisper";
 
 type CreateBody = {
@@ -77,13 +77,11 @@ export async function POST(req: Request) {
       if (!cues.length) return fail("Không đọc được câu thoại nào từ file phụ đề đã dán/tải lên.");
       if (b.translateCustom) needTranslateLang = "auto";
     } else if (subSource === "whisper") {
-      const tr = await getYouTubeTranscript(videoId, "whisper", {
-        whisper: true,
+      const tr = await transcribeAnyYouTubeAudio(videoId, {
         quotaKey: `admin:${admin.id}`,
       });
       if (!title) title = tr.title;
-      const merged = mergeIntoSentences(tr.segments);
-      cues = merged.map((s) => ({
+      cues = tr.segments.map((s) => ({
         start_ms: Math.max(0, Math.round(s.start * 1000)),
         end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
         text: s.text,
@@ -100,16 +98,17 @@ export async function POST(req: Request) {
       if (!actualLang.startsWith("vi")) needTranslateLang = actualLang || "auto";
     }
 
+    cues = mergeDubCues(cues);
     if (!cues.length) return fail("Video không có câu thoại nào để thuyết minh.");
     if (cues.length > 2500) return fail(`Phụ đề quá dài (${cues.length} câu, tối đa 2500 câu).`, 413);
 
     if (needTranslateLang) {
       if (!translationEnabled()) return fail("Server chưa cấu hình AI dịch phụ đề.", 503);
-      const translated = await translateForDubbing(
-        cues.map((c) => c.text),
-        needTranslateLang,
-      );
-      cues = cues.map((c, i) => ({ ...c, text: translated[i] || c.text }));
+      const { translations } = await translateForDubbingSmart(buildTranslateItems(cues), {
+        title,
+        sourceLang: needTranslateLang,
+      });
+      cues = cues.map((c, i) => ({ ...c, text: translations[i] || c.text }));
     }
 
     const created = await dubJson<{ job: DubJob }>("/jobs", {

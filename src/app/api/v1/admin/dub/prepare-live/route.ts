@@ -1,9 +1,8 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
-import { parseSubtitleText, type DubCue } from "@/lib/dub";
-import { prepareLiveDub } from "@/lib/dub-live";
-import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
-import { mergeIntoSentences } from "@/lib/subtitles";
-import { translateForDubbing, translationEnabled } from "@/lib/translate";
+import { mergeDubCues, parseSubtitleText, type DubCue } from "@/lib/dub";
+import { buildTranslateItems, prepareLiveDub } from "@/lib/dub-live";
+import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
+import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 
 type PrepareBody = {
   url: unknown;
@@ -37,20 +36,19 @@ export async function POST(req: Request) {
     }
 
     let title = "";
-    let cues: (DubCue & { orig?: string })[] = [];
+    let rawCues: DubCue[] = [];
     let needTranslateLang: string | null = null;
 
     if (subSource === "custom") {
-      cues = parseSubtitleText(str(b.customSub));
-      if (!cues.length) return fail("Không đọc được câu thoại nào từ file phụ đề.");
+      rawCues = parseSubtitleText(str(b.customSub));
+      if (!rawCues.length) return fail("Không đọc được câu thoại nào từ file phụ đề.");
       if (b.translateCustom) needTranslateLang = "auto";
     } else if (subSource === "whisper") {
-      const tr = await getYouTubeTranscript(videoId, "whisper", {
-        whisper: true,
+      const tr = await transcribeAnyYouTubeAudio(videoId, {
         quotaKey: `admin:${admin.id}`,
       });
       title = tr.title;
-      cues = mergeIntoSentences(tr.segments).map((s) => ({
+      rawCues = tr.segments.map((s) => ({
         start_ms: Math.max(0, Math.round(s.start * 1000)),
         end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
         text: s.text,
@@ -58,22 +56,27 @@ export async function POST(req: Request) {
       needTranslateLang = "auto";
     }
 
-    if (!cues.length) return fail("Không tìm thấy phụ đề cho video này.");
-    if (cues.length > 2500) return fail(`Phụ đề quá dài (${cues.length} câu).`, 413);
+    const merged = mergeDubCues(rawCues);
+    if (!merged.length) return fail("Không tìm thấy phụ đề cho video này.");
+    if (merged.length > 2500) return fail(`Phụ đề quá dài (${merged.length} câu).`, 413);
 
+    let cues: (DubCue & { orig?: string })[] = merged;
+    let style = null;
     if (needTranslateLang) {
       if (!translationEnabled()) return fail("Server chưa cấu hình AI dịch phụ đề.", 503);
-      const translated = await translateForDubbing(
-        cues.map((c) => c.text),
-        needTranslateLang,
-      );
-      cues = cues.map((c, i) => ({ ...c, text: translated[i] || c.text, orig: c.text }));
+      const res = await translateForDubbingSmart(buildTranslateItems(merged), {
+        title,
+        sourceLang: needTranslateLang,
+      });
+      style = res.style;
+      cues = merged.map((c, i) => ({ ...c, text: res.translations[i] || c.text, orig: c.text }));
     }
 
     return Response.json({
       videoId,
       title: title || videoId,
       sourceLang: needTranslateLang ?? "vi",
+      style,
       cues,
     });
   } catch (e) {

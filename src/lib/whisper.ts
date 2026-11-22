@@ -58,12 +58,13 @@ export function whisperFilename(head: Uint8Array, filename: string, mime: string
 export type WhisperVersion = "v1" | "v2";
 export const whisperVersion = (): WhisperVersion => (process.env.WHISPER_VERSION === "v1" ? "v1" : "v2");
 
-/** Gửi 1 file audio lên Whisper, trả về segment có timestamp (đã cộng offset giây) + phiên bản đã dùng. */
+/** Gửi 1 file audio lên Whisper, trả về segment có timestamp (đã cộng offset giây) + phiên bản đã dùng.
+ *  `language`: mặc định "de" (bài học tiếng Đức); truyền `null` để Whisper tự nhận diện ngôn ngữ (thuyết minh đa ngôn ngữ). */
 export async function transcribeAudio(
   audio: Blob,
   filename: string,
   offset = 0,
-  { prompt, version = whisperVersion() }: { prompt?: string; version?: WhisperVersion } = {},
+  { prompt, version = whisperVersion(), language = "de" }: { prompt?: string; version?: WhisperVersion; language?: string | null } = {},
 ): Promise<{ segments: Segment[]; version: WhisperVersion }> {
   if (!whisperEnabled()) throw new Error("Chưa cấu hình Whisper trong .env.local (xem README).");
 
@@ -77,12 +78,12 @@ export async function transcribeAudio(
 
   if (version === "v2") {
     try {
-      return { segments: await transcribeV2(audio, name, offset, prompt), version };
+      return { segments: await transcribeV2(audio, name, offset, prompt, language), version };
     } catch (e) {
       console.error("[whisper] v2 lỗi, chạy lại bằng v1:", (e as Error).message);
     }
   }
-  return { segments: await transcribeV1(audio, name, offset), version: "v1" };
+  return { segments: await transcribeV1(audio, name, offset, language), version: "v1" };
 }
 
 async function callApi(body: FormData, info: object) {
@@ -101,11 +102,11 @@ async function callApi(body: FormData, info: object) {
 
 // ---- v1 (code cũ, giữ nguyên) ----
 
-async function transcribeV1(audio: Blob, name: string, offset: number): Promise<Segment[]> {
+async function transcribeV1(audio: Blob, name: string, offset: number, language: string | null = "de"): Promise<Segment[]> {
   const body = new FormData();
   body.append("file", audio, name);
   body.append("model", MODEL);
-  body.append("language", "de");
+  if (language) body.append("language", language);
   body.append("response_format", "verbose_json");
   body.append("timestamp_granularities[]", "segment");
 
@@ -121,11 +122,11 @@ async function transcribeV1(audio: Blob, name: string, offset: number): Promise<
 
 type RawWord = { word: string; start: number; end: number };
 
-async function transcribeV2(audio: Blob, name: string, offset: number, prompt?: string): Promise<Segment[]> {
+async function transcribeV2(audio: Blob, name: string, offset: number, prompt?: string, language: string | null = "de"): Promise<Segment[]> {
   const body = new FormData();
   body.append("file", audio, name);
   body.append("model", MODEL);
-  body.append("language", "de");
+  if (language) body.append("language", language);
   body.append("response_format", "verbose_json");
   body.append("timestamp_granularities[]", "segment");
   body.append("timestamp_granularities[]", "word");

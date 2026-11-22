@@ -194,6 +194,233 @@ export async function translateForDubbing(sentences: string[], sourceLang = "aut
   return keys.map((k, i) => cached.get(k) || sentences[i]);
 }
 
+export type DubTranslateItem = {
+  text: string;
+  /** Thời lượng gốc của câu (giây) */
+  durationSec: number;
+  /** Khoảng thời gian khả dụng trước khi câu tiếp theo bắt đầu (giây) */
+  availSec: number;
+};
+
+export type DubStyleCard = {
+  topic: string;
+  tone: string;
+  pronouns: string;
+  glossary: string[];
+};
+
+const STYLE_CARD_SYSTEM =
+  "Bạn là đạo diễn thuyết minh tiếng Việt chuyên nghiệp. Đọc tiêu đề và một đoạn trích phụ đề của video YouTube, " +
+  "rồi trả về JSON tóm tắt phong cách dịch để các biên dịch viên dịch nhất quán cả video:\n" +
+  '{"topic": "chủ đề ngắn gọn trong 1 câu", "tone": "văn phong thuyết minh (vd: thân mật kiểu vlog, trang trọng kiểu tin tức, lôi cuốn kiểu phim tài liệu…)", ' +
+  '"pronouns": "quy ước xưng hô thống nhất (vd: mình – các bạn, tôi – quý vị, anh ấy/cô ấy…)", ' +
+  '"glossary": ["thuật ngữ hoặc tên riêng quan trọng cần giữ nguyên/dịch thống nhất (tối đa 10 mục)"]}';
+
+function isStyleCard(x: unknown): x is DubStyleCard {
+  if (!x || typeof x !== "object") return false;
+  const o = x as Record<string, unknown>;
+  return typeof o.topic === "string" && typeof o.tone === "string" && typeof o.pronouns === "string";
+}
+
+async function buildDubStyleCard(
+  items: DubTranslateItem[],
+  title: string,
+  sourceLang: string,
+): Promise<DubStyleCard | null> {
+  if (items.length <= 5) return null;
+  const head = items.slice(0, 14).map((x) => x.text);
+  const midStart = Math.max(14, Math.floor(items.length / 2) - 2);
+  const mid = items.length > 22 ? items.slice(midStart, midStart + 6).map((x) => x.text) : [];
+  try {
+    const card = await chatJson<DubStyleCard>(
+      STYLE_CARD_SYSTEM,
+      { title: title || "(không có tiêu đề)", sourceLang, opening: head, ...(mid.length ? { middleSample: mid } : {}) },
+      isStyleCard,
+      { prefer: "large", timeoutMs: 20_000 },
+    );
+    return {
+      topic: card.topic.trim().slice(0, 200),
+      tone: card.tone.trim().slice(0, 160),
+      pronouns: card.pronouns.trim().slice(0, 120),
+      glossary: Array.isArray(card.glossary)
+        ? card.glossary.filter((g): g is string => typeof g === "string" && !!g.trim()).slice(0, 10)
+        : [],
+    };
+  } catch (e) {
+    console.error("[dub-style-card]", (e as Error).message);
+    return null;
+  }
+}
+
+const SMART_DUB_SYSTEM = (lang: string, title: string, style: DubStyleCard | null) => {
+  const ctxLines = [
+    title ? `- Tiêu đề video: "${title}"` : "",
+    style?.topic ? `- Chủ đề: ${style.topic}` : "",
+    style?.tone ? `- Văn phong: ${style.tone}` : "",
+    style?.pronouns ? `- Xưng hô thống nhất: ${style.pronouns}` : "",
+    style?.glossary?.length ? `- Thuật ngữ / tên riêng: ${style.glossary.join("; ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    `Bạn là biên dịch viên thuyết minh video (voice-over) chuyên nghiệp từ ngôn ngữ "${lang}" sang tiếng Việt.\n` +
+    (ctxLines ? `Ngữ cảnh toàn video:\n${ctxLines}\n` : "") +
+    "Đầu vào JSON gồm:\n" +
+    '- "prev" (tuỳ chọn): vài câu ngay trước đó kèm bản dịch tiếng Việt — chỉ để nối mạch và giữ đúng xưng hô, KHÔNG dịch lại.\n' +
+    '- "items": danh sách câu cần dịch dạng {"1": {"s": số giây, "max": số từ tiếng Việt tối đa nên dùng, "text": câu gốc}, …}.\n' +
+    '- "next" (tuỳ chọn): vài câu tiếp theo — chỉ để biết mạch câu sắp nói, KHÔNG dịch lại.\n' +
+    "Quy tắc bắt buộc:\n" +
+    "1. Dịch sang tiếng Việt tự nhiên như lời nói, mạch lạc, đúng ngữ cảnh và giữ đúng xưng hô của video.\n" +
+    "2. Căn khớp thời lượng: giữ mỗi câu súc tích quanh hoặc dưới mức `max` từ tiếng Việt để giọng đọc kịp khớp hình, bỏ từ đệm thừa nhưng giữ đủ ý chính.\n" +
+    "3. Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên bằng giọng AI (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'). Không để ký tự thừa hay chú thích trong ngoặc.\n" +
+    "4. Giữ ĐÚNG số lượng và thứ tự khóa trong `items` (1..N), tuyệt đối không gộp hay bỏ sót câu.\n" +
+    'Trả về đúng JSON {"t": {"1": "...", "2": "...", …}}, không giải thích.'
+  );
+};
+
+async function callSmartDubProvider(
+  p: Provider,
+  systemPrompt: string,
+  payload: object,
+  expectedCount: number,
+): Promise<string[]> {
+  const res = await fetch(p.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
+    body: JSON.stringify({
+      model: p.model,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(payload) },
+      ],
+      ...p.extra,
+    }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data: { choices?: { message?: { content?: string } }[] } = await res.json();
+  const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+  const t: unknown = parsed.t;
+  const out = Array.from({ length: expectedCount }, (_, i) => {
+    const x = Array.isArray(t) ? (t.length === expectedCount ? t[i] : undefined) : (t as Record<string, unknown>)?.[i + 1];
+    return typeof x === "string" ? x.trim() : undefined;
+  });
+  if (!out.every((x) => x !== undefined)) {
+    throw new FormatError(`${p.name}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${expectedCount} câu)`);
+  }
+  return out as string[];
+}
+
+function dubProviders(): Provider[] {
+  const all = providers();
+  const small = process.env.TRANSLATE_MODEL ?? "openai/gpt-oss-20b";
+  // Ưu tiên mô hình lớn (Groq 120b → OpenAI → Groq 20b) để dịch mượt, giữ xưng hô & căn thời lượng chuẩn
+  const rank = (p: Provider) => (p.model === small ? 2 : p.name === "openai" ? 1 : 0);
+  return [...all].sort((a, b) => rank(a) - rank(b));
+}
+
+async function translateSmartDubChunk(
+  chunk: DubTranslateItem[],
+  prevCtx: { orig: string; vi: string }[],
+  nextCtx: string[],
+  systemPrompt: string,
+): Promise<string[]> {
+  const list = dubProviders();
+  if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
+
+  const result = chunk.map(() => "");
+  let todo = chunk.map((_, i) => i);
+  let formatError = false;
+
+  const makePayload = (indices: number[]) => ({
+    ...(prevCtx.length ? { prev: prevCtx } : {}),
+    items: Object.fromEntries(
+      indices.map((idx, pos) => {
+        const it = chunk[idx];
+        const s = Math.max(0.6, Math.round(it.availSec * 10) / 10);
+        // Kokoro đọc tự nhiên ở ~3.8 từ tiếng Việt / giây → đặt trần gọn gàng
+        const max = Math.max(4, Math.min(48, Math.round(s * 3.8)));
+        return [pos + 1, { s, max, text: it.text }];
+      }),
+    ),
+    ...(nextCtx.length ? { next: nextCtx } : {}),
+  });
+
+  for (const p of list) {
+    if (!todo.length) break;
+    try {
+      const out = await callSmartDubProvider(p, systemPrompt, makePayload(todo), todo.length);
+      todo.forEach((idx, k) => {
+        if (looksTranslated(chunk[idx].text, out[k])) result[idx] = out[k];
+      });
+      todo = todo.filter((idx) => !result[idx]);
+      if (todo.length) console.error(`[dub-smart] ${p.name}: ${todo.length} câu chưa dịch, thử tiếp`);
+    } catch (e) {
+      if (e instanceof FormatError) formatError = true;
+      console.error("[dub-smart]", (e as Error).message);
+    }
+  }
+
+  if (formatError && todo.length > 1) {
+    const mid = Math.ceil(todo.length / 2);
+    for (const part of [todo.slice(0, mid), todo.slice(mid)]) {
+      const sub = await translateSmartDubChunk(
+        part.map((i) => chunk[i]),
+        prevCtx,
+        nextCtx,
+        systemPrompt,
+      ).catch(() => null);
+      part.forEach((idx, k) => {
+        if (sub?.[k]) result[idx] = sub[k];
+      });
+    }
+    todo = todo.filter((idx) => !result[idx]);
+  }
+
+  if (todo.length === chunk.length) throw new Error("Không dịch được lúc này.");
+  return result.map((r, i) => r || chunk[i].text);
+}
+
+const SMART_DUB_BATCH = 20;
+
+/**
+ * Dịch thuyết minh thông minh (Combo 1 + 2 + 3):
+ * - Bước 1: Sinh Style Card (chủ đề, văn phong, xưng hô, bảng thuật ngữ) từ tiêu đề + trích đoạn video.
+ * - Bước 2: Dịch theo cửa sổ trượt (gửi kèm 3 câu trước đã dịch + 2 câu sau làm lookahead)
+ *   và căn ngân sách số từ theo thời lượng từng câu để giọng đọc khớp hình, tự nhiên.
+ */
+export async function translateForDubbingSmart(
+  items: DubTranslateItem[],
+  { title = "", sourceLang = "auto" }: { title?: string; sourceLang?: string } = {},
+): Promise<{ translations: string[]; style: DubStyleCard | null }> {
+  const lang = (sourceLang || "auto").toLowerCase();
+  if (!items.length || lang === "vi" || lang.startsWith("vi-")) {
+    return { translations: items.map((x) => x.text), style: null };
+  }
+
+  const style = await buildDubStyleCard(items, title, sourceLang || "auto");
+  const systemPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style);
+  const out: string[] = new Array(items.length);
+
+  for (let i = 0; i < items.length; i += SMART_DUB_BATCH) {
+    const chunk = items.slice(i, i + SMART_DUB_BATCH);
+    const prevCtx: { orig: string; vi: string }[] = [];
+    for (let p = Math.max(0, i - 3); p < i; p++) {
+      if (out[p]) prevCtx.push({ orig: items[p].text, vi: out[p] });
+    }
+    const nextCtx = items.slice(i + SMART_DUB_BATCH, i + SMART_DUB_BATCH + 2).map((x) => x.text);
+
+    const translated = await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
+    translated.forEach((t, k) => {
+      out[i + k] = t;
+    });
+  }
+
+  return { translations: out, style };
+}
+
 /** Dịch danh sách câu (giữ thứ tự). Câu đã có trong kho thì không gọi AI. "" = chưa dịch được. */
 export async function translateSentences(sentences: string[]): Promise<string[]> {
   const keys = sentences.map(keyOf);

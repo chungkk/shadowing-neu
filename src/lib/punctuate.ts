@@ -24,15 +24,22 @@ const PARALLEL = 3;
 
 export const punctuationEnabled = () => !!API_KEY && MODEL !== "off";
 
-const PROMPT =
+const PROMPT_DE =
   "Du setzt Satzzeichen in automatisch erzeugte deutsche Untertitel. Füge Punkt, Komma, Fragezeichen " +
   "und Ausrufezeichen ein und korrigiere die Groß-/Kleinschreibung. Ändere, ergänze oder lösche KEINE " +
   "Wörter und behalte die Reihenfolge exakt bei. Antworte nur mit dem Text.";
 
+const PROMPT_MULTI = (lang: string) =>
+  `Restore punctuation (periods, commas, question marks, exclamation marks) and capitalization in this auto-generated ${lang} transcript. ` +
+  "Do NOT translate, add, remove, or reorder any words. Keep every original word in exact order. Reply with the punctuated text only.";
+
+const CJK_RE = /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}/u;
 const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 /** Phụ đề gần như không có dấu kết thúc câu (< 1 dấu / 40 từ) */
 export function lacksPunctuation(segs: Segment[]): boolean {
+  const sample = segs.slice(0, 20).map((s) => s.text).join(" ");
+  if (CJK_RE.test(sample)) return false; // CJK không tách từ bằng khoảng trắng → không dùng LCS theo từ
   const words = segs.flatMap((s) => s.text.split(" "));
   if (words.length < 30) return false;
   return words.filter((w) => /[.!?…]["»“”']?$/.test(w)).length < words.length / 40;
@@ -67,7 +74,7 @@ function align(original: string[], output: string[]): string[] {
   return result;
 }
 
-async function callModel(text: string): Promise<string> {
+async function callModel(text: string, systemPrompt: string): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -77,7 +84,7 @@ async function callModel(text: string): Promise<string> {
         temperature: 0,
         reasoning_effort: "low",
         messages: [
-          { role: "system", content: PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: text },
         ],
       }),
@@ -96,10 +103,11 @@ async function callModel(text: string): Promise<string> {
 }
 
 /** Trả về bản phụ đề có dấu câu (giữ nguyên số từ + thời gian). Lỗi → trả về bản gốc. */
-export async function addPunctuation(segs: Segment[]): Promise<Segment[]> {
+export async function addPunctuation(segs: Segment[], lang = "de"): Promise<Segment[]> {
   const words = segs.flatMap((s) => s.words?.map(([, w]) => w) ?? s.text.split(" "));
   const fixed = [...words];
   const starts = Array.from({ length: Math.ceil(words.length / CHUNK) }, (_, k) => k * CHUNK);
+  const systemPrompt = lang.toLowerCase().startsWith("de") ? PROMPT_DE : PROMPT_MULTI(lang || "source");
 
   try {
     let next = 0;
@@ -108,7 +116,7 @@ export async function addPunctuation(segs: Segment[]): Promise<Segment[]> {
         while (next < starts.length) {
           const s = starts[next++];
           const input = words.slice(s, s + CHUNK + OVERLAP);
-          const aligned = align(input, (await callModel(input.join(" "))).split(/\s+/));
+          const aligned = align(input, (await callModel(input.join(" "), systemPrompt)).split(/\s+/));
           // Chỉ nhận phần chính của khúc; phần OVERLAP do khúc sau xử lý
           for (let k = 0; k < Math.min(CHUNK, input.length); k++) fixed[s + k] = aligned[k];
         }

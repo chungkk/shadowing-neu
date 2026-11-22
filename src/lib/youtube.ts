@@ -619,8 +619,11 @@ export async function fetchAnyYouTubeSubtitles(
 
   for (const cand of ordered) {
     try {
-      const segments = await cand.load();
+      let segments = await cand.load();
       if (segments.length) {
+        if (cand.track.auto && punctuationEnabled() && lacksPunctuation(segments)) {
+          segments = await addPunctuation(segments, cand.track.languageCode);
+        }
         return {
           title,
           duration,
@@ -634,4 +637,32 @@ export async function fetchAnyYouTubeSubtitles(
     }
   }
   return null;
+}
+
+/**
+ * Tạo phụ đề bằng Whisper tự nhận diện ngôn ngữ (không ép tiếng Đức) — dùng làm fallback cho tab Thuyết minh
+ * khi video YouTube không có bất kỳ track phụ đề nào.
+ */
+export async function transcribeAnyYouTubeAudio(
+  videoId: string,
+  { quotaKey, maxSeconds }: { quotaKey?: string; maxSeconds?: number } = {},
+): Promise<{ title: string; segments: Segment[] }> {
+  await connection();
+  if (!whisperEnabled()) throw new Error("Whisper chưa được bật trên server.");
+  if (quotaKey && !allow(`whisper:${quotaKey}`, WHISPER_PER_DAY, 24 * 3600_000)) {
+    throw new Error(`Mỗi ngày chỉ tạo được ${WHISPER_PER_DAY} phụ đề bằng Whisper. Mai thử lại nhé.`);
+  }
+  const { title, duration, audio } = await orYtdlp(
+    () => fromInnertube(videoId),
+    () => fromYtdlp(videoId),
+  );
+  if (maxSeconds && duration && duration > maxSeconds) throw new VideoTooLongError(duration, maxSeconds);
+  const { blob, filename } = await audio();
+  const r = await transcribeAudio(blob, filename, 0, { version: whisperVersion(), language: null });
+  let { segments } = r;
+  if (punctuationEnabled() && lacksPunctuation(segments)) {
+    segments = await addPunctuation(segments, "auto");
+  }
+  if (!segments.length) throw new Error("Whisper không nhận dạng được lời thoại nào.");
+  return { title, segments };
 }

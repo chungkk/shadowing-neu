@@ -1,11 +1,12 @@
 import "server-only";
 import { connection } from "next/server";
 import { getCached, setCached } from "./db";
-import { dubEnabled, dubJson, type DubCue } from "./dub";
-import { mergeIntoSentences } from "./subtitles";
-import { translateForDubbing, translationEnabled } from "./translate";
+import { dubEnabled, dubJson, mergeDubCues, type DubCue } from "./dub";
+import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
+import type { Segment } from "./subtitles";
+import { translateForDubbingSmart, translationEnabled, type DubStyleCard } from "./translate";
 import { whisperEnabled } from "./whisper";
-import { fetchAnyYouTubeSubtitles, getYouTubeTranscript, VideoTooLongError } from "./youtube";
+import { fetchAnyYouTubeSubtitles, transcribeAnyYouTubeAudio, VideoTooLongError } from "./youtube";
 
 export type LiveDubCue = DubCue & {
   /** Câu gốc trước khi dịch (nếu video không phải tiếng Việt) */
@@ -16,6 +17,7 @@ export type LiveDubResult = {
   videoId: string;
   title: string;
   sourceLang: string;
+  style?: DubStyleCard | null;
   cues: LiveDubCue[];
 };
 
@@ -26,7 +28,8 @@ type ProbeRes = {
   subtitles: { lang: string; name: string; auto: boolean }[];
 };
 
-const CACHE_PREFIX = "dub:live:v1:";
+// v2: gộp câu hoàn chỉnh + thêm dấu câu đa ngôn ngữ + dịch theo ngữ cảnh (Style Card + cửa sổ trượt) + căn thời lượng
+const CACHE_PREFIX = "dub:live:v2:";
 const gd = globalThis as unknown as { __dubLiveInflight?: Map<string, Promise<LiveDubResult>> };
 const inflight = (gd.__dubLiveInflight ??= new Map());
 
@@ -43,6 +46,43 @@ function pickProbeSub(subs: ProbeRes["subtitles"]) {
     subs.find((s) => isVi(s)) ??
     subs[0]
   );
+}
+
+function segmentsToCues(segments: Segment[]): DubCue[] {
+  return segments.map((s) => ({
+    start_ms: Math.max(0, Math.round(s.start * 1000)),
+    end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
+    text: s.text,
+  }));
+}
+
+/** Nếu phụ đề tự động thiếu dấu chấm câu → bổ sung dấu câu đa ngôn ngữ trước khi gộp thành câu trọn vẹn */
+async function ensurePunctuatedCues(cues: DubCue[], lang: string): Promise<DubCue[]> {
+  if (!punctuationEnabled() || cues.length < 4) return cues;
+  const segs: Segment[] = cues.map((c) => ({
+    start: c.start_ms / 1000,
+    end: c.end_ms / 1000,
+    text: c.text,
+  }));
+  if (!lacksPunctuation(segs)) return cues;
+  const fixed = await addPunctuation(segs, lang);
+  return fixed.map((s) => ({
+    start_ms: Math.max(0, Math.round(s.start * 1000)),
+    end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
+    text: s.text,
+  }));
+}
+
+/** Tính thời lượng & khung thời gian khả dụng trước câu kế tiếp để AI căn độ dài bản dịch khớp hình */
+export function buildTranslateItems(cues: DubCue[]) {
+  return cues.map((c, i) => {
+    const durSec = Math.max(0.4, (c.end_ms - c.start_ms) / 1000);
+    const next = cues[i + 1];
+    const availSec = next
+      ? Math.max(durSec, Math.min(durSec + 1.2, (next.start_ms - c.start_ms) / 1000))
+      : durSec + 1.0;
+    return { text: c.text, durationSec: durSec, availSec };
+  });
 }
 
 export async function prepareLiveDub(
@@ -66,7 +106,8 @@ export async function prepareLiveDub(
     const maxCues = opts.maxCues ?? 1800;
     let title = "";
     let sourceLang = "auto";
-    let cues: LiveDubCue[] = [];
+    let rawCues: DubCue[] = [];
+    let isAutoSub = false;
 
     // 1. Ưu tiên dịch vụ vieneu-dub (Innertube mọi ngôn ngữ) nếu đã cấu hình
     if (dubEnabled()) {
@@ -83,8 +124,9 @@ export async function prepareLiveDub(
             body: { url, lang: chosen.lang, auto: chosen.auto },
             timeoutMs: 35_000,
           });
-          cues = subRes.cues;
+          rawCues = subRes.cues;
           sourceLang = (subRes.lang || chosen.lang || "auto").toLowerCase();
+          isAutoSub = chosen.auto;
         }
       } catch (e) {
         if (e instanceof VideoTooLongError) throw e;
@@ -93,7 +135,7 @@ export async function prepareLiveDub(
     }
 
     // 2. Dự phòng: lấy phụ đề mọi ngôn ngữ trực tiếp bằng Innertube / yt-dlp của HalloVN
-    if (!cues.length) {
+    if (!rawCues.length) {
       const anySub = await fetchAnyYouTubeSubtitles(videoId, { maxSeconds: opts.maxSeconds }).catch((e) => {
         if (e instanceof VideoTooLongError) throw e;
         return null;
@@ -101,31 +143,23 @@ export async function prepareLiveDub(
       if (anySub && anySub.segments.length) {
         title = title || anySub.title;
         sourceLang = anySub.lang.toLowerCase();
-        cues = mergeIntoSentences(anySub.segments).map((s) => ({
-          start_ms: Math.max(0, Math.round(s.start * 1000)),
-          end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
-          text: s.text,
-        }));
+        isAutoSub = anySub.auto;
+        rawCues = segmentsToCues(anySub.segments);
       }
     }
 
-    // 3. Nếu video hoàn toàn không có phụ đề trên YouTube → Whisper (chỉ khi được phép)
-    if (!cues.length && opts.allowWhisper && whisperEnabled()) {
-      const tr = await getYouTubeTranscript(videoId, "whisper", {
-        whisper: true,
+    // 3. Nếu video hoàn toàn không có phụ đề trên YouTube → Whisper tự nhận diện ngôn ngữ (chỉ khi được phép)
+    if (!rawCues.length && opts.allowWhisper && whisperEnabled()) {
+      const tr = await transcribeAnyYouTubeAudio(videoId, {
         quotaKey: opts.quotaKey,
         maxSeconds: opts.maxSeconds,
       });
       title = title || tr.title;
       sourceLang = "auto";
-      cues = mergeIntoSentences(tr.segments).map((s) => ({
-        start_ms: Math.max(0, Math.round(s.start * 1000)),
-        end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
-        text: s.text,
-      }));
+      rawCues = segmentsToCues(tr.segments);
     }
 
-    if (!cues.length) {
+    if (!rawCues.length) {
       throw new Error(
         opts.allowWhisper
           ? "Không tìm thấy phụ đề cho video này."
@@ -133,21 +167,29 @@ export async function prepareLiveDub(
       );
     }
 
-    if (cues.length > maxCues) {
-      throw new Error(`Phụ đề video quá dài (${cues.length} câu, tối đa ${maxCues} câu). Hãy chọn video ngắn hơn nhé.`);
+    // Bước 1 (Combo 1): Thêm dấu câu cho phụ đề tự động rồi gộp các mảnh vụn thành câu trọn vẹn
+    const punctuated = isAutoSub ? await ensurePunctuatedCues(rawCues, sourceLang) : rawCues;
+    const merged = mergeDubCues(punctuated);
+
+    if (!merged.length) throw new Error("Không tìm thấy lời thoại hợp lệ trong phụ đề.");
+    if (merged.length > maxCues) {
+      throw new Error(`Phụ đề video quá dài (${merged.length} câu, tối đa ${maxCues} câu). Hãy chọn video ngắn hơn nhé.`);
     }
 
-    // 4. Dịch sang tiếng Việt nếu nguồn không phải tiếng Việt
+    // Bước 2 & 3 (Combo 2 + 3): Dịch có ngữ cảnh toàn video (Style Card + cửa sổ trượt) & căn theo thời lượng câu
+    let cues: LiveDubCue[] = merged;
+    let style: DubStyleCard | null = null;
     if (!sourceLang.startsWith("vi")) {
       if (!translationEnabled()) throw new Error("Server chưa cấu hình AI dịch phụ đề.");
-      const translated = await translateForDubbing(
-        cues.map((c) => c.text),
+      const res = await translateForDubbingSmart(buildTranslateItems(merged), {
+        title,
         sourceLang,
-      );
-      cues = cues.map((c, i) => ({
+      });
+      style = res.style;
+      cues = merged.map((c, i) => ({
         start_ms: c.start_ms,
         end_ms: c.end_ms,
-        text: translated[i] || c.text,
+        text: res.translations[i] || c.text,
         orig: c.text,
       }));
     }
@@ -156,6 +198,7 @@ export async function prepareLiveDub(
       videoId,
       title: title || videoId,
       sourceLang,
+      style,
       cues,
     };
     setCached(`${CACHE_PREFIX}${videoId}`, result, null);
