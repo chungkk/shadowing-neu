@@ -1,7 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Check, ChevronRight, Layers, Library } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasReviewIcon as Layers,
+  ChristmasVocabIcon as Library,
+} from "@/components/FestiveIcons";
 import { getCurrentUser } from "@/lib/auth";
 import { vocabOverview } from "@/lib/db";
 import { deckCounts, deckMarks, getDeck, listDecks, type DeckSummary } from "@/lib/decks";

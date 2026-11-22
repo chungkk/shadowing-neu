@@ -3,16 +3,18 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
-  BookOpenCheck,
-  Car,
   CheckCircle2,
-  ListVideo,
-  Lock,
-  MessageSquare,
   Plus,
-  Tv,
-  Users,
 } from "lucide-react";
+import {
+  ChristmasCarIcon as Car,
+  ChristmasCatalogIcon as BookOpenCheck,
+  ChristmasChannelIcon as Tv,
+  ChristmasChatIcon as MessageSquare,
+  ChristmasLockIcon as Lock,
+  ChristmasUsersIcon as Users,
+  ChristmasVideoIcon as ListVideo,
+} from "@/components/FestiveIcons";
 import { requireAdmin } from "@/lib/auth";
 import { earnableFreePoints, lockSettings } from "@/lib/access";
 import { LESSON_PRICE } from "@/lib/lesson-lock";

@@ -1,7 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, BookOpen, ChevronDown, RotateCcw, Star } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasStarIcon as Star,
+  ChristmasWrongIcon as RotateCcw,
+} from "@/components/FestiveIcons";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { DEFAULT_CLASS, classQuestionIds, learnTree, prefs } from "@/lib/laixe";

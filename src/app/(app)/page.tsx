@@ -2,18 +2,21 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import {
   ArrowRight,
-  BookOpen,
-  Car,
   Check,
   CheckCircle2,
   ChevronDown,
-  Headphones,
-  Landmark,
-  Languages,
-  Mic,
-  PencilLine,
-  Smartphone,
 } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasCarIcon as Car,
+  ChristmasDeutschIcon as Languages,
+  ChristmasHeadphonesIcon as Headphones,
+  ChristmasLidIcon as Landmark,
+  ChristmasMicIcon as Mic,
+  ChristmasPencilIcon as PencilLine,
+  ChristmasSmartphoneIcon as Smartphone,
+  ChristmasSnowflakeIcon,
+} from "@/components/FestiveIcons";
 import type { ComponentType, CSSProperties } from "react";
 import { LoginLink } from "@/components/auth/LoginDialog";
 import Mascot from "@/components/Mascot";
@@ -109,10 +112,10 @@ export default function Home() {
         <div className={`${wrap} relative z-10 grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12 lg:py-16`}>
           <div className="flex flex-col items-start gap-5">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted">
-              <span className="noel-dot size-1.5 rounded-full bg-accent" aria-hidden />
+              <ChristmasSnowflakeIcon className="size-3.5 text-link" />
               {SEASONAL_THEME === "noel"
                 ? "Giáng Sinh an lành · Dành cho người Việt tại Đức · Miễn phí 0 €"
-                : "Dành cho người Việt tại Đức · Miễn phí 0 €"}
+                : "Mùa Giáng Sinh · Dành cho người Việt tại Đức · Miễn phí 0 €"}
             </span>
 
             <h1 className="noel-headline display max-w-[18ch]">

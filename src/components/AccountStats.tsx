@@ -2,7 +2,14 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { BookOpen, CalendarClock, Flame, PenLine, PlayCircle, Trophy } from "lucide-react";
+import { CalendarClock } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasFlameIcon as Flame,
+  ChristmasPencilIcon as PenLine,
+  ChristmasTrophyIcon as Trophy,
+  ChristmasVideoIcon as PlayCircle,
+} from "./FestiveIcons";
 import { clientApi } from "@/lib/client-api";
 import { Gem } from "./PointsBadge";
 

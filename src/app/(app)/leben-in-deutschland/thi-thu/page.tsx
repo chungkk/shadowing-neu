@@ -1,7 +1,8 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CircleCheck, Clock, Flag, ListChecks, LogIn, Play } from "lucide-react";
+import { CircleCheck, Clock, ListChecks, LogIn, Play } from "lucide-react";
+import { ChristmasFlagIcon as Flag } from "@/components/FestiveIcons";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
 import { EXAM, EXAM_TOTAL, STATES, getState, prefs } from "@/lib/lid";

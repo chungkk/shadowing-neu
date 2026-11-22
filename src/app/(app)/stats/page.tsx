@@ -1,7 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Car, ChevronRight, Landmark, Languages, Layers, Settings, Trophy } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
+import {
+  ChristmasCarIcon as Car,
+  ChristmasDeutschIcon as Languages,
+  ChristmasLidIcon as Landmark,
+  ChristmasReviewIcon as Layers,
+  ChristmasSettingsIcon as Settings,
+  ChristmasTrophyIcon as Trophy,
+} from "@/components/FestiveIcons";
 import PageHeader from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth";
 import { accountStats } from "@/lib/account-stats";

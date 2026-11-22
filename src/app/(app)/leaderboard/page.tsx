@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Trophy } from "lucide-react";
+import { ChristmasTrophyIcon as Trophy } from "@/components/FestiveIcons";
 import PageHeader from "@/components/PageHeader";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";

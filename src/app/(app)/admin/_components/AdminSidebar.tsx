@@ -3,21 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ArrowLeft, Menu, X } from "lucide-react";
 import {
-  ArrowLeft,
-  BookOpenCheck,
-  Captions,
-  LayoutDashboard,
-  ListVideo,
-  Lock,
-  Menu,
-  MessageSquare,
-  Server,
-  ShieldCheck,
-  Tv,
-  Users,
-  X,
-} from "lucide-react";
+  ChristmasAdminIcon as ShieldCheck,
+  ChristmasCaptionsIcon as Captions,
+  ChristmasCatalogIcon as BookOpenCheck,
+  ChristmasChannelIcon as Tv,
+  ChristmasChatIcon as MessageSquare,
+  ChristmasDashboardIcon as LayoutDashboard,
+  ChristmasLockIcon as Lock,
+  ChristmasSystemIcon as Server,
+  ChristmasUsersIcon as Users,
+  ChristmasVideoIcon as ListVideo,
+} from "@/components/FestiveIcons";
 import type { ComponentType } from "react";
 
 export type SidebarCounts = {

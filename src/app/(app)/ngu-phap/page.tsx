@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { GraduationCap } from "lucide-react";
+import { ChristmasGrammarIcon as GraduationCap } from "@/components/FestiveIcons";
 import PageHeader from "@/components/PageHeader";
 import GrammarCatalog from "@/components/grammar/GrammarCatalog";
 import { ALL_GRAMMAR_SUMMARIES, GRAMMAR_CATEGORIES } from "@/lib/grammar";

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Car } from "lucide-react";
+import { ChristmasCarIcon as Car } from "@/components/FestiveIcons";
 import { SubHeader } from "@/components/quiz/QuizParts";
 import { CLASS_ORDER, DEFAULT_CLASS, classGroups, classQuestionIds, prefs } from "@/lib/laixe";
 import { JsonLd, breadcrumbLd, fmtNum, quizPageMeta } from "@/lib/laixe/seo";

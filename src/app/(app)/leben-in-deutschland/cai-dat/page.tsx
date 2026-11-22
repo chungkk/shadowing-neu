@@ -1,5 +1,9 @@
 import { Suspense, type ComponentType, type ReactNode } from "react";
-import { BookOpen, Database, MapPin, Settings as SettingsIcon } from "lucide-react";
+import { Database, MapPin } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasSettingsIcon as SettingsIcon,
+} from "@/components/FestiveIcons";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { STATES, prefs } from "@/lib/lid";

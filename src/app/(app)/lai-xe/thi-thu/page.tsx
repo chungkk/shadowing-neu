@@ -1,7 +1,11 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CircleCheck, Clock, FileStack, Flag, ListChecks, Play, TriangleAlert } from "lucide-react";
+import { CircleCheck, Clock, ListChecks, Play, TriangleAlert } from "lucide-react";
+import {
+  ChristmasFileStackIcon as FileStack,
+  ChristmasFlagIcon as Flag,
+} from "@/components/FestiveIcons";
 import { SubHeader } from "@/components/quiz/QuizParts";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";

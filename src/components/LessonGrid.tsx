@@ -4,24 +4,26 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  Briefcase,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
   Clock,
-  Coffee,
   ExternalLink,
-  Film,
-  GraduationCap,
   Keyboard,
-  Lock,
-  MessageSquare,
-  Mic,
-  Newspaper,
   Search,
-  Sparkles,
   X,
 } from "lucide-react";
+import {
+  ChristmasChatIcon as MessageSquare,
+  ChristmasCocoaIcon as Coffee,
+  ChristmasGrammarIcon as GraduationCap,
+  ChristmasLockIcon as Lock,
+  ChristmasMicIcon as Mic,
+  ChristmasNewsIcon as Newspaper,
+  ChristmasOrnamentIcon as Film,
+  ChristmasStarIcon as Sparkles,
+  ChristmasWorkIcon as Briefcase,
+} from "./FestiveIcons";
 import type { ComponentType } from "react";
 import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
 import { channelPath, lessonPath } from "@/lib/slug";

@@ -3,25 +3,24 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronDown, LogOut } from "lucide-react";
 import {
-  BarChart3,
-  BookMarked,
-  BookOpen,
-  Car,
-  ChevronDown,
-  FileStack,
-  Flag,
-  GraduationCap,
-  House,
-  Landmark,
-  Languages,
-  Layers,
-  LogOut,
-  MonitorPlay,
-  Settings,
-  ShieldCheck,
-  Trophy,
-} from "lucide-react";
+  ChristmasAdminIcon as ShieldCheck,
+  ChristmasBookIcon as BookOpen,
+  ChristmasCarIcon as Car,
+  ChristmasChartIcon as BarChart3,
+  ChristmasDeutschIcon as Languages,
+  ChristmasFileStackIcon as FileStack,
+  ChristmasFlagIcon as Flag,
+  ChristmasGrammarIcon as GraduationCap,
+  ChristmasHomeIcon as House,
+  ChristmasLidIcon as Landmark,
+  ChristmasReviewIcon as Layers,
+  ChristmasSettingsIcon as Settings,
+  ChristmasTrophyIcon as Trophy,
+  ChristmasVideoIcon as MonitorPlay,
+  ChristmasVocabIcon as BookMarked,
+} from "./FestiveIcons";
 import type { ComponentType, ReactNode } from "react";
 import { logout } from "@/app/(app)/auth-actions";
 import Avatar, { type AvatarUser } from "./Avatar";

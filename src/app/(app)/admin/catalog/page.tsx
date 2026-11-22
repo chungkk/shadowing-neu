@@ -1,6 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { BookMarked, Car, ExternalLink, GraduationCap, Landmark } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import {
+  ChristmasCarIcon as Car,
+  ChristmasGrammarIcon as GraduationCap,
+  ChristmasLidIcon as Landmark,
+  ChristmasVocabIcon as BookMarked,
+} from "@/components/FestiveIcons";
 import { requireAdmin } from "@/lib/auth";
 import { adminCatalogStats } from "@/lib/db";
 import { listDecks } from "@/lib/decks";

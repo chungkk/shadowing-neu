@@ -2,7 +2,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowRight, BarChart3, Flag } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import {
+  ChristmasChartIcon as BarChart3,
+  ChristmasFlagIcon as Flag,
+} from "@/components/FestiveIcons";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams, quizBookmarks, quizStats } from "@/lib/db";
 import { classQuestionIds, isGrund, prefs } from "@/lib/laixe";

@@ -1,7 +1,17 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, BarChart3, BookOpen, Car, ChevronDown, Clock, FileStack, Flag, RotateCcw, Settings, ShieldAlert, Star } from "lucide-react";
+import { ArrowRight, ChevronDown, Clock, ShieldAlert } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasCarIcon as Car,
+  ChristmasChartIcon as BarChart3,
+  ChristmasFileStackIcon as FileStack,
+  ChristmasFlagIcon as Flag,
+  ChristmasSettingsIcon as Settings,
+  ChristmasStarIcon as Star,
+  ChristmasWrongIcon as RotateCcw,
+} from "@/components/FestiveIcons";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { BOGEN_COUNT, CLASS_ORDER, DEFAULT_CLASS, WEB_BOGEN_LIMIT, classInfo, classQuestionIds, isGrund, prefs, totalQuestions } from "@/lib/laixe";

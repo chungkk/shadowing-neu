@@ -1,7 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, BarChart3, BookOpen, CheckCircle2, ChevronDown, Clock, Flag, Landmark, RotateCcw, Settings, Star } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown, Clock } from "lucide-react";
+import {
+  ChristmasBookIcon as BookOpen,
+  ChristmasChartIcon as BarChart3,
+  ChristmasFlagIcon as Flag,
+  ChristmasLidIcon as Landmark,
+  ChristmasSettingsIcon as Settings,
+  ChristmasStarIcon as Star,
+  ChristmasWrongIcon as RotateCcw,
+} from "@/components/FestiveIcons";
 import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { EXAM, EXAM_TOTAL, STATES, generalCount, generalIds, prefs, stateIds } from "@/lib/lid";

@@ -5,38 +5,42 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowRight,
-  Bell,
   BellOff,
-  BookOpen,
-  Car,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  Flame,
-  Landmark,
-  Layers,
   Play,
-  RotateCcw,
   SlidersHorizontal,
-  type LucideIcon,
 } from "lucide-react";
+import type { ComponentType } from "react";
+import {
+  ChristmasBellIcon as Bell,
+  ChristmasBookIcon as BookOpen,
+  ChristmasCarIcon as Car,
+  ChristmasFlameIcon as Flame,
+  ChristmasLidIcon as Landmark,
+  ChristmasReviewIcon as Layers,
+  ChristmasWrongIcon as RotateCcw,
+} from "./FestiveIcons";
 import { clientApi } from "@/lib/client-api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Reminder, RemindersResponse, ReminderSection } from "@/lib/reminders";
+
+type IconComp = ComponentType<{ className?: string }>;
 
 const SEEN_KEY = "ckk-reminders-seen";
 const MUTED_KEY = "ckk-reminders-muted";
 const REFRESH_MS = 60_000;
 
-const SECTIONS: { key: ReminderSection; label: string; short: string; icon: LucideIcon; badge: string }[] = [
+const SECTIONS: { key: ReminderSection; label: string; short: string; icon: IconComp; badge: string }[] = [
   { key: "de", label: "Tiếng Đức", short: "Tiếng Đức", icon: BookOpen, badge: "badge-ok" },
   { key: "laixe", label: "Lái xe", short: "Lái xe", icon: Car, badge: "badge-gold" },
   { key: "lid", label: "Leben in Deutschland", short: "LiD", icon: Landmark, badge: "badge-coral" },
 ];
 const SECTION_BY_KEY = Object.fromEntries(SECTIONS.map((s) => [s.key, s])) as Record<ReminderSection, (typeof SECTIONS)[number]>;
 
-const KIND_ICON: Record<Reminder["kind"], LucideIcon> = {
+const KIND_ICON: Record<Reminder["kind"], IconComp> = {
   streak: Flame,
   review: Layers,
   lesson: Play,

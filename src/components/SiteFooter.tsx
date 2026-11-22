@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import ConsentSettings from "@/components/company/ConsentSettings";
 import { SITE } from "@/lib/company/site";
 import Mascot from "./Mascot";
+import { ChristmasTreeIcon } from "./FestiveIcons";
 
 const COLUMNS = [
   {
@@ -89,6 +90,9 @@ export default function SiteFooter() {
               <Link href="/about" className="underline underline-offset-2 hover:text-foreground">
                 hallovn.de
               </Link>
+              <span className="ml-2 inline-flex items-center gap-1 align-middle text-muted">
+                <ChristmasTreeIcon className="size-3.5" /> Giáng Sinh an lành
+              </span>
             </p>
             <p>Video thuộc quyền sở hữu của tác giả trên YouTube.</p>
           </div>

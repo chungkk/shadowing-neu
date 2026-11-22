@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { ChristmasVocabIcon as BookOpen } from "@/components/FestiveIcons";
 import { requireUser } from "@/lib/auth";
 import { listVocab } from "@/lib/db";
 import VocabList from "@/components/VocabList";

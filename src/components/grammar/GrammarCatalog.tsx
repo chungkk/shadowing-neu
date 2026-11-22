@@ -4,13 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  BookOpenCheck,
   CheckCircle2,
   CircleHelp,
   Search,
-  Sparkles,
   X,
 } from "lucide-react";
+import {
+  ChristmasCatalogIcon as BookOpenCheck,
+  ChristmasStarIcon as Sparkles,
+} from "@/components/FestiveIcons";
 import LevelBadge from "@/components/LevelBadge";
 import { CaseLegend } from "@/components/grammar/GrammarText";
 import {

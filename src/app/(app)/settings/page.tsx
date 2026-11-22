@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Settings as SettingsIcon } from "lucide-react";
+import { ChristmasSettingsIcon as SettingsIcon } from "@/components/FestiveIcons";
 import PageHeader from "@/components/PageHeader";
 import { envAdminEmail, requireUser } from "@/lib/auth";
 import { getPoints } from "@/lib/db";

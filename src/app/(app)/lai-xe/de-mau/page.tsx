@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Check, FileStack } from "lucide-react";
+import { Check } from "lucide-react";
+import { ChristmasFileStackIcon as FileStack } from "@/components/FestiveIcons";
 import { SubHeader } from "@/components/quiz/QuizParts";
 import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
