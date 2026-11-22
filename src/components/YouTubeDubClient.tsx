@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Globe, Headphones, Loader2, Play, Sparkles, TriangleAlert, X } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { extractVideoId } from "@/lib/youtube-id";
-import KokoroLivePlayer, { type LiveCue } from "./KokoroLivePlayer";
+import KokoroLivePlayer, { LIVE_VOICES, type LiveCue, type LiveVoiceId } from "./KokoroLivePlayer";
 
 export type DubSuggestion = {
   videoId: string;
@@ -23,7 +23,7 @@ type LiveSession = {
   title: string;
   sourceLang?: string;
   cues: LiveCue[];
-  voiceIdx: 0 | 1;
+  voiceId: LiveVoiceId;
 };
 
 type PrepProgress = {
@@ -108,7 +108,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const initialV = searchParams.get("v") ?? "";
 
   const [url, setUrl] = useState(initialV ? `https://youtu.be/${initialV}` : "");
-  const [voiceIdx, setVoiceIdx] = useState<0 | 1>(1);
+  const [voiceId, setVoiceId] = useState<LiveVoiceId>("edge:vi-VN-NamMinhNeural");
   const [loading, setLoading] = useState(false);
   const [prep, setPrep] = useState<PrepProgress | null>(null);
   const [showPrepDetail, setShowPrepDetail] = useState(true);
@@ -127,7 +127,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   }, []);
 
   const loadVideo = useCallback(
-    async (rawInput: string, voice: 0 | 1) => {
+    async (rawInput: string, voice: LiveVoiceId) => {
       const videoId = extractVideoId(rawInput.trim());
       if (!videoId) {
         setErr("Link YouTube không hợp lệ. Vui lòng dán link YouTube đầy đủ (ví dụ: https://youtu.be/…)");
@@ -155,7 +155,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
           title: data.title || data.videoId,
           sourceLang: data.sourceLang,
           cues: data.cues,
-          voiceIdx: voice,
+          voiceId: voice,
         };
         setSession(nextSession);
 
@@ -194,14 +194,14 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
     const id = extractVideoId(initialV);
     if (id && autoLoadedRef.current !== id) {
       autoLoadedRef.current = id;
-      void loadVideo(id, 1);
+      void loadVideo(id, "edge:vi-VN-NamMinhNeural");
     }
   }, [initialV, loadVideo]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || loading) return;
-    void loadVideo(url, voiceIdx);
+    void loadVideo(url, voiceId);
   };
 
   const cancelLoad = () => {
@@ -213,7 +213,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
 
   const openQuick = (videoId: string) => {
     setUrl(`https://youtu.be/${videoId}`);
-    void loadVideo(videoId, voiceIdx);
+    void loadVideo(videoId, voiceId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -242,13 +242,16 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             required
           />
           <select
-            className="input text-foreground sm:w-48"
-            value={voiceIdx}
-            onChange={(e) => setVoiceIdx(Number(e.target.value) === 0 ? 0 : 1)}
+            className="input text-foreground sm:w-64"
+            value={voiceId}
+            onChange={(e) => setVoiceId(e.target.value as LiveVoiceId)}
             aria-label="Chọn giọng thuyết minh"
           >
-            <option value={1}>Giọng Đức Duy (Nam)</option>
-            <option value={0}>Giọng Diễm Trinh (Nữ)</option>
+            {LIVE_VOICES.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.label}
+              </option>
+            ))}
           </select>
 
           {loading ? (
@@ -302,7 +305,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
         )}
 
         <p className="text-xs text-muted">
-          Tự động gộp câu, dịch theo ngữ cảnh toàn video và đọc thuyết minh tiếng Việt trực tiếp trên trình duyệt. Lần đầu sẽ tải nhẹ giọng đọc AI vào bộ nhớ trình duyệt để lần sau phát tức thì.
+          Tự động gộp câu, dịch theo ngữ cảnh toàn video và đọc thuyết minh song song. Giọng <strong>Edge (Nam Minh / Hoài My)</strong> phát tức thì; giọng <strong>Kokoro</strong> chạy hoàn toàn trên trình duyệt.
         </p>
 
         {err && (
@@ -317,12 +320,12 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
       {session && (
         <section className="card p-4 sm:p-5">
           <KokoroLivePlayer
-            key={`${session.videoId}:${session.voiceIdx}`}
+            key={`${session.videoId}:${session.voiceId}`}
             videoId={session.videoId}
             title={session.title}
             sourceLang={session.sourceLang}
             cues={session.cues}
-            initialVoice={session.voiceIdx}
+            initialVoice={session.voiceId}
             shareUrl={`/thuyet-minh?v=${session.videoId}`}
           />
         </section>

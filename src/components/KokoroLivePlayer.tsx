@@ -23,6 +23,30 @@ export type LiveCue = {
   orig?: string;
 };
 
+export type LiveVoiceId =
+  | "edge:vi-VN-NamMinhNeural"
+  | "edge:vi-VN-HoaiMyNeural"
+  | "kokoro:1"
+  | "kokoro:0";
+
+export const LIVE_VOICES: { id: LiveVoiceId; label: string; short: string }[] = [
+  { id: "edge:vi-VN-NamMinhNeural", label: "Edge · Nam Minh (Nam · Tự nhiên)", short: "Edge · Nam Minh (Nam)" },
+  { id: "edge:vi-VN-HoaiMyNeural", label: "Edge · Hoài My (Nữ · Tự nhiên)", short: "Edge · Hoài My (Nữ)" },
+  { id: "kokoro:1", label: "Kokoro · Đức Duy (Nam · Trình duyệt)", short: "Kokoro · Đức Duy (Nam)" },
+  { id: "kokoro:0", label: "Kokoro · Diễm Trinh (Nữ · Trình duyệt)", short: "Kokoro · Diễm Trinh (Nữ)" },
+];
+
+function resolveInitialVoice(v?: LiveVoiceId | 0 | 1): LiveVoiceId {
+  if (v === 0) return "kokoro:0";
+  if (v === 1) return "kokoro:1";
+  if (v && LIVE_VOICES.some((x) => x.id === v)) return v;
+  return "edge:vi-VN-NamMinhNeural";
+}
+
+function isKokoroVoice(v: LiveVoiceId): boolean {
+  return v.startsWith("kokoro:");
+}
+
 type YTPlayerEx = {
   playVideo(): void;
   pauseVideo(): void;
@@ -63,7 +87,7 @@ export default function KokoroLivePlayer({
   title,
   cues,
   sourceLang,
-  initialVoice = 1,
+  initialVoice = "edge:vi-VN-NamMinhNeural",
   initialSpeed = 1.15,
   initialOrigVol = 25,
   shareUrl,
@@ -73,7 +97,7 @@ export default function KokoroLivePlayer({
   title: string;
   cues: LiveCue[];
   sourceLang?: string;
-  initialVoice?: 0 | 1; // 0 = Diễm Trinh (nữ), 1 = Đức Duy (nam)
+  initialVoice?: LiveVoiceId | 0 | 1;
   initialSpeed?: number;
   initialOrigVol?: number;
   shareUrl?: string;
@@ -84,7 +108,7 @@ export default function KokoroLivePlayer({
   const ctxRef = useRef<AudioContext | null>(null);
   const gainRef = useRef<GainNode | null>(null);
   const activeSrcRef = useRef<AudioBufferSourceNode | null>(null);
-  const audioEndAtRef = useRef<number>(0); // AudioContext time when current cue ends
+  const audioEndAtRef = useRef<number>(0);
   const bufCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
   const inflightRef = useRef<Map<string, Promise<AudioBuffer | null>>>(new Map());
   const lastSpokenIdxRef = useRef<number>(-1);
@@ -92,12 +116,12 @@ export default function KokoroLivePlayer({
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
 
   const [ytReady, setYtReady] = useState(false);
-  const [modelReady, setModelReady] = useState(false);
+  const [voiceId, setVoiceId] = useState<LiveVoiceId>(() => resolveInitialVoice(initialVoice));
+  const [kokoroReady, setKokoroReady] = useState(false);
   const [progress, setProgress] = useState<KokoroProgress>({ stage: "Đang khởi tạo giọng đọc AI…", pct: 0 });
-  const [modelErr, setModelErr] = useState("");
+  const [engineErr, setEngineErr] = useState("");
 
   const [playing, setPlaying] = useState(false);
-  const [voiceIdx, setVoiceIdx] = useState<0 | 1>(initialVoice);
   const [speed, setSpeed] = useState(initialSpeed);
   const [origVol, setOrigVol] = useState(initialOrigVol);
   const [dubVol, setDubVol] = useState(110);
@@ -108,12 +132,14 @@ export default function KokoroLivePlayer({
   const [copied, setCopied] = useState(false);
   const [lastSynthMs, setLastSynthMs] = useState<number | null>(null);
 
+  const usingKokoro = isKokoroVoice(voiceId);
+  const voiceReady = usingKokoro ? kokoroReady : true;
   const hasOrig = cues.some((c) => Boolean(c.orig));
   const activeCue = activeCueIdx >= 0 ? cues[activeCueIdx] : null;
 
-  const stateRef = useRef({ voiceIdx, speed, origVol, dubVol, dubMuted, modelReady, cues });
+  const stateRef = useRef({ voiceId, speed, origVol, dubVol, dubMuted, voiceReady, cues });
   useEffect(() => {
-    stateRef.current = { voiceIdx, speed, origVol, dubVol, dubMuted, modelReady, cues };
+    stateRef.current = { voiceId, speed, origVol, dubVol, dubMuted, voiceReady, cues };
   });
 
   // Reset audio cache when video/cues change, and close AudioContext on unmount
@@ -162,59 +188,98 @@ export default function KokoroLivePlayer({
   }, []);
 
   const getCueBuffer = useCallback(
-    async (cueIndex: number, vIdx: 0 | 1, spd: number): Promise<AudioBuffer | null> => {
+    async (cueIndex: number, vId: LiveVoiceId, spd: number): Promise<AudioBuffer | null> => {
       const cue = stateRef.current.cues[cueIndex];
-      if (!cue || !stateRef.current.modelReady) return null;
-      const key = `${vIdx}:${spd.toFixed(2)}:${cueIndex}`;
+      if (!cue) return null;
+      if (isKokoroVoice(vId) && !stateRef.current.voiceReady) return null;
+
+      const normSpd = Math.round(spd * 20) / 20;
+      const key = `${vId}:${normSpd.toFixed(2)}:${cueIndex}`;
       const hit = bufCacheRef.current.get(key);
       if (hit) return hit;
 
       const existing = inflightRef.current.get(key);
       if (existing) return existing;
 
-      const p = synthesizeKokoro(cue.text, vIdx, spd)
-        .then(({ pcm, sampleRate, synthMs }) => {
-          setLastSynthMs(synthMs);
-          if (!pcm.length) return null;
+      const p = (async (): Promise<AudioBuffer | null> => {
+        try {
+          if (isKokoroVoice(vId)) {
+            const vIdx: 0 | 1 = vId === "kokoro:0" ? 0 : 1;
+            const { pcm, sampleRate, synthMs } = await synthesizeKokoro(cue.text, vIdx, normSpd);
+            setLastSynthMs(synthMs);
+            if (!pcm.length) return null;
+            const ctx = getAudioCtx();
+            const buf = ctx.createBuffer(1, pcm.length, sampleRate);
+            buf.getChannelData(0).set(pcm);
+            bufCacheRef.current.set(key, buf);
+            return buf;
+          }
+
+          // Edge Neural TTS: fetch MP3 cue-by-cue & decode into AudioBuffer
+          const t0 = performance.now();
+          const qs = new URLSearchParams({
+            v: vId,
+            s: normSpd.toFixed(2),
+            t: cue.text.slice(0, 600),
+          });
+          const res = await fetch(`/api/v1/dub/tts?${qs.toString()}`);
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error((errJson as { error?: string }).error || `Edge TTS HTTP ${res.status}`);
+          }
+          const arr = await res.arrayBuffer();
+          setLastSynthMs(Math.round(performance.now() - t0));
           const ctx = getAudioCtx();
-          const buf = ctx.createBuffer(1, pcm.length, sampleRate);
-          buf.getChannelData(0).set(pcm);
+          const buf = await ctx.decodeAudioData(arr);
           bufCacheRef.current.set(key, buf);
+          setEngineErr("");
           return buf;
-        })
-        .catch(() => null)
-        .finally(() => {
+        } catch (e) {
+          if (!isKokoroVoice(vId)) {
+            setEngineErr((e as Error).message);
+          }
+          return null;
+        } finally {
           inflightRef.current.delete(key);
-        });
+        }
+      })();
+
       inflightRef.current.set(key, p);
       return p;
     },
     [getAudioCtx],
   );
 
-  // Load Kokoro-Vietnamese-Lite model in browser (cached in Cache API after 1st load)
+  // Warm up Edge TTS (first 3 cues) OR lazily load Kokoro WASM when Kokoro voice is selected
   useEffect(() => {
     let active = true;
+    if (!usingKokoro) {
+      // Edge TTS sẵn sàng ngay lập tức — prefetch trước 3 câu đầu
+      for (let k = 0; k < Math.min(3, cues.length); k++) {
+        void getCueBuffer(k, voiceId, stateRef.current.speed);
+      }
+      return;
+    }
+
     ensureKokoroLoaded((p) => {
       if (active) setProgress(p);
     })
       .then(() => {
         if (active) {
-          setModelReady(true);
-          stateRef.current.modelReady = true;
-          // Warm up first 3 cues immediately so Play starts with near-0ms delay
+          setKokoroReady(true);
+          stateRef.current.voiceReady = true;
           for (let k = 0; k < Math.min(3, cues.length); k++) {
-            void getCueBuffer(k, stateRef.current.voiceIdx, stateRef.current.speed);
+            void getCueBuffer(k, voiceId, stateRef.current.speed);
           }
         }
       })
       .catch((e) => {
-        if (active) setModelErr((e as Error).message);
+        if (active) setEngineErr((e as Error).message);
       });
     return () => {
       active = false;
     };
-  }, [cues.length, getCueBuffer]);
+  }, [usingKokoro, voiceId, cues.length, getCueBuffer]);
 
   // Apply volume updates
   useEffect(() => {
@@ -294,19 +359,20 @@ export default function KokoroLivePlayer({
   // Real-time scheduler & lookahead prefetch loop (every 100ms)
   useEffect(() => {
     const speakCue = async (cueIndex: number, isSeek: boolean) => {
-      const { voiceIdx: vIdx, speed: spd, cues: list } = stateRef.current;
+      const { voiceId: vId, speed: spd, cues: list } = stateRef.current;
       const yt = ytRef.current;
       if (!yt || yt.getPlayerState?.() !== 1) return;
 
       // Prefetch next 4 cues ahead in background
       for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + 4); k++) {
-        void getCueBuffer(k, vIdx, spd);
+        void getCueBuffer(k, vId, spd);
       }
 
-      const buf = await getCueBuffer(cueIndex, vIdx, spd);
+      const buf = await getCueBuffer(cueIndex, vId, spd);
       if (!buf) return;
       if (!ytRef.current || ytRef.current.getPlayerState?.() !== 1) return;
       if (lastSpokenIdxRef.current !== cueIndex) return;
+      if (stateRef.current.voiceId !== vId) return;
 
       const ctx = getAudioCtx();
       const gain = gainRef.current;
@@ -343,7 +409,7 @@ export default function KokoroLivePlayer({
 
     const timer = setInterval(() => {
       const yt = ytRef.current;
-      const { modelReady: ready, cues: list } = stateRef.current;
+      const { voiceReady: ready, cues: list } = stateRef.current;
       if (!yt || !ready || !list.length) return;
       if (yt.getPlayerState?.() !== 1) return;
 
@@ -438,7 +504,7 @@ export default function KokoroLivePlayer({
           <p className="text-xs text-muted">
             {showDebugMeta ? (
               <>
-                Kokoro Lite trên trình duyệt (0đ server · {cues.length} câu)
+                {usingKokoro ? "Kokoro Lite trình duyệt" : "Edge Neural TTS trực tiếp"} ({cues.length} câu)
                 {lastSynthMs !== null ? ` · tạo câu trong ${lastSynthMs}ms` : ""}
               </>
             ) : (
@@ -453,16 +519,20 @@ export default function KokoroLivePlayer({
         <div className="flex items-center gap-1.5">
           <select
             className="input h-8 w-auto py-1 text-xs text-foreground"
-            value={voiceIdx}
+            value={voiceId}
             onChange={(e) => {
               stopSpeech();
+              setEngineErr("");
               lastSpokenIdxRef.current = -1;
-              setVoiceIdx(Number(e.target.value) === 0 ? 0 : 1);
+              setVoiceId(e.target.value as LiveVoiceId);
             }}
             aria-label="Giọng thuyết minh"
           >
-            <option value={1}>Đức Duy (Nam)</option>
-            <option value={0}>Diễm Trinh (Nữ)</option>
+            {LIVE_VOICES.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.short}
+              </option>
+            ))}
           </select>
 
           {shareUrl && (
@@ -474,8 +544,8 @@ export default function KokoroLivePlayer({
         </div>
       </div>
 
-      {/* Model download / init progress (1-time, cached in browser) */}
-      {!modelReady && !modelErr && (
+      {/* Model download / init progress (chỉ hiện khi chọn giọng Kokoro lần đầu) */}
+      {usingKokoro && !kokoroReady && !engineErr && (
         <div className="space-y-1.5 rounded-lg border border-line bg-card-2/60 p-3">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
@@ -493,9 +563,9 @@ export default function KokoroLivePlayer({
         </div>
       )}
 
-      {modelErr && (
+      {engineErr && (
         <p role="alert" className="alert alert-err text-xs">
-          Lỗi nạp giọng đọc AI trên trình duyệt: {modelErr}
+          Lỗi giọng đọc: {engineErr}
         </p>
       )}
 
@@ -516,9 +586,9 @@ export default function KokoroLivePlayer({
           </>
         ) : (
           <span className="text-xs text-muted">
-            {modelReady
+            {voiceReady
               ? "Bấm “Phát” để xem YouTube với giọng thuyết minh tiếng Việt (tua thoải mái, tự bắt nhịp)"
-              : "Đang nạp giọng đọc AI lần đầu (tự lưu trong trình duyệt cho các lần sau)…"}
+              : "Đang nạp giọng đọc Kokoro lần đầu (tự lưu trong trình duyệt cho các lần sau)…"}
           </span>
         )}
       </div>
@@ -528,10 +598,10 @@ export default function KokoroLivePlayer({
         <button
           type="button"
           className="btn btn-sm btn-primary tabular-nums"
-          disabled={!ytReady || !modelReady}
+          disabled={!ytReady || !voiceReady}
           onClick={togglePlay}
         >
-          {!modelReady ? (
+          {!voiceReady ? (
             <>
               <Loader2 className="size-3.5 animate-spin" />
               Đang nạp {progress.pct}%
@@ -543,7 +613,7 @@ export default function KokoroLivePlayer({
             </>
           )}
         </button>
-        <button type="button" className="btn btn-sm" disabled={!ytReady || !modelReady} onClick={restart} title="Xem lại từ đầu">
+        <button type="button" className="btn btn-sm" disabled={!ytReady || !voiceReady} onClick={restart} title="Xem lại từ đầu">
           <RotateCcw className="size-3.5" />
         </button>
 

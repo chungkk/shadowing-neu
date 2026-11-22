@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Build gọn cho Docker (Coolify): .next/standalone/server.js
   output: "standalone",
+  serverExternalPackages: ["msedge-tts"],
   outputFileTracingExcludes: { "/*": ["data/**/*"] },
   // API câu hỏi lái xe (app iOS/Android) đọc catalog JSON lúc chạy
   outputFileTracingIncludes: {
