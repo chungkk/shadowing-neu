@@ -110,6 +110,7 @@ export default function SyncedPlayer({
     let cancelled = false;
     let player: YTPlayerEx | null = null;
     const host = hostRef.current;
+    const audioEl = audioRef.current;
     if (!host) return;
     const el = document.createElement("div");
     host.appendChild(el);
@@ -158,7 +159,7 @@ export default function SyncedPlayer({
     return () => {
       cancelled = true;
       ytRef.current = null;
-      audioRef.current?.pause();
+      audioEl?.pause();
       player?.destroy();
       el.remove();
     };

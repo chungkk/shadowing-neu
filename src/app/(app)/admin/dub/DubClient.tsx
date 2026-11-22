@@ -25,6 +25,9 @@ type DubHealth = {
   model_ready: boolean;
   model_error?: string | null;
   precision: string;
+  edge_tts?: boolean;
+  elevenlabs_keys?: number;
+  elevenlabs_model?: string;
   voices_count: number;
   queue_size: number;
 };
@@ -111,7 +114,7 @@ export default function DubClient() {
   const [translateCustom, setTranslateCustom] = useState(false);
 
   // Voice & mix settings
-  const [voice, setVoice] = useState("Lạc Phi");
+  const [voice, setVoice] = useState("edge:vi-VN-NamMinhNeural");
   const [baseSpeed, setBaseSpeed] = useState(1.15);
   const [origVol, setOrigVol] = useState(25);
   const [dubVol, setDubVol] = useState(140);
@@ -263,13 +266,19 @@ export default function DubClient() {
 
       {health && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          {health.edge_tts && <span className="badge badge-ok">⚡ Edge TTS: Sẵn sàng (0đ)</span>}
+          {!!health.elevenlabs_keys && (
+            <span className="badge badge-ok">
+              ⚡ ElevenLabs: {health.elevenlabs_keys.toLocaleString("vi-VN")} key ({health.elevenlabs_model || "flash"})
+            </span>
+          )}
           <span className={`badge ${health.model_ready ? "badge-ok" : "badge-gold"}`}>
             {health.model_ready ? <CheckCircle2 className="size-3.5" /> : <Loader2 className="size-3.5 animate-spin" />}
             {health.model_ready
-              ? `VieNeu-TTS sẵn sàng (${health.precision.toUpperCase()} · ${health.voices_count} giọng)`
+              ? `VieNeu-TTS (${health.precision.toUpperCase()} · ${health.voices_count} giọng)`
               : health.model_error
                 ? `Lỗi nạp model: ${health.model_error}`
-                : "Đang nạp model VieNeu-TTS trên VPS…"}
+                : "Đang nạp VieNeu-TTS…"}
           </span>
           {status?.translationEnabled && <span className="badge badge-gem">AI dịch phụ đề: Bật</span>}
           {status?.whisperEnabled && <span className="badge">Whisper AI: Bật</span>}
