@@ -219,18 +219,17 @@ export default function SyncedPlayer({
   };
 
   return (
-    <div className="mt-2 flex flex-col gap-3 rounded-xl border border-line bg-card-2/50 p-3">
+    <div className="flex flex-col gap-2.5">
       <div
         ref={hostRef}
-        className="aspect-video w-full max-w-3xl overflow-hidden rounded-lg bg-black [&_iframe]:h-full [&_iframe]:w-full"
+        className="aspect-video w-full overflow-hidden rounded-lg bg-black [&_iframe]:h-full [&_iframe]:w-full"
       />
 
-      {/* Live Vietnamese caption bar */}
-      <div className="min-h-10 max-w-3xl rounded-lg border border-line bg-card px-3 py-2 text-center text-sm font-medium text-foreground">
-        {caption || <span className="text-xs text-muted">Bấm “Phát đồng bộ” để xem YouTube song song với giọng thuyết minh MP3…</span>}
+      {/* Live Vietnamese caption */}
+      <div className="min-h-11 rounded-lg bg-card-2/80 px-4 py-2.5 text-center text-sm font-medium text-foreground">
+        {caption || <span className="text-xs text-muted">Bấm “Phát” để xem YouTube song song với giọng thuyết minh</span>}
       </div>
 
-      {/* Hidden synced MP3 audio element */}
       <audio
         ref={audioRef}
         preload="auto"
@@ -240,18 +239,18 @@ export default function SyncedPlayer({
 
       {audioErr && <p className="text-xs text-amber">{audioErr}</p>}
 
-      {/* Controls */}
-      <div className="flex max-w-3xl flex-wrap items-center gap-3 text-xs">
+      {/* Compact single-row controls */}
+      <div className="flex flex-wrap items-center gap-3 text-xs">
         <button type="button" className="btn btn-sm btn-primary" disabled={!ready} onClick={toggleSyncPlay}>
           {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-          {playing ? "Tạm dừng" : "Phát đồng bộ"}
+          {playing ? "Tạm dừng" : "Phát"}
         </button>
-        <button type="button" className="btn btn-sm" disabled={!ready} onClick={restart} title="Phát lại từ đầu">
+        <button type="button" className="btn btn-sm" disabled={!ready} onClick={restart} title="Từ đầu">
           <RotateCcw className="size-3.5" />
         </button>
 
         <label className="flex items-center gap-1.5 text-muted">
-          <span>YouTube gốc {origVol}%</span>
+          <span>Gốc {origVol}%</span>
           <input
             type="range"
             min={0}
@@ -268,11 +267,11 @@ export default function SyncedPlayer({
             type="button"
             className="text-foreground"
             onClick={() => setDubMuted((m) => !m)}
-            title={dubMuted ? "Bật tiếng thuyết minh" : "Tắt tiếng thuyết minh"}
+            title={dubMuted ? "Bật thuyết minh" : "Tắt thuyết minh"}
           >
             {dubMuted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
           </button>
-          <span>Thuyết minh {dubMuted ? "0" : dubVol}%</span>
+          <span>Việt {dubMuted ? "0" : dubVol}%</span>
           <input
             type="range"
             min={0}
@@ -287,8 +286,8 @@ export default function SyncedPlayer({
           />
         </label>
 
-        <label className="flex items-center gap-1.5 text-muted" title="Tinh chỉnh độ trễ nếu audio hơi sớm/trễ">
-          <span>Lệch {offsetMs >= 0 ? `+${offsetMs}` : offsetMs}ms</span>
+        <label className="ml-auto flex items-center gap-1.5 text-muted" title="Chỉnh độ trễ audio">
+          <span>{offsetMs >= 0 ? `+${offsetMs}` : offsetMs}ms</span>
           <input
             type="range"
             min={-1000}
@@ -296,7 +295,7 @@ export default function SyncedPlayer({
             step={100}
             value={offsetMs}
             onChange={(e) => setOffsetMs(Number(e.target.value))}
-            className="w-20"
+            className="w-16"
           />
         </label>
       </div>

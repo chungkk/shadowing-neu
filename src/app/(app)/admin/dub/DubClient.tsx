@@ -2,34 +2,27 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Download,
   FileText,
-  Film,
-  Headphones,
   Loader2,
-  Mic,
   Play,
-  RefreshCw,
-  Search,
+  Settings2,
   Trash2,
   TriangleAlert,
   Upload,
 } from "lucide-react";
-import SectionCard from "../_components/SectionCard";
 import SyncedPlayer from "./SyncedPlayer";
 
 type DubVoice = { id: string; label: string; cloned?: boolean };
 type DubHealth = {
   ok: boolean;
   model_ready: boolean;
-  model_error?: string | null;
   precision: string;
   edge_tts?: boolean;
   elevenlabs_keys?: number;
-  elevenlabs_model?: string;
   voices_count: number;
-  queue_size: number;
 };
 type DubJob = {
   id: string;
@@ -40,13 +33,10 @@ type DubJob = {
   output_mode?: "mp3" | "mp4";
   base_speed: number;
   orig_vol: number;
-  dub_vol: number;
-  max_height: number;
   status: "queued" | "downloading" | "synthesizing" | "mixing" | "done" | "error" | "cancelled";
   stage: string;
   done_cues: number;
   total_cues: number;
-  cache_hits: number;
   eta_s: number | null;
   current_text: string;
   error: string | null;
@@ -55,37 +45,25 @@ type DubJob = {
   created_at: number;
 };
 
-type ProbeInfo = {
-  video_id: string;
-  title: string;
-  duration: number;
-  channel: string;
-  thumbnail: string;
-  language: string;
-  whisperAvailable: boolean;
-  subtitles: { lang: string; name: string; auto: boolean }[];
-};
-
 type StatusPayload = {
   enabled: boolean;
-  translationEnabled: boolean;
   whisperEnabled: boolean;
   health: DubHealth | null;
   voices: DubVoice[];
   jobs: DubJob[];
 };
 
+const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);
+
 function fmtDuration(sec: number): string {
   const s = Math.max(0, Math.round(sec));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
+  const m = Math.floor(s / 60);
   const r = s % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}` : `${m}:${String(r).padStart(2, "0")}`;
+  return m > 0 ? `${m}p${String(r).padStart(2, "0")}s` : `${r}s`;
 }
 
 function fmtSize(bytes: number): string {
   if (!bytes) return "";
-  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -94,35 +72,31 @@ function videoIdFromUrl(u: string): string {
   return m ? m[1] : "";
 }
 
-const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);
+function shortVoiceName(voiceId: string, voices: DubVoice[]): string {
+  const found = voices.find((v) => v.id === voiceId);
+  if (found) return found.label.split("(")[0].trim();
+  if (voiceId.startsWith("edge:")) return voiceId.includes("HoaiMy") ? "Edge · Hoài My" : "Edge · Nam Minh";
+  if (voiceId.startsWith("el:")) return "ElevenLabs";
+  return voiceId;
+}
 
 export default function DubClient() {
   const [status, setStatus] = useState<StatusPayload | null>(null);
-  const [loadErr, setLoadErr] = useState("");
   const [url, setUrl] = useState("");
-  const [probing, setProbing] = useState(false);
-  const [probe, setProbe] = useState<ProbeInfo | null>(null);
-  const [probeErr, setProbeErr] = useState("");
+  const [voice, setVoice] = useState("edge:vi-VN-NamMinhNeural");
+  const [showAdv, setShowAdv] = useState(false);
 
-  // Mode: mp3 (fast, no video download, plays synced with YouTube) | mp4 (muxed file)
+  // Advanced options (collapsed by default)
   const [outputMode, setOutputMode] = useState<"mp3" | "mp4">("mp3");
-
-  // Subtitle source selection
-  const [subSource, setSubSource] = useState<"youtube" | "whisper" | "custom">("youtube");
-  const [subTrackKey, setSubTrackKey] = useState("");
+  const [baseSpeed, setBaseSpeed] = useState(1.15);
+  const [origVol, setOrigVol] = useState(25);
+  const [subSource, setSubSource] = useState<"auto" | "whisper" | "custom">("auto");
   const [customSub, setCustomSub] = useState("");
   const [translateCustom, setTranslateCustom] = useState(false);
 
-  // Voice & mix settings
-  const [voice, setVoice] = useState("edge:vi-VN-NamMinhNeural");
-  const [baseSpeed, setBaseSpeed] = useState(1.15);
-  const [origVol, setOrigVol] = useState(25);
-  const [dubVol, setDubVol] = useState(140);
-  const [maxHeight, setMaxHeight] = useState<720 | 1080>(720);
-
   const [submitting, setSubmitting] = useState(false);
-  const [submitErr, setSubmitErr] = useState("");
-  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -131,15 +105,11 @@ export default function DubClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setStatus(data);
-      setLoadErr("");
       if (data.voices?.length) {
-        setVoice((cur) => {
-          if (data.voices.some((v: DubVoice) => v.id === cur)) return cur;
-          return data.voices[0].id;
-        });
+        setVoice((cur) => (data.voices.some((v: DubVoice) => v.id === cur) ? cur : data.voices[0].id));
       }
     } catch (e) {
-      setLoadErr((e as Error).message);
+      setErr((e as Error).message);
     }
   }, []);
 
@@ -149,539 +119,344 @@ export default function DubClient() {
   }, [refresh]);
 
   useEffect(() => {
-    const hasActive =
-      status?.jobs.some((j) => ACTIVE_STATUSES.has(j.status)) ||
-      (status?.enabled && status.health && !status.health.model_ready && !status.health.model_error);
+    const hasActive = status?.jobs.some((j) => ACTIVE_STATUSES.has(j.status));
     if (!hasActive) return;
-    const t = setInterval(() => void refresh(), 2500);
+    const t = setInterval(() => void refresh(), 2000);
     return () => clearInterval(t);
   }, [status, refresh]);
 
-  const handleProbe = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!url.trim()) return;
-    setProbing(true);
-    setProbeErr("");
-    setSubmitErr("");
+    setSubmitting(true);
+    setErr("");
     try {
-      const res = await fetch("/api/v1/admin/dub/probe", {
+      const res = await fetch("/api/v1/admin/dub/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({
+          url: url.trim(),
+          outputMode,
+          subSource,
+          customSub: subSource === "custom" ? customSub : "",
+          translateCustom,
+          voice,
+          baseSpeed,
+          origVol: origVol / 100,
+          dubVol: 1.4,
+          maxHeight: 720,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      setProbe(data);
-      if (data.subtitles?.length) {
-        const first = data.subtitles[0];
-        setSubSource("youtube");
-        setSubTrackKey(`${first.lang}|${first.auto ? 1 : 0}`);
-      } else if (data.whisperAvailable) {
-        setSubSource("whisper");
-      } else {
-        setSubSource("custom");
-      }
-    } catch (err) {
-      setProbe(null);
-      setProbeErr((err as Error).message);
+      if (data.job?.id) setActiveId(data.job.id);
+      setUrl("");
+      await refresh();
+    } catch (e2) {
+      setErr((e2 as Error).message);
     } finally {
-      setProbing(false);
+      setSubmitting(false);
     }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    setCustomSub(text);
+    setCustomSub(await file.text());
     setSubSource("custom");
   };
 
-  const handleStartDub = async () => {
-    if (!url.trim()) return;
-    setSubmitting(true);
-    setSubmitErr("");
-    try {
-      const [subLang, subAutoFlag] = subTrackKey.split("|");
-      const res = await fetch("/api/v1/admin/dub/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: url.trim(),
-          title: probe?.title || "",
-          outputMode,
-          subSource,
-          subLang: subLang || "de",
-          subAuto: subAutoFlag === "1",
-          customSub,
-          translateCustom,
-          voice,
-          baseSpeed,
-          origVol: origVol / 100,
-          dubVol: dubVol / 100,
-          maxHeight,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      if (data.job?.id) setPreviewId(data.job.id);
-      await refresh();
-    } catch (err) {
-      setSubmitErr((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
-    if (previewId === id) setPreviewId(null);
+    if (activeId === id) setActiveId(null);
     await fetch(`/api/v1/admin/dub/jobs/${id}`, { method: "DELETE" });
     await refresh();
   };
 
-  const health = status?.health;
   const voices = status?.voices ?? [];
   const jobs = status?.jobs ?? [];
+  const selectedJob = jobs.find((j) => j.id === activeId) ?? jobs.find((j) => ACTIVE_STATUSES.has(j.status)) ?? null;
+  const selectedVid = selectedJob ? selectedJob.video_id || videoIdFromUrl(selectedJob.url) : "";
+  const selectedMode = selectedJob?.output_mode ?? "mp3";
 
   return (
-    <div className="flex flex-col gap-5">
-      {loadErr && (
-        <div role="alert" className="alert alert-err flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2">
-            <TriangleAlert className="size-4 shrink-0" />
-            {loadErr}
-          </span>
-          <button type="button" className="btn btn-sm" onClick={() => void refresh()}>
-            <RefreshCw className="size-3.5" /> Thử lại
-          </button>
-        </div>
-      )}
-
-      {status && !status.enabled && (
-        <div className="alert alert-warn">
-          <TriangleAlert className="size-4 shrink-0" />
-          Chưa cấu hình biến môi trường <code>VIENEU_DUB_URL</code> trên server HalloVN.
-        </div>
-      )}
-
-      {health && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {health.edge_tts && <span className="badge badge-ok">⚡ Edge TTS: Sẵn sàng (0đ)</span>}
-          {!!health.elevenlabs_keys && (
-            <span className="badge badge-ok">
-              ⚡ ElevenLabs: {health.elevenlabs_keys.toLocaleString("vi-VN")} key ({health.elevenlabs_model || "flash"})
-            </span>
-          )}
-          <span className={`badge ${health.model_ready ? "badge-ok" : "badge-gold"}`}>
-            {health.model_ready ? <CheckCircle2 className="size-3.5" /> : <Loader2 className="size-3.5 animate-spin" />}
-            {health.model_ready
-              ? `VieNeu-TTS (${health.precision.toUpperCase()} · ${health.voices_count} giọng)`
-              : health.model_error
-                ? `Lỗi nạp model: ${health.model_error}`
-                : "Đang nạp VieNeu-TTS…"}
-          </span>
-          {status?.translationEnabled && <span className="badge badge-gem">AI dịch phụ đề: Bật</span>}
-          {status?.whisperEnabled && <span className="badge">Whisper AI: Bật</span>}
-          <button type="button" className="btn btn-sm ml-auto" onClick={() => void refresh()}>
-            <RefreshCw className="size-3.5" /> Làm mới
-          </button>
-        </div>
-      )}
-
-      {/* Step 1: YouTube URL + Probe */}
-      <SectionCard
-        title="1. Dán link YouTube"
-        description="Hỗ trợ video YouTube mọi ngôn ngữ. Lấy phụ đề → dịch sang tiếng Việt → tạo MP3 giọng thuyết minh phát song song video YouTube."
-      >
-        <form onSubmit={handleProbe} className="flex flex-col gap-3 sm:flex-row">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+      {/* Main 1-step bar */}
+      <form onSubmit={handleSubmit} className="card flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-2.5 sm:flex-row">
           <input
             type="url"
             className="input flex-1 text-foreground"
-            placeholder="https://www.youtube.com/watch?v=..."
+            placeholder="Dán link YouTube vào đây…"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required
           />
-          <button type="submit" className="btn btn-primary shrink-0" disabled={probing || !url.trim()}>
-            {probing ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
-            {probing ? "Đang kiểm tra…" : "Kiểm tra video"}
-          </button>
-        </form>
-
-        {probeErr && (
-          <p role="alert" className="alert alert-err mt-3">
-            <TriangleAlert className="size-4 shrink-0" /> {probeErr}
-          </p>
-        )}
-
-        {probe && (
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-line bg-card-2/60 p-3 sm:flex-row sm:items-center">
-            {probe.thumbnail && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={probe.thumbnail}
-                alt={probe.title}
-                className="aspect-video w-full rounded-lg object-cover sm:w-44"
-              />
+          <select
+            className="input text-foreground sm:w-64"
+            value={voice}
+            onChange={(e) => setVoice(e.target.value)}
+            aria-label="Giọng đọc"
+          >
+            {voices.length ? (
+              voices.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.cloned ? "🎙 " : ""}
+                  {v.label}
+                </option>
+              ))
+            ) : (
+              <option value="edge:vi-VN-NamMinhNeural">⚡ Edge TTS · Nam Minh (siêu nhanh)</option>
             )}
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-semibold text-foreground">{probe.title}</p>
-              <p className="text-xs text-muted">
-                {probe.channel ? `${probe.channel} · ` : ""}
-                Thời lượng: <span className="font-mono font-semibold text-foreground">{fmtDuration(probe.duration)}</span>
-                {" · "}
-                {probe.subtitles.length} track phụ đề YouTube
-              </p>
-            </div>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* Step 2: Mode, Subtitle & Voice Settings */}
-      <SectionCard
-        title="2. Chế độ, Phụ đề & Giọng thuyết minh"
-        description="Mặc định chỉ tạo file MP3 (~1 MB/phút, bỏ qua bước tải & ghép video) rồi phát đồng bộ trực tiếp với YouTube."
-      >
-        <div className="mb-4 flex flex-wrap gap-2">
+          </select>
           <button
-            type="button"
-            className={`btn btn-sm ${outputMode === "mp3" ? "btn-primary" : ""}`}
-            onClick={() => setOutputMode("mp3")}
+            type="submit"
+            className="btn btn-primary shrink-0"
+            disabled={submitting || !url.trim() || status?.enabled === false}
           >
-            <Headphones className="size-3.5" /> Nhanh: Tạo MP3 & phát song song YouTube
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${outputMode === "mp4" ? "btn-primary" : ""}`}
-            onClick={() => setOutputMode("mp4")}
-          >
-            <Film className="size-3.5" /> Đầy đủ: Tải & ghép sẵn file MP4 tải về
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+            {submitting ? "Đang dịch…" : "Thuyết minh"}
           </button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-3">
-            <label className="field text-sm">
+        {/* Minimal footer row */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+            onClick={() => setShowAdv((v) => !v)}
+          >
+            <Settings2 className="size-3.5" />
+            Tuỳ chọn nâng cao
+            {showAdv ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+          </button>
+
+          {status?.health && (
+            <span className="text-[11px] text-muted">
+              {status.health.edge_tts ? "Edge ✓" : ""}
+              {status.health.elevenlabs_keys ? ` · ElevenLabs (${status.health.elevenlabs_keys} key)` : ""}
+              {status.health.model_ready ? " · Lạc Phi ✓" : ""}
+            </span>
+          )}
+        </div>
+
+        {/* Collapsible advanced options */}
+        {showAdv && (
+          <div className="mt-1 grid gap-3 border-t border-line pt-3 sm:grid-cols-3">
+            <label className="field text-xs">
+              Chế độ xuất
+              <select
+                className="input text-foreground"
+                value={outputMode}
+                onChange={(e) => setOutputMode(e.target.value === "mp4" ? "mp4" : "mp3")}
+              >
+                <option value="mp3">MP3 phát song song YouTube (nhanh)</option>
+                <option value="mp4">Ghép sẵn file MP4 tải về</option>
+              </select>
+            </label>
+
+            <label className="field text-xs">
               Nguồn phụ đề
               <select
                 className="input text-foreground"
                 value={subSource}
-                onChange={(e) => setSubSource(e.target.value as "youtube" | "whisper" | "custom")}
+                onChange={(e) => setSubSource(e.target.value as "auto" | "whisper" | "custom")}
               >
-                <option value="youtube">Phụ đề YouTube (tự dịch sang tiếng Việt nếu khác tiếng Việt)</option>
+                <option value="auto">Tự động (YouTube → dịch AI)</option>
                 <option value="whisper" disabled={!status?.whisperEnabled}>
-                  Whisper AI (tự nghe & tách chữ khi video không có sub)
+                  Whisper AI (video không có sub)
                 </option>
-                <option value="custom">Tự dán / tải lên file .SRT hoặc .ASS</option>
+                <option value="custom">Tự tải / dán file .SRT / .ASS</option>
               </select>
             </label>
 
-            {subSource === "youtube" && (
-              <label className="field text-sm">
-                Track phụ đề YouTube
-                {probe?.subtitles.length ? (
-                  <select
-                    className="input text-foreground"
-                    value={subTrackKey}
-                    onChange={(e) => setSubTrackKey(e.target.value)}
-                  >
-                    {probe.subtitles.map((s) => {
-                      const key = `${s.lang}|${s.auto ? 1 : 0}`;
-                      return (
-                        <option key={key} value={key}>
-                          {s.lang} — {s.name} {s.auto ? "(tự động)" : "(thủ công ✓)"}
-                        </option>
-                      );
-                    })}
-                  </select>
-                ) : (
-                  <input
-                    className="input text-foreground"
-                    placeholder="Mã ngôn ngữ (vd: de, en, vi) — bấm Kiểm tra video trước để hiện danh sách"
-                    value={subTrackKey.split("|")[0] || "de"}
-                    onChange={(e) => setSubTrackKey(`${e.target.value}|0`)}
-                  />
-                )}
-              </label>
-            )}
-
-            {subSource === "custom" && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-muted">Dán nội dung .SRT / .ASS hoặc chọn file:</span>
-                  <button type="button" className="btn btn-sm" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="size-3.5" /> Chọn file .srt / .ass
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".srt,.ass,.vtt,.txt"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </div>
-                <textarea
-                  rows={6}
-                  className="input font-mono text-xs text-foreground"
-                  placeholder="1&#10;00:00:01,500 --> 00:00:04,200&#10;Xin chào mọi người..."
-                  value={customSub}
-                  onChange={(e) => setCustomSub(e.target.value)}
-                />
-                <label className="flex items-center gap-2 text-xs text-muted">
-                  <input
-                    type="checkbox"
-                    checked={translateCustom}
-                    onChange={(e) => setTranslateCustom(e.target.checked)}
-                  />
-                  Dịch phụ đề này sang tiếng Việt bằng AI trước khi đọc (bỏ chọn nếu đã là tiếng Việt)
-                </label>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <label className="field text-sm">
-              Giọng thuyết minh
-              <select className="input text-foreground" value={voice} onChange={(e) => setVoice(e.target.value)}>
-                {voices.length ? (
-                  voices.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.cloned ? "🎙 " : ""}
-                      {v.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="Lạc Phi">🎙 Lạc Phi — Nam · Thuyết minh (clone)</option>
-                )}
-              </select>
-            </label>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="field text-sm">
-                Tốc độ đọc ({baseSpeed.toFixed(2)}×)
+            <label className="field text-xs">
+              Tốc độ đọc: {baseSpeed.toFixed(2)}× · Gốc: {origVol}%
+              <div className="flex items-center gap-2 pt-1.5">
                 <input
                   type="range"
-                  min={0.9}
+                  min={0.95}
                   max={1.35}
                   step={0.05}
                   value={baseSpeed}
                   onChange={(e) => setBaseSpeed(Number(e.target.value))}
+                  className="w-1/2"
+                  title="Tốc độ đọc"
                 />
-              </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={60}
+                  step={5}
+                  value={origVol}
+                  onChange={(e) => setOrigVol(Number(e.target.value))}
+                  className="w-1/2"
+                  title="Âm lượng gốc YouTube"
+                />
+              </div>
+            </label>
 
-              {outputMode === "mp4" ? (
-                <label className="field text-sm">
-                  Chất lượng MP4
-                  <select
-                    className="input text-foreground"
-                    value={maxHeight}
-                    onChange={(e) => setMaxHeight(Number(e.target.value) === 1080 ? 1080 : 720)}
-                  >
-                    <option value={720}>720p (nhanh, nhẹ)</option>
-                    <option value={1080}>1080p Full HD</option>
-                  </select>
-                </label>
-              ) : (
-                <label className="field text-sm">
-                  Âm gốc YouTube mặc định ({origVol}%)
-                  <input
-                    type="range"
-                    min={0}
-                    max={80}
-                    step={5}
-                    value={origVol}
-                    onChange={(e) => setOrigVol(Number(e.target.value))}
-                  />
-                </label>
-              )}
-            </div>
-
-            {outputMode === "mp4" && (
-              <div className="grid grid-cols-2 gap-3">
-                <label className="field text-sm">
-                  Âm gốc ({origVol}%)
-                  <input
-                    type="range"
-                    min={0}
-                    max={80}
-                    step={5}
-                    value={origVol}
-                    onChange={(e) => setOrigVol(Number(e.target.value))}
-                  />
-                </label>
-                <label className="field text-sm">
-                  Giọng thuyết minh ({dubVol}%)
-                  <input
-                    type="range"
-                    min={60}
-                    max={180}
-                    step={10}
-                    value={dubVol}
-                    onChange={(e) => setDubVol(Number(e.target.value))}
-                  />
+            {subSource === "custom" && (
+              <div className="flex flex-col gap-2 sm:col-span-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted">Dán nội dung .SRT / .ASS:</span>
+                  <button type="button" className="btn btn-sm" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="size-3.5" /> Chọn file
+                  </button>
+                  <input ref={fileInputRef} type="file" accept=".srt,.ass,.vtt,.txt" className="hidden" onChange={handleFileUpload} />
+                </div>
+                <textarea
+                  rows={4}
+                  className="input font-mono text-xs text-foreground"
+                  value={customSub}
+                  onChange={(e) => setCustomSub(e.target.value)}
+                />
+                <label className="flex items-center gap-2 text-xs text-muted">
+                  <input type="checkbox" checked={translateCustom} onChange={(e) => setTranslateCustom(e.target.checked)} />
+                  Dịch phụ đề này sang tiếng Việt bằng AI
                 </label>
               </div>
             )}
           </div>
-        </div>
-
-        {submitErr && (
-          <p role="alert" className="alert alert-err mt-4">
-            <TriangleAlert className="size-4 shrink-0" /> {submitErr}
-          </p>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            className="btn btn-lg btn-primary"
-            disabled={submitting || !url.trim() || !status?.enabled || (subSource === "custom" && !customSub.trim())}
-            onClick={() => void handleStartDub()}
-          >
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Mic className="size-4" />}
-            {submitting
-              ? "Đang lấy & dịch phụ đề…"
-              : outputMode === "mp3"
-                ? "Tạo MP3 & xem song song YouTube"
-                : "Bắt đầu ghép file MP4"}
-          </button>
-          <span className="text-xs text-muted">
-            {outputMode === "mp3"
-              ? "Không cần tải video về VPS — chỉnh âm lượng gốc & thuyết minh trực tiếp khi xem."
-              : "Tải video + trộn âm trên VPS, giữ track âm gốc làm track phụ."}
-          </span>
-        </div>
-      </SectionCard>
+        {err && (
+          <p role="alert" className="alert alert-err text-xs">
+            <TriangleAlert className="size-4 shrink-0" /> {err}
+          </p>
+        )}
+      </form>
 
-      {/* Step 3: Jobs list */}
-      <SectionCard
-        title={`3. Video đã & đang xử lý (${jobs.length})`}
-        description="Khi xong bấm “Xem song song” để phát YouTube đồng bộ với giọng thuyết minh MP3 (có chỉnh âm lượng & độ trễ trực tiếp)."
-        flush
-      >
-        {jobs.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted">Chưa có video thuyết minh nào.</div>
-        ) : (
+      {/* Active Player or Live Progress Card */}
+      {selectedJob && (
+        <div className="card flex flex-col gap-3 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-foreground">{selectedJob.title}</p>
+              <p className="text-xs text-muted">
+                {shortVoiceName(selectedJob.voice, voices)}
+                {selectedJob.elapsed_s ? ` · xong trong ${fmtDuration(selectedJob.elapsed_s)}` : ""}
+                {selectedJob.size_bytes > 0 ? ` · ${fmtSize(selectedJob.size_bytes)}` : ""}
+              </p>
+            </div>
+            {selectedJob.status === "done" && (
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/api/v1/admin/dub/jobs/${selectedJob.id}/download?type=${selectedMode}&dl=1`}
+                  className="btn btn-sm"
+                >
+                  <Download className="size-3.5" /> {selectedMode.toUpperCase()}
+                </a>
+                <a
+                  href={`/api/v1/admin/dub/jobs/${selectedJob.id}/download?type=srt`}
+                  className="btn btn-sm"
+                >
+                  <FileText className="size-3.5" /> SRT
+                </a>
+              </div>
+            )}
+          </div>
+
+          {ACTIVE_STATUSES.has(selectedJob.status) && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span className="inline-flex items-center gap-1.5 text-foreground">
+                  <Loader2 className="size-3.5 animate-spin text-accent" />
+                  {selectedJob.stage}
+                </span>
+                <span>
+                  {selectedJob.total_cues > 0
+                    ? `${Math.round((selectedJob.done_cues / selectedJob.total_cues) * 100)}%`
+                    : ""}
+                  {selectedJob.eta_s ? ` · còn ~${fmtDuration(selectedJob.eta_s)}` : ""}
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-card-2">
+                <div
+                  className="h-full rounded-full bg-accent transition-all duration-300"
+                  style={{
+                    width: `${Math.max(6, selectedJob.total_cues > 0 ? Math.round((selectedJob.done_cues / selectedJob.total_cues) * 100) : 6)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {selectedJob.error && (
+            <p role="alert" className="alert alert-err text-xs">
+              {selectedJob.error}
+            </p>
+          )}
+
+          {selectedJob.status === "done" && (
+            selectedMode === "mp3" && selectedVid ? (
+              <SyncedPlayer
+                key={selectedJob.id}
+                jobId={selectedJob.id}
+                videoId={selectedVid}
+                initialOrigVol={Math.round((selectedJob.orig_vol ?? 0.25) * 100)}
+              />
+            ) : (
+              <video
+                key={selectedJob.id}
+                controls
+                preload="metadata"
+                className="aspect-video w-full rounded-lg bg-black"
+                src={`/api/v1/admin/dub/jobs/${selectedJob.id}/download`}
+              />
+            )
+          )}
+        </div>
+      )}
+
+      {/* Compact History List */}
+      {jobs.length > 0 && (
+        <div className="card overflow-hidden p-0">
+          <div className="border-b border-line px-4 py-2.5 text-xs font-semibold text-muted uppercase">
+            Gần đây ({jobs.length})
+          </div>
           <div className="divide-y divide-line">
             {jobs.map((j) => {
-              const pct = j.total_cues > 0 ? Math.min(100, Math.round((j.done_cues / j.total_cues) * 100)) : 0;
-              const isActive = ACTIVE_STATUSES.has(j.status);
               const mode = j.output_mode ?? "mp4";
-              const vid = j.video_id || videoIdFromUrl(j.url);
+              const isSelected = selectedJob?.id === j.id;
               return (
-                <div key={j.id} className="flex flex-col gap-3 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {mode === "mp3" ? (
-                          <Headphones className="size-4 shrink-0 text-accent" />
-                        ) : (
-                          <Film className="size-4 shrink-0 text-muted" />
-                        )}
-                        <p className="truncate font-semibold text-foreground" title={j.title}>
-                          {j.title}
-                        </p>
-                        <span className="badge">{mode.toUpperCase()}</span>
-                        <span
-                          className={`badge ${
-                            j.status === "done"
-                              ? "badge-ok"
-                              : j.status === "error" || j.status === "cancelled"
-                                ? "badge-err"
-                                : "badge-gold"
-                          }`}
-                        >
-                          {isActive && <Loader2 className="size-3 animate-spin" />}
-                          {j.stage}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted">
-                        Giọng: <span className="font-medium text-foreground">{j.voice}</span> · {j.base_speed}× ·{" "}
-                        {j.done_cues}/{j.total_cues} câu
-                        {j.size_bytes > 0 ? ` · ${fmtSize(j.size_bytes)}` : ""}
-                        {j.elapsed_s ? ` · xong trong ${fmtDuration(j.elapsed_s)}` : ""}
-                        {isActive && j.eta_s ? ` · còn ~${fmtDuration(j.eta_s)}` : ""}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      {j.status === "done" && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-primary"
-                            onClick={() => setPreviewId(previewId === j.id ? null : j.id)}
-                          >
-                            <Play className="size-3.5" />
-                            {previewId === j.id ? "Ẩn trình phát" : mode === "mp3" ? "Xem song song" : "Xem thử"}
-                          </button>
-                          <a
-                            href={`/api/v1/admin/dub/jobs/${j.id}/download?type=${mode === "mp3" ? "mp3" : "mp4"}&dl=1`}
-                            className="btn btn-sm"
-                          >
-                            <Download className="size-3.5" /> Tải {mode.toUpperCase()}
-                          </a>
-                          <a
-                            href={`/api/v1/admin/dub/jobs/${j.id}/download?type=srt`}
-                            className="btn btn-sm"
-                          >
-                            <FileText className="size-3.5" /> SRT
-                          </a>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        className="btn btn-sm text-red-400"
-                        onClick={() => void handleDelete(j.id)}
-                        title={isActive ? "Huỷ job" : "Xoá file"}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {isActive && (
-                    <div className="space-y-1">
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-card-2">
-                        <div
-                          className="h-full rounded-full bg-accent transition-all duration-300"
-                          style={{ width: `${Math.max(4, pct)}%` }}
-                        />
-                      </div>
-                      {j.current_text && <p className="truncate text-xs text-muted">“{j.current_text}”</p>}
-                    </div>
-                  )}
-
-                  {j.error && (
-                    <p role="alert" className="alert alert-err text-xs">
-                      {j.error}
+                <div
+                  key={j.id}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isSelected ? "bg-sec-soft/50" : "hover:bg-card-2/50"}`}
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => setActiveId(j.id)}
+                  >
+                    <p className="truncate font-medium text-foreground">{j.title}</p>
+                    <p className="text-xs text-muted">
+                      {shortVoiceName(j.voice, voices)} · {j.status === "done" ? `${fmtDuration(j.elapsed_s ?? 0)} · ${fmtSize(j.size_bytes)}` : j.stage}
                     </p>
-                  )}
+                  </button>
 
-                  {previewId === j.id && j.status === "done" && (
-                    mode === "mp3" && vid ? (
-                      <SyncedPlayer
-                        key={j.id}
-                        jobId={j.id}
-                        videoId={vid}
-                        initialOrigVol={Math.round((j.orig_vol ?? 0.25) * 100)}
-                      />
-                    ) : (
-                      <video
-                        key={j.id}
-                        controls
-                        preload="metadata"
-                        className="mt-1 aspect-video w-full max-w-2xl rounded-xl border border-line bg-black"
-                        src={`/api/v1/admin/dub/jobs/${j.id}/download`}
-                      />
-                    )
+                  {j.status === "done" && (
+                    <a
+                      href={`/api/v1/admin/dub/jobs/${j.id}/download?type=${mode}&dl=1`}
+                      className="btn btn-sm shrink-0"
+                      title={`Tải ${mode.toUpperCase()}`}
+                    >
+                      <Download className="size-3.5" />
+                    </a>
                   )}
+                  <button
+                    type="button"
+                    className="btn btn-sm shrink-0 text-muted hover:text-red-400"
+                    onClick={() => void handleDelete(j.id)}
+                    title="Xoá"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
                 </div>
               );
             })}
           </div>
-        )}
-      </SectionCard>
+        </div>
+      )}
     </div>
   );
 }

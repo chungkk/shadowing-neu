@@ -3,12 +3,13 @@ import { dubEnabled, dubJson, parseSubtitleText, type DubCue, type DubJob } from
 import { extractVideoId, getYouTubeTranscript } from "@/lib/youtube";
 import { mergeIntoSentences } from "@/lib/subtitles";
 import { translateForDubbing, translationEnabled } from "@/lib/translate";
+import { whisperEnabled } from "@/lib/whisper";
 
 type CreateBody = {
   url: unknown;
   title?: unknown;
   outputMode?: unknown; // "mp3" | "mp4"
-  subSource?: unknown; // "youtube" | "whisper" | "custom"
+  subSource?: unknown; // "auto" | "youtube" | "whisper" | "custom"
   subLang?: unknown;
   subAuto?: unknown;
   customSub?: unknown;
@@ -18,6 +19,12 @@ type CreateBody = {
   origVol?: unknown;
   dubVol?: unknown;
   maxHeight?: unknown;
+};
+
+type ProbeRes = {
+  video_id: string;
+  title: string;
+  subtitles: { lang: string; name: string; auto: boolean }[];
 };
 
 export async function POST(req: Request) {
@@ -30,11 +37,11 @@ export async function POST(req: Request) {
   if (!videoId) return fail("Link YouTube không hợp lệ.");
   const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-  const subSource = str(b.subSource) || "youtube";
+  let subSource = str(b.subSource) || "auto";
+  let subLang = str(b.subLang) || "";
+  let subAuto = Boolean(b.subAuto);
   const outputMode = str(b.outputMode) === "mp4" ? "mp4" : "mp3";
-  const subLang = str(b.subLang) || "de";
-  const subAuto = Boolean(b.subAuto);
-  const voice = str(b.voice) || "Lạc Phi";
+  const voice = str(b.voice) || "edge:vi-VN-NamMinhNeural";
   const baseSpeed = Math.min(1.5, Math.max(0.85, Number(b.baseSpeed) || 1.15));
   const origVol = Math.min(1.0, Math.max(0, Number(b.origVol ?? 0.25)));
   const dubVol = Math.min(2.0, Math.max(0.2, Number(b.dubVol ?? 1.4)));
@@ -45,6 +52,26 @@ export async function POST(req: Request) {
   let needTranslateLang: string | null = null;
 
   try {
+    // One-click auto mode: probe video and automatically pick the best subtitle track (or Whisper)
+    if (subSource === "auto" || (subSource === "youtube" && !subLang)) {
+      const info = await dubJson<ProbeRes>("/probe", {
+        method: "POST",
+        body: { url },
+        timeoutMs: 30_000,
+      });
+      if (!title && info.title) title = info.title;
+      if (info.subtitles?.length) {
+        const best = info.subtitles[0];
+        subSource = "youtube";
+        subLang = best.lang;
+        subAuto = best.auto;
+      } else if (whisperEnabled()) {
+        subSource = "whisper";
+      } else {
+        return fail("Video này không có phụ đề trên YouTube. Hãy mở 'Tuỳ chọn nâng cao' để dán file .srt/.ass.");
+      }
+    }
+
     if (subSource === "custom") {
       cues = parseSubtitleText(str(b.customSub));
       if (!cues.length) return fail("Không đọc được câu thoại nào từ file phụ đề đã dán/tải lên.");
@@ -65,11 +92,12 @@ export async function POST(req: Request) {
     } else {
       const subRes = await dubJson<{ lang: string; cues: DubCue[] }>("/subtitles", {
         method: "POST",
-        body: { url, lang: subLang, auto: subAuto },
-        timeoutMs: 55_000,
+        body: { url, lang: subLang || "de", auto: subAuto },
+        timeoutMs: 45_000,
       });
       cues = subRes.cues;
-      if (!subLang.toLowerCase().startsWith("vi")) needTranslateLang = subLang;
+      const actualLang = (subRes.lang || subLang || "").toLowerCase();
+      if (!actualLang.startsWith("vi")) needTranslateLang = actualLang || "auto";
     }
 
     if (!cues.length) return fail("Video không có câu thoại nào để thuyết minh.");

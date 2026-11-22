@@ -5,7 +5,7 @@ import DubClient from "./DubClient";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export const metadata = {
-  title: "Thuyết minh YouTube (Admin) — HalloVN",
+  title: "Thuyết minh YouTube — HalloVN Admin",
 };
 
 async function DubPageInner() {
@@ -14,8 +14,8 @@ async function DubPageInner() {
     <>
       <AdminPageHeader
         crumbs={[{ label: "Nội dung học tập" }, { label: "Thuyết minh YouTube" }]}
-        title="Thuyết minh YouTube (VieNeu-TTS)"
-        description="Dán link YouTube → tự lấy & dịch phụ đề sang tiếng Việt → tạo file MP3 giọng Lạc Phi rồi phát song song đồng bộ với video YouTube (hoặc xuất MP4 tải về). Chỉ Admin mới dùng được."
+        title="Thuyết minh YouTube"
+        description="Dán link YouTube, chọn giọng, bấm 1 nút — tự dịch tiếng Việt, đọc MP3 rồi phát song song với video."
       />
       <DubClient />
     </>
