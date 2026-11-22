@@ -1,0 +1,5 @@
+Kokoro-Vietnamese Lite
+Distilled from contextboxai/Kokoro-Vietnamese (rev 9f210d622209fcc216fe2ac6159fed2ff381cb8a, Apache-2.0),
+itself based on hexgrad/Kokoro-82M (Apache-2.0). Distillation method after Paradee (sahilmahendrakar/paradee,
+Apache-2.0). config.json copied unchanged from contextboxai/Kokoro-Vietnamese.
+frontend/ reads the SEA-G2P SEAP dictionary format (pnnbao97/sea-g2p, Apache-2.0); the dictionary is not included.

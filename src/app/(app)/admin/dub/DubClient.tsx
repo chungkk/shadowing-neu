@@ -14,6 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import SyncedPlayer from "./SyncedPlayer";
+import KokoroLivePlayer, { type LiveCue } from "./KokoroLivePlayer";
 
 type DubVoice = { id: string; label: string; cloned?: boolean };
 type DubHealth = {
@@ -45,6 +46,13 @@ type DubJob = {
   created_at: number;
 };
 
+type LiveSession = {
+  videoId: string;
+  title: string;
+  cues: LiveCue[];
+  voiceIdx: 0 | 1;
+};
+
 type StatusPayload = {
   enabled: boolean;
   whisperEnabled: boolean;
@@ -52,6 +60,11 @@ type StatusPayload = {
   voices: DubVoice[];
   jobs: DubJob[];
 };
+
+const KOKORO_VOICES: DubVoice[] = [
+  { id: "kokoro:1", label: "🚀 Trình duyệt · Đức Duy (Nam · Kokoro Lite · Nghe ngay · 0đ)" },
+  { id: "kokoro:0", label: "🚀 Trình duyệt · Diễm Trinh (Nữ · Kokoro Lite · Nghe ngay · 0đ)" },
+];
 
 const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);
 
@@ -83,7 +96,7 @@ function shortVoiceName(voiceId: string, voices: DubVoice[]): string {
 export default function DubClient() {
   const [status, setStatus] = useState<StatusPayload | null>(null);
   const [url, setUrl] = useState("");
-  const [voice, setVoice] = useState("edge:vi-VN-NamMinhNeural");
+  const [voice, setVoice] = useState("kokoro:1");
   const [showAdv, setShowAdv] = useState(false);
 
   // Advanced options (collapsed by default)
@@ -97,6 +110,7 @@ export default function DubClient() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -105,9 +119,6 @@ export default function DubClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setStatus(data);
-      if (data.voices?.length) {
-        setVoice((cur) => (data.voices.some((v: DubVoice) => v.id === cur) ? cur : data.voices[0].id));
-      }
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -131,27 +142,53 @@ export default function DubClient() {
     setSubmitting(true);
     setErr("");
     try {
-      const res = await fetch("/api/v1/admin/dub/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: url.trim(),
-          outputMode,
-          subSource,
-          customSub: subSource === "custom" ? customSub : "",
-          translateCustom,
-          voice,
-          baseSpeed,
-          origVol: origVol / 100,
-          dubVol: 1.4,
-          maxHeight: 720,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      if (data.job?.id) setActiveId(data.job.id);
-      setUrl("");
-      await refresh();
+      if (voice.startsWith("kokoro:")) {
+        // Browser-side Kokoro Lite: server only fetches & translates subtitles (~2-4s), browser runs TTS live!
+        const res = await fetch("/api/v1/admin/dub/prepare-live", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: url.trim(),
+            subSource,
+            customSub: subSource === "custom" ? customSub : "",
+            translateCustom,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        setActiveId(null);
+        setLiveSession({
+          videoId: data.videoId,
+          title: data.title,
+          cues: data.cues,
+          voiceIdx: voice === "kokoro:0" ? 0 : 1,
+        });
+        setUrl("");
+      } else {
+        // Server-side MP3/MP4 job (Edge TTS / ElevenLabs / VieNeu Lạc Phi)
+        const res = await fetch("/api/v1/admin/dub/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: url.trim(),
+            outputMode,
+            subSource,
+            customSub: subSource === "custom" ? customSub : "",
+            translateCustom,
+            voice,
+            baseSpeed,
+            origVol: origVol / 100,
+            dubVol: 1.4,
+            maxHeight: 720,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        setLiveSession(null);
+        if (data.job?.id) setActiveId(data.job.id);
+        setUrl("");
+        await refresh();
+      }
     } catch (e2) {
       setErr((e2 as Error).message);
     } finally {
@@ -172,9 +209,11 @@ export default function DubClient() {
     await refresh();
   };
 
-  const voices = status?.voices ?? [];
+  const allVoices = [...KOKORO_VOICES, ...(status?.voices ?? [])];
   const jobs = status?.jobs ?? [];
-  const selectedJob = jobs.find((j) => j.id === activeId) ?? jobs.find((j) => ACTIVE_STATUSES.has(j.status)) ?? null;
+  const selectedJob = !liveSession
+    ? (jobs.find((j) => j.id === activeId) ?? jobs.find((j) => ACTIVE_STATUSES.has(j.status)) ?? null)
+    : null;
   const selectedVid = selectedJob ? selectedJob.video_id || videoIdFromUrl(selectedJob.url) : "";
   const selectedMode = selectedJob?.output_mode ?? "mp3";
 
@@ -192,26 +231,22 @@ export default function DubClient() {
             required
           />
           <select
-            className="input text-foreground sm:w-64"
+            className="input text-foreground sm:w-72"
             value={voice}
             onChange={(e) => setVoice(e.target.value)}
             aria-label="Giọng đọc"
           >
-            {voices.length ? (
-              voices.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.cloned ? "🎙 " : ""}
-                  {v.label}
-                </option>
-              ))
-            ) : (
-              <option value="edge:vi-VN-NamMinhNeural">⚡ Edge TTS · Nam Minh (siêu nhanh)</option>
-            )}
+            {allVoices.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.cloned ? "🎙 " : ""}
+                {v.label}
+              </option>
+            ))}
           </select>
           <button
             type="submit"
             className="btn btn-primary shrink-0"
-            disabled={submitting || !url.trim() || status?.enabled === false}
+            disabled={submitting || !url.trim() || (!voice.startsWith("kokoro:") && status?.enabled === false)}
           >
             {submitting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
             {submitting ? "Đang dịch…" : "Thuyết minh"}
@@ -230,24 +265,24 @@ export default function DubClient() {
             {showAdv ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
           </button>
 
-          {status?.health && (
-            <span className="text-[11px] text-muted">
-              {status.health.edge_tts ? "Edge ✓" : ""}
-              {status.health.elevenlabs_keys ? ` · ElevenLabs (${status.health.elevenlabs_keys} key)` : ""}
-              {status.health.model_ready ? " · Lạc Phi ✓" : ""}
-            </span>
-          )}
+          <span className="text-[11px] text-muted">
+            Kokoro Lite (trình duyệt) ✓
+            {status?.health?.edge_tts ? " · Edge ✓" : ""}
+            {status?.health?.elevenlabs_keys ? ` · ElevenLabs (${status.health.elevenlabs_keys} key)` : ""}
+            {status?.health?.model_ready ? " · Lạc Phi ✓" : ""}
+          </span>
         </div>
 
         {/* Collapsible advanced options */}
         {showAdv && (
           <div className="mt-1 grid gap-3 border-t border-line pt-3 sm:grid-cols-3">
             <label className="field text-xs">
-              Chế độ xuất
+              Chế độ server (Edge / ElevenLabs / Lạc Phi)
               <select
                 className="input text-foreground"
                 value={outputMode}
                 onChange={(e) => setOutputMode(e.target.value === "mp4" ? "mp4" : "mp3")}
+                disabled={voice.startsWith("kokoro:")}
               >
                 <option value="mp3">MP3 phát song song YouTube (nhanh)</option>
                 <option value="mp4">Ghép sẵn file MP4 tải về</option>
@@ -270,7 +305,7 @@ export default function DubClient() {
             </label>
 
             <label className="field text-xs">
-              Tốc độ đọc: {baseSpeed.toFixed(2)}× · Gốc: {origVol}%
+              Tốc độ: {baseSpeed.toFixed(2)}× · Gốc: {origVol}%
               <div className="flex items-center gap-2 pt-1.5">
                 <input
                   type="range"
@@ -326,14 +361,29 @@ export default function DubClient() {
         )}
       </form>
 
-      {/* Active Player or Live Progress Card */}
+      {/* Browser-side Live Kokoro Lite Player */}
+      {liveSession && (
+        <div className="card p-4">
+          <KokoroLivePlayer
+            key={`${liveSession.videoId}:${liveSession.voiceIdx}`}
+            videoId={liveSession.videoId}
+            title={liveSession.title}
+            cues={liveSession.cues}
+            initialVoice={liveSession.voiceIdx}
+            initialSpeed={baseSpeed}
+            initialOrigVol={origVol}
+          />
+        </div>
+      )}
+
+      {/* Server-side MP3/MP4 Active Player or Live Progress */}
       {selectedJob && (
         <div className="card flex flex-col gap-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-foreground">{selectedJob.title}</p>
               <p className="text-xs text-muted">
-                {shortVoiceName(selectedJob.voice, voices)}
+                {shortVoiceName(selectedJob.voice, allVoices)}
                 {selectedJob.elapsed_s ? ` · xong trong ${fmtDuration(selectedJob.elapsed_s)}` : ""}
                 {selectedJob.size_bytes > 0 ? ` · ${fmtSize(selectedJob.size_bytes)}` : ""}
               </p>
@@ -346,10 +396,7 @@ export default function DubClient() {
                 >
                   <Download className="size-3.5" /> {selectedMode.toUpperCase()}
                 </a>
-                <a
-                  href={`/api/v1/admin/dub/jobs/${selectedJob.id}/download?type=srt`}
-                  className="btn btn-sm"
-                >
+                <a href={`/api/v1/admin/dub/jobs/${selectedJob.id}/download?type=srt`} className="btn btn-sm">
                   <FileText className="size-3.5" /> SRT
                 </a>
               </div>
@@ -364,9 +411,7 @@ export default function DubClient() {
                   {selectedJob.stage}
                 </span>
                 <span>
-                  {selectedJob.total_cues > 0
-                    ? `${Math.round((selectedJob.done_cues / selectedJob.total_cues) * 100)}%`
-                    : ""}
+                  {selectedJob.total_cues > 0 ? `${Math.round((selectedJob.done_cues / selectedJob.total_cues) * 100)}%` : ""}
                   {selectedJob.eta_s ? ` · còn ~${fmtDuration(selectedJob.eta_s)}` : ""}
                 </span>
               </div>
@@ -387,8 +432,8 @@ export default function DubClient() {
             </p>
           )}
 
-          {selectedJob.status === "done" && (
-            selectedMode === "mp3" && selectedVid ? (
+          {selectedJob.status === "done" &&
+            (selectedMode === "mp3" && selectedVid ? (
               <SyncedPlayer
                 key={selectedJob.id}
                 jobId={selectedJob.id}
@@ -403,8 +448,7 @@ export default function DubClient() {
                 className="aspect-video w-full rounded-lg bg-black"
                 src={`/api/v1/admin/dub/jobs/${selectedJob.id}/download`}
               />
-            )
-          )}
+            ))}
         </div>
       )}
 
@@ -412,12 +456,12 @@ export default function DubClient() {
       {jobs.length > 0 && (
         <div className="card overflow-hidden p-0">
           <div className="border-b border-line px-4 py-2.5 text-xs font-semibold text-muted uppercase">
-            Gần đây ({jobs.length})
+            Lịch sử server ({jobs.length})
           </div>
           <div className="divide-y divide-line">
             {jobs.map((j) => {
               const mode = j.output_mode ?? "mp4";
-              const isSelected = selectedJob?.id === j.id;
+              const isSelected = !liveSession && selectedJob?.id === j.id;
               return (
                 <div
                   key={j.id}
@@ -426,11 +470,15 @@ export default function DubClient() {
                   <button
                     type="button"
                     className="min-w-0 flex-1 text-left"
-                    onClick={() => setActiveId(j.id)}
+                    onClick={() => {
+                      setLiveSession(null);
+                      setActiveId(j.id);
+                    }}
                   >
                     <p className="truncate font-medium text-foreground">{j.title}</p>
                     <p className="text-xs text-muted">
-                      {shortVoiceName(j.voice, voices)} · {j.status === "done" ? `${fmtDuration(j.elapsed_s ?? 0)} · ${fmtSize(j.size_bytes)}` : j.stage}
+                      {shortVoiceName(j.voice, allVoices)} ·{" "}
+                      {j.status === "done" ? `${fmtDuration(j.elapsed_s ?? 0)} · ${fmtSize(j.size_bytes)}` : j.stage}
                     </p>
                   </button>
 
