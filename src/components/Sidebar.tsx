@@ -11,6 +11,7 @@ import {
   ChevronDown,
   FileStack,
   Flag,
+  GraduationCap,
   House,
   Landmark,
   Languages,
@@ -46,6 +47,7 @@ const ITEMS: Item[] = [
 const REVIEW: Item = { href: "/vocab/notebook", label: "Ôn tập", icon: Layers };
 const DEUTSCH: Item[] = [
   { href: "/tieng-duc", label: "Bài học", icon: MonitorPlay },
+  { href: "/ngu-phap", label: "Ngữ pháp", icon: GraduationCap },
   { href: "/vocab", label: "Từ vựng", icon: BookMarked },
   REVIEW,
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
@@ -70,6 +72,7 @@ const USER_ITEMS: Item[] = [
   { href: "/settings", label: "Hồ sơ & cài đặt", icon: Settings },
 ];
 const LEARN_QUICK: Item[] = [
+  { href: "/ngu-phap", label: "Ngữ pháp A1–B2", icon: GraduationCap },
   { href: "/vocab/notebook", label: "Sổ từ & ôn tập", icon: Layers },
   { href: "/vocab", label: "Kho từ vựng", icon: BookMarked },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: Trophy },
@@ -322,7 +325,13 @@ export function UserDropdown({ user }: { user: NavUser }) {
 }
 
 const showDeutschSubnav = (p: string) =>
-  p === "/tieng-duc" || p.startsWith("/tieng-duc/trinh-do/") || p === "/vocab" || p.startsWith("/vocab/") || p === "/leaderboard";
+  p === "/tieng-duc" ||
+  p.startsWith("/tieng-duc/trinh-do/") ||
+  p === "/ngu-phap" ||
+  p.startsWith("/ngu-phap/") ||
+  p === "/vocab" ||
+  p.startsWith("/vocab/") ||
+  p === "/leaderboard";
 
 const showLaixeSubnav = (p: string) =>
   p === "/lai-xe" || p === "/lai-xe/hoc" || p === "/lai-xe/de-mau" || p === "/lai-xe/thi-thu" || p === "/lai-xe/thong-ke" || p === "/lai-xe/cau-sai" || p === "/lai-xe/danh-dau" || p === "/lai-xe/hang";

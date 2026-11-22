@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import {
   ArrowRight,
   BookMarked,
+  GraduationCap,
   Headphones,
   Keyboard,
   Languages,
@@ -192,6 +193,9 @@ async function DeutschContent() {
             <span className="inline-flex items-center gap-1.5">
               <Languages className="size-3.5 text-amber" aria-hidden /> Tra từ &amp; bản dịch tiếng Việt
             </span>
+            <Link href="/ngu-phap" className="inline-flex items-center gap-1 text-accent-text hover:underline">
+              <GraduationCap className="size-3.5" aria-hidden /> Ngữ pháp A1–B2
+            </Link>
             <Link href="/vocab" className="inline-flex items-center gap-1 text-link hover:underline">
               <BookMarked className="size-3.5" aria-hidden /> Kho từ Goethe A1–B2
             </Link>
