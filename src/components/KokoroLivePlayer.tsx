@@ -129,6 +129,14 @@ export default function KokoroLivePlayer({
   const activeSrcsRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const audioEndAtRef = useRef<number>(0);
   const stopGenRef = useRef<number>(0);
+  const playbackRef = useRef<{
+    cueIndex: number;
+    buf: AudioBuffer;
+    startedAtCtx: number;
+    baseOffset: number;
+    voiceId: LiveVoiceId;
+    pausedOffset: number | null;
+  } | null>(null);
   const bufCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
   const inflightRef = useRef<Map<string, Promise<AudioBuffer | null>>>(new Map());
   const lastSpokenIdxRef = useRef<number>(-1);
@@ -204,7 +212,7 @@ export default function KokoroLivePlayer({
     return ctxRef.current;
   }, []);
 
-  const stopSpeech = useCallback(() => {
+  const stopActiveSources = useCallback(() => {
     stopGenRef.current += 1;
     for (const src of activeSrcsRef.current) {
       try {
@@ -217,6 +225,27 @@ export default function KokoroLivePlayer({
     activeSrcsRef.current.clear();
     audioEndAtRef.current = 0;
   }, []);
+
+  /** Dừng hẳn giọng đọc và xoá trạng thái tạm dừng (dùng khi tua, đổi giọng, kết thúc, unmount). */
+  const stopSpeech = useCallback(() => {
+    playbackRef.current = null;
+    stopActiveSources();
+  }, [stopActiveSources]);
+
+  /** Tạm dừng giọng đọc và lưu chính xác vị trí đang đọc dở để phát tiếp ngay lập tức khi bấm Phát lại. */
+  const pauseSpeech = useCallback(() => {
+    const pb = playbackRef.current;
+    if (pb && pb.pausedOffset === null && ctxRef.current) {
+      const elapsed = Math.max(0, ctxRef.current.currentTime - pb.startedAtCtx);
+      const offset = pb.baseOffset + elapsed;
+      if (offset < pb.buf.duration - 0.15) {
+        pb.pausedOffset = offset;
+      } else {
+        playbackRef.current = null;
+      }
+    }
+    stopActiveSources();
+  }, [stopActiveSources]);
 
   const getCueBuffer = useCallback(
     async (cueIndex: number, vId: LiveVoiceId, spd: number): Promise<AudioBuffer | null> => {
@@ -352,6 +381,58 @@ export default function KokoroLivePlayer({
     }
   }, [activeCueIdx, showScript]);
 
+  const resumeSpeech = useCallback(() => {
+    const ctx = getAudioCtx();
+    const gain = gainRef.current;
+    const pb = playbackRef.current;
+    if (!gain || !pb || pb.pausedOffset === null) return;
+
+    const { voiceId: vId, speed: spd, cues: list } = stateRef.current;
+    const cue = list[pb.cueIndex];
+    const tMs = (ytRef.current?.getCurrentTime?.() ?? 0) * 1000;
+    const nextStart = list[pb.cueIndex + 1]?.start_ms ?? (cue ? cue.end_ms + 5000 : 0);
+    const stillInCue =
+      cue &&
+      pb.voiceId === vId &&
+      tMs >= cue.start_ms - 400 &&
+      tMs < Math.min(nextStart - 60, cue.end_ms + 800);
+
+    if (!stillInCue) {
+      playbackRef.current = null;
+      return;
+    }
+
+    const offset = pb.pausedOffset;
+    const remaining = pb.buf.duration - offset;
+    if (remaining <= 0.12) {
+      playbackRef.current = null;
+      return;
+    }
+
+    // Khôi phục đúng âm tiết đang đọc dở ngay lập tức (0ms độ trễ)
+    const now = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = pb.buf;
+    src.connect(gain);
+    src.start(now, offset);
+    activeSrcsRef.current.add(src);
+    pb.startedAtCtx = now;
+    pb.baseOffset = offset;
+    pb.pausedOffset = null;
+    audioEndAtRef.current = now + remaining;
+    src.onended = () => {
+      activeSrcsRef.current.delete(src);
+      if (playbackRef.current === pb && pb.pausedOffset === null) {
+        playbackRef.current = null;
+      }
+    };
+
+    // Prefetch lại 4 câu kế tiếp để sẵn sàng ngay sau câu đang đọc tiếp
+    for (let k = pb.cueIndex + 1; k <= Math.min(list.length - 1, pb.cueIndex + 4); k++) {
+      void getCueBuffer(k, vId, spd);
+    }
+  }, [getAudioCtx, getCueBuffer]);
+
   // Mount YouTube IFrame Player
   useEffect(() => {
     let cancelled = false;
@@ -384,7 +465,7 @@ export default function KokoroLivePlayer({
             lastPollWallRef.current = 0;
             if (ev.data === 1) {
               setPlaying(true);
-              getAudioCtx();
+              resumeSpeech();
               // Trên iOS Safari, bấm Play trực tiếp trong iframe đôi khi tự bỏ mute → áp lại mức âm gốc ngay khi phát
               if (player) {
                 if (stateRef.current.origVol <= 0) player.mute();
@@ -393,6 +474,10 @@ export default function KokoroLivePlayer({
                   player.setVolume(stateRef.current.origVol);
                 }
               }
+            } else if (ev.data === 2 || ev.data === 3) {
+              // 2 = PAUSED, 3 = BUFFERING → giữ vị trí câu đang đọc dở để tiếp tục ngay khi phát lại
+              if (ev.data === 2) setPlaying(false);
+              pauseSpeech();
             } else {
               setPlaying(false);
               stopSpeech();
@@ -409,7 +494,7 @@ export default function KokoroLivePlayer({
       player?.destroy();
       el.remove();
     };
-  }, [videoId, getAudioCtx, stopSpeech]);
+  }, [videoId, pauseSpeech, resumeSpeech, stopSpeech]);
 
   // Real-time scheduler & lookahead prefetch loop (every 100ms)
   useEffect(() => {
@@ -425,9 +510,19 @@ export default function KokoroLivePlayer({
       }
 
       const buf = await getCueBuffer(cueIndex, vId, spd);
-      if (!buf) return;
-      if (myStopGen !== stopGenRef.current) return;
-      if (!ytRef.current || ytRef.current.getPlayerState?.() !== 1) return;
+      if (!buf) {
+        if (lastSpokenIdxRef.current === cueIndex && playbackRef.current?.cueIndex !== cueIndex) {
+          lastSpokenIdxRef.current = cueIndex - 1;
+        }
+        return;
+      }
+      if (myStopGen !== stopGenRef.current || !ytRef.current || ytRef.current.getPlayerState?.() !== 1) {
+        // Bị pause/dừng ngay lúc câu này đang tải → trả lại mốc để phát ngay khi bấm Phát lại
+        if (lastSpokenIdxRef.current === cueIndex && playbackRef.current?.cueIndex !== cueIndex) {
+          lastSpokenIdxRef.current = cueIndex - 1;
+        }
+        return;
+      }
       if (lastSpokenIdxRef.current !== cueIndex) return;
       if (stateRef.current.voiceId !== vId) return;
 
@@ -447,9 +542,21 @@ export default function KokoroLivePlayer({
       src.connect(gain);
       src.start(startAt);
       activeSrcsRef.current.add(src);
+      const pb = {
+        cueIndex,
+        buf,
+        startedAtCtx: startAt,
+        baseOffset: 0,
+        voiceId: vId,
+        pausedOffset: null as number | null,
+      };
+      playbackRef.current = pb;
       audioEndAtRef.current = startAt + buf.duration;
       src.onended = () => {
         activeSrcsRef.current.delete(src);
+        if (playbackRef.current === pb && pb.pausedOffset === null) {
+          playbackRef.current = null;
+        }
       };
     };
 
@@ -526,7 +633,7 @@ export default function KokoroLivePlayer({
     getAudioCtx();
     if (playing) {
       yt.pauseVideo();
-      stopSpeech();
+      pauseSpeech();
     } else {
       yt.playVideo();
     }

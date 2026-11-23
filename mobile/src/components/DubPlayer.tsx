@@ -242,6 +242,8 @@ export default function DubPlayer({
   const lastYtTimeRef = useRef(0);
   const lastPollWallRef = useRef(0);
   const speakGenRef = useRef(0);
+  const playingCueRef = useRef<{ cueIndex: number; voiceId: DubVoiceId; speed: number } | null>(null);
+  const pausedCueRef = useRef<{ cueIndex: number; voiceId: DubVoiceId; speed: number } | null>(null);
 
   const [playing, setPlaying] = useState(false);
   const [voiceId, setVoiceId] = useState<DubVoiceId>(initialVoice);
@@ -296,11 +298,53 @@ export default function DubPlayer({
     }
   }, []);
 
+  /** Dừng hẳn giọng đọc và xoá trạng thái tạm dừng (dùng khi tua, đổi giọng, đổi tốc độ, hết video). */
   const stopDub = useCallback(() => {
     speakGenRef.current += 1;
+    playingCueRef.current = null;
+    pausedCueRef.current = null;
     try {
       audioRef.current?.pause();
     } catch {}
+  }, []);
+
+  /** Tạm dừng giọng đọc và nhớ câu đang đọc dở để bấm Phát lại là đọc tiếp ngay lập tức. */
+  const pauseDub = useCallback(() => {
+    speakGenRef.current += 1;
+    const p = audioRef.current;
+    if (p && playingCueRef.current && !pausedCueRef.current) {
+      const hasRemaining = p.playing || (p.duration > 0 && p.currentTime < p.duration - 0.15);
+      if (hasRemaining) {
+        pausedCueRef.current = playingCueRef.current;
+      }
+    }
+    try {
+      p?.pause();
+    } catch {}
+  }, []);
+
+  const resumeDub = useCallback(() => {
+    const p = audioRef.current;
+    const paused = pausedCueRef.current;
+    if (!p || !paused) return;
+    pausedCueRef.current = null;
+
+    const { voiceId: vId, speed: spd, dubMuted: muted, cues: list } = stateRef.current;
+    if (
+      paused.cueIndex === lastSpokenIdxRef.current &&
+      paused.voiceId === vId &&
+      paused.speed === spd &&
+      (p.duration <= 0 || p.currentTime < p.duration - 0.15)
+    ) {
+      try {
+        p.muted = muted;
+        p.volume = muted ? 0 : 1;
+        p.play();
+      } catch {}
+      for (let k = paused.cueIndex + 1; k <= Math.min(list.length - 1, paused.cueIndex + 4); k++) {
+        void fetchFittedDubCue(list, k, vId, spd);
+      }
+    }
   }, []);
 
   // Khởi tạo AudioPlayer native cho giọng thuyết minh
@@ -354,9 +398,25 @@ export default function DubPlayer({
       void fetchFittedDubCue(list, k, vId, spd);
     }
 
+    const rollbackIfCancelled = () => {
+      if (
+        lastSpokenIdxRef.current === cueIndex &&
+        playingCueRef.current?.cueIndex !== cueIndex &&
+        pausedCueRef.current?.cueIndex !== cueIndex
+      ) {
+        lastSpokenIdxRef.current = cueIndex - 1;
+      }
+    };
+
     const file = await fetchFittedDubCue(list, cueIndex, vId, spd);
-    if (!file) return;
-    if (myGen !== speakGenRef.current || !stateRef.current.playing) return;
+    if (!file) {
+      rollbackIfCancelled();
+      return;
+    }
+    if (myGen !== speakGenRef.current || !stateRef.current.playing) {
+      rollbackIfCancelled();
+      return;
+    }
     if (lastSpokenIdxRef.current !== cueIndex || stateRef.current.voiceId !== vId) return;
 
     const p = audioRef.current;
@@ -368,8 +428,13 @@ export default function DubPlayer({
         allowsRecording: false,
         interruptionMode: "mixWithOthers",
       }).catch(() => {});
-      if (myGen !== speakGenRef.current || !stateRef.current.playing) return;
+      if (myGen !== speakGenRef.current || !stateRef.current.playing) {
+        rollbackIfCancelled();
+        return;
+      }
       if (lastSpokenIdxRef.current !== cueIndex || stateRef.current.voiceId !== vId) return;
+      pausedCueRef.current = null;
+      playingCueRef.current = { cueIndex, voiceId: vId, speed: spd };
       p.replace({ uri: file.uri });
       p.muted = muted;
       p.volume = muted ? 0 : 1;
@@ -457,7 +522,7 @@ export default function DubPlayer({
     haptic.tap();
     if (playing) {
       setPlaying(false);
-      stopDub();
+      pauseDub();
     } else {
       setPlaying(true);
     }
@@ -550,7 +615,11 @@ export default function DubPlayer({
           onChangeState={(s: string) => {
             if (s === PLAYER_STATES.PLAYING) {
               setPlaying(true);
-            } else if (s === PLAYER_STATES.PAUSED || s === PLAYER_STATES.ENDED) {
+              resumeDub();
+            } else if (s === PLAYER_STATES.PAUSED || s === PLAYER_STATES.BUFFERING) {
+              if (s === PLAYER_STATES.PAUSED) setPlaying(false);
+              pauseDub();
+            } else if (s === PLAYER_STATES.ENDED) {
               setPlaying(false);
               stopDub();
             }
