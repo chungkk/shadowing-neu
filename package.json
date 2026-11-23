@@ -11,7 +11,8 @@
     "test:catalog": "node --test tools/laixe-catalog/catalog.test.mjs tools/laixe-catalog/translate-vi.test.mjs",
     "catalog:publish": "node tools/laixe-catalog/publish.mjs",
     "import:content": "node scripts/import-portal-content.mjs",
-    "pack:ext": "node scripts/pack-extension.mjs"
+    "pack:ext": "node scripts/pack-extension.mjs",
+    "assets:ext": "node scripts/capture-store-assets.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.59.0",
