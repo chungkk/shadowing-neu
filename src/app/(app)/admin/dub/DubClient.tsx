@@ -14,7 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import SyncedPlayer from "./SyncedPlayer";
-import KokoroLivePlayer, { type LiveCue } from "@/components/KokoroLivePlayer";
+import KokoroLivePlayer, { type LiveCue, type LiveVoiceId } from "@/components/KokoroLivePlayer";
 
 type DubVoice = { id: string; label: string; cloned?: boolean };
 type DubHealth = {
@@ -49,7 +49,7 @@ type LiveSession = {
   videoId: string;
   title: string;
   cues: LiveCue[];
-  voiceIdx: 0 | 1;
+  voiceId: LiveVoiceId;
 };
 
 type StatusPayload = {
@@ -60,9 +60,8 @@ type StatusPayload = {
   jobs: DubJob[];
 };
 
-const KOKORO_VOICES: DubVoice[] = [
-  { id: "kokoro:1", label: "🚀 Trình duyệt · Đức Duy (Nam · Kokoro Lite · Nghe ngay · 0đ)" },
-  { id: "kokoro:0", label: "🚀 Trình duyệt · Diễm Trinh (Nữ · Kokoro Lite · Nghe ngay · 0đ)" },
+const BROWSER_VOICES: DubVoice[] = [
+  { id: "piper:adam_bua", label: "🚀 Trình duyệt · Adam bựa (Nam · Bắc · Nghe ngay · 0đ)" },
 ];
 
 const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);
@@ -94,7 +93,7 @@ function shortVoiceName(voiceId: string, voices: DubVoice[]): string {
 export default function DubClient() {
   const [status, setStatus] = useState<StatusPayload | null>(null);
   const [url, setUrl] = useState("");
-  const [voice, setVoice] = useState("kokoro:1");
+  const [voice, setVoice] = useState("piper:adam_bua");
   const [showAdv, setShowAdv] = useState(false);
 
   // Advanced options (collapsed by default)
@@ -141,8 +140,8 @@ export default function DubClient() {
     setSubmitting(true);
     setErr("");
     try {
-      if (voice.startsWith("kokoro:")) {
-        // Browser-side Kokoro Lite: server streams subtitle fetch & translation progress (0% -> 100%)
+      if (voice.startsWith("piper:")) {
+        // Browser-side WASM voice: server streams subtitle fetch & translation progress (0% -> 100%)
         setPrep({ pct: 3, stage: "Đang kết nối…" });
         const res = await fetch("/api/v1/admin/dub/prepare-live?stream=1", {
           method: "POST",
@@ -192,7 +191,7 @@ export default function DubClient() {
           videoId: data.videoId,
           title: data.title,
           cues: data.cues,
-          voiceIdx: voice === "kokoro:0" ? 0 : 1,
+          voiceId: voice as LiveVoiceId,
         });
         setUrl("");
       } else {
@@ -241,7 +240,7 @@ export default function DubClient() {
     await refresh();
   };
 
-  const allVoices = [...KOKORO_VOICES, ...(status?.voices ?? [])];
+  const allVoices = [...BROWSER_VOICES, ...(status?.voices ?? [])];
   const jobs = status?.jobs ?? [];
   const selectedJob = !liveSession
     ? (jobs.find((j) => j.id === activeId) ?? jobs.find((j) => ACTIVE_STATUSES.has(j.status)) ?? null)
@@ -278,7 +277,7 @@ export default function DubClient() {
           <button
             type="submit"
             className="btn btn-primary relative shrink-0 overflow-hidden tabular-nums"
-            disabled={submitting || !url.trim() || (!voice.startsWith("kokoro:") && status?.enabled === false)}
+            disabled={submitting || !url.trim() || (!voice.startsWith("piper:") && status?.enabled === false)}
           >
             {submitting && prep && (
               <span
@@ -322,7 +321,7 @@ export default function DubClient() {
           </button>
 
           <span className="text-[11px] text-muted">
-            Kokoro Lite (trình duyệt) ✓
+            Adam bựa (trình duyệt) ✓
             {status?.health?.edge_tts ? " · Edge ✓" : ""}
             {status?.health?.model_ready ? " · Lạc Phi ✓" : ""}
           </span>
@@ -337,7 +336,7 @@ export default function DubClient() {
                 className="input text-foreground"
                 value={outputMode}
                 onChange={(e) => setOutputMode(e.target.value === "mp4" ? "mp4" : "mp3")}
-                disabled={voice.startsWith("kokoro:")}
+                disabled={voice.startsWith("piper:")}
               >
                 <option value="mp3">MP3 phát song song YouTube (nhanh)</option>
                 <option value="mp4">Ghép sẵn file MP4 tải về</option>
@@ -416,15 +415,15 @@ export default function DubClient() {
         )}
       </form>
 
-      {/* Browser-side Live Kokoro Lite Player */}
+      {/* Browser-side Live WASM Player */}
       {liveSession && (
         <div className="card p-4">
           <KokoroLivePlayer
-            key={`${liveSession.videoId}:${liveSession.voiceIdx}`}
+            key={`${liveSession.videoId}:${liveSession.voiceId}`}
             videoId={liveSession.videoId}
             title={liveSession.title}
             cues={liveSession.cues}
-            initialVoice={liveSession.voiceIdx}
+            initialVoice={liveSession.voiceId}
             initialSpeed={baseSpeed}
             initialOrigVol={origVol}
             showDebugMeta

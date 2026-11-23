@@ -362,7 +362,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
         )}
 
         <p className="text-xs text-muted">
-          Tự động gộp câu, dịch theo ngữ cảnh và phát cuốn chiếu ngay sau vài giây đầu. Giọng <strong>Edge (Nam Minh / Hoài My)</strong> phát tức thì; giọng <strong>Kokoro</strong> chạy hoàn toàn trên trình duyệt.
+          Tự động gộp câu, dịch theo ngữ cảnh và phát cuốn chiếu ngay sau vài giây đầu. Giọng <strong>Edge (Nam Minh / Hoài My)</strong> phát tức thì; giọng <strong>Adam bựa</strong> chạy hoàn toàn trên trình duyệt.
         </p>
 
         {err && (

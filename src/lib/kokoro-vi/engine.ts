@@ -4,11 +4,9 @@ import config from "./config.json";
 import { SeaDictionary, phonemizeChunks } from "./frontend";
 
 const CACHE_NAME = "kokoro-vi-lite-v2";
-const MODEL_URL = "/download/media/kokoro/kokoro_vi_lite.onnx";
 const DICT_URL = "/download/media/kokoro/sea_g2p.bin";
 const ORT_WASM_PATH = "/download/media/kokoro/ort/";
 
-export const KOKORO_SAMPLE_RATE = 24_000;
 export const PIPER_SAMPLE_RATE = 22_050;
 
 export type PiperVoiceKey = "adam_bua";
@@ -30,9 +28,7 @@ type OrtModule = typeof import("onnxruntime-web");
 type OrtSession = import("onnxruntime-web").InferenceSession;
 
 let ortMod: OrtModule | null = null;
-let session: OrtSession | null = null;
 let dictionary: SeaDictionary | null = null;
-let loadingPromise: Promise<void> | null = null;
 const piperSessions = new Map<PiperVoiceKey, OrtSession>();
 const piperLoading = new Map<PiperVoiceKey, Promise<void>>();
 let runChain: Promise<unknown> = Promise.resolve();
@@ -95,68 +91,6 @@ async function fetchWithCache(
     }
   }
   return new Uint8Array(buf);
-}
-
-export function isKokoroReady(): boolean {
-  return Boolean(session && dictionary && ortMod);
-}
-
-export async function ensureKokoroLoaded(onProgress?: (p: KokoroProgress) => void): Promise<void> {
-  if (isKokoroReady()) {
-    onProgress?.({ stage: "Sẵn sàng", pct: 100 });
-    return;
-  }
-  if (loadingPromise) return loadingPromise;
-
-  loadingPromise = (async () => {
-    try {
-      onProgress?.({ stage: "Đang nạp ONNX Runtime (WASM)…", pct: 5 });
-      const ort = await import("onnxruntime-web");
-      ort.env.wasm.wasmPaths = ORT_WASM_PATH;
-      ort.env.wasm.numThreads = 1; // Single-thread WASM needs no COOP/COEP headers (safe with YouTube iframe)
-      ortMod = ort;
-
-      let modelLoaded = 0;
-      let modelTotal = 9_210_026;
-      let dictLoaded = 0;
-      let dictTotal = 62_829_820;
-
-      const emitDownload = () => {
-        const total = Math.max(1, modelTotal + dictTotal);
-        const loaded = modelLoaded + dictLoaded;
-        const pct = Math.min(90, 8 + Math.round((loaded / total) * 82));
-        const mbDone = (loaded / (1024 * 1024)).toFixed(1);
-        const mbAll = (total / (1024 * 1024)).toFixed(0);
-        onProgress?.({ stage: `Đang tải model & từ điển tiếng Việt (lần đầu, lưu cache trình duyệt)… ${mbDone}/${mbAll} MB`, pct });
-      };
-
-      const [modelBytes, dictBytes] = await Promise.all([
-        fetchWithCache(MODEL_URL, "model Kokoro Lite (9.2 MB)", (l, t) => {
-          modelLoaded = l;
-          if (t > 0) modelTotal = t;
-          emitDownload();
-        }),
-        fetchWithCache(DICT_URL, "từ điển SEA-G2P", (l, t) => {
-          dictLoaded = l;
-          if (t > 0) dictTotal = t;
-          emitDownload();
-        }),
-      ]);
-
-      onProgress?.({ stage: "Đang khởi tạo mô hình Kokoro Lite…", pct: 94 });
-      dictionary ??= new SeaDictionary(dictBytes);
-      session = await ort.InferenceSession.create(modelBytes, {
-        executionProviders: ["wasm"],
-        graphOptimizationLevel: "all",
-      });
-      onProgress?.({ stage: "Sẵn sàng", pct: 100 });
-    } catch (e) {
-      loadingPromise = null;
-      throw e;
-    }
-  })();
-
-  return loadingPromise;
 }
 
 export function isPiperReady(voiceKey: PiperVoiceKey): boolean {
@@ -265,54 +199,6 @@ function trimSilenceAndFade(pcm: Float32Array, sr: number): Float32Array {
     out[out.length - 1 - i] *= g;
   }
   return out;
-}
-
-/** Synthesize Vietnamese text locally in browser WASM (voiceIdx: 0 = Diễm Trinh nữ, 1 = Đức Duy nam). */
-export function synthesizeKokoro(
-  text: string,
-  voiceIdx: 0 | 1,
-  speed = 1.15,
-): Promise<{ pcm: Float32Array; sampleRate: number; synthMs: number }> {
-  const job = runChain.then(async () => {
-    if (!session || !dictionary || !ortMod) throw new Error("Kokoro Lite chưa được nạp.");
-    const clean = text.trim();
-    if (!clean) return { pcm: new Float32Array(0), sampleRate: KOKORO_SAMPLE_RATE, synthMs: 0 };
-
-    const t0 = performance.now();
-    const { chunks } = phonemizeChunks(clean, dictionary, config.vocab);
-    const parts: Float32Array[] = [];
-    let totalLen = 0;
-    const clampedSpeed = Math.min(1.5, Math.max(0.75, speed));
-
-    for (const chunk of chunks) {
-      if (!chunk.tokens.length) continue;
-      const feeds = {
-        input_ids: new ortMod.Tensor("int64", BigInt64Array.from(chunk.tokens, BigInt), [1, chunk.tokens.length]),
-        speed: new ortMod.Tensor("float32", new Float32Array([clampedSpeed]), [1]),
-        voice: new ortMod.Tensor("int64", BigInt64Array.of(BigInt(voiceIdx)), [1]),
-      };
-      const out = await session.run(feeds);
-      const raw = out.waveform?.data as Float32Array | undefined;
-      if (raw && raw.length) {
-        const trimmed = trimSilenceAndFade(raw, KOKORO_SAMPLE_RATE);
-        if (trimmed.length) {
-          parts.push(trimmed);
-          totalLen += trimmed.length;
-        }
-      }
-    }
-
-    const merged = new Float32Array(totalLen);
-    let pos = 0;
-    for (const p of parts) {
-      merged.set(p, pos);
-      pos += p.length;
-    }
-    return { pcm: merged, sampleRate: KOKORO_SAMPLE_RATE, synthMs: Math.round(performance.now() - t0) };
-  });
-
-  runChain = job.catch(() => {});
-  return job;
 }
 
 /**
