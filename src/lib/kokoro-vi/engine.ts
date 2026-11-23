@@ -9,12 +9,17 @@ const ORT_WASM_PATH = "/download/media/kokoro/ort/";
 
 export const PIPER_SAMPLE_RATE = 22_050;
 
-export type PiperVoiceKey = "adam_bua";
+export type PiperVoiceKey = "adam_bua" | "lac_phi";
 
 const PIPER_MODELS: Record<PiperVoiceKey, { url: string; label: string; approxBytes: number }> = {
   adam_bua: {
-    url: "/download/media/kokoro/adam_bua_int8.onnx?v=1",
+    url: "/download/media/kokoro/adam_bua_int8.onnx?v=2",
     label: "giọng Adam bựa (16 MB)",
+    approxBytes: 16_700_000,
+  },
+  lac_phi: {
+    url: "/download/media/kokoro/lac_phi_int8.onnx?v=1",
+    label: "giọng Lạc Phi (16 MB)",
     approxBytes: 16_700_000,
   },
 };

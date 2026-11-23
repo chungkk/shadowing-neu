@@ -62,6 +62,7 @@ type StatusPayload = {
 
 const BROWSER_VOICES: DubVoice[] = [
   { id: "piper:adam_bua", label: "🚀 Trình duyệt · Adam bựa (Nam · Bắc · Nghe ngay · 0đ)" },
+  { id: "piper:lac_phi", label: "🚀 Trình duyệt · Lạc Phi (Nam · Thuyết minh · Nghe ngay · 0đ)" },
 ];
 
 const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);
@@ -321,9 +322,9 @@ export default function DubClient() {
           </button>
 
           <span className="text-[11px] text-muted">
-            Adam bựa (trình duyệt) ✓
+            Adam bựa / Lạc Phi (trình duyệt) ✓
             {status?.health?.edge_tts ? " · Edge ✓" : ""}
-            {status?.health?.model_ready ? " · Lạc Phi ✓" : ""}
+            {status?.health?.model_ready ? " · Lạc Phi server ✓" : ""}
           </span>
         </div>
 

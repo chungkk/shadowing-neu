@@ -35,12 +35,14 @@ export type LiveCue = {
 export type LiveVoiceId =
   | "edge:vi-VN-NamMinhNeural"
   | "edge:vi-VN-HoaiMyNeural"
-  | "piper:adam_bua";
+  | "piper:adam_bua"
+  | "piper:lac_phi";
 
 export const LIVE_VOICES: { id: LiveVoiceId; label: string; short: string }[] = [
   { id: "edge:vi-VN-NamMinhNeural", label: "Edge · Nam Minh (Nam · Tự nhiên)", short: "Edge · Nam Minh (Nam)" },
   { id: "edge:vi-VN-HoaiMyNeural", label: "Edge · Hoài My (Nữ · Tự nhiên)", short: "Edge · Hoài My (Nữ)" },
   { id: "piper:adam_bua", label: "Adam bựa (Nam · Bắc · Trình duyệt)", short: "Adam bựa (Nam · Trình duyệt)" },
+  { id: "piper:lac_phi", label: "Lạc Phi (Nam · Thuyết minh · Trình duyệt)", short: "Lạc Phi (Nam · Trình duyệt)" },
 ];
 
 function resolveInitialVoice(v?: LiveVoiceId): LiveVoiceId {
@@ -50,6 +52,7 @@ function resolveInitialVoice(v?: LiveVoiceId): LiveVoiceId {
 
 function getPiperVoiceKey(v: LiveVoiceId): PiperVoiceKey | null {
   if (v === "piper:adam_bua") return "adam_bua";
+  if (v === "piper:lac_phi") return "lac_phi";
   return null;
 }
 
@@ -715,7 +718,11 @@ export default function KokoroLivePlayer({
             )}
             {showDebugMeta && (
               <span>
-                {usingLocalWasm ? "Adam bựa trình duyệt (INT8)" : "Edge Neural TTS"}
+                {localEngineKey === "lac_phi"
+                  ? "Lạc Phi trình duyệt (INT8)"
+                  : usingLocalWasm
+                    ? "Adam bựa trình duyệt (INT8)"
+                    : "Edge Neural TTS"}
                 {lastSynthMs !== null ? ` · ${lastSynthMs}ms` : ""}
               </span>
             )}

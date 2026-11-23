@@ -60,6 +60,7 @@ const VOICE_PILLS: { id: LiveVoiceId; name: string; tag: string }[] = [
   { id: "edge:vi-VN-NamMinhNeural", name: "Nam Minh", tag: "Nam · Tự nhiên" },
   { id: "edge:vi-VN-HoaiMyNeural", name: "Hoài My", tag: "Nữ · Tự nhiên" },
   { id: "piper:adam_bua", name: "Adam bựa", tag: "Trình duyệt" },
+  { id: "piper:lac_phi", name: "Lạc Phi", tag: "Thuyết minh" },
 ];
 
 const PIPELINE_STEPS = [
