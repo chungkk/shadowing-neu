@@ -216,6 +216,8 @@ export default function DubPlayer({
   cues,
   initialVoice = "edge:vi-VN-NamMinhNeural",
   bgProgress = null,
+  bgStatus = null,
+  onRetryBg,
 }: {
   videoId: string;
   title: string;
@@ -223,6 +225,9 @@ export default function DubPlayer({
   cues: DubCue[];
   initialVoice?: DubVoiceId;
   bgProgress?: DubBgProgress | null;
+  /** Kết nối dịch ngầm: đang tự nối lại / đã hết lượt nối lại */
+  bgStatus?: "reconnecting" | "failed" | null;
+  onRetryBg?: () => void;
 }) {
   const { t } = useI18n();
   const { width, tablet, split } = useLayout();
@@ -547,14 +552,42 @@ export default function DubPlayer({
         >
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-              <ActivityIndicator size="small" color={sec.secText} />
+              {bgStatus === "failed" ? (
+                <SymbolView name="wifi.exclamationmark" size={14} tintColor={C.muted} weight="semibold" />
+              ) : (
+                <ActivityIndicator size="small" color={sec.secText} />
+              )}
               <Text style={{ color: C.text, fontSize: 12, fontWeight: "600", flex: 1 }} numberOfLines={1}>
-                {t("dub.bgTranslating", { d: bgProgress.done, n: bgProgress.total })}
+                {bgStatus === "failed"
+                  ? t("dub.bgFailed")
+                  : bgStatus === "reconnecting"
+                    ? t("dub.reconnecting")
+                    : t("dub.bgTranslating", { d: bgProgress.done, n: bgProgress.total })}
               </Text>
             </View>
-            <Text style={{ color: sec.secText, fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
-              {bgProgress.pct}%
-            </Text>
+            {bgStatus === "failed" && onRetryBg ? (
+              <Pressable
+                onPress={() => {
+                  haptic.tap();
+                  onRetryBg();
+                }}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  backgroundColor: sec.sec,
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <Text style={{ color: sec.onSec, fontSize: 12, fontWeight: "800" }}>{t("retry")}</Text>
+              </Pressable>
+            ) : (
+              <Text style={{ color: sec.secText, fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+                {bgProgress.pct}%
+              </Text>
+            )}
           </View>
           <View style={{ height: 4, borderRadius: 2, backgroundColor: alpha(sec.sec, 0.2), overflow: "hidden" }}>
             <View style={{ height: "100%", width: `${bgProgress.pct}%`, backgroundColor: sec.sec }} />
@@ -580,10 +613,16 @@ export default function DubPlayer({
       >
         {activeCue ? (
           <>
-            <Text style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "700", textAlign: "center" }}>
-              {activeCue.pending ? t("dub.translatingCue") : activeCue.text}
-            </Text>
-            {showOrig && !!activeCue.orig && (
+            {activeCue.untranslated ? (
+              <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21, fontStyle: "italic", textAlign: "center" }}>
+                {activeCue.orig} ({t("dub.untranslated")})
+              </Text>
+            ) : (
+              <Text style={{ color: C.text, fontSize: 16, lineHeight: 22, fontWeight: "700", textAlign: "center" }}>
+                {activeCue.pending ? t("dub.translatingCue") : activeCue.text}
+              </Text>
+            )}
+            {showOrig && !!activeCue.orig && !activeCue.untranslated && (
               <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18, textAlign: "center" }}>
                 {activeCue.orig}
               </Text>
@@ -721,16 +760,20 @@ export default function DubPlayer({
             <View style={{ flex: 1, gap: 3 }}>
               <Text
                 style={{
-                  color: item.pending ? C.muted : C.text,
+                  color: item.pending || item.untranslated ? C.muted : C.text,
                   fontSize: 15,
                   lineHeight: 21,
                   fontWeight: active ? "700" : "500",
-                  fontStyle: item.pending ? "italic" : "normal",
+                  fontStyle: item.pending || item.untranslated ? "italic" : "normal",
                 }}
               >
-                {item.pending ? t("dub.translatingCue") : item.text}
+                {item.pending
+                  ? t("dub.translatingCue")
+                  : item.untranslated
+                    ? `${item.orig ?? ""} (${t("dub.untranslated")})`
+                    : item.text}
               </Text>
-              {showOrig && !!item.orig && (
+              {showOrig && !!item.orig && !item.untranslated && (
                 <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{item.orig}</Text>
               )}
             </View>

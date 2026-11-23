@@ -207,8 +207,10 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                     nextCues[idx] = {
                       start_ms: nextCues[idx].start_ms,
                       end_ms: nextCues[idx].end_ms,
-                      text: tr || nextCues[idx].orig || nextCues[idx].text,
+                      // "" = AI chưa dịch được → không đọc (đừng thay bằng câu gốc)
+                      text: tr,
                       orig: nextCues[idx].orig,
+                      ...(tr ? {} : { untranslated: true }),
                     };
                   }
                 });

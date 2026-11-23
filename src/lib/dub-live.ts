@@ -4,7 +4,7 @@ import { getCached, setCached } from "./db";
 import { dubEnabled, dubJson, mergeDubCues, type DubCue } from "./dub";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
 import type { Segment } from "./subtitles";
-import { translateForDubbingSmart, translationEnabled, type DubStyleCard } from "./translate";
+import { translateDubRepair, translateForDubbingSmart, translationEnabled, type DubStyleCard } from "./translate";
 import { whisperEnabled } from "./whisper";
 import { fetchAnyYouTubeSubtitles, transcribeAnyYouTubeAudio, VideoTooLongError } from "./youtube";
 
@@ -13,6 +13,8 @@ export type LiveDubCue = DubCue & {
   orig?: string;
   /** true = đang dịch ngầm ở server (chỉ có trong gói `ready` cuốn chiếu) */
   pending?: boolean;
+  /** true = AI chưa dịch được câu này (text = ""), lần mở sau sẽ dịch bù */
+  untranslated?: boolean;
 };
 
 export type LiveDubResult = {
@@ -21,6 +23,8 @@ export type LiveDubResult = {
   sourceLang: string;
   style?: DubStyleCard | null;
   cues: LiveDubCue[];
+  /** Thời điểm lưu khi còn câu chưa dịch; quá REPAIR_AFTER_MS thì lần mở sau dịch bù */
+  failedAt?: number;
 };
 
 export type PrepareProgress = {
@@ -56,9 +60,30 @@ const CACHE_PREFIX = "dub:live:v2:";
 const gd = globalThis as unknown as { __dubLiveFlights?: Map<string, FlightEntry> };
 const inflight = (gd.__dubLiveFlights ??= new Map());
 
-export function getCachedLiveDub(videoId: string): LiveDubResult | null {
+/** Chờ bao lâu rồi mới dịch bù câu lỗi (tránh gọi AI liên tục khi nhà cung cấp đang lỗi) */
+const REPAIR_AFTER_MS = 10 * 60_000;
+
+const hasUntranslated = (r: LiveDubResult) => r.cues.some((c) => c.untranslated);
+
+function readCachedLiveDub(videoId: string): LiveDubResult | null {
   const hit = getCached<LiveDubResult>(`${CACHE_PREFIX}${videoId}`);
   return hit && Array.isArray(hit.cues) && hit.cues.length > 0 ? hit : null;
+}
+
+/** Bản cache dùng được ngay; null nếu chưa có hoặc còn câu lỗi đã đến hạn dịch bù. */
+export function getCachedLiveDub(videoId: string): LiveDubResult | null {
+  const hit = readCachedLiveDub(videoId);
+  if (!hit) return null;
+  if (hasUntranslated(hit) && translationEnabled() && Date.now() - (hit.failedAt ?? 0) >= REPAIR_AFTER_MS) return null;
+  return hit;
+}
+
+/** Đánh dấu câu chưa dịch + thời điểm lỗi trước khi lưu cache */
+function finalizeResult(r: LiveDubResult): LiveDubResult {
+  const out: LiveDubResult = { ...r };
+  if (hasUntranslated(r)) out.failedAt = Date.now();
+  else delete out.failedAt;
+  return out;
 }
 
 function pickProbeSub(subs: ProbeRes["subtitles"]) {
@@ -176,6 +201,36 @@ export async function prepareLiveDub(
   const emitProgress = (p: PrepareProgress) => broadcast({ type: "progress", ...p });
 
   const run = (async (): Promise<LiveDubResult> => {
+    // Đã dịch trước đó nhưng còn câu lỗi → phát ngay bản cũ, chỉ dịch bù những câu thiếu
+    const stale = readCachedLiveDub(videoId);
+    if (stale && hasUntranslated(stale) && translationEnabled()) {
+      const missing = stale.cues.flatMap((c, i) => (c.untranslated ? [i] : []));
+      const total = stale.cues.length;
+      const snapshot = { ...stale, cues: stale.cues.map((c) => ({ ...c })) };
+      entry.partial = { data: snapshot, pct: 60, done: total - missing.length, total };
+      broadcast({ type: "ready", data: snapshot, pct: 60, done: total - missing.length, total });
+      emitProgress({ pct: 60, stage: `Đang dịch bù ${missing.length} câu còn thiếu…`, done: total - missing.length, total });
+
+      const items = buildTranslateItems(
+        stale.cues.map((c) => ({ start_ms: c.start_ms, end_ms: c.end_ms, text: c.orig || c.text })),
+      );
+      const fixed = await translateDubRepair(items, missing, {
+        title: stale.title,
+        sourceLang: stale.sourceLang,
+        style: stale.style ?? null,
+      });
+      const repaired = finalizeResult({
+        ...stale,
+        cues: stale.cues.map((c, i) => {
+          const tr = fixed.get(i);
+          return tr ? { start_ms: c.start_ms, end_ms: c.end_ms, text: tr, orig: c.orig } : c;
+        }),
+      });
+      setCached(`${CACHE_PREFIX}${videoId}`, repaired, null);
+      emitProgress({ pct: 100, stage: "Hoàn tất!" });
+      return repaired;
+    }
+
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     const maxCues = opts.maxCues ?? 1800;
     let title = "";
@@ -292,8 +347,9 @@ export async function prepareLiveDub(
             workingCues[idx] = {
               start_ms: merged[idx].start_ms,
               end_ms: merged[idx].end_ms,
-              text: tr || merged[idx].text,
+              text: tr,
               orig: merged[idx].text,
+              ...(tr ? {} : { untranslated: true }),
             };
           });
           const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 98;
@@ -324,18 +380,19 @@ export async function prepareLiveDub(
       cues = merged.map((c, i) => ({
         start_ms: c.start_ms,
         end_ms: c.end_ms,
-        text: res.translations[i] || c.text,
+        text: res.translations[i] || "",
         orig: c.text,
+        ...(res.translations[i] ? {} : { untranslated: true }),
       }));
     }
 
-    const result: LiveDubResult = {
+    const result = finalizeResult({
       videoId,
       title: title || videoId,
       sourceLang,
       style,
       cues,
-    };
+    });
     setCached(`${CACHE_PREFIX}${videoId}`, result, null);
     emitProgress({ pct: 100, stage: "Hoàn tất!" });
     return result;
@@ -360,6 +417,9 @@ export function streamPrepareResponse(
           controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
         } catch {}
       };
+      // Nhịp giữ kết nối: các bước lâu (tải phụ đề, Whisper) có thể im lặng hàng chục giây;
+      // ping giúp proxy không cắt kết nối và app phân biệt được "server đang làm" với "mất mạng".
+      const heartbeat = setInterval(() => send({ type: "ping" }), 15_000);
       try {
         const data = await executor(
           (p) => send({ type: "progress", ...p }),
@@ -371,6 +431,7 @@ export function streamPrepareResponse(
       } catch (e) {
         send({ type: "error", error: (e as Error).message || "Không thể chuẩn bị thuyết minh lúc này." });
       } finally {
+        clearInterval(heartbeat);
         try {
           controller.close();
         } catch {}

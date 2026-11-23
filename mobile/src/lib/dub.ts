@@ -16,6 +16,8 @@ export type DubCue = {
   text: string;
   orig?: string;
   pending?: boolean;
+  /** AI chưa dịch được câu này (text rỗng, không đọc) */
+  untranslated?: boolean;
 };
 
 export type DubResult = {
@@ -43,6 +45,8 @@ export type RecentDub = {
   videoId: string;
   title: string;
 };
+
+const IDLE_TIMEOUT_MS = 45_000;
 
 // ---- 1. Stream NDJSON chuẩn bị phụ đề tiếng Việt (tiến trình % + phát cuốn chiếu) ----
 
@@ -102,9 +106,24 @@ export function startDubPrepareStream(
     xhr.setRequestHeader("Accept", "application/x-ndjson");
     const auth = authHeaders();
     if (auth?.Authorization) xhr.setRequestHeader("Authorization", auth.Authorization);
-    xhr.timeout = 180_000;
+    // Không giới hạn tổng thời gian (video dài dịch ngầm vài phút); chỉ coi là mất kết nối
+    // khi không nhận được byte nào trong IDLE_TIMEOUT_MS (server ping mỗi 15 giây).
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    let idleTimedOut = false;
+    const bumpIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        idleTimedOut = true;
+        try {
+          xhr.abort();
+        } catch {}
+      }, IDLE_TIMEOUT_MS);
+    };
+    const stopIdle = () => clearTimeout(idleTimer);
+    bumpIdle();
 
     xhr.onprogress = () => {
+      bumpIdle();
       if (aborted || xhr.status >= 400) return;
       const resp = xhr.responseText ?? "";
       if (resp.length > offset) {
@@ -114,6 +133,7 @@ export function startDubPrepareStream(
     };
 
     xhr.onload = () => {
+      stopIdle();
       if (aborted) return;
       const resp = xhr.responseText ?? "";
       if (xhr.status < 200 || xhr.status >= 300) {
@@ -151,12 +171,15 @@ export function startDubPrepareStream(
     };
 
     xhr.onerror = () => {
-      if (!aborted) reject(new Error(t("api.noConnection")));
-    };
-    xhr.ontimeout = () => {
+      stopIdle();
       if (!aborted) reject(new Error(t("api.noConnection")));
     };
     xhr.onabort = () => {
+      stopIdle();
+      if (idleTimedOut && !aborted) {
+        reject(new Error(t("api.noConnection")));
+        return;
+      }
       const err = new Error("aborted");
       err.name = "AbortError";
       reject(err);

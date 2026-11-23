@@ -28,6 +28,8 @@ export type LiveCue = {
   orig?: string;
   /** true = đang dịch ngầm, chưa có bản tiếng Việt */
   pending?: boolean;
+  /** true = AI chưa dịch được câu này (text rỗng, không đọc) */
+  untranslated?: boolean;
 };
 
 export type LiveVoiceId =
@@ -621,9 +623,15 @@ export default function KokoroLivePlayer({
         {activeCue ? (
           <>
             <p className="text-sm leading-snug font-semibold text-foreground sm:text-[0.95rem]">
-              {activeCue.pending ? "Đang dịch câu này…" : activeCue.text}
+              {activeCue.pending ? (
+                "Đang dịch câu này…"
+              ) : activeCue.untranslated ? (
+                <span className="font-normal italic text-muted">{activeCue.orig} (chưa dịch được)</span>
+              ) : (
+                activeCue.text
+              )}
             </p>
-            {showOrig && activeCue.orig && (
+            {showOrig && activeCue.orig && !activeCue.untranslated && (
               <p className="text-xs leading-snug text-muted">{activeCue.orig}</p>
             )}
           </>
@@ -775,9 +783,15 @@ export default function KokoroLivePlayer({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`block leading-snug ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
-                      {c.pending ? <span className="italic text-muted">Đang dịch…</span> : c.text}
+                      {c.pending ? (
+                        <span className="italic text-muted">Đang dịch…</span>
+                      ) : c.untranslated ? (
+                        <span className="italic text-muted">{c.orig} (chưa dịch được)</span>
+                      ) : (
+                        c.text
+                      )}
                     </span>
-                    {showOrig && c.orig && <span className="mt-0.5 block text-[11px] text-muted">{c.orig}</span>}
+                    {showOrig && c.orig && !c.untranslated && <span className="mt-0.5 block text-[11px] text-muted">{c.orig}</span>}
                   </span>
                 </button>
               );

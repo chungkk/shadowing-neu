@@ -387,8 +387,29 @@ async function translateSmartDubChunk(
   }
 
   if (todo.length === chunk.length) throw new Error("Không dịch được lúc này.");
-  return result.map((r, i) => r || chunk[i].text);
+  // "" = câu chưa dịch được. Không thay bằng câu gốc: giọng Việt sẽ đọc tiếng nước ngoài thành vô nghĩa.
+  return result;
 }
+
+/** Dịch 1 lô, lỗi thì đợi chút rồi thử lại 1 lần (thường do 429 / mạng chập chờn). */
+async function translateSmartDubChunkRetry(
+  chunk: DubTranslateItem[],
+  prevCtx: string[],
+  nextCtx: string[],
+  systemPrompt: string,
+): Promise<string[]> {
+  try {
+    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
+  } catch (e) {
+    console.error("[dub-smart] lô lỗi, thử lại:", (e as Error).message);
+    await new Promise((r) => setTimeout(r, CHUNK_RETRY_DELAY_MS));
+    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
+  }
+}
+
+const CHUNK_RETRY_DELAY_MS = 2_500;
+/** Style Card chỉ để dịch hay hơn, không được giữ chân lô đầu: quá hạn thì dịch luôn không cần nó. */
+const STYLE_CARD_DEADLINE_MS = 6_000;
 
 const FIRST_DUB_BATCH = 20; // Lô đầu 20 câu (~2 phút đầu) xong ngay để phát liền
 const NEXT_DUB_BATCH = 30; // Các lô sau 30 câu, chạy song song 4 luồng
@@ -421,7 +442,10 @@ export async function translateForDubbingSmart(
   }
 
   onProgress?.({ phase: "style", done: 0, total: items.length });
-  const style = await buildDubStyleCard(items, title, sourceLang || "auto");
+  const style = await Promise.race([
+    buildDubStyleCard(items, title, sourceLang || "auto"),
+    new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
+  ]);
   const systemPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style);
   const out: string[] = new Array(items.length);
   onProgress?.({ phase: "translate", done: 0, total: items.length });
@@ -438,11 +462,19 @@ export async function translateForDubbingSmart(
 
   let doneCount = 0;
 
-  const runRange = async (r: { start: number; end: number }) => {
+  const runRange = async (r: { start: number; end: number }, mustSucceed = false) => {
     const chunk = items.slice(r.start, r.end);
     const prevCtx = items.slice(Math.max(0, r.start - 2), r.start).map((x) => x.text);
     const nextCtx = items.slice(r.end, r.end + 2).map((x) => x.text);
-    const translated = await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
+    let translated: string[];
+    try {
+      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, systemPrompt);
+    } catch (e) {
+      // Lô đầu hỏng thì chưa có gì để phát → báo lỗi. Lô sau hỏng thì để trống, các lô khác dịch tiếp.
+      if (mustSucceed) throw e;
+      console.error(`[dub-smart] bỏ lô ${r.start}-${r.end}:`, (e as Error).message);
+      translated = chunk.map(() => "");
+    }
     translated.forEach((t, k) => {
       out[r.start + k] = t;
     });
@@ -453,7 +485,7 @@ export async function translateForDubbingSmart(
 
   // Lô 0 chạy ưu tiên trước để trình phát mở ngay lập tức sau ~2–3 giây
   if (ranges.length > 0) {
-    await runRange(ranges[0]);
+    await runRange(ranges[0], true);
   }
 
   // Các lô còn lại chạy song song 4 luồng
@@ -471,6 +503,52 @@ export async function translateForDubbingSmart(
   }
 
   return { translations: out, style };
+}
+
+/**
+ * Dịch bù các câu còn thiếu của một video đã dịch (theo chỉ số trong `items`).
+ * Gom các chỉ số liền nhau thành lô ≤ 30 câu, kèm 2 câu trước/sau làm ngữ cảnh.
+ * Trả về Map chỉ số → bản dịch (chỉ những câu dịch được).
+ */
+export async function translateDubRepair(
+  items: DubTranslateItem[],
+  indices: number[],
+  { title = "", sourceLang = "auto", style = null }: { title?: string; sourceLang?: string; style?: DubStyleCard | null } = {},
+): Promise<Map<number, string>> {
+  const fixed = new Map<number, string>();
+  const sorted = [...new Set(indices)].filter((i) => i >= 0 && i < items.length).sort((a, b) => a - b);
+  if (!sorted.length) return fixed;
+
+  const groups: number[][] = [];
+  for (const i of sorted) {
+    const g = groups[groups.length - 1];
+    if (g && i === g[g.length - 1] + 1 && g.length < NEXT_DUB_BATCH) g.push(i);
+    else groups.push([i]);
+  }
+
+  const systemPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(DUB_CONCURRENCY, groups.length) }, async () => {
+      while (cursor < groups.length) {
+        const g = groups[cursor++];
+        const first = g[0];
+        const last = g[g.length - 1];
+        const prevCtx = items.slice(Math.max(0, first - 2), first).map((x) => x.text);
+        const nextCtx = items.slice(last + 1, last + 3).map((x) => x.text);
+        const out = await translateSmartDubChunkRetry(
+          g.map((i) => items[i]),
+          prevCtx,
+          nextCtx,
+          systemPrompt,
+        ).catch(() => null);
+        g.forEach((idx, k) => {
+          if (out?.[k]) fixed.set(idx, out[k]);
+        });
+      }
+    }),
+  );
+  return fixed;
 }
 
 /** Dịch danh sách câu (giữ thứ tự). Câu đã có trong kho thì không gọi AI. "" = chưa dịch được. */
