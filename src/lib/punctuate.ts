@@ -11,7 +11,8 @@ import type { Segment, Word } from "./subtitles";
  * - PUNCTUATE_MODEL    mô hình (mặc định "openai/gpt-oss-120b"; đặt "off" để tắt)
  * - PUNCTUATE_API_URL  endpoint chat completions (mặc định suy ra từ TRANSCRIBE_API_URL)
  */
-const MODEL = process.env.PUNCTUATE_MODEL ?? "openai/gpt-oss-120b";
+// Mặc định dùng gpt-oss-20b (nhanh gấp 2–3× cho tác vụ chấm câu và tách riêng hạn mức TPM với 120b dùng để dịch)
+const MODEL = process.env.PUNCTUATE_MODEL ?? "openai/gpt-oss-20b";
 const API_KEY = process.env.PUNCTUATE_API_KEY ?? process.env.TRANSCRIBE_API_KEY;
 const API_URL =
   process.env.PUNCTUATE_API_URL ??

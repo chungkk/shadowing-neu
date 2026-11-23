@@ -323,7 +323,7 @@ function isStyleCard(x: unknown): x is DubStyleCard {
   return typeof o.topic === "string" && typeof o.tone === "string" && typeof o.pronouns === "string";
 }
 
-const STYLE_SCRIPT_MAX_CHARS = 24_000;
+const STYLE_SCRIPT_MAX_CHARS = 8_000;
 
 /**
  * Chuẩn bị toàn bộ phụ đề cho bước đọc hiểu trước khi dịch.
@@ -478,6 +478,7 @@ async function callSmartDubProvider(
   systemPrompt: string,
   payload: object,
   expectedCount: number,
+  fastFailover = false,
 ): Promise<string[]> {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(p.url, {
@@ -492,13 +493,17 @@ async function callSmartDubProvider(
         ],
         ...p.extra,
       }),
-      signal: AbortSignal.timeout(35_000),
+      signal: AbortSignal.timeout(fastFailover ? 20_000 : 35_000),
     });
-    // Rate limit ngắn → đợi nhanh tối đa 2 lần rồi thử lại, nếu vẫn 429 thì nhường provider kế tiếp
-    if (res.status === 429 && attempt < 2) {
-      const wait = Math.min(Number(res.headers.get("retry-after")) || 1.5 * (attempt + 1), 6);
-      await new Promise((r) => setTimeout(r, wait * 1000));
-      continue;
+    // Lô đầu (fastFailover): nếu 429 bắt chờ > 2s → chuyển ngay sang provider kế tiếp thay vì treo người dùng chờ 12s
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get("retry-after")) || 0;
+      const maxAttempts = fastFailover ? 1 : 2;
+      if (attempt < maxAttempts && (!fastFailover || retryAfter <= 2)) {
+        const wait = Math.min(retryAfter || 1.5 * (attempt + 1), fastFailover ? 2 : 6);
+        await new Promise((r) => setTimeout(r, wait * 1000));
+        continue;
+      }
     }
     if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data: { choices?: { message?: { content?: string } }[] } = await res.json();
@@ -552,6 +557,7 @@ async function translateSmartDubChunk(
   nextCtx: string[],
   systemPrompt: string,
   overviewCtx: string[] = [],
+  fastFailover = false,
 ): Promise<string[]> {
   const list = dubProviders();
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
@@ -578,7 +584,7 @@ async function translateSmartDubChunk(
   for (const p of list) {
     if (!todo.length) break;
     try {
-      const out = await callSmartDubProvider(p, systemPrompt, makePayload(todo), todo.length);
+      const out = await callSmartDubProvider(p, systemPrompt, makePayload(todo), todo.length, fastFailover);
       todo.forEach((idx, k) => {
         if (looksTranslated(chunk[idx].text, out[k])) result[idx] = out[k];
       });
@@ -603,6 +609,7 @@ async function translateSmartDubChunk(
         partNext,
         systemPrompt,
         overviewCtx,
+        fastFailover,
       ).catch(() => null);
       part.forEach((idx, k) => {
         if (sub?.[k]) result[idx] = sub[k];
@@ -623,13 +630,14 @@ async function translateSmartDubChunkRetry(
   nextCtx: string[],
   systemPrompt: string,
   overviewCtx: string[] = [],
+  fastFailover = false,
 ): Promise<string[]> {
   try {
-    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx);
+    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx, fastFailover);
   } catch (e) {
     console.error("[dub-smart] lô lỗi, thử lại:", (e as Error).message);
-    await new Promise((r) => setTimeout(r, CHUNK_RETRY_DELAY_MS));
-    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx);
+    await new Promise((r) => setTimeout(r, fastFailover ? 800 : CHUNK_RETRY_DELAY_MS));
+    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx, fastFailover);
   }
 }
 
@@ -704,22 +712,11 @@ export async function translateForDubbingSmart(
     return { translations: items.map((x) => x.text), style: null };
   }
 
-  // Khởi chạy phân tích cẩm nang văn phong (Style Bible) SONG SONG với lô đầu tiên (10 câu mở đầu)
-  // thay vì chặn chờ 4–10 giây trước khi bắt đầu dịch → mở trình phát nhanh hơn gấp 3–4 lần,
-  // trong khi toàn bộ các lô tiếp theo vẫn hưởng trọn Style Bible + mẫu câu từ lô đầu.
-  const stylePromise =
-    items.length > FIRST_DUB_BATCH
-      ? Promise.race([
-          buildDubStyleCard(items, title, sourceLang || "auto"),
-          new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
-        ])
-      : Promise.resolve<DubStyleCard | null>(null);
-
   const initialPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, null);
   const out: string[] = new Array(items.length);
   onProgress?.({ phase: "translate", done: 0, total: items.length });
 
-  // Chia lô: lô đầu nhỏ (10 câu) để phát tức thì, các lô sau 30 câu chạy song song
+  // Chia lô: lô đầu nhỏ (10 câu) để phát tức thì, các lô sau 25 câu chạy song song
   const ranges: { start: number; end: number }[] = [];
   if (items.length > 0) {
     const firstEnd = Math.min(items.length, FIRST_DUB_BATCH);
@@ -742,7 +739,7 @@ export async function translateForDubbingSmart(
     const nextCtx = items.slice(r.end, r.end + 2).map((x) => x.text);
     let translated: string[];
     try {
-      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, prompt, overviewCtx);
+      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, prompt, overviewCtx, mustSucceed);
     } catch (e) {
       // Lô đầu hỏng thì chưa có gì để phát → báo lỗi. Lô sau hỏng thì để trống, các lô khác dịch tiếp.
       if (mustSucceed) throw e;
@@ -757,17 +754,21 @@ export async function translateForDubbingSmart(
     onProgress?.({ phase: "translate", done: doneCount, total: items.length });
   };
 
-  // Lô 0 chạy ngay lập tức (song song với Style Bible), kèm overview rải đều toàn bài để đúng văn phong ngay từ câu 1
+  // Lô 0 chạy ĐỘC QUYỀN trước (chỉ ~1.200 token + overview toàn bài, KHÔNG bị Style Bible tranh TPM Groq)
+  // → mở tiếng trong ~1.5–2.5 giây!
   if (ranges.length > 0) {
     const overview = buildQuickOverview(items, ranges[0].end + 2);
     await runRange(ranges[0], initialPrompt, true, overview);
   }
 
-  const style = await stylePromise;
-
-  // Các lô còn lại chạy song song, kèm đầy đủ Style Bible + 4–5 câu mẫu từ lô 0 để đồng bộ giọng văn & xưng hô
+  // Chỉ sau khi người dùng đã bắt đầu nghe lô đầu mới chạy Style Bible gọn (8.000 ký tự) cho các lô phía sau
   const rest = ranges.slice(1);
+  let style: DubStyleCard | null = null;
   if (rest.length > 0) {
+    style = await Promise.race([
+      buildDubStyleCard(items, title, sourceLang || "auto"),
+      new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
+    ]);
     const examples = pickStyleExamples(items, out, ranges[0].end);
     const restPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style, examples);
     let cursor = 0;

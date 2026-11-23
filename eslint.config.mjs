@@ -10,6 +10,7 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     "mobile/**", // app Expo có cấu hình lint riêng
+    "extension/**", // Chrome Extension MV3 (plain JS, chạy với global chrome.*)
     "out/**",
     "build/**",
     "next-env.d.ts",

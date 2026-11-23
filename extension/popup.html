@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HalloVN Thuyết minh</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="head">
+        <div class="brand">
+          <img src="icons/icon48.png" alt="HalloVN" class="logo" />
+          <div>
+            <h1>HalloVN Thuyết minh</h1>
+            <p id="tabHint" class="sub">Đang kiểm tra trang hiện tại…</p>
+          </div>
+        </div>
+        <span id="stateDot" class="dot" aria-hidden="true"></span>
+      </header>
+
+      <button id="toggleBtn" type="button" class="btn-main" disabled>Bật thuyết minh tiếng Việt</button>
+      <p id="errBox" class="alert hidden" role="alert"></p>
+
+      <section class="card">
+        <div class="label-row">
+          <span class="label">Giọng đọc</span>
+        </div>
+        <div class="pills" role="radiogroup" aria-label="Chọn giọng thuyết minh">
+          <button type="button" class="pill" data-voice="edge:vi-VN-NamMinhNeural">Nam Minh · Nam</button>
+          <button type="button" class="pill" data-voice="edge:vi-VN-HoaiMyNeural">Hoài My · Nữ</button>
+        </div>
+
+        <label class="slider-row">
+          <span class="label">Âm lượng gốc</span>
+          <input id="origVol" type="range" min="0" max="100" step="5" />
+          <span id="origVolVal" class="val">25%</span>
+        </label>
+
+        <label class="slider-row">
+          <span class="label">Âm lượng Việt</span>
+          <input id="dubVol" type="range" min="0" max="160" step="10" />
+          <span id="dubVolVal" class="val">115%</span>
+        </label>
+
+        <label class="slider-row">
+          <span class="label">Tốc độ đọc</span>
+          <input id="speed" type="range" min="0.9" max="1.4" step="0.05" />
+          <span id="speedVal" class="val">1.15×</span>
+        </label>
+      </section>
+
+      <section class="card toggles">
+        <label class="check-row">
+          <span>Hiện phụ đề tiếng Việt trên video</span>
+          <input id="showCaptions" type="checkbox" />
+        </label>
+        <label class="check-row">
+          <span>Phụ đề song ngữ (kèm câu gốc)</span>
+          <input id="showOrig" type="checkbox" />
+        </label>
+        <label class="check-row">
+          <span>Tự bật khi chuyển video YouTube kế tiếp</span>
+          <input id="autoNextYouTube" type="checkbox" />
+        </label>
+      </section>
+
+      <section class="card">
+        <div class="row-between">
+          <span class="label">Video không có phụ đề sẵn?</span>
+          <button id="uploadSubBtn" type="button" class="btn-sm">Nạp .SRT / .VTT</button>
+          <input id="subFileInput" type="file" accept=".srt,.vtt,.txt" class="hidden" />
+        </div>
+      </section>
+
+      <details class="card">
+        <summary class="summary">Tài khoản HalloVN &amp; Máy chủ</summary>
+        <div class="details-body">
+          <div id="authSignedIn" class="auth-bar hidden">
+            <span id="authName" class="auth-name"></span>
+            <button id="logoutBtn" type="button" class="btn-sm">Đăng xuất</button>
+          </div>
+          <form id="loginForm" class="login-form">
+            <input id="loginEmail" type="email" placeholder="Email HalloVN (để mở thêm lượt)" required />
+            <input id="loginPass" type="password" placeholder="Mật khẩu" required />
+            <button type="submit" class="btn-sm btn-accent">Đăng nhập</button>
+          </form>
+
+          <label class="server-row">
+            <span class="label">Máy chủ API</span>
+            <select id="apiBase">
+              <option value="https://hallovn.de">hallovn.de (Chính thức)</option>
+              <option value="http://localhost:3000">localhost:3000 (Dev)</option>
+            </select>
+          </label>
+        </div>
+      </details>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

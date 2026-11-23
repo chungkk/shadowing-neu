@@ -1,0 +1,278 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 340px;
+  background: #0f1219;
+  color: #f1f5f9;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 225px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #475569;
+  flex-shrink: 0;
+}
+
+.dot.on {
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+}
+
+.dot.loading {
+  background: #f59e0b;
+}
+
+.btn-main {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-main:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn-main:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-main.active {
+  background: #1e293b;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  color: #fda4af;
+}
+
+.alert {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(153, 27, 27, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px;
+  border-radius: 12px;
+  background: #171c27;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.label {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.pill {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0f131c;
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pill.active {
+  border-color: #f43f5e;
+  background: rgba(225, 29, 72, 0.18);
+  color: #fda4af;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 94px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-row input[type="range"] {
+  width: 100%;
+  accent-color: #f43f5e;
+}
+
+.val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.toggles {
+  gap: 8px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.check-row input {
+  accent-color: #f43f5e;
+  width: 15px;
+  height: 15px;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.btn-sm {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0f131c;
+  color: #e2e8f0;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-sm:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-accent {
+  background: #e11d48;
+  border-color: #f43f5e;
+  color: #fff;
+}
+
+.summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+  user-select: none;
+}
+
+.details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.auth-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.auth-name {
+  font-size: 12px;
+  color: #86efac;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-form input,
+.server-row select {
+  width: 100%;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0f131c;
+  color: #f1f5f9;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.server-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}

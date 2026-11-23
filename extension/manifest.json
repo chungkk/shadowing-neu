@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "HalloVN — Thuyết minh tiếng Việt cho Video",
+  "short_name": "HalloVN Dub",
+  "version": "1.0.0",
+  "description": "Xem video YouTube và các trang web có phụ đề với giọng thuyết minh tiếng Việt tự nhiên, đồng bộ trực tiếp ngay trong trình duyệt.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "HalloVN Thuyết minh tiếng Việt",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://hallovn.de/*",
+    "http://localhost:3000/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

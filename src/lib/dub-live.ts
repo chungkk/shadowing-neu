@@ -124,8 +124,13 @@ function segmentsToCues(segments: Segment[]): DubCueInput[] {
   }));
 }
 
+/** Lưu bản thuyết minh đã hoàn tất vào cache dùng chung theo videoId (kể cả khi phụ đề do Chrome Extension lấy từ trình duyệt). */
+export function saveCachedLiveDub(videoId: string, result: LiveDubResult): void {
+  setCached(`${CACHE_PREFIX}${videoId}`, finalizeResult(result), null);
+}
+
 /** Nếu phụ đề thiếu dấu chấm câu → bổ sung dấu câu đa ngôn ngữ trước khi sắp xếp thành từng câu trọn vẹn */
-async function ensurePunctuatedCues(
+export async function ensurePunctuatedCues(
   cues: DubCueInput[],
   lang: string,
   emit?: (p: PrepareProgress) => void,

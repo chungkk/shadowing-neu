@@ -1,0 +1,191 @@
+/* Nút bật thuyết minh gắn trên thanh điều khiển YouTube */
+.hvn-yt-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: top !important;
+  position: relative !important;
+}
+
+.hvn-yt-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  min-width: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+
+.hvn-yt-btn:hover .hvn-yt-badge {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.hvn-yt-btn.hvn-active .hvn-yt-badge {
+  background: #e11d48;
+  border-color: #fb7185;
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.55);
+}
+
+.hvn-yt-btn.hvn-loading .hvn-yt-badge {
+  background: #d97706;
+  border-color: #fbbf24;
+  animation: hvn-pulse 1.1s ease-in-out infinite;
+}
+
+/* HUD phụ đề & tiến trình ngay trên khung video (hỗ trợ cả Fullscreen) */
+.hvn-dub-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  z-index: 2147483640;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: min(88%, 760px);
+  width: max-content;
+  pointer-events: none;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.hvn-dub-pill {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 240px;
+  max-width: 420px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(15, 18, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  color: #f8fafc;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+}
+
+.hvn-dub-pill.hvn-dub-err {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  background: rgba(127, 29, 29, 0.92);
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.hvn-dub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hvn-dub-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f43f5e;
+  flex-shrink: 0;
+  animation: hvn-pulse 1s ease-in-out infinite;
+}
+
+.hvn-dub-pct {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #fda4af;
+  font-size: 12px;
+}
+
+.hvn-dub-close {
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.hvn-dub-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hvn-dub-bar {
+  height: 4px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.hvn-dub-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e11d48, #fb7185);
+  transition: width 0.25s ease-out;
+}
+
+.hvn-dub-unlock {
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  background: rgba(225, 29, 72, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.hvn-dub-unlock:hover {
+  background: #be123c;
+}
+
+.hvn-dub-caption {
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: rgba(10, 12, 18, 0.78);
+  backdrop-filter: blur(6px);
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.hvn-dub-vi {
+  color: #ffffff;
+  font-size: clamp(14px, 1.5vw, 20px);
+  font-weight: 600;
+  line-height: 1.35;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+.hvn-dub-orig {
+  margin-top: 3px;
+  color: rgba(226, 232, 240, 0.84);
+  font-size: clamp(12px, 1.15vw, 15px);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+@keyframes hvn-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
