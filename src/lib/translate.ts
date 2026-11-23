@@ -98,6 +98,9 @@ const VI_PLAIN_WORDS = new Set([
 export function looksTranslated(source: string, translation: string): boolean {
   const t = translation.trim();
   if (!t) return false;
+  // Câu chỉ có số / ký hiệu ("10, 9, 8", "2024, 2025, 2026") giữ nguyên vẫn hợp lệ
+  if (!/\p{L}/u.test(source)) return true;
+
   const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
   const srcNonLatin = (source.match(NON_LATIN_SCRIPT) ?? []).length;
@@ -111,8 +114,17 @@ export function looksTranslated(source: string, translation: string): boolean {
     if (norm(t) === norm(source)) return false;
     // Cụm CJK rất ngắn (tên riêng 1–4 chữ, vd "東京" → "Tokyo") sau khi bỏ hết ký tự CJK là hợp lệ
     if (srcNonLatin <= 4 && outNonLatin === 0) return true;
-  } else if (source.trim().split(/\s+/).length <= 2) {
-    return true;
+  } else {
+    const srcTokens = source.trim().split(/\s+/).filter(Boolean);
+    if (srcTokens.length <= 2) return true;
+    // Danh sách tên riêng / thương hiệu quốc tế cách nhau bởi dấu phẩy ("Instagram, TikTok, YouTube.")
+    if (
+      srcTokens.length <= 6 &&
+      /[,&/]/.test(source) &&
+      srcTokens.every((w) => /^[\p{Lu}\d]/u.test(w.replace(/^["'([–-]+/, "")))
+    ) {
+      return true;
+    }
   }
 
   if (norm(t) === norm(source)) return false;
@@ -130,37 +142,74 @@ export function looksTranslated(source: string, translation: string): boolean {
 
 const keyOf = (text: string) => "vi:" + createHash("sha1").update(text.trim()).digest("hex");
 
-async function callProvider(p: Provider, sentences: string[], systemPrompt = PROMPT): Promise<string[]> {
-  const res = await fetch(p.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
-    body: JSON.stringify({
-      model: p.model,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify({ s: Object.fromEntries(sentences.map((x, i) => [i + 1, x])) }) },
-      ],
-      ...p.extra,
-    }),
-    signal: AbortSignal.timeout(45_000),
-  });
-  if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-  const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
-  // Thiếu câu nào = mô hình đã gộp câu → các bản dịch phía sau có thể bị lệch, bỏ cả lô
-  const t: unknown = parsed.t;
-  const out = sentences.map((_, i) => {
-    const x = Array.isArray(t) ? (t.length === sentences.length ? t[i] : undefined) : (t as Record<string, unknown>)?.[i + 1];
-    return typeof x === "string" ? x.trim() : undefined;
+class FormatError extends Error {}
+
+function parseJsonLoose(raw: string): unknown {
+  const trimmed = raw.trim();
+  const stripped = trimmed.startsWith("```")
+    ? trimmed
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/, "")
+        .trim()
+    : trimmed;
+  return JSON.parse(stripped || "{}");
+}
+
+function extractTranslations(providerName: string, rawContent: string, expectedCount: number): string[] {
+  let parsed: unknown;
+  try {
+    parsed = parseJsonLoose(rawContent);
+  } catch {
+    throw new FormatError(`${providerName}: JSON không hợp lệ`);
+  }
+  const obj = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  // Chấp nhận cả {"t": {"1": ...}} lẫn {"1": ...} ở cấp gốc nếu mô hình quên bọc khóa "t"
+  const t: unknown = obj.t !== undefined ? obj.t : obj["1"] !== undefined ? obj : undefined;
+  const out = Array.from({ length: expectedCount }, (_, i) => {
+    const x = Array.isArray(t)
+      ? t.length === expectedCount
+        ? t[i]
+        : undefined
+      : (t as Record<string, unknown> | undefined)?.[i + 1];
+    if (typeof x === "string") return x.trim();
+    if (typeof x === "number" && Number.isFinite(x)) return String(x);
+    return undefined;
   });
   if (!out.every((x) => x !== undefined)) {
-    throw new FormatError(`${p.name}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${sentences.length} câu)`);
+    throw new FormatError(
+      `${providerName}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${expectedCount} câu)`,
+    );
   }
   return out as string[];
 }
 
-class FormatError extends Error {}
+async function callProvider(p: Provider, sentences: string[], systemPrompt = PROMPT): Promise<string[]> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(p.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
+      body: JSON.stringify({
+        model: p.model,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify({ s: Object.fromEntries(sentences.map((x, i) => [i + 1, x])) }) },
+        ],
+        ...p.extra,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    if (res.status === 429 && attempt < 1) {
+      const wait = Math.min(Number(res.headers.get("retry-after")) || 1.5, 4);
+      await new Promise((r) => setTimeout(r, wait * 1000));
+      continue;
+    }
+    if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const data: { choices?: { message?: { content?: string } }[] } = await res.json();
+    // Thiếu câu nào hoặc JSON lỗi = ném FormatError để chia đôi lô dịch lại
+    return extractTranslations(p.name, data.choices?.[0]?.message?.content ?? "{}", sentences.length);
+  }
+}
 
 /**
  * Dịch 1 lô câu: thử lần lượt từng nhà cung cấp; câu nào chưa ra tiếng Việt thì gửi riêng
@@ -377,7 +426,7 @@ async function buildDubStyleCard(
   }
 }
 
-type StyleExample = { orig: string; vi: string };
+export type StyleExample = { orig: string; vi: string };
 
 const SMART_DUB_SYSTEM = (
   lang: string,
@@ -400,7 +449,7 @@ const SMART_DUB_SYSTEM = (
     .join("\n");
 
   const exampleBlock = styleExamples.length
-    ? "Mẫu lời thoại đã dịch ở phần mở đầu (hãy bám sát đúng giọng văn và cách xưng hô này):\n" +
+    ? "Mẫu lời thoại đã dịch ở phần mở đầu (ƯU TIÊN bám sát đúng cách xưng hô và giọng văn này để cả video thống nhất, không đổi xưng hô giữa chừng):\n" +
       styleExamples.map((e) => `- "${e.orig}" => "${e.vi}"`).join("\n") +
       "\n"
     : "";
@@ -416,7 +465,7 @@ const SMART_DUB_SYSTEM = (
     "Quy tắc bắt buộc:\n" +
     "1. Việt hóa lời thoại tự nhiên (KHÔNG dịch máy từng chữ): diễn đạt lại theo cách người Việt nói/dẫn chuyện thật, giữ trọn ý, cảm xúc và sắc thái của người nói.\n" +
     "2. Tránh bệnh dịch khô kiểu Tây: KHÔNG dịch cứng 'Es ist / It is' thành 'Nó là…'; chuyển câu bị động Tây ('được làm bởi…') sang câu chủ động tự nhiên; tách hoặc đảo lại mệnh đề quan hệ/cụm danh từ dài cho thuận tai. Chuyển thành ngữ và từ đệm (halt, quasi, eben, basically, you know…) sang từ nối hoặc tiểu từ tiếng Việt phù hợp với văn phong video.\n" +
-    "3. Giữ đúng xưng hô và mạch nối dựa vào cẩm nang + `prev`/`next`; nếu là hội thoại nhiều người, phân biệt rõ vai nói.\n" +
+    "3. Giữ đúng xưng hô và mạch nối dựa vào mẫu phần mở đầu, cẩm nang và `prev`/`next`; nếu là hội thoại nhiều người, phân biệt rõ vai nói.\n" +
     "4. Tối ưu cho giọng đọc AI (TTS) và thời lượng: dùng dấu phẩy, chấm, hỏi, than đúng nhịp thở để giọng đọc có cảm xúc; giữ độ dài gọn quanh mức `max` từ nhưng ưu tiên câu trôi chảy (đừng cắt cụt từ nối làm câu bị khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc.\n" +
     "5. Giữ ĐÚNG số lượng và thứ tự khóa trong `items` (1..N), tuyệt đối không gộp hay bỏ sót câu.\n" +
     'Trả về đúng JSON {"t": {"1": "...", "2": "...", …}}, không giải thích.'
@@ -444,24 +493,15 @@ async function callSmartDubProvider(
       }),
       signal: AbortSignal.timeout(35_000),
     });
-    // Rate limit ngắn → đợi rất nhanh 1 lần rồi thử lại, nếu vẫn 429 thì nhường provider kế tiếp
-    if (res.status === 429 && attempt < 1) {
-      const wait = Math.min(Number(res.headers.get("retry-after")) || 1.5, 4);
+    // Rate limit ngắn → đợi nhanh tối đa 2 lần rồi thử lại, nếu vẫn 429 thì nhường provider kế tiếp
+    if (res.status === 429 && attempt < 2) {
+      const wait = Math.min(Number(res.headers.get("retry-after")) || 1.5 * (attempt + 1), 6);
       await new Promise((r) => setTimeout(r, wait * 1000));
       continue;
     }
     if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
-    const t: unknown = parsed.t;
-    const out = Array.from({ length: expectedCount }, (_, i) => {
-      const x = Array.isArray(t) ? (t.length === expectedCount ? t[i] : undefined) : (t as Record<string, unknown>)?.[i + 1];
-      return typeof x === "string" ? x.trim() : undefined;
-    });
-    if (!out.every((x) => x !== undefined)) {
-      throw new FormatError(`${p.name}: trả về sai định dạng (${out.filter((x) => x !== undefined).length}/${expectedCount} câu)`);
-    }
-    return out as string[];
+    return extractTranslations(p.name, data.choices?.[0]?.message?.content ?? "{}", expectedCount);
   }
 }
 
@@ -550,10 +590,14 @@ async function translateSmartDubChunk(
   if (formatError && todo.length > 1) {
     const mid = Math.ceil(todo.length / 2);
     for (const part of [todo.slice(0, mid), todo.slice(mid)]) {
+      const first = part[0];
+      const last = part[part.length - 1];
+      const partPrev = first > 0 ? chunk.slice(Math.max(0, first - 2), first).map((x) => x.text) : prevCtx;
+      const partNext = last < chunk.length - 1 ? chunk.slice(last + 1, last + 3).map((x) => x.text) : nextCtx;
       const sub = await translateSmartDubChunk(
         part.map((i) => chunk[i]),
-        prevCtx,
-        nextCtx,
+        partPrev,
+        partNext,
         systemPrompt,
       ).catch(() => null);
       part.forEach((idx, k) => {
@@ -589,8 +633,8 @@ const CHUNK_RETRY_DELAY_MS = 2_500;
 const STYLE_CARD_DEADLINE_MS = 14_000;
 
 const FIRST_DUB_BATCH = 10; // Lô đầu 10 câu (~45–60s đầu) dịch siêu nhanh (~1.5–2.5s) để mở video gần như tức thì
-const NEXT_DUB_BATCH = 30; // Các lô sau 30 câu, chạy song song
-const DUB_CONCURRENCY = 4; // Chạy song song 4 luồng cho phần còn lại để đuổi kịp rất nhanh trong lúc người dùng xem lô đầu
+const NEXT_DUB_BATCH = 25; // Các lô sau 25 câu — cân bằng giữa tốc độ và tránh chạm trần TPM / cắt cụt JSON
+const DUB_CONCURRENCY = 3; // 3 luồng song song giúp bám sát giới hạn TPM của Groq 120b, giảm rớt lô 429
 
 /** Chọn 4–5 cặp câu tiêu biểu đã dịch ở lô đầu làm mẫu giọng văn & xưng hô cho các lô song song phía sau. */
 function pickStyleExamples(items: DubTranslateItem[], translations: string[], count: number): StyleExample[] {
@@ -714,13 +758,25 @@ export async function translateForDubbingSmart(
 
 /**
  * Dịch bù các câu còn thiếu của một video đã dịch (theo chỉ số trong `items`).
- * Gom các chỉ số liền nhau thành lô ≤ 30 câu, kèm 2 câu trước/sau làm ngữ cảnh.
+ * Gom các chỉ số liền nhau thành lô ≤ 25 câu, kèm 2 câu trước/sau và mẫu văn phong từ các câu đã dịch sẵn.
  * Trả về Map chỉ số → bản dịch (chỉ những câu dịch được).
  */
 export async function translateDubRepair(
   items: DubTranslateItem[],
   indices: number[],
-  { title = "", sourceLang = "auto", style = null }: { title?: string; sourceLang?: string; style?: DubStyleCard | null } = {},
+  {
+    title = "",
+    sourceLang = "auto",
+    style = null,
+    styleExamples = [],
+    onChunk,
+  }: {
+    title?: string;
+    sourceLang?: string;
+    style?: DubStyleCard | null;
+    styleExamples?: StyleExample[];
+    onChunk?: (info: { start: number; translations: string[]; done: number; total: number }) => void;
+  } = {},
 ): Promise<Map<number, string>> {
   const fixed = new Map<number, string>();
   const sorted = [...new Set(indices)].filter((i) => i >= 0 && i < items.length).sort((a, b) => a - b);
@@ -733,8 +789,9 @@ export async function translateDubRepair(
     else groups.push([i]);
   }
 
-  const systemPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style);
+  const systemPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style, styleExamples);
   let cursor = 0;
+  let repairedDone = 0;
   await Promise.all(
     Array.from({ length: Math.min(DUB_CONCURRENCY, groups.length) }, async () => {
       while (cursor < groups.length) {
@@ -749,13 +806,29 @@ export async function translateDubRepair(
           nextCtx,
           systemPrompt,
         ).catch(() => null);
-        g.forEach((idx, k) => {
-          if (out?.[k]) fixed.set(idx, out[k]);
+        const groupTranslations = g.map((idx, k) => {
+          const tr = out?.[k] || "";
+          if (tr) fixed.set(idx, tr);
+          return tr;
         });
+        repairedDone += g.length;
+        onChunk?.({ start: first, translations: groupTranslations, done: repairedDone, total: sorted.length });
       }
     }),
   );
   return fixed;
+}
+
+/** Kiểm tra nhanh có câu nào chưa có bản dịch hợp lệ trong SQLite cache không (để không trừ rate-limit cho cache hit). */
+export function hasUncachedSentences(sentences: string[]): boolean {
+  const keys = sentences.map(keyOf);
+  const cached = getTranslations(keys);
+  return sentences.some((s, i) => {
+    const trimmed = s.trim();
+    if (!trimmed) return false;
+    const t = cached.get(keys[i]);
+    return t === undefined || !looksTranslated(s, t);
+  });
 }
 
 /** Dịch danh sách câu (giữ thứ tự). Câu đã có trong kho thì không gọi AI. "" = chưa dịch được. */
@@ -769,16 +842,27 @@ export async function translateSentences(sentences: string[]): Promise<string[]>
   });
   const missing = [...new Set(sentences.filter((_, i) => !cached.has(keys[i])).map((s) => s.trim()))].filter(Boolean);
 
+  const chunks: string[][] = [];
   for (let i = 0; i < missing.length; i += BATCH) {
-    const chunk = missing.slice(i, i + BATCH);
-    const res = await translateBatch(chunk);
-    // Chỉ lưu câu dịch được; câu hỏng lần sau sẽ thử lại
-    const rows = chunk
-      .map((text, k) => ({ key: keyOf(text), text, translation: res[k].out, provider: res[k].provider }))
-      .filter((r) => r.translation);
-    saveTranslations(rows);
-    for (const r of rows) cached.set(r.key, r.translation);
+    chunks.push(missing.slice(i, i + BATCH));
   }
+
+  // Dịch song song tối đa 2 lô (mỗi request /api/v1/translate tối đa 40 câu → nhanh gần gấp đôi)
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(2, chunks.length) }, async () => {
+      while (cursor < chunks.length) {
+        const chunk = chunks[cursor++];
+        const res = await translateBatch(chunk);
+        // Chỉ lưu câu dịch được; câu hỏng lần sau sẽ thử lại
+        const rows = chunk
+          .map((text, k) => ({ key: keyOf(text), text, translation: res[k].out, provider: res[k].provider }))
+          .filter((r) => r.translation);
+        saveTranslations(rows);
+        for (const r of rows) cached.set(r.key, r.translation);
+      }
+    }),
+  );
   return keys.map((k) => cached.get(k) ?? "");
 }
 
@@ -818,7 +902,7 @@ export async function chatJson<T>(
       });
       if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const data: { choices?: { message?: { content?: string } }[] } = await res.json();
-      const parsed: unknown = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+      const parsed: unknown = parseJsonLoose(data.choices?.[0]?.message?.content ?? "{}");
       if (valid(parsed)) return { ...parsed, provider: p.name };
       throw new Error(`${p.name}: trả về sai định dạng`);
     } catch (e) {

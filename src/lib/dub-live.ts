@@ -236,10 +236,40 @@ export async function prepareLiveDub(
       const items = buildTranslateItems(
         stale.cues.map((c) => ({ start_ms: c.start_ms, end_ms: c.end_ms, text: c.orig || c.text })),
       );
+      // Lấy tối đa 5 câu đã dịch sẵn làm mẫu văn phong & xưng hô để các câu dịch bù khớp tông cả video
+      const styleExamples = stale.cues
+        .filter((c) => !c.untranslated && c.orig && c.text && c.orig.trim().length >= 20 && c.text.trim().length >= 15)
+        .slice(0, 5)
+        .map((c) => ({ orig: c.orig!.trim().slice(0, 180), vi: c.text.trim().slice(0, 200) }));
+
+      const baseDone = total - missing.length;
       const fixed = await translateDubRepair(items, missing, {
         title: stale.title,
         sourceLang: stale.sourceLang,
         style: stale.style ?? null,
+        styleExamples,
+        onChunk: ({ start, translations, done: repairDone, total: repairTotal }) => {
+          const doneNow = Math.min(total, baseDone + repairDone);
+          const pct = repairTotal > 0 ? Math.min(98, 60 + Math.round((repairDone / repairTotal) * 38)) : 98;
+          if (entry.partial) {
+            entry.partial.pct = pct;
+            entry.partial.done = doneNow;
+            translations.forEach((tr, k) => {
+              const idx = start + k;
+              const origCue = entry.partial!.data.cues[idx];
+              if (origCue) {
+                entry.partial!.data.cues[idx] = {
+                  start_ms: origCue.start_ms,
+                  end_ms: origCue.end_ms,
+                  text: tr,
+                  orig: origCue.orig,
+                  ...(tr ? {} : { untranslated: true }),
+                };
+              }
+            });
+          }
+          broadcast({ type: "chunk", start, translations, pct, done: doneNow, total });
+        },
       });
       const repaired = finalizeResult({
         ...stale,
