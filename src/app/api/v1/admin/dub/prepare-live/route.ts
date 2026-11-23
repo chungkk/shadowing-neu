@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     if (!merged.length) throw new Error("Không tìm thấy phụ đề cho video này.");
     if (merged.length > 2500) throw new Error(`Phụ đề quá dài (${merged.length} câu).`);
 
-    let cues: (DubCue & { orig?: string })[] = merged;
+    let cues: (DubCue & { orig?: string; untranslated?: boolean })[] = merged;
     let style = null;
     if (needTranslateLang) {
       if (!translationEnabled()) throw new Error("Server chưa cấu hình AI dịch phụ đề.");
@@ -90,7 +90,13 @@ export async function POST(req: Request) {
         },
       });
       style = res.style;
-      cues = merged.map((c, i) => ({ ...c, text: res.translations[i] || c.text, orig: c.text }));
+      cues = merged.map((c, i) => ({
+        start_ms: c.start_ms,
+        end_ms: c.end_ms,
+        text: res.translations[i] || "",
+        orig: c.text,
+        ...(res.translations[i] ? {} : { untranslated: true }),
+      }));
     }
 
     emit?.({ pct: 100, stage: "Hoàn tất!" });

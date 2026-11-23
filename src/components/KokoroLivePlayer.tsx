@@ -219,7 +219,7 @@ export default function KokoroLivePlayer({
   useEffect(() => {
     return () => {
       if (ctxRef.current) {
-        void ctxRef.current.close().catch(() => {});
+        void ctxRef.current.close().catch(() => { });
         ctxRef.current = null;
         gainRef.current = null;
       }
@@ -270,7 +270,7 @@ export default function KokoroLivePlayer({
             setAudioBlocked(false);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     window.addEventListener("pointerdown", unlock, { passive: true });
     window.addEventListener("keydown", unlock, { passive: true });
@@ -285,10 +285,10 @@ export default function KokoroLivePlayer({
     for (const src of activeSrcsRef.current) {
       try {
         src.stop();
-      } catch {}
+      } catch { }
       try {
         src.disconnect();
-      } catch {}
+      } catch { }
     }
     activeSrcsRef.current.clear();
     scheduledRef.current = [];
@@ -828,7 +828,7 @@ export default function KokoroLivePlayer({
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const copyShare = async () => {
@@ -838,7 +838,7 @@ export default function KokoroLivePlayer({
       await navigator.clipboard.writeText(full);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch { }
   };
 
   return (
@@ -1133,9 +1133,8 @@ export default function KokoroLivePlayer({
                       ref={active ? activeRowRef : undefined}
                       type="button"
                       onClick={() => seekToCue(idx)}
-                      className={`flex items-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
-                        active ? "bg-sec-soft text-foreground" : "text-muted hover:bg-card-2/70 hover:text-foreground"
-                      }`}
+                      className={`flex items-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${active ? "bg-sec-soft text-foreground" : "text-muted hover:bg-card-2/70 hover:text-foreground"
+                        }`}
                     >
                       <span className="mt-0.5 shrink-0 font-mono text-[11px] tabular-nums opacity-75">
                         {formatTime(c.start_ms / 1000)}

@@ -101,6 +101,20 @@ function pickProbeSub(subs: ProbeRes["subtitles"]) {
   );
 }
 
+// Ký tự đặc trưng tiếng Việt (không có trong Đức/Anh/Tây Ban Nha…; tiếng Pháp chỉ có â/ê/ô rất ít)
+const VI_UNIQUE_CHARS = /[ăâđêôơưảãạằắẳẵặầấẩẫậẻẽẹềếểễệỉĩịỏõọồốổỗộờớởỡợủũụừứửữựỳỷỹỵ]/gi;
+
+/** Nhận diện nhanh phụ đề Whisper đã là tiếng Việt sẵn để không gửi đi dịch AI thừa. */
+function looksVietnameseCues(cues: DubCueInput[]): boolean {
+  const sample = cues
+    .slice(0, 15)
+    .map((c) => c.text)
+    .join(" ");
+  const letters = (sample.match(/\p{L}/gu) ?? []).length;
+  const viChars = (sample.match(VI_UNIQUE_CHARS) ?? []).length;
+  return viChars >= 6 && letters > 0 && viChars / letters >= 0.08;
+}
+
 function segmentsToCues(segments: Segment[]): DubCueInput[] {
   return segments.map((s) => ({
     start_ms: Math.max(0, Math.round(s.start * 1000)),
@@ -274,10 +288,13 @@ export async function prepareLiveDub(
     // 2. Dự phòng: lấy phụ đề mọi ngôn ngữ trực tiếp bằng Innertube / yt-dlp của HalloVN
     if (!rawCues.length) {
       emitProgress({ pct: 16, stage: "Đang tải phụ đề YouTube…" });
-      const anySub = await fetchAnyYouTubeSubtitles(videoId, { maxSeconds: opts.maxSeconds }).catch((e) => {
-        if (e instanceof VideoTooLongError) throw e;
-        return null;
-      });
+      // Bỏ qua bước chấm câu bên trong để gộp về đúng 1 bước ensurePunctuatedCues (có báo tiến trình 24% và không gọi lặp 2 lần)
+      const anySub = await fetchAnyYouTubeSubtitles(videoId, { maxSeconds: opts.maxSeconds, skipPunctuate: true }).catch(
+        (e) => {
+          if (e instanceof VideoTooLongError) throw e;
+          return null;
+        },
+      );
       if (anySub && anySub.segments.length) {
         title = title || anySub.title;
         sourceLang = anySub.lang.toLowerCase();
@@ -291,10 +308,11 @@ export async function prepareLiveDub(
       const tr = await transcribeAnyYouTubeAudio(videoId, {
         quotaKey: opts.quotaKey,
         maxSeconds: opts.maxSeconds,
+        skipPunctuate: true,
       });
       title = title || tr.title;
-      sourceLang = "auto";
       rawCues = segmentsToCues(tr.segments);
+      sourceLang = looksVietnameseCues(rawCues) ? "vi" : "auto";
     }
 
     if (!rawCues.length) {

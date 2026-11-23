@@ -71,7 +71,32 @@ const PIPELINE_STEPS = [
 ] as const;
 
 const RECENT_KEY = "hallovn-dub-recent";
+const VOICE_KEY = "hallovn-dub-voice";
+const DEFAULT_VOICE: LiveVoiceId = "edge:vi-VN-NamMinhNeural";
 const EMPTY_RECENT: RecentDub[] = [];
+const BG_RECONNECT_DELAYS_MS = [2000, 3500, 5000] as const;
+
+function isValidVoice(v: unknown): v is LiveVoiceId {
+  return typeof v === "string" && VOICE_PILLS.some((p) => p.id === v);
+}
+
+function waitAbortable(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 async function fetchPrepareStream(
   endpoint: string,
@@ -108,36 +133,47 @@ async function fetchPrepareStream(
   let buf = "";
   let result: PrepareResult | null = null;
 
+  const handleLine = (rawLine: string) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    let msg:
+      | { type: "progress"; pct: number; stage: string; done?: number; total?: number }
+      | { type: "ready"; data: PrepareResult; pct: number; done: number; total: number }
+      | { type: "chunk"; start: number; translations: string[]; pct: number; done: number; total: number }
+      | { type: "done"; data: PrepareResult }
+      | { type: "error"; error: string }
+      | { type: "ping" };
+    try {
+      msg = JSON.parse(line);
+    } catch {
+      throw new Error("Máy chủ phản hồi không hợp lệ (kết nối có thể bị gián đoạn). Vui lòng thử lại.");
+    }
+    if (msg.type === "progress") {
+      callbacks.onProgress({ pct: msg.pct, stage: msg.stage, done: msg.done, total: msg.total });
+    } else if (msg.type === "ready") {
+      callbacks.onReady(msg.data, { pct: msg.pct, done: msg.done, total: msg.total });
+    } else if (msg.type === "chunk") {
+      callbacks.onChunk(msg.start, msg.translations, { pct: msg.pct, done: msg.done, total: msg.total });
+    } else if (msg.type === "error") {
+      throw new Error(msg.error);
+    } else if (msg.type === "done") {
+      result = msg.data;
+    }
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
     let nl = buf.indexOf("\n");
     while (nl !== -1) {
-      const line = buf.slice(0, nl).trim();
+      handleLine(buf.slice(0, nl));
       buf = buf.slice(nl + 1);
-      if (line) {
-        const msg = JSON.parse(line) as
-          | { type: "progress"; pct: number; stage: string; done?: number; total?: number }
-          | { type: "ready"; data: PrepareResult; pct: number; done: number; total: number }
-          | { type: "chunk"; start: number; translations: string[]; pct: number; done: number; total: number }
-          | { type: "done"; data: PrepareResult }
-          | { type: "error"; error: string };
-        if (msg.type === "progress") {
-          callbacks.onProgress({ pct: msg.pct, stage: msg.stage, done: msg.done, total: msg.total });
-        } else if (msg.type === "ready") {
-          callbacks.onReady(msg.data, { pct: msg.pct, done: msg.done, total: msg.total });
-        } else if (msg.type === "chunk") {
-          callbacks.onChunk(msg.start, msg.translations, { pct: msg.pct, done: msg.done, total: msg.total });
-        } else if (msg.type === "error") {
-          throw new Error(msg.error);
-        } else if (msg.type === "done") {
-          result = msg.data;
-        }
-      }
       nl = buf.indexOf("\n");
     }
   }
+  buf += decoder.decode();
+  if (buf.trim()) handleLine(buf);
 
   if (!result) throw new Error("Kết nối bị gián đoạn trước khi hoàn tất. Vui lòng thử lại.");
   return result;
@@ -148,7 +184,14 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const initialV = searchParams.get("v") ?? "";
 
   const [url, setUrl] = useState(initialV ? `https://youtu.be/${initialV}` : "");
-  const [voiceId, setVoiceId] = useState<LiveVoiceId>("edge:vi-VN-NamMinhNeural");
+  const [storedVoice, setStoredVoice] = useLocalStorage<LiveVoiceId>(VOICE_KEY, DEFAULT_VOICE);
+  const voiceId: LiveVoiceId = isValidVoice(storedVoice) ? storedVoice : DEFAULT_VOICE;
+  const setVoiceId = useCallback(
+    (next: LiveVoiceId) => {
+      setStoredVoice(isValidVoice(next) ? next : DEFAULT_VOICE);
+    },
+    [setStoredVoice],
+  );
   const [loading, setLoading] = useState(false);
   const [loadingVideoId, setLoadingVideoId] = useState<string | null>(null);
   const [prep, setPrep] = useState<PrepProgress | null>(null);
@@ -211,57 +254,80 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
       let becameReady = false;
 
       try {
-        const data = await fetchPrepareStream(
-          "/api/v1/dub/prepare",
-          { videoId },
-          {
-            onProgress: (p) => {
-              if (isActive()) setPrep(p);
-            },
-            onReady: (partial, bg) => {
-              if (!isActive()) return;
-              becameReady = true;
-              const title = partial.title || partial.videoId;
-              setSession({
-                videoId: partial.videoId,
-                title,
-                sourceLang: partial.sourceLang,
-                cues: partial.cues,
-                voiceId: voice,
-              });
-              setBgProgress(bg);
-              setLoading(false);
-              setLoadingVideoId(null);
-              setPrep(null);
-              recordOpen(partial.videoId, title);
-            },
-            onChunk: (start, translations, bg) => {
-              if (!isActive()) return;
-              setBgProgress(bg);
-              setSession((prev) => {
-                if (!prev || prev.videoId !== videoId) return prev;
-                const nextCues = prev.cues.slice();
-                translations.forEach((tr, k) => {
-                  const idx = start + k;
-                  if (nextCues[idx]) {
-                    nextCues[idx] = {
-                      start_ms: nextCues[idx].start_ms,
-                      end_ms: nextCues[idx].end_ms,
-                      // "" = AI chưa dịch được → không đọc (đừng thay bằng câu gốc)
-                      text: tr,
-                      orig: nextCues[idx].orig,
-                      ...(tr ? {} : { untranslated: true }),
-                    };
-                  }
-                });
-                return { ...prev, cues: nextCues };
-              });
-            },
-          },
-          ac.signal,
-        );
+        let data: PrepareResult | null = null;
+        let bgAttempt = 0;
 
-        if (!isActive()) return;
+        while (true) {
+          try {
+            data = await fetchPrepareStream(
+              "/api/v1/dub/prepare",
+              { videoId },
+              {
+                onProgress: (p) => {
+                  if (isActive() && !becameReady) setPrep(p);
+                },
+                onReady: (partial, bg) => {
+                  if (!isActive()) return;
+                  const firstReady = !becameReady;
+                  becameReady = true;
+                  const title = partial.title || partial.videoId;
+                  setSession({
+                    videoId: partial.videoId,
+                    title,
+                    sourceLang: partial.sourceLang,
+                    cues: partial.cues,
+                    voiceId: voice,
+                  });
+                  setBgProgress(bg);
+                  if (firstReady) {
+                    setLoading(false);
+                    setLoadingVideoId(null);
+                    setPrep(null);
+                    recordOpen(partial.videoId, title);
+                  }
+                },
+                onChunk: (start, translations, bg) => {
+                  if (!isActive()) return;
+                  setBgProgress(bg);
+                  setSession((prev) => {
+                    if (!prev || prev.videoId !== videoId) return prev;
+                    const nextCues = prev.cues.slice();
+                    translations.forEach((tr, k) => {
+                      const idx = start + k;
+                      if (nextCues[idx]) {
+                        nextCues[idx] = {
+                          start_ms: nextCues[idx].start_ms,
+                          end_ms: nextCues[idx].end_ms,
+                          // "" = AI chưa dịch được → không đọc (đừng thay bằng câu gốc)
+                          text: tr,
+                          orig: nextCues[idx].orig,
+                          ...(tr ? {} : { untranslated: true }),
+                        };
+                      }
+                    });
+                    return { ...prev, cues: nextCues };
+                  });
+                },
+              },
+              ac.signal,
+            );
+            break;
+          } catch (streamErr) {
+            if (!isActive() || (streamErr as Error).name === "AbortError") throw streamErr;
+            // Đã mở player (20 câu đầu) nhưng stream dịch ngầm bị đứt → tự nối lại tối đa 3 lần vào luồng inflight/cache trên server
+            if (becameReady && bgAttempt < BG_RECONNECT_DELAYS_MS.length) {
+              const delay = BG_RECONNECT_DELAYS_MS[bgAttempt++];
+              await waitAbortable(delay, ac.signal);
+              continue;
+            }
+            if (becameReady) {
+              throw new Error("Mất kết nối khi dịch phần còn lại. Hãy bấm tải lại video để cập nhật đủ phụ đề.");
+            }
+            throw streamErr;
+          }
+        }
+
+        if (!isActive() || !data) return;
         const title = data.title || data.videoId;
         setSession({
           videoId: data.videoId,
@@ -649,7 +715,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                     onClick={() => removeRecent(r.videoId)}
                     title="Xoá khỏi danh sách gần đây"
                     aria-label="Xoá khỏi danh sách gần đây"
-                    className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-black/65 text-white opacity-0 transition hover:bg-black/85 group-hover:opacity-100 focus-visible:opacity-100"
+                    className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-black/65 text-white opacity-90 transition hover:bg-black/85 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <X className="size-3.5" />
                   </button>

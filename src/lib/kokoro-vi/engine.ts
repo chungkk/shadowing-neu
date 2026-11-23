@@ -36,6 +36,8 @@ let ortMod: OrtModule | null = null;
 let dictionary: SeaDictionary | null = null;
 const piperSessions = new Map<PiperVoiceKey, OrtSession>();
 const piperLoading = new Map<PiperVoiceKey, Promise<void>>();
+const piperListeners = new Map<PiperVoiceKey, Set<(p: KokoroProgress) => void>>();
+const piperLastProgress = new Map<PiperVoiceKey, KokoroProgress>();
 let runChain: Promise<unknown> = Promise.resolve();
 
 async function fetchWithCache(
@@ -110,13 +112,44 @@ export async function ensurePiperLoaded(
     onProgress?.({ stage: "Sẵn sàng", pct: 100 });
     return;
   }
+
+  let listeners = piperListeners.get(voiceKey);
+  if (!listeners) {
+    listeners = new Set();
+    piperListeners.set(voiceKey, listeners);
+  }
+  if (onProgress) {
+    listeners.add(onProgress);
+    const last = piperLastProgress.get(voiceKey);
+    if (last) onProgress(last);
+  }
+
   const existing = piperLoading.get(voiceKey);
-  if (existing) return existing;
+  if (existing) {
+    try {
+      await existing;
+    } finally {
+      if (onProgress) listeners.delete(onProgress);
+    }
+    return;
+  }
+
+  const emit = (p: KokoroProgress) => {
+    piperLastProgress.set(voiceKey, p);
+    const subs = piperListeners.get(voiceKey);
+    if (subs) {
+      for (const fn of subs) {
+        try {
+          fn(p);
+        } catch {}
+      }
+    }
+  };
 
   const spec = PIPER_MODELS[voiceKey];
   const p = (async () => {
     try {
-      onProgress?.({ stage: "Đang nạp ONNX Runtime (WASM)…", pct: 5 });
+      emit({ stage: "Đang nạp ONNX Runtime (WASM)…", pct: 5 });
       if (!ortMod) {
         const ort = await import("onnxruntime-web");
         ort.env.wasm.wasmPaths = ORT_WASM_PATH;
@@ -136,7 +169,7 @@ export async function ensurePiperLoaded(
         const pct = Math.min(90, 8 + Math.round((loaded / total) * 82));
         const mbDone = (loaded / (1024 * 1024)).toFixed(1);
         const mbAll = (total / (1024 * 1024)).toFixed(0);
-        onProgress?.({
+        emit({
           stage: `Đang tải ${spec.label} (lần đầu, lưu cache trình duyệt)… ${mbDone}/${mbAll} MB`,
           pct,
         });
@@ -160,16 +193,19 @@ export async function ensurePiperLoaded(
         dictionary = new SeaDictionary(dictBytes);
       }
 
-      onProgress?.({ stage: `Đang khởi tạo ${spec.label}…`, pct: 94 });
+      emit({ stage: `Đang khởi tạo ${spec.label}…`, pct: 94 });
       const sess = await ortMod.InferenceSession.create(modelBytes, {
         executionProviders: ["wasm"],
         graphOptimizationLevel: "all",
       });
       piperSessions.set(voiceKey, sess);
-      onProgress?.({ stage: "Sẵn sàng", pct: 100 });
+      emit({ stage: "Sẵn sàng", pct: 100 });
     } catch (e) {
       piperLoading.delete(voiceKey);
       throw e;
+    } finally {
+      piperLastProgress.delete(voiceKey);
+      piperListeners.delete(voiceKey);
     }
   })();
 

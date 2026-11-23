@@ -599,7 +599,7 @@ export async function saveUploadedTranscript(
  */
 export async function fetchAnyYouTubeSubtitles(
   videoId: string,
-  { maxSeconds }: { maxSeconds?: number } = {},
+  { maxSeconds, skipPunctuate = false }: { maxSeconds?: number; skipPunctuate?: boolean } = {},
 ): Promise<{ title: string; duration?: number; lang: string; auto: boolean; segments: Segment[] } | null> {
   await connection();
   const { title, duration, tracks } = await orYtdlp(
@@ -621,7 +621,7 @@ export async function fetchAnyYouTubeSubtitles(
     try {
       let segments = await cand.load();
       if (segments.length) {
-        if (cand.track.auto && punctuationEnabled() && lacksPunctuation(segments)) {
+        if (!skipPunctuate && cand.track.auto && punctuationEnabled() && lacksPunctuation(segments)) {
           segments = await addPunctuation(segments, cand.track.languageCode);
         }
         return {
@@ -645,7 +645,7 @@ export async function fetchAnyYouTubeSubtitles(
  */
 export async function transcribeAnyYouTubeAudio(
   videoId: string,
-  { quotaKey, maxSeconds }: { quotaKey?: string; maxSeconds?: number } = {},
+  { quotaKey, maxSeconds, skipPunctuate = false }: { quotaKey?: string; maxSeconds?: number; skipPunctuate?: boolean } = {},
 ): Promise<{ title: string; segments: Segment[] }> {
   await connection();
   if (!whisperEnabled()) throw new Error("Whisper chưa được bật trên server.");
@@ -660,7 +660,7 @@ export async function transcribeAnyYouTubeAudio(
   const { blob, filename } = await audio();
   const r = await transcribeAudio(blob, filename, 0, { version: whisperVersion(), language: null });
   let { segments } = r;
-  if (punctuationEnabled() && lacksPunctuation(segments)) {
+  if (!skipPunctuate && punctuationEnabled() && lacksPunctuation(segments)) {
     segments = await addPunctuation(segments, "auto");
   }
   if (!segments.length) throw new Error("Whisper không nhận dạng được lời thoại nào.");

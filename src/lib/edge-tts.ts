@@ -92,6 +92,8 @@ function generateSecMsGec(): string {
 
 function escapeXml(s: string): string {
   return s
+    // Loại bỏ ký tự điều khiển bất hợp lệ trong XML 1.0 (tránh Edge TTS từ chối SSML)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -103,6 +105,7 @@ const DUB_TTS_DIR = path.join(TTS_DIR, "dub");
 const CACHE_MAX_BYTES = (Number(process.env.DUB_TTS_CACHE_MB) || 500) * 1024 * 1024;
 const pending = new Map<string, Promise<Buffer>>();
 let writes = 0;
+let pruning = false;
 
 /** Làm tròn tốc độ về bội 0.05 trong [0.85, 1.45] để tăng tỷ lệ trùng cache */
 export function normalizeEdgeSpeed(speed: number): number {
@@ -124,22 +127,30 @@ export function hasEdgeDubSpeech(voiceId: EdgeVoiceId, speed: number, text: stri
   return fs.existsSync(cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim()));
 }
 
-function pruneCache() {
+async function pruneCache() {
+  if (pruning) return;
+  pruning = true;
   try {
-    const files = fs.readdirSync(DUB_TTS_DIR).flatMap((name) => {
-      if (!name.endsWith(".mp3")) return [];
-      const st = fs.statSync(path.join(DUB_TTS_DIR, name));
-      return [{ name, size: st.size, used: Math.max(st.atimeMs, st.mtimeMs) }];
-    });
+    const names = await fs.promises.readdir(DUB_TTS_DIR);
+    const files: { name: string; size: number; used: number }[] = [];
+    for (const name of names) {
+      if (!name.endsWith(".mp3")) continue;
+      try {
+        const st = await fs.promises.stat(path.join(DUB_TTS_DIR, name));
+        files.push({ name, size: st.size, used: Math.max(st.atimeMs, st.mtimeMs) });
+      } catch {}
+    }
     let total = files.reduce((n, f) => n + f.size, 0);
     if (total <= CACHE_MAX_BYTES) return;
     for (const f of files.sort((a, b) => a.used - b.used)) {
       if (total <= CACHE_MAX_BYTES * 0.8) break;
-      fs.rmSync(path.join(DUB_TTS_DIR, f.name), { force: true });
+      await fs.promises.rm(path.join(DUB_TTS_DIR, f.name), { force: true }).catch(() => {});
       total -= f.size;
     }
   } catch (e) {
     console.error("[edge-tts] dọn cache lỗi:", e);
+  } finally {
+    pruning = false;
   }
 }
 
@@ -251,7 +262,7 @@ export async function synthesizeEdgeDub(text: string, voiceId: EdgeVoiceId, spee
   const file = cacheFileFor(voiceId, spd, clean);
 
   try {
-    return fs.readFileSync(file);
+    return await fs.promises.readFile(file);
   } catch {}
 
   let job = pending.get(file);
@@ -263,9 +274,17 @@ export async function synthesizeEdgeDub(text: string, voiceId: EdgeVoiceId, spee
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const audio = await runEdgeOnce(voiceName, rate, clean);
-          fs.mkdirSync(DUB_TTS_DIR, { recursive: true });
-          fs.writeFileSync(file, audio);
-          if (++writes % 100 === 0) pruneCache();
+          await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
+          // Ghi file tạm rồi rename (atomic) để tránh lưu file MP3 cụt/hỏng vào cache nếu lỗi giữa chừng
+          const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+          try {
+            await fs.promises.writeFile(tmp, audio);
+            await fs.promises.rename(tmp, file);
+          } catch (writeErr) {
+            await fs.promises.rm(tmp, { force: true }).catch(() => {});
+            throw writeErr;
+          }
+          if (++writes % 100 === 0) void pruneCache();
           return audio;
         } catch (e) {
           lastErr = e;
