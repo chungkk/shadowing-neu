@@ -7,13 +7,14 @@ import {
   normalizeEdgeSpeed,
   synthesizeEdgeDub,
 } from "@/lib/edge-tts";
+import { hasPiperDubSpeech, isServerPiperVoice, synthesizePiperDub } from "@/lib/piper-tts";
 import { allow, clientIp } from "@/lib/rate-limit";
 
 const WINDOW_MS = 10 * 60_000;
 
 /**
- * GET /api/v1/dub/tts?v=edge:vi-VN-NamMinhNeural&s=1.15&t=...
- * Đọc từng câu thuyết minh tiếng Việt trực tiếp bằng Edge Neural TTS (có cache đĩa + HTTP cache).
+ * GET /api/v1/dub/tts?v=edge:vi-VN-NamMinhNeural|piper:adam_bua&s=1.15&t=...
+ * Đọc từng câu thuyết minh tiếng Việt (Edge Neural TTS hoặc Piper ONNX Adam/Lạc Phi, có cache đĩa + HTTP cache).
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -21,13 +22,16 @@ export async function GET(req: Request) {
   const text = (searchParams.get("t") ?? "").replace(/\s+/g, " ").trim();
   const speed = normalizeEdgeSpeed(Number(searchParams.get("s") ?? "1.15"));
 
-  if (!isEdgeVoice(voice)) return fail("Giọng đọc Edge không hợp lệ.");
+  const edgeVoice = isEdgeVoice(voice) ? voice : null;
+  const piperVoice = !edgeVoice && isServerPiperVoice(voice) ? voice : null;
+  if (!edgeVoice && !piperVoice) return fail("Giọng đọc không hợp lệ.");
   if (!text) return fail("Thiếu câu cần đọc.");
   if (text.length > EDGE_TTS_MAX_CHARS) return fail("Câu quá dài.", 413);
 
   try {
     // Cache hit trên đĩa → trả ngay, không tính hạn mức
-    if (!hasEdgeDubSpeech(voice, speed, text)) {
+    const cachedOnDisk = edgeVoice ? hasEdgeDubSpeech(edgeVoice, speed, text) : hasPiperDubSpeech(piperVoice!, speed, text);
+    if (!cachedOnDisk) {
       const user = await getCurrentUser();
       if (user?.role !== "admin") {
         const key = user ? `u:${user.id}` : `ip:${await clientIp()}`;
@@ -37,15 +41,17 @@ export async function GET(req: Request) {
       }
     }
 
-    const mp3 = await synthesizeEdgeDub(text, voice, speed);
-    return new Response(new Uint8Array(mp3), {
+    const audio = edgeVoice
+      ? await synthesizeEdgeDub(text, edgeVoice, speed)
+      : await synthesizePiperDub(text, piperVoice!, speed);
+    return new Response(new Uint8Array(audio), {
       headers: {
-        "Content-Type": "audio/mpeg",
+        "Content-Type": edgeVoice ? "audio/mpeg" : "audio/wav",
         "Cache-Control": "public, max-age=604800, immutable",
       },
     });
   } catch (e) {
     console.error("[dub/tts]", e);
-    return fail((e as Error).message || "Không tạo được giọng đọc Edge TTS.", 502);
+    return fail((e as Error).message || "Không tạo được giọng đọc.", 502);
   }
 }
