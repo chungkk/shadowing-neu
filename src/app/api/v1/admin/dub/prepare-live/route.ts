@@ -76,7 +76,7 @@ export async function POST(req: Request) {
         sourceLang: needTranslateLang,
         onProgress: ({ phase, done, total }) => {
           if (phase === "style") {
-            emit?.({ pct: 36, stage: "Đang phân tích ngữ cảnh & phong cách video…", done: 0, total });
+            emit?.({ pct: 36, stage: "Đang đọc toàn bộ phụ đề & phân tích văn phong…", done: 0, total });
           } else {
             const pct = total > 0 ? Math.min(98, 42 + Math.round((done / total) * 56)) : 90;
             emit?.({

@@ -55,8 +55,8 @@ type FlightEntry = {
   partial?: { data: LiveDubResult; pct: number; done: number; total: number };
 };
 
-// v2: gộp câu hoàn chỉnh + thêm dấu câu đa ngôn ngữ + dịch theo ngữ cảnh (Style Card + cửa sổ trượt) + căn thời lượng
-const CACHE_PREFIX = "dub:live:v2:";
+// v3: đọc toàn bộ phụ đề tạo cẩm nang văn phong + dịch bằng mô hình lớn (Groq 120b → OpenAI) + neo giọng văn từ lô đầu
+const CACHE_PREFIX = "dub:live:v3:";
 const gd = globalThis as unknown as { __dubLiveFlights?: Map<string, FlightEntry> };
 const inflight = (gd.__dubLiveFlights ??= new Map());
 
@@ -330,7 +330,7 @@ export async function prepareLiveDub(
         sourceLang,
         onProgress: ({ phase, done, total }) => {
           if (phase === "style") {
-            emitProgress({ pct: 34, stage: "Đang phân tích ngữ cảnh & phong cách video…", done: 0, total });
+            emitProgress({ pct: 34, stage: "Đang đọc toàn bộ phụ đề & phân tích văn phong…", done: 0, total });
           } else {
             const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 90;
             emitProgress({
