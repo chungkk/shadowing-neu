@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { TTS_DIR } from "./db";
+import { DUB_TTS_DIR, noteDubTtsCacheWrite, touchDubTtsFile } from "./dub-tts-cache";
 import { normalizeEdgeSpeed } from "./edge-tts";
 import config from "./kokoro-vi/config.json";
 import { SeaDictionary, phonemizeChunks } from "./kokoro-vi/frontend";
@@ -28,7 +29,6 @@ const PIPER_SAMPLE_RATE = 22_050;
 const DICT_URL = "https://hallovn.de/download/media/kokoro/sea_g2p.bin";
 const ORT_REMOTE_BASE = "https://hallovn.de/download/media/kokoro/ort/";
 const KOKORO_DIR = path.join(TTS_DIR, "kokoro");
-const DUB_TTS_DIR = path.join(TTS_DIR, "dub");
 
 type OrtModule = typeof import("onnxruntime-web");
 type OrtSession = import("onnxruntime-web").InferenceSession;
@@ -251,7 +251,9 @@ export async function synthesizePiperDub(text: string, voiceId: ServerPiperVoice
   const file = cacheFileFor(voiceId, spd, clean);
 
   try {
-    return await fs.promises.readFile(file);
+    const data = await fs.promises.readFile(file);
+    touchDubTtsFile(file);
+    return data;
   } catch {}
 
   let job = state.pending.get(file);
@@ -267,6 +269,7 @@ export async function synthesizePiperDub(text: string, voiceId: ServerPiperVoice
         await fs.promises.rm(tmp, { force: true }).catch(() => {});
         throw e;
       }
+      noteDubTtsCacheWrite(wav.byteLength);
       return wav;
     })().finally(() => state.pending.delete(file));
     state.pending.set(file, job);

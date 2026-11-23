@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import WebSocket from "ws";
-import { TTS_DIR } from "./db";
+import { DUB_TTS_DIR, noteDubTtsCacheWrite, touchDubTtsFile } from "./dub-tts-cache";
 
 export const EDGE_VI_VOICES = {
   "edge:vi-VN-NamMinhNeural": "vi-VN-NamMinhNeural",
@@ -101,11 +101,7 @@ function escapeXml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-const DUB_TTS_DIR = path.join(TTS_DIR, "dub");
-const CACHE_MAX_BYTES = (Number(process.env.DUB_TTS_CACHE_MB) || 500) * 1024 * 1024;
 const pending = new Map<string, Promise<Buffer>>();
-let writes = 0;
-let pruning = false;
 
 /** Làm tròn tốc độ về bội 0.05 trong [0.85, 1.45] để tăng tỷ lệ trùng cache */
 export function normalizeEdgeSpeed(speed: number): number {
@@ -125,33 +121,6 @@ function cacheFileFor(voiceId: EdgeVoiceId, speed: number, text: string): string
 
 export function hasEdgeDubSpeech(voiceId: EdgeVoiceId, speed: number, text: string): boolean {
   return fs.existsSync(cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim()));
-}
-
-async function pruneCache() {
-  if (pruning) return;
-  pruning = true;
-  try {
-    const names = await fs.promises.readdir(DUB_TTS_DIR);
-    const files: { name: string; size: number; used: number }[] = [];
-    for (const name of names) {
-      if (!name.endsWith(".mp3")) continue;
-      try {
-        const st = await fs.promises.stat(path.join(DUB_TTS_DIR, name));
-        files.push({ name, size: st.size, used: Math.max(st.atimeMs, st.mtimeMs) });
-      } catch {}
-    }
-    let total = files.reduce((n, f) => n + f.size, 0);
-    if (total <= CACHE_MAX_BYTES) return;
-    for (const f of files.sort((a, b) => a.used - b.used)) {
-      if (total <= CACHE_MAX_BYTES * 0.8) break;
-      await fs.promises.rm(path.join(DUB_TTS_DIR, f.name), { force: true }).catch(() => {});
-      total -= f.size;
-    }
-  } catch (e) {
-    console.error("[edge-tts] dọn cache lỗi:", e);
-  } finally {
-    pruning = false;
-  }
 }
 
 function runEdgeOnce(voiceName: string, rate: string, text: string, allowClockRetry = true): Promise<Buffer> {
@@ -262,7 +231,9 @@ export async function synthesizeEdgeDub(text: string, voiceId: EdgeVoiceId, spee
   const file = cacheFileFor(voiceId, spd, clean);
 
   try {
-    return await fs.promises.readFile(file);
+    const data = await fs.promises.readFile(file);
+    touchDubTtsFile(file);
+    return data;
   } catch {}
 
   let job = pending.get(file);
@@ -284,7 +255,7 @@ export async function synthesizeEdgeDub(text: string, voiceId: EdgeVoiceId, spee
             await fs.promises.rm(tmp, { force: true }).catch(() => {});
             throw writeErr;
           }
-          if (++writes % 100 === 0) void pruneCache();
+          noteDubTtsCacheWrite(audio.byteLength);
           return audio;
         } catch (e) {
           lastErr = e;
