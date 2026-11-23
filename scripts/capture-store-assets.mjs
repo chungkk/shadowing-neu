@@ -925,6 +925,269 @@ const PROMO_SMALL_HTML = `<!doctype html><html lang="vi"><head><meta charset="ut
   </div>
 </body></html>`;
 
+// 5. Marquee Promo Tile (1400x560)
+const PROMO_MARQUEE_HTML = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><style>
+  ${BASE_STYLES}
+  .marquee {
+    width: 1400px;
+    height: 560px;
+    padding: 46px 64px;
+    background:
+      radial-gradient(680px 460px at 78% 18%, rgba(225, 29, 72, 0.34), transparent 64%),
+      radial-gradient(620px 420px at 14% 92%, rgba(56, 189, 248, 0.2), transparent 64%),
+      linear-gradient(140deg, #090e1c 0%, #121a2f 52%, #090d16 100%);
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .m-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .m-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .m-brand img {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+  .m-brand-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .m-brand-sub {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+  .m-headline {
+    margin: 0;
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.028em;
+    color: #fff;
+  }
+  .m-headline span {
+    background: linear-gradient(90deg, #fb7185, #f43f5e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .m-desc {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.5;
+    color: #cbd5e1;
+    max-width: 560px;
+  }
+  .m-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .m-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+  .m-chip.accent {
+    background: rgba(225, 29, 72, 0.22);
+    border-color: rgba(251, 113, 133, 0.5);
+    color: #fecdd3;
+  }
+  .m-right {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .m-player {
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(155deg, #1b2c4b 0%, #162135 55%, #0c121e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 28px 65px rgba(0, 0, 0, 0.62);
+    padding: 20px 22px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .m-player-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .m-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(15, 18, 26, 0.85);
+    border: 1px solid rgba(251, 113, 133, 0.45);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .m-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+  }
+  .m-caption-box {
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: rgba(10, 12, 18, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+  }
+  .m-cap-vi {
+    font-size: 19px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.38;
+  }
+  .m-cap-orig {
+    margin-top: 5px;
+    font-size: 14px;
+    color: rgba(226, 232, 240, 0.8);
+  }
+  .m-scrubber {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    overflow: hidden;
+  }
+  .m-scrubber > i {
+    display: block;
+    width: 44%;
+    height: 100%;
+    background: #ff0033;
+  }
+  .m-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #e2e8f0;
+  }
+  .m-bar-r {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .m-voice-dock {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(15, 18, 25, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  }
+  .m-voice-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+  .m-voice-pills {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .m-vp {
+    text-align: center;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #0f131c;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 13px;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+  .m-vp.active {
+    border-color: #f43f5e;
+    background: rgba(225, 29, 72, 0.22);
+    color: #fda4af;
+  }
+</style></head><body>
+  <div class="marquee">
+    <div class="m-left">
+      <div class="m-brand">
+        <img src="${icon128DataUri}" alt="HalloVN" />
+        <div>
+          <div class="m-brand-title">HalloVN Thuyết minh</div>
+          <div class="m-brand-sub">Chrome Extension · hallovn.de</div>
+        </div>
+      </div>
+
+      <h1 class="m-headline">Xem video ngoại ngữ bằng <span>tiếng Việt</span> ngay 1 chạm</h1>
+      <p class="m-desc">Tự động dịch phụ đề và phát giọng thuyết minh tiếng Việt đồng bộ mượt trên YouTube và mọi trang web có video.</p>
+
+      <div class="m-chips">
+        <span class="m-chip accent">VI · 1 chạm trên YouTube</span>
+        <span class="m-chip">🎙️ Nam · Nữ · Adam</span>
+        <span class="m-chip">💬 Phụ đề song ngữ</span>
+      </div>
+    </div>
+
+    <div class="m-right">
+      <div class="m-player">
+        <div class="m-player-top">
+          <span style="font-size:12px;font-weight:800;letter-spacing:0.06em;padding:4px 9px;border-radius:6px;background:rgba(15,23,42,0.75);border:1px solid rgba(255,255,255,0.18)">YOUTUBE · DOKU</span>
+          <span class="m-live"><span class="m-live-dot"></span> Đang phát giọng Việt · 1.15×</span>
+        </div>
+
+        <div class="m-caption-box">
+          <div class="m-cap-vi">Hôm nay chúng ta cùng khám phá cuộc sống thường ngày tại Berlin.</div>
+          <div class="m-cap-orig">Heute entdecken wir den Alltag und das Arbeitsleben in Berlin.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="m-scrubber"><i></i></div>
+          <div class="m-bar">
+            <span>❚❚ &nbsp;&nbsp; 🔊 &nbsp;&nbsp; 04:18 / 11:24</span>
+            <div class="m-bar-r">
+              <div class="hvn-yt-btn hvn-active"><span class="hvn-yt-badge">VI</span></div>
+              <span>CC</span>
+              <span>⚙</span>
+              <span>⛶</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-voice-dock">
+        <span class="m-voice-label">Giọng đọc</span>
+        <div class="m-voice-pills">
+          <div class="m-vp">Nam</div>
+          <div class="m-vp">Nữ</div>
+          <div class="m-vp active">Adam</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+
 async function renderPng(browser, html, width, height, outPath) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: "load" });
@@ -945,6 +1208,7 @@ try {
   await renderPng(browser, SCREENSHOT_2_HTML, 1280, 800, path.join(OUT_DIR, "screenshot-2-voices-controls.png"));
   await renderPng(browser, SCREENSHOT_3_HTML, 1280, 800, path.join(OUT_DIR, "screenshot-3-bilingual-srt.png"));
   await renderPng(browser, PROMO_SMALL_HTML, 440, 280, path.join(OUT_DIR, "promo-small-440x280.png"));
+  await renderPng(browser, PROMO_MARQUEE_HTML, 1400, 560, path.join(OUT_DIR, "promo-marquee-1400x560.png"));
 } finally {
   await browser.close();
 }
