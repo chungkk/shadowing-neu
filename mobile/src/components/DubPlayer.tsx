@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Share, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, Pressable, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime } from "@shared/subtitles";
@@ -15,43 +15,161 @@ import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 import { C, R, SEC, alpha } from "@/lib/theme";
 
-type OrigAudioMode = "off" | "low" | "on";
-
 const SPEEDS = [1, 1.15, 1.25, 1.35] as const;
 
+/** Các mức âm lượng tiếng gốc khi chỉnh được thật (Android, hoặc iOS khi Web Audio chạy). */
+const ORIG_LEVELS = [0, 15, 30, 60, 100] as const;
+/** iOS khi không có Web Audio: WebKit khoá âm lượng video, chỉ tắt/bật được. */
+const ORIG_TOGGLE = [0, 100] as const;
+
 /**
- * Hỗ trợ lệnh play/pause/volume/mute ổn định trên WKWebView iOS và tự tắt phụ đề YouTube để không đè phụ đề tiếng Việt.
- * Giữ trạng thái __dubMuted để khi người dùng bấm trực tiếp vào iframe trên iOS không bị tự bỏ mute.
+ * Trạng thái chỉnh âm lượng tiếng gốc:
+ * - native: Android, setVolume của YouTube chạy bình thường.
+ * - pending: iOS, đang chờ khung YouTube nối Web Audio (chỉ nối được khi video bắt đầu phát).
+ * - ok: iOS, đã nối GainNode → chỉnh âm lượng thật.
+ * - unsupported: iOS, không nối được hoặc bị câm → quay về tắt/bật.
  */
-const YT_DUB_SHIM = `
-window.__dubMuted = true;
-window.addEventListener("message", function (e) {
-  try {
-    var m = JSON.parse(e.data);
-    if (!window.player || !m || !m.eventName) return;
-    switch (m.eventName) {
-      case "playVideo": player.playVideo(); break;
-      case "pauseVideo": player.pauseVideo(); break;
-      case "muteVideo": window.__dubMuted = true; player.mute(); break;
-      case "unMuteVideo": window.__dubMuted = false; player.unMute(); break;
-      case "setVolume": if (m.meta && typeof m.meta.volume === "number") player.setVolume(m.meta.volume); break;
-    }
-  } catch (_) {}
-});
-(function hookPlayer() {
-  if (!window.player || typeof player.getPlayerState !== "function") return setTimeout(hookPlayer, 250);
-  if (window.__dubMuted) { try { player.mute(); } catch (_) {} }
-  player.addEventListener("onStateChange", function (e) {
-    if (e.data !== 1) return;
+type GainStatus = "native" | "pending" | "ok" | "unsupported";
+
+/** Tiền tố tin nhắn trạng thái gain, đi nhờ kênh playerQualityChange vì thư viện bỏ qua eventType lạ. */
+const GAIN_MSG = "__dubgain:";
+
+/**
+ * Đoạn JS chèn vào WebView. Với injectedJavaScriptForMainFrameOnly=false nó chạy ở mọi khung:
+ *
+ * Khung chính (trang của react-native-youtube-iframe):
+ * - Hỗ trợ lệnh play/pause/volume/mute ổn định trên WKWebView iOS, tự tắt phụ đề YouTube.
+ * - Giữ __dubMuted để khi người dùng bấm thẳng vào iframe trên iOS không bị tự bỏ mute.
+ * - Chuyển mức âm lượng xuống khung YouTube và chuyển trạng thái gain từ khung YouTube về app
+ *   (ReactNativeWebView chỉ có ở khung chính).
+ *
+ * Khung youtube.com/embed (chỉ khi allowGain):
+ * - iOS khoá HTMLMediaElement.volume, nên nối <video> qua Web Audio GainNode để chỉnh âm lượng thật.
+ * - Chỉ nối khi nguồn là blob: (MSE); luồng HLS gốc bị lỗi WebKit làm câm khi nối Web Audio.
+ * - Kiểm tra bằng AnalyserNode: phát có tiếng nhưng đo toàn im lặng ~6 giây → báo "silent" để app tải lại không nối.
+ */
+function buildShim(allowGain: boolean): string {
+  return `
+(function () {
+  if (window.top !== window) return;
+  window.__dubMuted = true;
+  window.__dubVol = 100;
+  function sendGain() {
     try {
-      if (window.__dubMuted) player.mute();
-      player.unloadModule("captions");
-      player.unloadModule("cc");
+      var f = window.player && player.getIframe && player.getIframe();
+      if (f && f.contentWindow) f.contentWindow.postMessage(JSON.stringify({ __dubSetGain: window.__dubVol / 100 }), "*");
+    } catch (_) {}
+  }
+  window.addEventListener("message", function (e) {
+    if (typeof e.data !== "string") return;
+    try {
+      var m = JSON.parse(e.data);
+      if (!m) return;
+      if (m.__dubGain) {
+        if (m.__dubGain === "hello") sendGain();
+        else if (window.ReactNativeWebView)
+          window.ReactNativeWebView.postMessage(JSON.stringify({ eventType: "playerQualityChange", data: "${GAIN_MSG}" + m.__dubGain }));
+        return;
+      }
+      if (!window.player || !m.eventName) return;
+      switch (m.eventName) {
+        case "playVideo": player.playVideo(); break;
+        case "pauseVideo": player.pauseVideo(); break;
+        case "muteVideo": window.__dubMuted = true; player.mute(); break;
+        case "unMuteVideo": window.__dubMuted = false; player.unMute(); break;
+        case "setVolume":
+          if (m.meta && typeof m.meta.volume === "number") {
+            window.__dubVol = m.meta.volume;
+            player.setVolume(m.meta.volume);
+            sendGain();
+          }
+          break;
+      }
     } catch (_) {}
   });
+  (function hookPlayer() {
+    if (!window.player || typeof player.getPlayerState !== "function") return setTimeout(hookPlayer, 250);
+    if (window.__dubMuted) { try { player.mute(); } catch (_) {} }
+    player.addEventListener("onStateChange", function (e) {
+      if (e.data !== 1) return;
+      try {
+        if (window.__dubMuted) player.mute();
+        player.unloadModule("captions");
+        player.unloadModule("cc");
+      } catch (_) {}
+    });
+  })();
+})();
+(function () {
+  if (!${allowGain ? "true" : "false"} || window.top === window) return;
+  if (!/(^|\.)youtube(-nocookie)?\.com$/.test(location.hostname)) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var ctx = null, gainNode = null, gain = 1, reported = false;
+  function post(s) { try { window.parent.postMessage(JSON.stringify({ __dubGain: s }), "*"); } catch (_) {} }
+  window.addEventListener("message", function (e) {
+    if (typeof e.data !== "string" || e.data.indexOf("__dubSetGain") < 0) return;
+    try {
+      var m = JSON.parse(e.data);
+      if (typeof m.__dubSetGain !== "number") return;
+      gain = Math.max(0, Math.min(1, m.__dubSetGain));
+      if (gainNode) gainNode.gain.setTargetAtTime(gain, ctx.currentTime, 0.04);
+    } catch (_) {}
+  });
+  function watchSilence(v, an) {
+    var buf = new Float32Array(an.fftSize), flat = 0;
+    var iv = setInterval(function () {
+      if (v.paused || v.muted || gain <= 0.01 || v.readyState < 3 || ctx.state !== "running") return;
+      an.getFloatTimeDomainData(buf);
+      var mx = 0;
+      for (var i = 0; i < buf.length; i++) { var a = Math.abs(buf[i]); if (a > mx) mx = a; }
+      if (mx > 0.0001) { clearInterval(iv); post("verified"); return; }
+      if (++flat >= 12) { clearInterval(iv); post("silent"); }
+    }, 500);
+  }
+  function tryHook(v) {
+    if (v.__dubHooked || v.__dubTrying) return;
+    var src = v.currentSrc || v.src || "";
+    if (!src) return;
+    if (!AC || src.indexOf("blob:") !== 0) { if (!reported) { reported = true; post("unsupported"); } return; }
+    v.__dubTrying = true;
+    if (!ctx) ctx = new AC();
+    var resumed = ctx.state === "running" ? Promise.resolve() : ctx.resume();
+    Promise.race([resumed, new Promise(function (r) { setTimeout(r, 1200); })]).then(function () {
+      v.__dubTrying = false;
+      if (ctx.state !== "running") { post("suspended"); return; }
+      var s = ctx.createMediaElementSource(v);
+      gainNode = ctx.createGain();
+      gainNode.gain.value = gain;
+      s.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      var an = ctx.createAnalyser();
+      an.fftSize = 2048;
+      s.connect(an);
+      v.__dubHooked = true;
+      reported = true;
+      post("ok");
+      post("hello");
+      watchSilence(v, an);
+    }).catch(function () { v.__dubTrying = false; post("unsupported"); });
+  }
+  (function findVideo() {
+    var v = document.querySelector("video");
+    if (!v) return setTimeout(findVideo, 400);
+    if (!v.__dubListen) {
+      v.__dubListen = true;
+      v.addEventListener("playing", function () {
+        if (ctx && ctx.state !== "running") ctx.resume().catch(function () {});
+        tryHook(v);
+      });
+    }
+    if (!v.paused) tryHook(v);
+    setTimeout(findVideo, 1500);
+  })();
+  post("hello");
 })();
 true;
 `;
+}
 
 function Pill({
   icon,
@@ -122,7 +240,15 @@ export default function DubPlayer({
   const [playing, setPlaying] = useState(false);
   const [voiceId, setVoiceId] = useState<DubVoiceId>(initialVoice);
   const [speedIdx, setSpeedIdx] = useState(1); // mặc định 1.15x
-  const [origMode, setOrigMode] = useState<OrigAudioMode>("off"); // iOS WKWebView: tắt gốc mặc định để nghe tiếng Việt trong rõ
+  // Âm lượng tiếng gốc 0–100; mặc định tắt để nghe tiếng Việt rõ
+  const [origVol, setOrigVol] = useState(0);
+  const [gainStatus, setGainStatus] = useState<GainStatus>(Platform.OS === "ios" ? "pending" : "native");
+  // Tắt hẳn việc nối Web Audio (sau khi phát hiện bị câm) → tải lại player không nối, quay về tắt/bật
+  const [gainAllowed, setGainAllowed] = useState(Platform.OS === "ios");
+  const [playerKey, setPlayerKey] = useState(0);
+  const [playerStart, setPlayerStart] = useState(0);
+  const shim = useMemo(() => buildShim(gainAllowed), [gainAllowed]);
+  const canGain = gainStatus === "native" || gainStatus === "ok";
   const [dubMuted, setDubMuted] = useState(false);
   const [showOrig, setShowOrig] = useState(false);
   const [activeCueIdx, setActiveCueIdx] = useState(-1);
@@ -131,21 +257,38 @@ export default function DubPlayer({
   const hasOrig = useMemo(() => cues.some((c) => Boolean(c.orig)), [cues]);
   const activeCue = activeCueIdx >= 0 ? cues[activeCueIdx] : null;
 
-  const stateRef = useRef({ voiceId, speed, dubMuted, origMode, cues, playing });
+  const stateRef = useRef({ voiceId, speed, dubMuted, cues, playing });
   useEffect(() => {
-    stateRef.current = { voiceId, speed, dubMuted, origMode, cues, playing };
+    stateRef.current = { voiceId, speed, dubMuted, cues, playing };
   });
 
-  // Cập nhật AVAudioSession theo chế độ tiếng gốc:
-  // - "low" (Gốc: Nhỏ): dùng duckOthers của iOS để hệ thống tự hạ nhỏ tiếng YouTube xuống ~20% mỗi khi giọng Việt đọc!
-  // - "off" / "on": mixWithOthers
+  // AVAudioSession: trộn tiếng video (WebView) với giọng thuyết minh.
+  // Không dùng duckOthers: nó chỉ hạ tiếng app khác, không hạ được video trong chính app.
   useEffect(() => {
     void setAudioModeAsync({
       playsInSilentMode: true,
       allowsRecording: false,
-      interruptionMode: origMode === "low" ? "duckOthers" : "mixWithOthers",
+      interruptionMode: "mixWithOthers",
     }).catch(() => {});
-  }, [origMode]);
+  }, []);
+
+  // Trạng thái Web Audio từ khung YouTube (đi nhờ sự kiện playerQualityChange)
+  const onGainMessage = useCallback((msg: string) => {
+    if (!msg.startsWith(GAIN_MSG)) return;
+    const status = msg.slice(GAIN_MSG.length);
+    if (status === "ok" || status === "verified") {
+      setGainStatus("ok");
+    } else if (status === "unsupported") {
+      setGainStatus((s) => (s === "ok" ? s : "unsupported"));
+    } else if (status === "silent") {
+      // Nối Web Audio nhưng ra im lặng (lỗi WebKit) → tải lại player không nối, giữ vị trí đang xem
+      setGainStatus("unsupported");
+      setGainAllowed(false);
+      setOrigVol((v) => (v > 0 ? 100 : 0));
+      setPlayerStart(Math.floor(lastYtTimeRef.current));
+      setPlayerKey((k) => k + 1);
+    }
+  }, []);
 
   const stopDub = useCallback(() => {
     speakGenRef.current += 1;
@@ -223,7 +366,7 @@ export default function DubPlayer({
       await setAudioModeAsync({
         playsInSilentMode: true,
         allowsRecording: false,
-        interruptionMode: stateRef.current.origMode === "low" ? "duckOthers" : "mixWithOthers",
+        interruptionMode: "mixWithOthers",
       }).catch(() => {});
       p.replace({ uri: file.uri });
       p.muted = muted;
@@ -324,8 +467,9 @@ export default function DubPlayer({
     setVoiceId((v) => (v === DUB_VOICES[0].id ? DUB_VOICES[1].id : DUB_VOICES[0].id));
   };
 
-  const cycleOrigMode = () => {
-    setOrigMode((m) => (m === "off" ? "low" : m === "low" ? "on" : "off"));
+  const cycleOrigVol = () => {
+    const levels: readonly number[] = canGain ? ORIG_LEVELS : ORIG_TOGGLE;
+    setOrigVol((v) => levels.find((l) => l > v) ?? 0);
   };
 
   const cycleSpeed = () => {
@@ -344,19 +488,21 @@ export default function DubPlayer({
 
   const videoWidth = split ? Math.min(Math.floor(width * 0.48), 540) : Math.min(width, CONTENT_MAX);
   const voiceLabel = voiceId === DUB_VOICES[0].id ? t("dub.voiceMale") : t("dub.voiceFemale");
-  const origLabel = origMode === "off" ? t("dub.origOff") : origMode === "low" ? t("dub.origLow") : t("dub.origOn");
+  const origLabel =
+    origVol <= 0 ? t("dub.origOff") : !canGain || origVol >= 100 ? t("dub.origOn") : t("dub.origPct", { n: origVol });
 
   const videoPane = (
     <View style={{ width: split ? videoWidth : "100%", alignItems: "center", backgroundColor: C.background }}>
       <View style={{ width: videoWidth, height: Math.round((videoWidth * 9) / 16), backgroundColor: "#000" }}>
         <YoutubePlayer
+          key={playerKey}
           ref={ytRef}
           height={Math.round((videoWidth * 9) / 16)}
           width={videoWidth}
           videoId={videoId}
           play={playing}
-          mute={origMode === "off"}
-          volume={origMode === "low" ? 20 : 100}
+          mute={origVol <= 0}
+          volume={origVol > 0 ? origVol : 100}
           initialPlayerParams={{
             rel: false,
             controls: true,
@@ -364,12 +510,16 @@ export default function DubPlayer({
             iv_load_policy: 3,
             showClosedCaptions: false,
             preventFullScreen: true,
+            start: playerStart,
           }}
           webViewProps={{
-            injectedJavaScript: YT_DUB_SHIM,
+            injectedJavaScript: shim,
+            // iOS: chạy cả trong khung youtube.com để nối Web Audio chỉnh âm lượng gốc
+            injectedJavaScriptForMainFrameOnly: false,
             allowsInlineMediaPlayback: true,
             mediaPlaybackRequiresUserAction: false,
           }}
+          onPlaybackQualityChange={onGainMessage}
           onChangeState={(s: string) => {
             if (s === PLAYER_STATES.PLAYING) {
               setPlaying(true);
@@ -495,10 +645,10 @@ export default function DubPlayer({
           <Pill icon="waveform" label={voiceLabel} on onPress={cycleVoice} />
           <Pill icon="gauge.with.dots.needle.67percent" label={`${speed.toFixed(2).replace(/\.00$/, "")}×`} onPress={cycleSpeed} />
           <Pill
-            icon={origMode === "off" ? "speaker.slash" : "speaker.wave.2"}
+            icon={origVol <= 0 ? "speaker.slash" : origVol < 50 && canGain ? "speaker.wave.1" : "speaker.wave.2"}
             label={origLabel}
-            on={origMode !== "off"}
-            onPress={cycleOrigMode}
+            on={origVol > 0}
+            onPress={cycleOrigVol}
           />
           <Pill
             icon={dubMuted ? "speaker.slash.fill" : "speaker.wave.3.fill"}
