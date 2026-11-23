@@ -18,9 +18,9 @@ const API_URL =
   process.env.TRANSCRIBE_API_URL?.replace(/\/audio\/transcriptions$/, "/chat/completions") ??
   "https://api.groq.com/openai/v1/chat/completions";
 
-const CHUNK = 300; // số từ mỗi lần gửi
+const CHUNK = 450; // số từ mỗi lần gửi (tăng để giảm số vòng gọi LLM khi khôi phục dấu câu)
 const OVERLAP = 40; // gửi thêm vài chục từ phía sau làm ngữ cảnh, để cuối khúc không bị chấm sai
-const PARALLEL = 3;
+const PARALLEL = 5;
 
 export const punctuationEnabled = () => !!API_KEY && MODEL !== "off";
 

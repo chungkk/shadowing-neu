@@ -588,9 +588,9 @@ const CHUNK_RETRY_DELAY_MS = 2_500;
 /** Thời hạn chờ đọc toàn bộ phụ đề sinh Style Bible trước khi bỏ qua để không treo lô đầu. */
 const STYLE_CARD_DEADLINE_MS = 14_000;
 
-const FIRST_DUB_BATCH = 20; // Lô đầu 20 câu (~2 phút đầu) xong ngay để phát liền và làm mẫu văn phong
+const FIRST_DUB_BATCH = 10; // Lô đầu 10 câu (~45–60s đầu) dịch siêu nhanh (~1.5–2.5s) để mở video gần như tức thì
 const NEXT_DUB_BATCH = 30; // Các lô sau 30 câu, chạy song song
-const DUB_CONCURRENCY = 3; // Vừa nhanh vừa hạn chế chạm rate-limit TPM của Groq 120b
+const DUB_CONCURRENCY = 4; // Chạy song song 4 luồng cho phần còn lại để đuổi kịp rất nhanh trong lúc người dùng xem lô đầu
 
 /** Chọn 4–5 cặp câu tiêu biểu đã dịch ở lô đầu làm mẫu giọng văn & xưng hô cho các lô song song phía sau. */
 function pickStyleExamples(items: DubTranslateItem[], translations: string[], count: number): StyleExample[] {
@@ -638,16 +638,22 @@ export async function translateForDubbingSmart(
     return { translations: items.map((x) => x.text), style: null };
   }
 
-  onProgress?.({ phase: "style", done: 0, total: items.length });
-  const style = await Promise.race([
-    buildDubStyleCard(items, title, sourceLang || "auto"),
-    new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
-  ]);
-  const basePrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style);
+  // Khởi chạy phân tích cẩm nang văn phong (Style Bible) SONG SONG với lô đầu tiên (10 câu mở đầu)
+  // thay vì chặn chờ 4–10 giây trước khi bắt đầu dịch → mở trình phát nhanh hơn gấp 3–4 lần,
+  // trong khi toàn bộ các lô tiếp theo vẫn hưởng trọn Style Bible + mẫu câu từ lô đầu.
+  const stylePromise =
+    items.length > FIRST_DUB_BATCH
+      ? Promise.race([
+          buildDubStyleCard(items, title, sourceLang || "auto"),
+          new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
+        ])
+      : Promise.resolve<DubStyleCard | null>(null);
+
+  const initialPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, null);
   const out: string[] = new Array(items.length);
   onProgress?.({ phase: "translate", done: 0, total: items.length });
 
-  // Chia lô: lô đầu nhỏ (20 câu) để phát tức thì, các lô sau 30 câu chạy song song
+  // Chia lô: lô đầu nhỏ (10 câu) để phát tức thì, các lô sau 30 câu chạy song song
   const ranges: { start: number; end: number }[] = [];
   if (items.length > 0) {
     const firstEnd = Math.min(items.length, FIRST_DUB_BATCH);
@@ -680,16 +686,18 @@ export async function translateForDubbingSmart(
     onProgress?.({ phase: "translate", done: doneCount, total: items.length });
   };
 
-  // Lô 0 chạy ưu tiên trước để trình phát mở ngay lập tức và tạo mẫu văn phong cho các lô sau
+  // Lô 0 chạy ngay lập tức (song song với Style Bible) để trình phát mở sau ~2 giây
   if (ranges.length > 0) {
-    await runRange(ranges[0], basePrompt, true);
+    await runRange(ranges[0], initialPrompt, true);
   }
 
-  // Các lô còn lại chạy song song, kèm 4–5 câu mẫu từ lô 0 để giữ đồng bộ giọng văn & xưng hô
+  const style = await stylePromise;
+
+  // Các lô còn lại chạy song song, kèm đầy đủ Style Bible + 4–5 câu mẫu từ lô 0 để đồng bộ giọng văn & xưng hô
   const rest = ranges.slice(1);
   if (rest.length > 0) {
     const examples = pickStyleExamples(items, out, ranges[0].end);
-    const restPrompt = examples.length ? SMART_DUB_SYSTEM(sourceLang || "auto", title, style, examples) : basePrompt;
+    const restPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style, examples);
     let cursor = 0;
     await Promise.all(
       Array.from({ length: Math.min(DUB_CONCURRENCY, rest.length) }, async () => {

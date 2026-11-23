@@ -264,7 +264,7 @@ export async function prepareLiveDub(
     // 1. Ưu tiên dịch vụ vieneu-dub (Innertube mọi ngôn ngữ) nếu đã cấu hình
     if (dubEnabled()) {
       try {
-        const info = await dubJson<ProbeRes>("/probe", { method: "POST", body: { url }, timeoutMs: 25_000 });
+        const info = await dubJson<ProbeRes>("/probe", { method: "POST", body: { url }, timeoutMs: 10_000 });
         title = info.title || "";
         if (opts.maxSeconds && info.duration && info.duration > opts.maxSeconds) {
           throw new VideoTooLongError(info.duration, opts.maxSeconds);
@@ -275,7 +275,7 @@ export async function prepareLiveDub(
           const subRes = await dubJson<{ lang: string; cues: DubCue[] }>("/subtitles", {
             method: "POST",
             body: { url, lang: chosen.lang, auto: chosen.auto },
-            timeoutMs: 35_000,
+            timeoutMs: 20_000,
           });
           rawCues = subRes.cues;
           sourceLang = (subRes.lang || chosen.lang || "auto").toLowerCase();
@@ -358,7 +358,7 @@ export async function prepareLiveDub(
             const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 90;
             emitProgress({
               pct,
-              stage: done > 0 ? `Đang dịch tiếng Việt (${done}/${total} câu)…` : `Đang dịch 20 câu đầu để phát ngay…`,
+              stage: done > 0 ? `Đang dịch tiếng Việt (${done}/${total} câu)…` : `Đang dịch 10 câu đầu để phát ngay…`,
               done,
               total,
             });

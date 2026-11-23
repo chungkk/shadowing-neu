@@ -91,6 +91,11 @@ function loadYT(): Promise<void> {
   return ytPromise;
 }
 
+/** Nạp trước script YouTube IFrame API để trình phát mở tức thì ngay khi dữ liệu sẵn sàng. */
+export function preloadYouTubeIframeApi(): void {
+  if (typeof window !== "undefined") void loadYT();
+}
+
 /** Tốc độ đọc tối đa khi phải đọc nhanh để kịp câu sau (trần của /api/v1/dub/tts) */
 const MAX_FIT_SPEED = 1.45;
 /** Giới hạn số AudioBuffer PCM giữ trong RAM (tránh tràn bộ nhớ trên Safari/iOS với video dài) */
@@ -1001,16 +1006,16 @@ export default function KokoroLivePlayer({
             className="aspect-video w-full overflow-hidden rounded-xl bg-black [&_iframe]:h-full [&_iframe]:w-full"
           />
 
-          {/* Background translation progress bar (khi đã phát cuốn chiếu từ 20 câu đầu) */}
+          {/* Thanh tải phần còn lại gọn nhẹ (không lộ quy trình kỹ thuật) */}
           {bgProgress && bgProgress.done < bgProgress.total && (
-            <div className="space-y-1.5 rounded-xl border border-line bg-card-2/50 px-3 py-2">
+            <div className="space-y-1 rounded-xl border border-line/70 bg-card-2/40 px-3 py-2">
               <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
-                <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
+                <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground/85">
                   <Loader2 className="size-3 shrink-0 animate-spin text-sec-text" />
                   <span className="truncate">
                     {bgProgress.reconnecting
-                      ? `Đang kết nối lại để dịch tiếp phần còn lại (${bgProgress.done}/${bgProgress.total} câu)…`
-                      : `Đang dịch ngầm phần còn lại (${bgProgress.done}/${bgProgress.total} câu) — bạn đã có thể bấm Phát ngay`}
+                      ? "Đang kết nối lại để tải phần tiếp theo…"
+                      : "Đang tải thêm thuyết minh cho phần sau — bạn có thể xem ngay"}
                   </span>
                 </span>
                 <span className="shrink-0 font-mono font-semibold text-sec-text tabular-nums">{bgProgress.pct}%</span>
@@ -1018,7 +1023,7 @@ export default function KokoroLivePlayer({
               <div className="h-1 w-full overflow-hidden rounded-full bg-card">
                 <div
                   className="h-full rounded-full bg-sec transition-[width] duration-300"
-                  style={{ width: `${bgProgress.pct}%` }}
+                  style={{ width: `${Math.max(8, bgProgress.pct)}%` }}
                 />
               </div>
             </div>

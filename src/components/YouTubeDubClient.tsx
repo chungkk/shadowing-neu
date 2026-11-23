@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Check,
   Globe,
   Headphones,
   Link2,
@@ -14,8 +13,9 @@ import {
   X,
 } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { ensurePiperLoaded } from "@/lib/kokoro-vi/engine";
 import { extractVideoId } from "@/lib/youtube-id";
-import KokoroLivePlayer, { type LiveCue, type LiveVoiceId } from "./KokoroLivePlayer";
+import KokoroLivePlayer, { preloadYouTubeIframeApi, type LiveCue, type LiveVoiceId } from "./KokoroLivePlayer";
 
 export type DubSuggestion = {
   videoId: string;
@@ -64,12 +64,21 @@ const VOICE_PILLS: { id: LiveVoiceId; name: string; tag: string }[] = [
   { id: "piper:lac_phi", name: "Lạc Phi", tag: "Thuyết minh" },
 ];
 
-const PIPELINE_STEPS = [
-  { label: "Lấy phụ đề", minPct: 6, donePct: 29 },
-  { label: "Sắp xếp câu", minPct: 30, donePct: 33 },
-  { label: "Phân tích văn phong", minPct: 34, donePct: 39 },
-  { label: "Dịch lời thoại", minPct: 40, donePct: 99 },
-] as const;
+/** Trạng thái hiển thị thân thiện, không lộ chi tiết kỹ thuật xử lý phía sau. */
+function smartLoadingStatus(displayPct: number, elapsedSec: number): string {
+  if (displayPct < 32) return "Đang chuẩn bị video…";
+  if (displayPct < 68) return "Đang tạo thuyết minh tiếng Việt…";
+  if (elapsedSec >= 12) return "Video khá dài, sắp sẵn sàng…";
+  return "Đang đồng bộ giọng đọc…";
+}
+
+function smartTargetPct(serverPct: number): number {
+  if (serverPct >= 95) return 96;
+  if (serverPct >= 40) return Math.min(94, Math.max(serverPct + 18, 76));
+  if (serverPct >= 28) return 72;
+  if (serverPct >= 14) return 54;
+  return 34;
+}
 
 const RECENT_KEY = "hallovn-dub-recent";
 const VOICE_KEY = "hallovn-dub-voice";
@@ -196,6 +205,8 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const [loading, setLoading] = useState(false);
   const [loadingVideoId, setLoadingVideoId] = useState<string | null>(null);
   const [prep, setPrep] = useState<PrepProgress | null>(null);
+  const [displayPct, setDisplayPct] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [bgProgress, setBgProgress] = useState<BgProgress | null>(null);
   const [err, setErr] = useState("");
   const [session, setSession] = useState<LiveSession | null>(null);
@@ -204,6 +215,8 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const inputRef = useRef<HTMLInputElement>(null);
   const autoLoadedRef = useRef("");
   const voiceIdRef = useRef<LiveVoiceId>(voiceId);
+  const prepPctRef = useRef(0);
+  const loadStartRef = useRef(0);
 
   const recentRef = useRef(recent);
   useEffect(() => {
@@ -213,6 +226,31 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   useEffect(() => {
     voiceIdRef.current = voiceId;
   }, [voiceId]);
+
+  useEffect(() => {
+    prepPctRef.current = prep?.pct ?? 0;
+  }, [prep]);
+
+  // Nạp sẵn YouTube IFrame API ngay khi vào trang để video mở tức thì khi dữ liệu sẵn sàng
+  useEffect(() => {
+    preloadYouTubeIframeApi();
+  }, []);
+
+  // Nội suy tiến trình mượt mà để thanh tải chạy liên tục, tự nhiên thay vì đứng yên rồi nhảy cục
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setInterval(() => {
+      const target = smartTargetPct(prepPctRef.current);
+      setDisplayPct((prev) => {
+        if (prev >= target) return prev;
+        const gap = target - prev;
+        const step = gap > 18 ? 3 : gap > 8 ? 2 : 1;
+        return Math.min(target, prev + step);
+      });
+      setElapsedSec(Math.floor((Date.now() - loadStartRef.current) / 1000));
+    }, 180);
+    return () => clearInterval(timer);
+  }, [loading]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();
@@ -242,15 +280,24 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
       // Đánh dấu trước khi replaceState cập nhật ?v=... để effect auto-load không kích hoạt lại loadVideo lần 2
       autoLoadedRef.current = videoId;
 
+      // Nạp song song YouTube IFrame API & giọng trình duyệt (nếu đang chọn) trong lúc server chuẩn bị video
+      preloadYouTubeIframeApi();
+      if (voice === "piper:adam_bua") void ensurePiperLoaded("adam_bua").catch(() => {});
+      else if (voice === "piper:lac_phi") void ensurePiperLoaded("lac_phi").catch(() => {});
+
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
       const isActive = () => abortRef.current === ac && !ac.signal.aborted;
 
+      loadStartRef.current = Date.now();
+      prepPctRef.current = 6;
+      setDisplayPct(8);
+      setElapsedSec(0);
       setLoading(true);
       setLoadingVideoId(videoId);
       setBgProgress(null);
-      setPrep({ pct: 4, stage: "Đang kết nối máy chủ…" });
+      setPrep({ pct: 6, stage: "Đang chuẩn bị video…" });
       setErr("");
       let becameReady = false;
 
@@ -409,13 +456,14 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
     setRecent(recent.filter((r) => r.videoId !== videoId));
   };
 
-  const pct = prep?.pct ?? 0;
+  const pct = Math.max(displayPct, Math.min(96, prep?.pct ?? 0));
+  const statusText = smartLoadingStatus(pct, elapsedSec);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Bảng điều khiển nhập link & chọn giọng */}
       <form onSubmit={handleSubmit} className="card flex flex-col gap-3.5 p-4 sm:p-5">
-        {/* Hàng 1: Ô dán link (có nút xoá nhanh) + Nút chạy / Loading + Huỷ */}
+        {/* Hàng 1: Ô dán link (tự tải ngay khi dán) + Nút chạy / Loading + Huỷ */}
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
           <div className="input-group min-w-0 flex-1 pr-2">
             <Link2 className="size-4 shrink-0 text-muted" aria-hidden />
@@ -426,12 +474,22 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="Dán link YouTube bất kỳ (tiếng Đức, Anh, Nhật, Hàn…)"
+              placeholder="Dán link YouTube bất kỳ — tự động mở thuyết minh ngay"
               aria-label="Link video YouTube"
               value={url}
               onChange={(e) => {
                 setUrl(e.target.value);
                 if (err) setErr("");
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text").trim();
+                const vid = extractVideoId(pasted);
+                if (vid && vid !== loadingVideoId && vid !== session?.videoId) {
+                  e.preventDefault();
+                  setUrl(pasted);
+                  setErr("");
+                  void loadVideo(pasted, voiceId);
+                }
               }}
               required
             />
@@ -527,11 +585,11 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             })}
           </div>
           <span className="text-[11px] text-muted">
-            Phát ngay sau 20 câu đầu · Dán link mới bất kỳ lúc nào
+            Dán link là tự động mở · Hỗ trợ nhiều ngôn ngữ
           </span>
         </div>
 
-        {/* Khung tiến trình trực quan khi đang chuẩn bị video */}
+        {/* Khung chờ gọn đẹp, không lộ quy trình kỹ thuật phía sau */}
         {loading && prep && (
           <div className="flex flex-col gap-3 rounded-xl border border-sec/25 bg-card-2/60 p-3.5 sm:flex-row sm:items-center sm:gap-4">
             {loadingVideoId && (
@@ -540,9 +598,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                 <img
                   src={`https://i.ytimg.com/vi/${loadingVideoId}/mqdefault.jpg`}
                   alt=""
-                  className="size-full object-cover opacity-80"
+                  className="size-full object-cover opacity-85"
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/25">
                   <span className="flex size-8 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-xs">
                     <Loader2 className="size-4 animate-spin" />
                   </span>
@@ -554,7 +612,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-foreground sm:text-sm">
                   <span className="size-2 shrink-0 animate-pulse rounded-full bg-sec" />
-                  <span className="truncate">{prep.stage}</span>
+                  <span className="truncate">{statusText}</span>
                 </span>
                 <span className="shrink-0 font-mono text-xs font-bold text-sec-text tabular-nums sm:text-sm">
                   {pct}%
@@ -564,42 +622,16 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               <div className="h-2 w-full overflow-hidden rounded-full bg-card">
                 <div
                   className="h-full rounded-full bg-sec transition-[width] duration-300 ease-out"
-                  style={{ width: `${Math.max(5, pct)}%` }}
+                  style={{ width: `${Math.max(6, pct)}%` }}
                 />
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                  {PIPELINE_STEPS.map((step, i) => {
-                    const done = pct > step.donePct;
-                    const active = !done && pct >= step.minPct;
-                    return (
-                      <span
-                        key={step.label}
-                        className={`inline-flex items-center gap-1 ${
-                          done
-                            ? "font-medium text-ok-text"
-                            : active
-                              ? "font-semibold text-sec-text"
-                              : "text-muted/75"
-                        }`}
-                      >
-                        {done ? (
-                          <Check className="size-3 shrink-0" />
-                        ) : active ? (
-                          <Loader2 className="size-3 shrink-0 animate-spin" />
-                        ) : (
-                          <span className="font-mono text-[10px] opacity-70">{i + 1}.</span>
-                        )}
-                        <span>{step.label}</span>
-                      </span>
-                    );
-                  })}
-                </div>
+              <div className="flex items-center justify-between gap-3 text-[11px] text-muted">
+                <span>Video sẽ tự mở ngay khi sẵn sàng</span>
                 <button
                   type="button"
                   onClick={() => cancelLoad(true)}
-                  className="text-[11px] font-medium text-muted underline-offset-2 transition hover:text-red-500 hover:underline"
+                  className="shrink-0 font-medium text-muted underline-offset-2 transition hover:text-red-500 hover:underline"
                 >
                   Huỷ &amp; dán link khác
                 </button>
@@ -643,7 +675,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Hỗ trợ nhiều ngôn ngữ</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">
-                Xem video tiếng Đức, Anh, Nhật, Hàn… tự động gộp câu trọn vẹn và dịch tiếng Việt tự nhiên.
+                Xem video tiếng Đức, Anh, Nhật, Hàn… tự động chuyển sang giọng thuyết minh tiếng Việt tự nhiên.
               </p>
             </div>
           </div>
@@ -663,9 +695,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               <Sparkles className="size-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Phát nhanh cuốn chiếu</p>
+              <p className="text-sm font-semibold text-foreground">Mở nhanh, xem liền mạch</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">
-                Dịch xong 20 câu đầu là xem ngay, phần còn lại dịch song song ở nền cực nhanh.
+                Dán link là bắt đầu xem gần như tức thì, giọng thuyết minh mượt mà xuyên suốt cả video.
               </p>
             </div>
           </div>
