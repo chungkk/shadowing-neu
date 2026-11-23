@@ -103,6 +103,7 @@ export default function KokoroLivePlayer({
   cues,
   sourceLang,
   initialVoice = "edge:vi-VN-NamMinhNeural",
+  onVoiceChange,
   initialSpeed = 1.15,
   initialOrigVol = 25,
   shareUrl,
@@ -114,6 +115,7 @@ export default function KokoroLivePlayer({
   cues: LiveCue[];
   sourceLang?: string;
   initialVoice?: LiveVoiceId;
+  onVoiceChange?: (voice: LiveVoiceId) => void;
   initialSpeed?: number;
   initialOrigVol?: number;
   shareUrl?: string;
@@ -557,6 +559,28 @@ export default function KokoroLivePlayer({
     yt.playVideo();
   };
 
+  const changeVoice = useCallback(
+    (nextVoice: LiveVoiceId) => {
+      stopSpeech();
+      setEngineErr("");
+      lastSpokenIdxRef.current = -1;
+      setVoiceId(nextVoice);
+      onVoiceChange?.(nextVoice);
+    },
+    [onVoiceChange, stopSpeech],
+  );
+
+  // Đồng bộ khi người dùng chọn giọng ở thanh phía trên (không làm tải lại iframe YouTube)
+  useEffect(() => {
+    const resolved = resolveInitialVoice(initialVoice);
+    if (resolved !== stateRef.current.voiceId) {
+      stopSpeech();
+      setEngineErr("");
+      lastSpokenIdxRef.current = -1;
+      setVoiceId(resolved);
+    }
+  }, [initialVoice, stopSpeech]);
+
   const copyShare = async () => {
     if (!shareUrl) return;
     const full = shareUrl.startsWith("http") ? shareUrl : `${window.location.origin}${shareUrl}`;
@@ -568,36 +592,34 @@ export default function KokoroLivePlayer({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Header row */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex flex-col gap-4">
+      {/* Vùng 1: Tiêu đề & hành động phiên xem */}
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line/70 pb-3">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-bold text-foreground sm:text-lg">{title}</h2>
-          <p className="text-xs text-muted">
-            {showDebugMeta ? (
-              <>
-                {usingLocalWasm ? "Adam bựa trình duyệt (INT8)" : "Edge Neural TTS trực tiếp"} ({cues.length} câu)
-                {lastSynthMs !== null ? ` · tạo câu trong ${lastSynthMs}ms` : ""}
-              </>
-            ) : (
-              <>
-                Thuyết minh tiếng Việt trực tiếp · {cues.length} câu
-                {sourceLang && sourceLang !== "auto" && !sourceLang.startsWith("vi") ? ` · dịch từ ${sourceLang.toUpperCase()}` : ""}
-              </>
+          <h2 className="line-clamp-2 text-base font-bold leading-snug text-foreground sm:text-lg">{title}</h2>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            <span className="rounded-md bg-card-2 px-2 py-0.5 font-medium text-foreground/85 tabular-nums">
+              {cues.length} câu
+            </span>
+            {sourceLang && sourceLang !== "auto" && !sourceLang.startsWith("vi") && (
+              <span className="rounded-md bg-sec-soft px-2 py-0.5 font-semibold text-sec-text">
+                {sourceLang.toUpperCase()} → VI
+              </span>
             )}
-          </p>
+            {showDebugMeta && (
+              <span>
+                {usingLocalWasm ? "Adam bựa trình duyệt (INT8)" : "Edge Neural TTS"}
+                {lastSynthMs !== null ? ` · ${lastSynthMs}ms` : ""}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <select
             className="input h-8 w-auto py-1 text-xs text-foreground"
             value={voiceId}
-            onChange={(e) => {
-              stopSpeech();
-              setEngineErr("");
-              lastSpokenIdxRef.current = -1;
-              setVoiceId(e.target.value as LiveVoiceId);
-            }}
+            onChange={(e) => changeVoice(e.target.value as LiveVoiceId)}
             aria-label="Giọng thuyết minh"
           >
             {LIVE_VOICES.map((v) => (
@@ -606,6 +628,28 @@ export default function KokoroLivePlayer({
               </option>
             ))}
           </select>
+
+          {hasOrig && (
+            <button
+              type="button"
+              className={`btn btn-sm ${showOrig ? "btn-soft" : ""}`}
+              onClick={() => setShowOrig((v) => !v)}
+              title="Hiện thêm câu gốc bên dưới bản dịch tiếng Việt"
+            >
+              <Captions className="size-3.5" />
+              <span className="max-sm:hidden">Song ngữ</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className={`btn btn-sm ${showScript ? "btn-soft" : ""}`}
+            onClick={() => setShowScript((v) => !v)}
+            title="Xem toàn bộ lời thoại & bấm để tua nhanh"
+          >
+            <ListMusic className="size-3.5" />
+            <span>Lời thoại</span>
+          </button>
 
           {shareUrl && (
             <button type="button" className="btn btn-sm" onClick={() => void copyShare()} title="Chép link xem thuyết minh">
@@ -618,7 +662,7 @@ export default function KokoroLivePlayer({
 
       {/* Model download / init progress (chỉ hiện khi chọn giọng trình duyệt lần đầu) */}
       {usingLocalWasm && !voiceReady && !engineErr && (
-        <div className="space-y-1.5 rounded-lg border border-line bg-card-2/60 p-3">
+        <div className="space-y-1.5 rounded-xl border border-line bg-card-2/60 p-3">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
               <Loader2 className="size-3.5 shrink-0 animate-spin text-sec-text" />
@@ -641,209 +685,217 @@ export default function KokoroLivePlayer({
         </p>
       )}
 
-      {/* YouTube Player */}
-      <div
-        ref={hostRef}
-        className="aspect-video w-full overflow-hidden rounded-lg bg-black [&_iframe]:h-full [&_iframe]:w-full"
-      />
+      {/* Vùng 2: Sân khấu chính (khi mở Lời thoại trên màn lớn sẽ chia 2 cột khoa học) */}
+      <div className={showScript ? "grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start" : "flex flex-col gap-3"}>
+        <div className="flex min-w-0 flex-col gap-3">
+          {/* YouTube Player */}
+          <div
+            ref={hostRef}
+            className="aspect-video w-full overflow-hidden rounded-xl bg-black [&_iframe]:h-full [&_iframe]:w-full"
+          />
 
-      {/* Background translation progress bar (khi đã phát cuốn chiếu từ 20 câu đầu) */}
-      {bgProgress && bgProgress.done < bgProgress.total && (
-        <div className="space-y-1 rounded-lg border border-line bg-card-2/50 px-3 py-2">
-          <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
-            <span className="inline-flex items-center gap-1.5 text-foreground">
-              <Loader2 className="size-3 animate-spin text-sec-text" />
-              Đang dịch ngầm phần còn lại ({bgProgress.done}/{bgProgress.total} câu) — bạn đã có thể bấm Phát ngay
-            </span>
-            <span className="font-mono font-semibold text-sec-text tabular-nums">{bgProgress.pct}%</span>
-          </div>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-card">
-            <div className="h-full rounded-full bg-sec transition-all duration-300" style={{ width: `${bgProgress.pct}%` }} />
-          </div>
-        </div>
-      )}
+          {/* Background translation progress bar (khi đã phát cuốn chiếu từ 20 câu đầu) */}
+          {bgProgress && bgProgress.done < bgProgress.total && (
+            <div className="space-y-1.5 rounded-xl border border-line bg-card-2/50 px-3 py-2">
+              <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
+                <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
+                  <Loader2 className="size-3 shrink-0 animate-spin text-sec-text" />
+                  <span className="truncate">
+                    Đang dịch ngầm phần còn lại ({bgProgress.done}/{bgProgress.total} câu) — bạn đã có thể bấm Phát ngay
+                  </span>
+                </span>
+                <span className="shrink-0 font-mono font-semibold text-sec-text tabular-nums">{bgProgress.pct}%</span>
+              </div>
+              <div className="h-1 w-full overflow-hidden rounded-full bg-card">
+                <div
+                  className="h-full rounded-full bg-sec transition-[width] duration-300"
+                  style={{ width: `${bgProgress.pct}%` }}
+                />
+              </div>
+            </div>
+          )}
 
-      {/* Live Vietnamese (+ optional original) caption */}
-      <div className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg bg-card-2/80 px-4 py-2.5 text-center">
-        {activeCue ? (
-          <>
-            <p className="text-sm leading-snug font-semibold text-foreground sm:text-[0.95rem]">
-              {activeCue.pending ? (
-                "Đang dịch câu này…"
-              ) : activeCue.untranslated ? (
-                <span className="font-normal italic text-muted">{activeCue.orig} (chưa dịch được)</span>
-              ) : (
-                activeCue.text
-              )}
-            </p>
-            {showOrig && activeCue.orig && !activeCue.untranslated && (
-              <p className="text-xs leading-snug text-muted">{activeCue.orig}</p>
+          {/* Phụ đề trực tiếp */}
+          <div className="flex min-h-15 flex-col items-center justify-center gap-1 rounded-xl border border-line/60 bg-card-2/75 px-4 py-3 text-center">
+            {activeCue ? (
+              <>
+                <p className="text-sm leading-snug font-semibold text-foreground sm:text-base">
+                  {activeCue.pending ? (
+                    "Đang dịch câu này…"
+                  ) : activeCue.untranslated ? (
+                    <span className="font-normal italic text-muted">{activeCue.orig} (chưa dịch được)</span>
+                  ) : (
+                    activeCue.text
+                  )}
+                </p>
+                {showOrig && activeCue.orig && !activeCue.untranslated && (
+                  <p className="text-xs leading-snug text-muted">{activeCue.orig}</p>
+                )}
+              </>
+            ) : (
+              <span className="text-xs text-muted">
+                {voiceReady
+                  ? "Bấm “Phát” để xem YouTube với giọng thuyết minh tiếng Việt (tua thoải mái, tự bắt nhịp)"
+                  : "Đang nạp giọng đọc AI lần đầu (tự lưu trong trình duyệt cho các lần sau)…"}
+              </span>
             )}
-          </>
-        ) : (
-          <span className="text-xs text-muted">
-            {voiceReady
-              ? "Bấm “Phát” để xem YouTube với giọng thuyết minh tiếng Việt (tua thoải mái, tự bắt nhịp)"
-              : "Đang nạp giọng đọc AI lần đầu (tự lưu trong trình duyệt cho các lần sau)…"}
-          </span>
-        )}
-      </div>
+          </div>
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2.5 text-xs sm:gap-3">
-        <button
-          type="button"
-          className="btn btn-sm btn-primary tabular-nums"
-          disabled={!ytReady || !voiceReady}
-          onClick={togglePlay}
-        >
-          {!voiceReady ? (
-            <>
-              <Loader2 className="size-3.5 animate-spin" />
-              Đang nạp {progress.pct}%
-            </>
-          ) : (
-            <>
-              {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-              {playing ? "Tạm dừng" : "Phát"}
-            </>
-          )}
-        </button>
-        <button type="button" className="btn btn-sm" disabled={!ytReady || !voiceReady} onClick={restart} title="Xem lại từ đầu">
-          <RotateCcw className="size-3.5" />
-        </button>
+          {/* Vùng 3: Bảng điều khiển phát & trộn âm tách nhóm rõ ràng */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-card-2/40 p-2.5 sm:px-3.5 sm:py-3">
+            {/* Nhóm điều khiển phát */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="btn btn-sm btn-primary min-w-[104px] tabular-nums"
+                disabled={!ytReady || !voiceReady}
+                onClick={togglePlay}
+              >
+                {!voiceReady ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Nạp {progress.pct}%
+                  </>
+                ) : (
+                  <>
+                    {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+                    {playing ? "Tạm dừng" : "Phát"}
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={!ytReady || !voiceReady}
+                onClick={restart}
+                title="Xem lại từ đầu"
+                aria-label="Xem lại từ đầu"
+              >
+                <RotateCcw className="size-3.5" />
+              </button>
+            </div>
 
-        {isIOS ? (
-          <button
-            type="button"
-            className={`btn btn-sm ${origVol > 0 ? "btn-soft" : ""}`}
-            onClick={() => setOrigVol((v) => (v > 0 ? 0 : 100))}
-            title="iOS chỉ cho bật/tắt tiếng gốc video trong trình duyệt"
-          >
-            {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-            {origVol <= 0 ? "Gốc: Tắt" : "Gốc: Bật"}
-          </button>
-        ) : (
-          <label className="flex items-center gap-1.5 text-muted">
-            <button
-              type="button"
-              className="text-foreground"
-              onClick={() => setOrigVol((v) => (v > 0 ? 0 : 25))}
-              title={origVol <= 0 ? "Bật tiếng gốc video" : "Tắt tiếng gốc video"}
-            >
-              {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-            </button>
-            <span>Gốc {origVol}%</span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={origVol}
-              onChange={(e) => setOrigVol(Number(e.target.value))}
-              className="w-18 sm:w-20"
-            />
-          </label>
-        )}
-
-        <label className="flex items-center gap-1.5 text-muted">
-          <button
-            type="button"
-            className="text-foreground"
-            onClick={() => setDubMuted((m) => !m)}
-            title={dubMuted ? "Bật thuyết minh" : "Tắt thuyết minh"}
-          >
-            {dubMuted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-          </button>
-          <span>Việt {dubMuted ? "0" : dubVol}%</span>
-          <input
-            type="range"
-            min={0}
-            max={160}
-            step={10}
-            value={dubVol}
-            onChange={(e) => {
-              setDubMuted(false);
-              setDubVol(Number(e.target.value));
-            }}
-            className="w-18 sm:w-20"
-          />
-        </label>
-
-        <label className="flex items-center gap-1.5 text-muted" title="Tốc độ giọng thuyết minh">
-          <span>{speed.toFixed(2)}×</span>
-          <input
-            type="range"
-            min={0.9}
-            max={1.4}
-            step={0.05}
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            className="w-16"
-          />
-        </label>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          {hasOrig && (
-            <button
-              type="button"
-              className={`btn btn-sm ${showOrig ? "btn-soft" : ""}`}
-              onClick={() => setShowOrig((v) => !v)}
-              title="Hiện thêm câu gốc bên dưới bản dịch tiếng Việt"
-            >
-              <Captions className="size-3.5" />
-              Song ngữ
-            </button>
-          )}
-          <button
-            type="button"
-            className={`btn btn-sm ${showScript ? "btn-soft" : ""}`}
-            onClick={() => setShowScript((v) => !v)}
-            title="Xem toàn bộ lời thoại & bấm để tua nhanh"
-          >
-            <ListMusic className="size-3.5" />
-            Lời thoại
-          </button>
-        </div>
-      </div>
-
-      {/* Collapsible clickable transcript */}
-      {showScript && (
-        <div className="max-h-72 overflow-y-auto rounded-lg border border-line bg-background/60 p-1.5">
-          <div className="flex flex-col gap-0.5">
-            {cues.map((c, idx) => {
-              const active = idx === activeCueIdx;
-              return (
+            {/* Nhóm trộn âm lượng & tốc độ */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              {isIOS ? (
                 <button
-                  key={`${c.start_ms}-${idx}`}
-                  ref={active ? activeRowRef : undefined}
                   type="button"
-                  onClick={() => seekToCue(idx)}
-                  className={`flex items-start gap-2.5 rounded-md px-2.5 py-2 text-left text-xs transition-colors ${
-                    active ? "bg-sec-soft text-foreground" : "text-muted hover:bg-card-2/70 hover:text-foreground"
-                  }`}
+                  className={`btn btn-sm ${origVol > 0 ? "btn-soft" : ""}`}
+                  onClick={() => setOrigVol((v) => (v > 0 ? 0 : 100))}
+                  title="iOS chỉ cho bật/tắt tiếng gốc video trong trình duyệt"
                 >
-                  <span className="mt-0.5 shrink-0 font-mono text-[11px] tabular-nums opacity-75">
-                    {formatTime(c.start_ms / 1000)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className={`block leading-snug ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
-                      {c.pending ? (
-                        <span className="italic text-muted">Đang dịch…</span>
-                      ) : c.untranslated ? (
-                        <span className="italic text-muted">{c.orig} (chưa dịch được)</span>
-                      ) : (
-                        c.text
-                      )}
-                    </span>
-                    {showOrig && c.orig && !c.untranslated && <span className="mt-0.5 block text-[11px] text-muted">{c.orig}</span>}
-                  </span>
+                  {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+                  {origVol <= 0 ? "Gốc: Tắt" : "Gốc: Bật"}
                 </button>
-              );
-            })}
+              ) : (
+                <label className="flex items-center gap-1.5 text-muted">
+                  <button
+                    type="button"
+                    className="text-foreground transition hover:text-sec-text"
+                    onClick={() => setOrigVol((v) => (v > 0 ? 0 : 25))}
+                    title={origVol <= 0 ? "Bật tiếng gốc video" : "Tắt tiếng gốc video"}
+                  >
+                    {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+                  </button>
+                  <span className="min-w-13 tabular-nums">Gốc {origVol}%</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={origVol}
+                    onChange={(e) => setOrigVol(Number(e.target.value))}
+                    className="w-16 sm:w-20"
+                  />
+                </label>
+              )}
+
+              <label className="flex items-center gap-1.5 text-muted">
+                <button
+                  type="button"
+                  className="text-foreground transition hover:text-sec-text"
+                  onClick={() => setDubMuted((m) => !m)}
+                  title={dubMuted ? "Bật thuyết minh" : "Tắt thuyết minh"}
+                >
+                  {dubMuted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+                </button>
+                <span className="min-w-14 tabular-nums">Việt {dubMuted ? "0" : dubVol}%</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={160}
+                  step={10}
+                  value={dubVol}
+                  onChange={(e) => {
+                    setDubMuted(false);
+                    setDubVol(Number(e.target.value));
+                  }}
+                  className="w-16 sm:w-20"
+                />
+              </label>
+
+              <label className="flex items-center gap-1.5 text-muted" title="Tốc độ giọng thuyết minh">
+                <span className="min-w-10 font-mono font-semibold text-foreground tabular-nums">{speed.toFixed(2)}×</span>
+                <input
+                  type="range"
+                  min={0.9}
+                  max={1.4}
+                  step={0.05}
+                  value={speed}
+                  onChange={(e) => setSpeed(Number(e.target.value))}
+                  className="w-16"
+                />
+              </label>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Cột lời thoại song song (màn lớn bên phải, màn nhỏ bên dưới) */}
+        {showScript && (
+          <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-background/60">
+            <div className="flex items-center justify-between border-b border-line/70 px-3 py-2 text-xs">
+              <span className="font-semibold text-foreground">Lời thoại ({cues.length} câu)</span>
+              <span className="text-[11px] text-muted">Bấm câu để tua tới</span>
+            </div>
+            <div className="max-h-80 overflow-y-auto p-1.5 lg:max-h-[460px]">
+              <div className="flex flex-col gap-0.5">
+                {cues.map((c, idx) => {
+                  const active = idx === activeCueIdx;
+                  return (
+                    <button
+                      key={`${c.start_ms}-${idx}`}
+                      ref={active ? activeRowRef : undefined}
+                      type="button"
+                      onClick={() => seekToCue(idx)}
+                      className={`flex items-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+                        active ? "bg-sec-soft text-foreground" : "text-muted hover:bg-card-2/70 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="mt-0.5 shrink-0 font-mono text-[11px] tabular-nums opacity-75">
+                        {formatTime(c.start_ms / 1000)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block leading-snug ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
+                          {c.pending ? (
+                            <span className="italic text-muted">Đang dịch…</span>
+                          ) : c.untranslated ? (
+                            <span className="italic text-muted">{c.orig} (chưa dịch được)</span>
+                          ) : (
+                            c.text
+                          )}
+                        </span>
+                        {showOrig && c.orig && !c.untranslated && (
+                          <span className="mt-0.5 block text-[11px] text-muted">{c.orig}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
