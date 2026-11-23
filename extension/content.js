@@ -59,7 +59,32 @@
     // Cleanup hooks for current video element
     videoListenersCleanup: null,
     lastUrl: location.href,
+    // Phụ đề YouTube bắt trực tiếp từ trình phát (có sẵn PO token + IP người dùng)
+    ytCapturedSubs: new Map(), // videoId -> { lang, text, title? }
+    ytTitles: new Map(), // videoId -> title
+    ytSubWaiters: new Map(), // videoId -> Set<resolve>
   };
+
+  window.addEventListener("message", (ev) => {
+    if (ev.source !== window || !ev.data || ev.data.source !== "hvn-yt-hook") return;
+    if (ev.data.type === "player-meta" && ev.data.videoId && ev.data.title) {
+      state.ytTitles.set(ev.data.videoId, ev.data.title);
+      return;
+    }
+    if (ev.data.type === "timedtext" && ev.data.videoId && ev.data.text) {
+      const entry = {
+        lang: String(ev.data.lang || "auto").toLowerCase(),
+        text: String(ev.data.text),
+        title: ev.data.title || state.ytTitles.get(ev.data.videoId) || "",
+      };
+      state.ytCapturedSubs.set(ev.data.videoId, entry);
+      const waiters = state.ytSubWaiters.get(ev.data.videoId);
+      if (waiters) {
+        for (const fn of waiters) fn(entry);
+        waiters.clear();
+      }
+    }
+  });
 
   // ---------------- Utilities ----------------
 
@@ -661,11 +686,112 @@
     return cues;
   }
 
+  function parseCapturedYouTubeText(rawText) {
+    const trimmed = String(rawText || "").trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("{")) {
+      try {
+        return parseYouTubeJson3(JSON.parse(trimmed));
+      } catch {
+        return [];
+      }
+    }
+    if (trimmed.startsWith("<")) {
+      return parseYouTubeXml(trimmed);
+    }
+    return parseSubtitleText(trimmed);
+  }
+
+  function waitForHookedSubtitles(ytId, timeoutMs = 2600) {
+    const existing = state.ytCapturedSubs.get(ytId);
+    if (existing) return Promise.resolve(existing);
+    return new Promise((resolve) => {
+      let set = state.ytSubWaiters.get(ytId);
+      if (!set) {
+        set = new Set();
+        state.ytSubWaiters.set(ytId, set);
+      }
+      const done = (val) => {
+        clearTimeout(timer);
+        set.delete(done);
+        resolve(val);
+      };
+      const timer = setTimeout(() => done(null), timeoutMs);
+      set.add(done);
+      try {
+        window.postMessage({ source: "hvn-content", type: "trigger-yt-subs", videoId: ytId }, "*");
+      } catch {
+        done(null);
+      }
+    });
+  }
+
+  async function extractFromPerformanceTimedtext(ytId) {
+    try {
+      const entries = performance.getEntriesByType("resource") || [];
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const name = entries[i]?.name || "";
+        if (!name.includes("/api/timedtext")) continue;
+        let u;
+        try {
+          u = new URL(name);
+        } catch {
+          continue;
+        }
+        if (u.searchParams.get("v") !== ytId) continue;
+        const lang = (u.searchParams.get("lang") || u.searchParams.get("tlang") || "auto").toLowerCase();
+        const res = await fetch(name, { credentials: "include" });
+        if (!res.ok) continue;
+        const txt = await res.text();
+        const cues = parseCapturedYouTubeText(txt);
+        if (cues.length) {
+          return {
+            title: state.ytTitles.get(ytId) || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId,
+            lang,
+            cues,
+          };
+        }
+      }
+    } catch {}
+    return null;
+  }
+
   /**
    * Lấy phụ đề YouTube TRỰC TIẾP bằng trình duyệt & IP của người dùng (same-origin trên youtube.com)
-   * → vượt hoàn toàn lỗi chặn vùng địa lý (ARD, WDR, ZDF), video thành viên, video giới hạn tuổi.
+   * → vượt hoàn toàn lỗi chặn vùng địa lý (ARD, WDR, ZDF), PO token (pot), video thành viên, giới hạn tuổi.
    */
   async function extractYouTubeSubtitlesFromBrowser(ytId) {
+    // 1. Đã bắt sẵn từ yt-hook (0ms!)
+    const cached = state.ytCapturedSubs.get(ytId);
+    if (cached) {
+      const cues = parseCapturedYouTubeText(cached.text);
+      if (cues.length) {
+        return {
+          title: cached.title || state.ytTitles.get(ytId) || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId,
+          lang: cached.lang,
+          cues,
+        };
+      }
+    }
+
+    // 2. Lấy lại từ PerformanceResourceTiming (nếu YouTube đã tải /api/timedtext kèm pot trước đó)
+    const fromPerf = await extractFromPerformanceTimedtext(ytId);
+    if (fromPerf && fromPerf.cues.length) return fromPerf;
+
+    // 3. Nhờ yt-hook kích hoạt chính trình phát YouTube tải /api/timedtext có pot hợp lệ (~200ms)
+    const hooked = await waitForHookedSubtitles(ytId, 2600);
+    if (hooked) {
+      const cues = parseCapturedYouTubeText(hooked.text);
+      if (cues.length) {
+        return {
+          title: hooked.title || state.ytTitles.get(ytId) || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId,
+          lang: hooked.lang,
+          cues,
+        };
+      }
+    }
+
+    // 4. Dự phòng: đọc ytInitialPlayerResponse từ HTML trang watch (với video không yêu cầu pot)
     try {
       const res = await fetch(`${location.origin}/watch?v=${ytId}`, { credentials: "include" });
       if (!res.ok) return null;
@@ -686,29 +812,24 @@
 
       for (const track of ordered) {
         if (!track.baseUrl) continue;
-        // Ưu tiên fmt=json3 (có thời gian từng từ chính xác, parse cực nhanh)
         try {
           const uJson = new URL(track.baseUrl, location.origin);
           uJson.searchParams.set("fmt", "json3");
           const rJson = await fetch(uJson.toString(), { credentials: "include" });
           if (rJson.ok) {
-            const text = await rJson.text();
-            if (text.trim().startsWith("{")) {
-              const cues = parseYouTubeJson3(JSON.parse(text));
-              if (cues.length) {
-                return { title, lang: String(track.languageCode || "auto").toLowerCase(), cues };
-              }
+            const cues = parseCapturedYouTubeText(await rJson.text());
+            if (cues.length) {
+              return { title, lang: String(track.languageCode || "auto").toLowerCase(), cues };
             }
           }
         } catch {}
 
-        // Dự phòng: XML srv3 / mặc định
         try {
           const uXml = new URL(track.baseUrl, location.origin);
           uXml.searchParams.set("fmt", "srv3");
           const rXml = await fetch(uXml.toString(), { credentials: "include" });
           if (rXml.ok) {
-            const cues = parseYouTubeXml(await rXml.text());
+            const cues = parseCapturedYouTubeText(await rXml.text());
             if (cues.length) {
               return { title, lang: String(track.languageCode || "auto").toLowerCase(), cues };
             }
