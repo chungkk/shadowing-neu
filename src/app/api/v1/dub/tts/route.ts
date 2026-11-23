@@ -31,7 +31,7 @@ export async function GET(req: Request) {
       const user = await getCurrentUser();
       if (user?.role !== "admin") {
         const key = user ? `u:${user.id}` : `ip:${await clientIp()}`;
-        if (!allow(`dubtts:${key}`, user ? 450 : 200, WINDOW_MS)) {
+        if (!allow(`dubtts:${key}`, user ? 900 : 400, WINDOW_MS)) {
           return fail("Bạn tạo giọng đọc quá nhanh trong thời gian ngắn, thử lại sau ít phút nhé.", 429);
         }
       }

@@ -158,11 +158,17 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const [recent, setRecent] = useLocalStorage<RecentDub[]>(RECENT_KEY, EMPTY_RECENT);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autoLoadedRef = useRef("");
+  const voiceIdRef = useRef<LiveVoiceId>(voiceId);
 
   const recentRef = useRef(recent);
   useEffect(() => {
     recentRef.current = recent;
   }, [recent]);
+
+  useEffect(() => {
+    voiceIdRef.current = voiceId;
+  }, [voiceId]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();
@@ -188,6 +194,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
         setErr("Link YouTube không hợp lệ. Vui lòng dán link YouTube đầy đủ (ví dụ: https://youtu.be/…)");
         return;
       }
+
+      // Đánh dấu trước khi replaceState cập nhật ?v=... để effect auto-load không kích hoạt lại loadVideo lần 2
+      autoLoadedRef.current = videoId;
 
       abortRef.current?.abort();
       const ac = new AbortController();
@@ -280,12 +289,11 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   );
 
   // Tự mở khi truy cập link có ?v=...
-  const autoLoadedRef = useRef("");
   useEffect(() => {
     const id = extractVideoId(initialV);
     if (id && autoLoadedRef.current !== id) {
       autoLoadedRef.current = id;
-      void loadVideo(id, "edge:vi-VN-NamMinhNeural");
+      void loadVideo(id, voiceIdRef.current);
     }
   }, [initialV, loadVideo]);
 

@@ -194,7 +194,7 @@ export function parseSubtitleText(raw: string): DubCue[] {
   return cues.sort((a, b) => a.start_ms - b.start_ms);
 }
 
-const CJK_SCRIPT = /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}/u;
+const CJK_SCRIPT = /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}/gu;
 const DUB_ABBREV = new Set(
   "mr. mrs. ms. dr. prof. st. jr. sr. vs. etc. e.g. i.e. fig. no. vol. approx. z.b. d.h. u.a. usw. bzw. ca. nr. str. evtl. ggf. vgl. bspw. inkl. max. min. mio. mrd. hr. fr. z.t. o.ä. u.ä. sog.".split(
     " ",
@@ -359,7 +359,8 @@ function joinTokens(toks: DubTok[], isCjk: boolean): string {
  * Câu hoàn chỉnh dù dài (~25s / ~60 từ / ~350 ký tự) vẫn giữ trọn vẹn 1 lần đọc.
  */
 function splitOverlongGroup(g: DubTok[], isCjk: boolean): DubTok[][] {
-  const HARD_MAX_CHARS = isCjk ? 140 : 350;
+  // CJK 85 ký tự khi dịch sang tiếng Việt thường tương đương ~400–520 ký tự (< trần 600 của Edge TTS)
+  const HARD_MAX_CHARS = isCjk ? 85 : 350;
   const HARD_MAX_WORDS = 65;
   const HARD_MAX_DUR_MS = 28_000;
   const MIN_SIDE = isCjk ? 1 : 5;
@@ -446,7 +447,11 @@ export function mergeDubCues(raw: DubCueInput[]): DubCue[] {
     return { ...c, end_ms };
   });
 
-  const isCjk = CJK_SCRIPT.test(nonOverlap.slice(0, 12).map((c) => c.text).join(""));
+  // Chỉ coi là CJK khi tỷ lệ chữ Hán/Nhật chiếm >= 25% số chữ cái (tránh video Đức/Anh có 1 từ Hán bị dính mất khoảng trắng)
+  const sampleText = nonOverlap.slice(0, 12).map((c) => c.text).join("");
+  const cjkChars = (sampleText.match(CJK_SCRIPT) ?? []).length;
+  const letterChars = (sampleText.match(/\p{L}/gu) ?? []).length;
+  const isCjk = letterChars > 0 && cjkChars / letterChars >= 0.25;
   const deduped = dedupRollingCues(nonOverlap, isCjk);
   const toks = tokenizeDubCues(deduped, isCjk);
   if (!toks.length) return [];

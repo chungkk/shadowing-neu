@@ -1,6 +1,6 @@
 import { body, fail, str } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { getCachedLiveDub, prepareLiveDub, streamPrepareResponse } from "@/lib/dub-live";
+import { getCachedLiveDub, isLiveDubInflight, prepareLiveDub, streamPrepareResponse } from "@/lib/dub-live";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { extractVideoId } from "@/lib/youtube-id";
 
@@ -41,7 +41,8 @@ export async function POST(req: Request) {
   const isAdmin = user?.role === "admin";
   const ip = isAdmin || user ? "" : await clientIp();
 
-  if (!isAdmin) {
+  // Nếu video đã có luồng đang dịch dở trên server thì gắn chung listener, không trừ thêm hạn mức
+  if (!isAdmin && !isLiveDubInflight(videoId)) {
     const key = user ? `u:${user.id}` : `ip:${ip}`;
     const ok10m = allow(`dub:10m:${key}`, user ? 15 : 5, 10 * 60_000);
     const okDay = allow(`dub:day:${key}`, user ? 60 : 15, 24 * 3600_000);

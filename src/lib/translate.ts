@@ -77,17 +77,55 @@ const DUB_PROMPT = (lang: string) =>
 const BATCH = 25; // số câu mỗi lần gọi AI
 
 const VI_CHARS = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
+const NON_LATIN_SCRIPT =
+  /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}|\p{Script=Hangul}|\p{Script=Cyrillic}|\p{Script=Arabic}|\p{Script=Thai}/gu;
+// Từ tiếng Việt phổ biến không có dấu thanh (tránh trùng stopword Anh/Đức) để không loại nhầm câu ngắn như "Anh tin em.", "Em xin anh.", "25 euro."
+const VI_PLAIN_WORDS = new Set([
+  "anh", "em", "toi", "ta", "cho", "xem", "tin", "xin", "sao", "ai", "ba", "cha", "mua", "hoa", "nghe",
+  "nhanh", "xong", "quen", "nha", "nhau", "nhung", "ngay", "nguoi", "thay", "thua", "xanh", "trang", "cao",
+  "lau", "sau", "truoc", "tren", "trong", "ngoai", "rieng", "chung", "them", "nhu", "voi", "hoac", "nen",
+  "thi", "khong", "cung", "dang", "moi", "mot", "hai", "bon", "nam", "bay", "tam", "chin", "muoi", "tram",
+  "nghin", "trieu", "phan", "euro", "dola", "xe", "ga", "ca", "ra", "con", "hay", "sai", "tay", "nay", "kia",
+]);
 
 /**
- * Bản dịch có thật là tiếng Việt không? Mô hình nhỏ đôi khi chép lại nguyên câu tiếng Đức.
- * Câu ngắn (≤ 2 từ: "Okay.", "Berlin!") giữ nguyên cũng được.
+ * Bản dịch có thật là tiếng Việt không? Mô hình nhỏ đôi khi chép lại nguyên câu gốc.
+ * - Với chữ CJK / không phải Latin (Nhật, Trung, Hàn, Nga…): không dùng mẹo đếm khoảng trắng <= 2,
+ *   mà kiểm tra xem bản dịch còn giữ chữ gốc không.
+ * - Với câu Latin ngắn (≤ 2 từ: "Okay.", "Berlin!"): giữ nguyên cũng được.
+ * - Với câu tiếng Việt hợp lệ nhưng không có dấu thanh ("Anh tin em.", "25 euro."): vẫn chấp nhận.
  */
 export function looksTranslated(source: string, translation: string): boolean {
   const t = translation.trim();
   if (!t) return false;
-  if (source.trim().split(/\s+/).length <= 2) return true;
   const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-  return norm(t) !== norm(source) && VI_CHARS.test(t);
+
+  const srcNonLatin = (source.match(NON_LATIN_SCRIPT) ?? []).length;
+  const outNonLatin = (t.match(NON_LATIN_SCRIPT) ?? []).length;
+  const outLetters = (t.match(/\p{L}/gu) ?? []).length;
+
+  // Bản dịch vẫn còn nhiều ký tự ngoại ngữ (Nhật/Trung/Hàn/Nga/Ả Rập/Thái) → chưa dịch
+  if (outNonLatin > 0 && outLetters > 0 && outNonLatin / outLetters > 0.2) return false;
+
+  if (srcNonLatin > 0) {
+    if (norm(t) === norm(source)) return false;
+    // Cụm CJK rất ngắn (tên riêng 1–4 chữ, vd "東京" → "Tokyo") sau khi bỏ hết ký tự CJK là hợp lệ
+    if (srcNonLatin <= 4 && outNonLatin === 0) return true;
+  } else if (source.trim().split(/\s+/).length <= 2) {
+    return true;
+  }
+
+  if (norm(t) === norm(source)) return false;
+  if (VI_CHARS.test(t)) return true;
+
+  // Chấp nhận câu số/đơn vị ("25 euro.", "100%") hoặc câu tiếng Việt không dấu thanh ("Anh tin em.")
+  const words = t
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  if (words.length === 0) return /\d/.test(t);
+  const viHits = words.filter((w) => VI_PLAIN_WORDS.has(w)).length;
+  return viHits > 0 && viHits / words.length >= 0.5;
 }
 
 const keyOf = (text: string) => "vi:" + createHash("sha1").update(text.trim()).digest("hex");

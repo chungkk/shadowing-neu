@@ -78,6 +78,11 @@ export function getCachedLiveDub(videoId: string): LiveDubResult | null {
   return hit;
 }
 
+/** Video đang có luồng chuẩn bị chạy sẵn trên server → đăng ký nghe chung, không tốn thêm hạn mức. */
+export function isLiveDubInflight(videoId: string): boolean {
+  return inflight.has(videoId);
+}
+
 /** Đánh dấu câu chưa dịch + thời điểm lỗi trước khi lưu cache */
 function finalizeResult(r: LiveDubResult): LiveDubResult {
   const out: LiveDubResult = { ...r };
