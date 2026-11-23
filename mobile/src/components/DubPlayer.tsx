@@ -240,6 +240,7 @@ export default function DubPlayer({
   const audioRef = useRef<AudioPlayer | null>(null);
   const lastSpokenIdxRef = useRef(-1);
   const lastYtTimeRef = useRef(0);
+  const lastPollWallRef = useRef(0);
   const speakGenRef = useRef(0);
 
   const [playing, setPlaying] = useState(false);
@@ -367,6 +368,8 @@ export default function DubPlayer({
         allowsRecording: false,
         interruptionMode: "mixWithOthers",
       }).catch(() => {});
+      if (myGen !== speakGenRef.current || !stateRef.current.playing) return;
+      if (lastSpokenIdxRef.current !== cueIndex || stateRef.current.voiceId !== vId) return;
       p.replace({ uri: file.uri });
       p.muted = muted;
       p.volume = muted ? 0 : 1;
@@ -377,7 +380,11 @@ export default function DubPlayer({
 
   // Vòng đồng bộ 140ms theo thời gian thực của YouTube player
   useEffect(() => {
-    if (!playing) return;
+    if (!playing) {
+      lastPollWallRef.current = 0;
+      return;
+    }
+    lastPollWallRef.current = 0;
     let busy = false;
     const timer = setInterval(async () => {
       if (busy || !ytRef.current) return;
@@ -385,13 +392,24 @@ export default function DubPlayer({
       try {
         const tSec = await ytRef.current.getCurrentTime();
         if (!Number.isFinite(tSec)) return;
+        const nowWall = Date.now();
+        const dtWall = lastPollWallRef.current > 0 ? Math.max(0, (nowWall - lastPollWallRef.current) / 1000) : 0;
+        lastPollWallRef.current = nowWall;
+
         const tMs = tSec * 1000;
-        const jumped = Math.abs(tSec - lastYtTimeRef.current) > 1.3;
+        const dtVideo = tSec - lastYtTimeRef.current;
         lastYtTimeRef.current = tSec;
 
-        if (jumped) {
+        // Chỉ coi là tua thật khi lùi > 0.5s hoặc nhảy tới vượt xa thời gian thực đã trôi qua
+        const seekedBack = dtVideo < -0.5;
+        const seekedForward = dtVideo > Math.max(1.5, dtWall * 1.5 + 1.2);
+        const jumped = seekedBack || seekedForward;
+
+        if (seekedBack) {
           stopDub();
           lastSpokenIdxRef.current = -1;
+        } else if (seekedForward) {
+          stopDub();
         }
 
         const list = stateRef.current.cues;
@@ -405,16 +423,24 @@ export default function DubPlayer({
           }
         }
 
+        // Chống giật lùi câu khi getCurrentTime() dao động nhẹ vài chục ms quanh mốc chuyển câu
+        if (!seekedBack && curIdx !== -1 && curIdx < lastSpokenIdxRef.current) {
+          curIdx = lastSpokenIdxRef.current;
+        }
+
         setActiveCueIdx((prev) => (prev === curIdx ? prev : curIdx));
 
-        if (curIdx !== -1) {
+        if (curIdx !== -1 && curIdx > lastSpokenIdxRef.current) {
           const curCue = list[curIdx];
-          if (!curCue.pending && curCue.text.trim() && curIdx !== lastSpokenIdxRef.current) {
+          if (!curCue.pending && curCue.text.trim()) {
             const lateMs = tMs - curCue.start_ms;
             const remainingMs = curCue.end_ms - tMs;
             if (!jumped || lateMs < 2500 || remainingMs > 1200) {
               lastSpokenIdxRef.current = curIdx;
               void speakCue(curIdx);
+            } else {
+              // Tua rơi đúng phần đuôi câu → đánh dấu bỏ qua để tick sau không đọc muộn
+              lastSpokenIdxRef.current = curIdx;
             }
           }
         }
@@ -442,6 +468,7 @@ export default function DubPlayer({
     stopDub();
     lastSpokenIdxRef.current = -1;
     lastYtTimeRef.current = 0;
+    lastPollWallRef.current = 0;
     setActiveCueIdx(-1);
     ytRef.current?.seekTo(0, true);
     setPlaying(true);
@@ -455,6 +482,7 @@ export default function DubPlayer({
     lastSpokenIdxRef.current = -1;
     const targetSec = cue.start_ms / 1000;
     lastYtTimeRef.current = targetSec;
+    lastPollWallRef.current = 0;
     setActiveCueIdx(index);
     ytRef.current?.seekTo(targetSec, true);
     setPlaying(true);

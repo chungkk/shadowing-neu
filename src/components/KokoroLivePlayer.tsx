@@ -124,12 +124,14 @@ export default function KokoroLivePlayer({
   const ytRef = useRef<YTPlayerEx | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const gainRef = useRef<GainNode | null>(null);
-  const activeSrcRef = useRef<AudioBufferSourceNode | null>(null);
+  const activeSrcsRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const audioEndAtRef = useRef<number>(0);
+  const stopGenRef = useRef<number>(0);
   const bufCacheRef = useRef<Map<string, AudioBuffer>>(new Map());
   const inflightRef = useRef<Map<string, Promise<AudioBuffer | null>>>(new Map());
   const lastSpokenIdxRef = useRef<number>(-1);
   const lastYtTimeRef = useRef<number>(0);
+  const lastPollWallRef = useRef<number>(0);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
 
   const [ytReady, setYtReady] = useState(false);
@@ -167,6 +169,9 @@ export default function KokoroLivePlayer({
   useEffect(() => {
     const cache = bufCacheRef.current;
     const inflight = inflightRef.current;
+    lastSpokenIdxRef.current = -1;
+    lastYtTimeRef.current = 0;
+    lastPollWallRef.current = 0;
     return () => {
       cache.clear();
       inflight.clear();
@@ -198,13 +203,16 @@ export default function KokoroLivePlayer({
   }, []);
 
   const stopSpeech = useCallback(() => {
-    if (activeSrcRef.current) {
+    stopGenRef.current += 1;
+    for (const src of activeSrcsRef.current) {
       try {
-        activeSrcRef.current.stop();
+        src.stop();
       } catch {}
-      activeSrcRef.current.disconnect();
-      activeSrcRef.current = null;
+      try {
+        src.disconnect();
+      } catch {}
     }
+    activeSrcsRef.current.clear();
     audioEndAtRef.current = 0;
   }, []);
 
@@ -371,6 +379,7 @@ export default function KokoroLivePlayer({
             setYtReady(true);
           },
           onStateChange: (ev: { data: number }) => {
+            lastPollWallRef.current = 0;
             if (ev.data === 1) {
               setPlaying(true);
               getAudioCtx();
@@ -406,6 +415,7 @@ export default function KokoroLivePlayer({
       const { voiceId: vId, speed: spd, cues: list } = stateRef.current;
       const yt = ytRef.current;
       if (!yt || yt.getPlayerState?.() !== 1) return;
+      const myStopGen = stopGenRef.current;
 
       // Prefetch next 4 cues ahead in background
       for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + 4); k++) {
@@ -414,6 +424,7 @@ export default function KokoroLivePlayer({
 
       const buf = await getCueBuffer(cueIndex, vId, spd);
       if (!buf) return;
+      if (myStopGen !== stopGenRef.current) return;
       if (!ytRef.current || ytRef.current.getPlayerState?.() !== 1) return;
       if (lastSpokenIdxRef.current !== cueIndex) return;
       if (stateRef.current.voiceId !== vId) return;
@@ -433,10 +444,10 @@ export default function KokoroLivePlayer({
       src.buffer = buf;
       src.connect(gain);
       src.start(startAt);
-      activeSrcRef.current = src;
+      activeSrcsRef.current.add(src);
       audioEndAtRef.current = startAt + buf.duration;
       src.onended = () => {
-        if (activeSrcRef.current === src) activeSrcRef.current = null;
+        activeSrcsRef.current.delete(src);
       };
     };
 
@@ -444,16 +455,31 @@ export default function KokoroLivePlayer({
       const yt = ytRef.current;
       const { voiceReady: ready, cues: list } = stateRef.current;
       if (!yt || !ready || !list.length) return;
-      if (yt.getPlayerState?.() !== 1) return;
+      if (yt.getPlayerState?.() !== 1) {
+        lastPollWallRef.current = 0;
+        return;
+      }
+
+      const nowWall = performance.now();
+      const dtWall = lastPollWallRef.current > 0 ? Math.max(0, (nowWall - lastPollWallRef.current) / 1000) : 0;
+      lastPollWallRef.current = nowWall;
 
       const t = yt.getCurrentTime?.() ?? 0;
       const tMs = t * 1000;
-      const jumped = Math.abs(t - lastYtTimeRef.current) > 1.2;
+      const ytRate = yt.getPlaybackRate?.() || 1;
+      const dtVideo = t - lastYtTimeRef.current;
       lastYtTimeRef.current = t;
 
-      if (jumped) {
+      // Chỉ coi là tua thật khi lùi > 0.5s hoặc nhảy tới vượt xa thời gian thực đã trôi qua
+      const seekedBack = dtVideo < -0.5;
+      const seekedForward = dtVideo > Math.max(1.5, dtWall * ytRate + 1.2);
+      const jumped = seekedBack || seekedForward;
+
+      if (seekedBack) {
         stopSpeech();
         lastSpokenIdxRef.current = -1;
+      } else if (seekedForward) {
+        stopSpeech();
       }
 
       let curIdx = -1;
@@ -466,16 +492,24 @@ export default function KokoroLivePlayer({
         }
       }
 
+      // Chống giật lùi câu khi getCurrentTime() dao động nhẹ vài chục ms quanh mốc chuyển câu
+      if (!seekedBack && curIdx !== -1 && curIdx < lastSpokenIdxRef.current) {
+        curIdx = lastSpokenIdxRef.current;
+      }
+
       setActiveCueIdx((prev) => (prev === curIdx ? prev : curIdx));
 
-      if (curIdx !== -1) {
+      if (curIdx !== -1 && curIdx > lastSpokenIdxRef.current) {
         const curCue = list[curIdx];
-        if (!curCue.pending && curCue.text.trim() && curIdx !== lastSpokenIdxRef.current) {
+        if (!curCue.pending && curCue.text.trim()) {
           const lateMs = tMs - curCue.start_ms;
           const remainingMs = curCue.end_ms - tMs;
           if (!jumped || lateMs < 2500 || remainingMs > 1200) {
             lastSpokenIdxRef.current = curIdx;
             void speakCue(curIdx, jumped);
+          } else {
+            // Tua rơi đúng phần đuôi câu → đánh dấu bỏ qua để tick sau không đọc muộn
+            lastSpokenIdxRef.current = curIdx;
           }
         }
       }
@@ -502,6 +536,8 @@ export default function KokoroLivePlayer({
     getAudioCtx();
     stopSpeech();
     lastSpokenIdxRef.current = -1;
+    lastYtTimeRef.current = 0;
+    lastPollWallRef.current = 0;
     setActiveCueIdx(-1);
     yt.seekTo(0, true);
     yt.playVideo();
@@ -514,6 +550,8 @@ export default function KokoroLivePlayer({
     getAudioCtx();
     stopSpeech();
     lastSpokenIdxRef.current = -1;
+    lastYtTimeRef.current = cue.start_ms / 1000;
+    lastPollWallRef.current = 0;
     setActiveCueIdx(idx);
     yt.seekTo(cue.start_ms / 1000, true);
     yt.playVideo();
