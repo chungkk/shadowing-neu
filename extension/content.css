@@ -45,7 +45,7 @@
 .hvn-dub-hud {
   position: absolute;
   left: 50%;
-  bottom: 64px;
+  bottom: 84px;
   transform: translateX(-50%);
   z-index: 2147483640;
   display: none;

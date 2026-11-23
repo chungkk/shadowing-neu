@@ -423,6 +423,8 @@
     const ctx = getAudioCtx();
     const gain = state.gain;
     if (!gain) return;
+    // Đảm bảo mức âm lượng thuyết minh luôn khớp cài đặt (không bao giờ kẹt ở 0)
+    gain.gain.value = Math.min(1.8, Math.max(0, state.settings.dubVol / 100));
     if (ctx.state !== "running") {
       stopActiveSources();
       return;
@@ -783,6 +785,24 @@
     }
   }
 
+  function findCueIndexAt(tMs) {
+    const list = state.cues;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      const nextStart = list[i + 1]?.start_ms ?? c.end_ms + 5000;
+      if (tMs >= c.start_ms - 120 && tMs < Math.min(nextStart - 60, c.end_ms + 800)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function syncActiveCueFromVideo() {
+    if (!state.video || !state.cues.length) return;
+    const idx = findCueIndexAt(state.video.currentTime * 1000);
+    if (idx !== -1) state.activeCueIdx = idx;
+  }
+
   function startDubStream(reqType, payload, sourceMode, sourceKey) {
     const runId = ++state.streamRunId;
     closePort();
@@ -801,6 +821,7 @@
     state.cues = [];
     state.activeCueIdx = -1;
     state.lastSpokenIdx = -1;
+    applyVolumes();
     updateYtButton();
     renderHud();
 
@@ -833,9 +854,11 @@
           state.cues = msg.data.cues || [];
           state.bgProgress = { pct: msg.pct || 20, done: msg.done || 0, total: msg.total || state.cues.length };
           state.error = "";
+          applyVolumes();
           if (firstReady && state.video) {
             state.lastVideoTime = state.video.currentTime;
             state.lastSpokenIdx = -1;
+            syncActiveCueFromVideo();
           }
           updateYtButton();
           renderHud();
@@ -867,6 +890,7 @@
             }
           });
           state.cues = next;
+          syncActiveCueFromVideo();
           renderHud();
           return;
         }
@@ -879,10 +903,12 @@
           state.cues = msg.data.cues || [];
           state.bgProgress = null;
           state.error = "";
+          applyVolumes();
           if (firstReady && state.video) {
             state.lastVideoTime = state.video.currentTime;
             state.lastSpokenIdx = -1;
           }
+          syncActiveCueFromVideo();
           closePort();
           updateYtButton();
           renderHud();
@@ -1091,15 +1117,7 @@
       stopSpeech();
     }
 
-    let curIdx = -1;
-    for (let i = 0; i < list.length; i++) {
-      const c = list[i];
-      const nextStart = list[i + 1]?.start_ms ?? c.end_ms + 5000;
-      if (tMs >= c.start_ms - 120 && tMs < Math.min(nextStart - 60, c.end_ms + 800)) {
-        curIdx = i;
-        break;
-      }
-    }
+    let curIdx = findCueIndexAt(tMs);
 
     if (!seekedBack && curIdx !== -1 && curIdx < state.lastSpokenIdx) {
       curIdx = state.lastSpokenIdx;
@@ -1274,6 +1292,24 @@
   document.addEventListener("fullscreenchange", () => {
     if (state.hudEl) renderHud();
   });
+
+  // Tự mở khoá AudioContext khi người dùng bấm/gõ bất kỳ đâu trên trang (nếu bật từ popup bị Chrome treo autoplay)
+  const unlockAudioOnGesture = () => {
+    if (!state.enabled || !state.audioBlocked || !state.ctx) return;
+    state.ctx
+      .resume()
+      .then(() => {
+        if (state.ctx && state.ctx.state === "running") {
+          state.audioBlocked = false;
+          if (state.playback && state.playback.pausedOffset !== null) resumeSpeech();
+          else if (state.activeSrcs.size === 0) state.lastSpokenIdx = -1;
+          renderHud();
+        }
+      })
+      .catch(() => {});
+  };
+  window.addEventListener("pointerdown", unlockAudioOnGesture, { passive: true });
+  window.addEventListener("keydown", unlockAudioOnGesture, { passive: true });
 
   // ---------------- YouTube Player Button ----------------
 
