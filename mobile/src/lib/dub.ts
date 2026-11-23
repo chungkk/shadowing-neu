@@ -256,6 +256,37 @@ export function fetchDubCueFile(text: string, voiceId: DubVoiceId, speed: number
   return job;
 }
 
+/** Edge trả MP3 CBR 48 kbit/s (audio-24khz-48kbitrate-mono-mp3) → 6000 byte ≈ 1 giây */
+const EDGE_MP3_BYTES_PER_SEC = 6000;
+/** Trần tốc độ của /api/v1/dub/tts */
+const MAX_FIT_SPEED = 1.45;
+
+/**
+ * Lấy MP3 cho câu `list[index]`, khớp thời lượng với khoảng trống trước câu sau:
+ * câu đọc dài quá thì xin Edge đọc nhanh hơn (giữ cao độ, không méo giọng)
+ * thay vì để câu sau cắt ngang.
+ */
+export async function fetchFittedDubCue(
+  list: DubCue[],
+  index: number,
+  voiceId: DubVoiceId,
+  speed: number,
+): Promise<File | null> {
+  const cue = list[index];
+  if (!cue || cue.pending || !cue.text.trim()) return null;
+  const base = await fetchDubCueFile(cue.text, voiceId, speed);
+  const next = list[index + 1];
+  if (!base || !next) return base;
+
+  const slot = (next.start_ms - cue.start_ms) / 1000 - 0.1;
+  const dur = base.size / EDGE_MP3_BYTES_PER_SEC;
+  const norm = Math.round(Math.min(MAX_FIT_SPEED, Math.max(0.85, speed)) * 20) / 20;
+  if (slot <= 0.4 || dur <= slot + 0.1 || norm >= MAX_FIT_SPEED) return base;
+
+  const need = Math.min(MAX_FIT_SPEED, Math.ceil(((norm * dur) / slot) * 20) / 20);
+  return (await fetchDubCueFile(cue.text, voiceId, need)) ?? base;
+}
+
 // ---- 3. Lịch sử video thuyết minh đã xem gần đây (lưu trên máy) ----
 
 const recentFile = new File(Paths.document, "dub-recent.json");

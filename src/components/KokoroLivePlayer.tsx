@@ -88,6 +88,9 @@ function loadYT(): Promise<void> {
   return ytPromise;
 }
 
+/** Tốc độ đọc tối đa khi phải đọc nhanh để kịp câu sau (trần của /api/v1/dub/tts) */
+const MAX_FIT_SPEED = 1.45;
+
 function detectIOS(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
@@ -220,37 +223,52 @@ export default function KokoroLivePlayer({
       const existing = inflightRef.current.get(key);
       if (existing) return existing;
 
+      /** Tổng hợp 1 câu ở tốc độ `speed` (Edge: rate trong SSML; Piper/WASM: tham số speed) */
+      const synthAt = async (speed: number): Promise<AudioBuffer | null> => {
+        if (engKey) {
+          const synth = await synthesizePiper(cue.text, engKey, speed);
+          setLastSynthMs(synth.synthMs);
+          if (!synth.pcm.length) return null;
+          const ctx = getAudioCtx();
+          const buf = ctx.createBuffer(1, synth.pcm.length, synth.sampleRate);
+          buf.getChannelData(0).set(synth.pcm);
+          return buf;
+        }
+        // Edge Neural TTS: fetch MP3 cue-by-cue & decode into AudioBuffer
+        const t0 = performance.now();
+        const qs = new URLSearchParams({
+          v: vId,
+          s: speed.toFixed(2),
+          t: cue.text.slice(0, 600),
+        });
+        const res = await fetch(`/api/v1/dub/tts?${qs.toString()}`);
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error((errJson as { error?: string }).error || `Edge TTS HTTP ${res.status}`);
+        }
+        const arr = await res.arrayBuffer();
+        setLastSynthMs(Math.round(performance.now() - t0));
+        return getAudioCtx().decodeAudioData(arr);
+      };
+
       const p = (async (): Promise<AudioBuffer | null> => {
         try {
-          if (engKey) {
-            const synth = await synthesizePiper(cue.text, engKey, normSpd);
-            setLastSynthMs(synth.synthMs);
-            if (!synth.pcm.length) return null;
-            const ctx = getAudioCtx();
-            const buf = ctx.createBuffer(1, synth.pcm.length, synth.sampleRate);
-            buf.getChannelData(0).set(synth.pcm);
-            bufCacheRef.current.set(key, buf);
-            return buf;
+          let buf = await synthAt(normSpd);
+          // Câu đọc dài hơn khoảng trống trước câu sau → xin đọc nhanh hơn ngay từ bộ tổng hợp
+          // (giữ nguyên cao độ). Không tăng playbackRate: AudioBufferSourceNode không giữ cao độ
+          // nên giọng bị nhanh và méo kiểu "chipmunk".
+          const next = stateRef.current.cues[cueIndex + 1];
+          if (buf && next) {
+            const ytRate = ytRef.current?.getPlaybackRate?.() || 1;
+            const slot = (next.start_ms - cue.start_ms) / 1000 / ytRate - 0.1;
+            if (slot > 0.4 && buf.duration > slot + 0.1 && normSpd < MAX_FIT_SPEED) {
+              const need = Math.min(MAX_FIT_SPEED, Math.ceil(((normSpd * buf.duration) / slot) * 20) / 20);
+              const fitted = await synthAt(need).catch(() => null);
+              if (fitted) buf = fitted;
+            }
           }
-
-          // Edge Neural TTS: fetch MP3 cue-by-cue & decode into AudioBuffer
-          const t0 = performance.now();
-          const qs = new URLSearchParams({
-            v: vId,
-            s: normSpd.toFixed(2),
-            t: cue.text.slice(0, 600),
-          });
-          const res = await fetch(`/api/v1/dub/tts?${qs.toString()}`);
-          if (!res.ok) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error((errJson as { error?: string }).error || `Edge TTS HTTP ${res.status}`);
-          }
-          const arr = await res.arrayBuffer();
-          setLastSynthMs(Math.round(performance.now() - t0));
-          const ctx = getAudioCtx();
-          const buf = await ctx.decodeAudioData(arr);
-          bufCacheRef.current.set(key, buf);
-          setEngineErr("");
+          if (buf) bufCacheRef.current.set(key, buf);
+          if (!engKey) setEngineErr("");
           return buf;
         } catch (e) {
           if (!engKey) {
@@ -409,25 +427,14 @@ export default function KokoroLivePlayer({
       const now = ctx.currentTime;
       const startAt = Math.max(now, audioEndAtRef.current + 0.02);
 
-      // Fit clip neatly before next cue if tight (gentle speedup up to 1.35x)
-      const ytRate = ytRef.current.getPlaybackRate?.() || 1;
-      let rate = ytRate;
-      const nextCue = list[cueIndex + 1];
-      if (nextCue) {
-        const curT = ytRef.current.getCurrentTime?.() ?? list[cueIndex].start_ms / 1000;
-        const avail = nextCue.start_ms / 1000 - curT - 0.05;
-        if (avail > 0.4 && buf.duration / rate > avail) {
-          rate = Math.min(ytRate * 1.35, buf.duration / avail);
-        }
-      }
-
+      // Phát đúng tốc độ gốc của bản tổng hợp: đổi playbackRate ở đây làm méo cao độ giọng.
+      // Việc khớp thời lượng đã làm trong getCueBuffer (xin Edge/Piper đọc nhanh hơn).
       const src = ctx.createBufferSource();
       src.buffer = buf;
-      src.playbackRate.value = rate;
       src.connect(gain);
       src.start(startAt);
       activeSrcRef.current = src;
-      audioEndAtRef.current = startAt + buf.duration / rate;
+      audioEndAtRef.current = startAt + buf.duration;
       src.onended = () => {
         if (activeSrcRef.current === src) activeSrcRef.current = null;
       };

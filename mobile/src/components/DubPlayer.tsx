@@ -9,7 +9,7 @@ import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-nativ
 import { formatTime } from "@shared/subtitles";
 import { Text } from "./Text";
 import { Label } from "./ui";
-import { DUB_VOICES, fetchDubCueFile, type DubBgProgress, type DubCue, type DubVoiceId } from "@/lib/dub";
+import { DUB_VOICES, fetchFittedDubCue, type DubBgProgress, type DubCue, type DubVoiceId } from "@/lib/dub";
 import { haptic } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
@@ -328,10 +328,7 @@ export default function DubPlayer({
   // Prefetch trước 3 câu đầu ngay khi mở màn hình
   useEffect(() => {
     for (let k = 0; k < Math.min(3, cues.length); k++) {
-      const c = cues[k];
-      if (c && !c.pending && c.text.trim()) {
-        void fetchDubCueFile(c.text, voiceId, speed);
-      }
+      void fetchFittedDubCue(cues, k, voiceId, speed);
     }
   }, [cues, voiceId, speed]);
 
@@ -353,13 +350,10 @@ export default function DubPlayer({
 
     // Tải trước 4 câu tiếp theo vào cache máy
     for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + 4); k++) {
-      const next = list[k];
-      if (next && !next.pending && next.text.trim()) {
-        void fetchDubCueFile(next.text, vId, spd);
-      }
+      void fetchFittedDubCue(list, k, vId, spd);
     }
 
-    const file = await fetchDubCueFile(cue.text, vId, spd);
+    const file = await fetchFittedDubCue(list, cueIndex, vId, spd);
     if (!file) return;
     if (myGen !== speakGenRef.current || !stateRef.current.playing) return;
     if (lastSpokenIdxRef.current !== cueIndex || stateRef.current.voiceId !== vId) return;
