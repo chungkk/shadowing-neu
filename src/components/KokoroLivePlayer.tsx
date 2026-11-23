@@ -130,6 +130,16 @@ function detectIOS(): boolean {
   return /iP(hone|ad|od)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+function ytErrorMessage(code: number): string {
+  if (code === 101 || code === 150) {
+    return `Chủ kênh YouTube đã tắt chế độ nhúng cho video này (mã ${code}) nên không thể phát trực tiếp trên web. Bạn hãy thử video khác nhé.`;
+  }
+  if (code === 100) return "Video này đã bị xoá hoặc đang ở chế độ riêng tư trên YouTube.";
+  if (code === 2) return "Mã video YouTube không hợp lệ.";
+  if (code === 5) return "Trình duyệt không phát được video HTML5 này. Hãy thử tải lại trang.";
+  return `Trình phát YouTube gặp lỗi (mã ${code}).`;
+}
+
 export default function KokoroLivePlayer({
   videoId,
   title,
@@ -153,7 +163,7 @@ export default function KokoroLivePlayer({
   initialOrigVol?: number;
   shareUrl?: string;
   showDebugMeta?: boolean;
-  bgProgress?: { pct: number; done: number; total: number } | null;
+  bgProgress?: { pct: number; done: number; total: number; reconnecting?: boolean } | null;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const ytRef = useRef<YTPlayerEx | null>(null);
@@ -172,6 +182,7 @@ export default function KokoroLivePlayer({
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
 
   const [ytReady, setYtReady] = useState(false);
+  const [ytErr, setYtErr] = useState("");
   const [voiceId, setVoiceId] = useState<LiveVoiceId>(() => resolveInitialVoice(initialVoice));
   const [readyEngines, setReadyEngines] = useState<Partial<Record<PiperVoiceKey, boolean>>>({});
   const [progress, setProgress] = useState<KokoroProgress>({ stage: "Đang khởi tạo giọng đọc AI…", pct: 0 });
@@ -234,7 +245,11 @@ export default function KokoroLivePlayer({
       gain.gain.value = stateRef.current.dubMuted ? 0 : stateRef.current.dubVol / 100;
       gain.connect(ctx.destination);
       ctx.onstatechange = () => {
-        setAudioBlocked(ctx.state !== "running");
+        const running = ctx.state === "running";
+        setAudioBlocked(!running);
+        if (running && activeSrcsRef.current.size === 0 && playbackRef.current?.pausedOffset == null) {
+          lastSpokenIdxRef.current = -1;
+        }
       };
       ctxRef.current = ctx;
       gainRef.current = gain;
@@ -255,30 +270,6 @@ export default function KokoroLivePlayer({
     }
     return ctx;
   }, []);
-
-  // Nếu người dùng bấm Play trực tiếp trong iframe YouTube (AudioContext bị treo do autoplay policy),
-  // tự mở khoá âm thanh ngay khi có tương tác đầu tiên bất kỳ trên trang.
-  useEffect(() => {
-    if (!audioBlocked) return;
-    const unlock = () => {
-      const ctx = ctxRef.current;
-      if (!ctx) return;
-      void ctx
-        .resume()
-        .then(() => {
-          if (ctxRef.current === ctx && ctx.state === "running") {
-            setAudioBlocked(false);
-          }
-        })
-        .catch(() => { });
-    };
-    window.addEventListener("pointerdown", unlock, { passive: true });
-    window.addEventListener("keydown", unlock, { passive: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, [audioBlocked]);
 
   const stopActiveSources = useCallback(() => {
     stopGenRef.current += 1;
@@ -550,6 +541,35 @@ export default function KokoroLivePlayer({
     }
   }, [getAudioCtx, getCueBuffer]);
 
+  // Nếu người dùng bấm Play trực tiếp trong iframe YouTube (AudioContext bị treo do autoplay policy),
+  // tự mở khoá âm thanh ngay khi có tương tác đầu tiên bất kỳ trên trang và phát ngay câu hiện tại.
+  useEffect(() => {
+    if (!audioBlocked) return;
+    const unlock = () => {
+      const ctx = ctxRef.current;
+      if (!ctx) return;
+      void ctx
+        .resume()
+        .then(() => {
+          if (ctxRef.current === ctx && ctx.state === "running") {
+            setAudioBlocked(false);
+            if (playbackRef.current && playbackRef.current.pausedOffset !== null) {
+              resumeSpeech();
+            } else if (activeSrcsRef.current.size === 0) {
+              lastSpokenIdxRef.current = -1;
+            }
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("keydown", unlock, { passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [audioBlocked, resumeSpeech]);
+
   // Mount YouTube IFrame Player
   useEffect(() => {
     let cancelled = false;
@@ -571,12 +591,19 @@ export default function KokoroLivePlayer({
           onReady: () => {
             if (cancelled || !player) return;
             ytRef.current = player;
+            setYtErr("");
             if (stateRef.current.origVol <= 0) player.mute();
             else {
               player.unMute();
               player.setVolume(stateRef.current.origVol);
             }
             setYtReady(true);
+          },
+          onError: (ev: { data: number }) => {
+            if (cancelled) return;
+            setPlaying(false);
+            stopSpeech();
+            setYtErr(ytErrorMessage(ev.data));
           },
           onStateChange: (ev: { data: number }) => {
             lastPollWallRef.current = 0;
@@ -644,6 +671,12 @@ export default function KokoroLivePlayer({
       const ctx = getAudioCtx();
       const gain = gainRef.current;
       if (!gain) return;
+      // Nếu AudioContext đang bị trình duyệt treo (autoplay policy), không xếp nguồn cũ vào hàng đợi
+      // để tránh phát lại câu đã trôi qua khi mở khoá; buffer vẫn nằm sẵn trong cache.
+      if (ctx.state !== "running") {
+        stopActiveSources();
+        return;
+      }
 
       if (isSeek) {
         stopSpeech();
@@ -751,9 +784,9 @@ export default function KokoroLivePlayer({
     return () => clearInterval(timer);
   }, [getAudioCtx, getCueBuffer, stopActiveSources, stopSpeech]);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     const yt = ytRef.current;
-    if (!yt) return;
+    if (!yt || ytErr) return;
     getAudioCtx();
     if (playing) {
       yt.pauseVideo();
@@ -761,7 +794,21 @@ export default function KokoroLivePlayer({
     } else {
       yt.playVideo();
     }
-  };
+  }, [getAudioCtx, pauseSpeech, playing, ytErr]);
+
+  // Phím tắt Space để Phát / Tạm dừng nhanh khi không đang gõ chữ hoặc bấm nút khác
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(el.tagName))) return;
+      if (!ytReady || !voiceReady || ytErr) return;
+      e.preventDefault();
+      togglePlay();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [togglePlay, voiceReady, ytErr, ytReady]);
 
   const restart = () => {
     const yt = ytRef.current;
@@ -821,14 +868,14 @@ export default function KokoroLivePlayer({
       .then(() => {
         if (ctxRef.current === ctx && ctx.state === "running") {
           setAudioBlocked(false);
-          if (playbackRef.current?.pausedOffset !== null) {
+          if (playbackRef.current && playbackRef.current.pausedOffset !== null) {
             resumeSpeech();
           } else if (activeSrcsRef.current.size === 0) {
             lastSpokenIdxRef.current = -1;
           }
         }
       })
-      .catch(() => { });
+      .catch(() => {});
   };
 
   const copyShare = async () => {
@@ -933,6 +980,12 @@ export default function KokoroLivePlayer({
         </div>
       )}
 
+      {ytErr && (
+        <p role="alert" className="alert alert-err text-xs">
+          {ytErr}
+        </p>
+      )}
+
       {engineErr && (
         <p role="alert" className="alert alert-err text-xs">
           Lỗi giọng đọc: {engineErr}
@@ -955,7 +1008,9 @@ export default function KokoroLivePlayer({
                 <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">
                   <Loader2 className="size-3 shrink-0 animate-spin text-sec-text" />
                   <span className="truncate">
-                    Đang dịch ngầm phần còn lại ({bgProgress.done}/{bgProgress.total} câu) — bạn đã có thể bấm Phát ngay
+                    {bgProgress.reconnecting
+                      ? `Đang kết nối lại để dịch tiếp phần còn lại (${bgProgress.done}/${bgProgress.total} câu)…`
+                      : `Đang dịch ngầm phần còn lại (${bgProgress.done}/${bgProgress.total} câu) — bạn đã có thể bấm Phát ngay`}
                   </span>
                 </span>
                 <span className="shrink-0 font-mono font-semibold text-sec-text tabular-nums">{bgProgress.pct}%</span>
@@ -1014,7 +1069,7 @@ export default function KokoroLivePlayer({
               <button
                 type="button"
                 className="btn btn-sm btn-primary min-w-[104px] tabular-nums"
-                disabled={!ytReady || !voiceReady}
+                disabled={!ytReady || !voiceReady || Boolean(ytErr)}
                 onClick={togglePlay}
               >
                 {!voiceReady ? (
@@ -1032,7 +1087,7 @@ export default function KokoroLivePlayer({
               <button
                 type="button"
                 className="btn btn-sm"
-                disabled={!ytReady || !voiceReady}
+                disabled={!ytReady || !voiceReady || Boolean(ytErr)}
                 onClick={restart}
                 title="Xem lại từ đầu"
                 aria-label="Xem lại từ đầu"

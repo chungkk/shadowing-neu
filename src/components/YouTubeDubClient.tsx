@@ -47,6 +47,7 @@ type BgProgress = {
   pct: number;
   done: number;
   total: number;
+  reconnecting?: boolean;
 };
 
 type PrepareResult = {
@@ -317,6 +318,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             // Đã mở player (20 câu đầu) nhưng stream dịch ngầm bị đứt → tự nối lại tối đa 3 lần vào luồng inflight/cache trên server
             if (becameReady && bgAttempt < BG_RECONNECT_DELAYS_MS.length) {
               const delay = BG_RECONNECT_DELAYS_MS[bgAttempt++];
+              setBgProgress((prev) => (prev ? { ...prev, reconnecting: true } : prev));
               await waitAbortable(delay, ac.signal);
               continue;
             }

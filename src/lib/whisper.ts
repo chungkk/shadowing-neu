@@ -91,6 +91,8 @@ async function callApi(body: FormData, info: object) {
     method: "POST",
     headers: API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {},
     body,
+    // Tránh treo kết nối Whisper vô hạn làm kẹt inflight cho videoId trên server
+    signal: AbortSignal.timeout(180_000),
   });
   if (!res.ok) {
     const detail = await res.text();
