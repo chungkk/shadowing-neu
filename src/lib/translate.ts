@@ -486,8 +486,8 @@ async function translateSmartDubChunk(
       indices.map((idx, pos) => {
         const it = chunk[idx];
         const s = Math.max(0.6, Math.round(it.availSec * 10) / 10);
-        // Giọng thuyết minh Việt ở 1.1x đọc tự nhiên ~4.4 từ/giây → đặt mức tham khảo mềm để không cắt cụt từ nối
-        const max = Math.max(5, Math.min(56, Math.round(s * 4.4)));
+        // Giọng thuyết minh Việt ở 1.1x đọc tự nhiên ~4.4 từ/giây → nới trần đến 120 từ cho câu dài trọn vẹn
+        const max = Math.max(5, Math.min(120, Math.round(s * 4.4)));
         return [pos + 1, { s, max, text: it.text }];
       }),
     ),

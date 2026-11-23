@@ -1,5 +1,5 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
-import { mergeDubCues, parseSubtitleText, type DubCue } from "@/lib/dub";
+import { mergeDubCues, parseSubtitleText, type DubCue, type DubCueInput } from "@/lib/dub";
 import { buildTranslateItems, prepareLiveDub, streamPrepareResponse, type PrepareProgress } from "@/lib/dub-live";
 import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
 import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     }
 
     let title = "";
-    let rawCues: DubCue[] = [];
+    let rawCues: DubCueInput[] = [];
     let needTranslateLang: string | null = null;
 
     if (subSource === "custom") {
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
         start_ms: Math.max(0, Math.round(s.start * 1000)),
         end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
         text: s.text,
+        ...(s.words?.length ? { words: s.words } : {}),
       }));
       needTranslateLang = "auto";
     }

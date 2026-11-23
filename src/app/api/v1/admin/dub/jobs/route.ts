@@ -1,5 +1,5 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
-import { dubEnabled, dubJson, mergeDubCues, parseSubtitleText, type DubCue, type DubJob } from "@/lib/dub";
+import { dubEnabled, dubJson, mergeDubCues, parseSubtitleText, type DubCue, type DubCueInput, type DubJob } from "@/lib/dub";
 import { buildTranslateItems } from "@/lib/dub-live";
 import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
 import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const maxHeight = Number(b.maxHeight) === 1080 ? 1080 : 720;
   let title = str(b.title).trim();
 
-  let cues: DubCue[] = [];
+  let cues: DubCueInput[] = [];
   let needTranslateLang: string | null = null;
 
   try {
@@ -85,6 +85,7 @@ export async function POST(req: Request) {
         start_ms: Math.max(0, Math.round(s.start * 1000)),
         end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
         text: s.text,
+        ...(s.words?.length ? { words: s.words } : {}),
       }));
       needTranslateLang = "auto";
     } else {

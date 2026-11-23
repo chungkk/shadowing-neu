@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { getCached, setCached } from "./db";
-import { dubEnabled, dubJson, mergeDubCues, type DubCue } from "./dub";
+import { dubEnabled, dubJson, mergeDubCues, type DubCue, type DubCueInput } from "./dub";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
 import type { Segment } from "./subtitles";
 import { translateDubRepair, translateForDubbingSmart, translationEnabled, type DubStyleCard } from "./translate";
@@ -55,8 +55,8 @@ type FlightEntry = {
   partial?: { data: LiveDubResult; pct: number; done: number; total: number };
 };
 
-// v3: đọc toàn bộ phụ đề tạo cẩm nang văn phong + dịch bằng mô hình lớn (Groq 120b → OpenAI) + neo giọng văn từ lô đầu
-const CACHE_PREFIX = "dub:live:v3:";
+// v4: tách câu trọn vẹn tới từng từ (không rơi 1–2 từ sang câu sau, giữ nguyên câu dài) + Style Bible toàn phụ đề + Groq 120b
+const CACHE_PREFIX = "dub:live:v4:";
 const gd = globalThis as unknown as { __dubLiveFlights?: Map<string, FlightEntry> };
 const inflight = (gd.__dubLiveFlights ??= new Map());
 
@@ -96,25 +96,27 @@ function pickProbeSub(subs: ProbeRes["subtitles"]) {
   );
 }
 
-function segmentsToCues(segments: Segment[]): DubCue[] {
+function segmentsToCues(segments: Segment[]): DubCueInput[] {
   return segments.map((s) => ({
     start_ms: Math.max(0, Math.round(s.start * 1000)),
     end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
     text: s.text,
+    ...(s.words?.length ? { words: s.words } : {}),
   }));
 }
 
-/** Nếu phụ đề tự động thiếu dấu chấm câu → bổ sung dấu câu đa ngôn ngữ trước khi gộp thành câu trọn vẹn */
+/** Nếu phụ đề thiếu dấu chấm câu → bổ sung dấu câu đa ngôn ngữ trước khi sắp xếp thành từng câu trọn vẹn */
 async function ensurePunctuatedCues(
-  cues: DubCue[],
+  cues: DubCueInput[],
   lang: string,
   emit?: (p: PrepareProgress) => void,
-): Promise<DubCue[]> {
+): Promise<DubCueInput[]> {
   if (!punctuationEnabled() || cues.length < 4) return cues;
   const segs: Segment[] = cues.map((c) => ({
     start: c.start_ms / 1000,
     end: c.end_ms / 1000,
     text: c.text,
+    ...(c.words?.length ? { words: c.words } : {}),
   }));
   if (!lacksPunctuation(segs)) return cues;
   emit?.({ pct: 24, stage: "Đang khôi phục dấu câu cho phụ đề tự động…" });
@@ -123,6 +125,7 @@ async function ensurePunctuatedCues(
     start_ms: Math.max(0, Math.round(s.start * 1000)),
     end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
     text: s.text,
+    ...(s.words?.length ? { words: s.words } : {}),
   }));
 }
 
@@ -235,8 +238,7 @@ export async function prepareLiveDub(
     const maxCues = opts.maxCues ?? 1800;
     let title = "";
     let sourceLang = "auto";
-    let rawCues: DubCue[] = [];
-    let isAutoSub = false;
+    let rawCues: DubCueInput[] = [];
 
     emitProgress({ pct: 6, stage: "Đang kiểm tra video & danh sách phụ đề…" });
 
@@ -258,7 +260,6 @@ export async function prepareLiveDub(
           });
           rawCues = subRes.cues;
           sourceLang = (subRes.lang || chosen.lang || "auto").toLowerCase();
-          isAutoSub = chosen.auto;
         }
       } catch (e) {
         if (e instanceof VideoTooLongError) throw e;
@@ -275,7 +276,6 @@ export async function prepareLiveDub(
       if (anySub && anySub.segments.length) {
         title = title || anySub.title;
         sourceLang = anySub.lang.toLowerCase();
-        isAutoSub = anySub.auto;
         rawCues = segmentsToCues(anySub.segments);
       }
     }
@@ -300,9 +300,9 @@ export async function prepareLiveDub(
       );
     }
 
-    // Bước 1: Thêm dấu câu cho phụ đề tự động rồi gộp các mảnh vụn thành câu trọn vẹn
-    const punctuated = isAutoSub ? await ensurePunctuatedCues(rawCues, sourceLang, emitProgress) : rawCues;
-    emitProgress({ pct: 30, stage: "Đang gộp thành câu hoàn chỉnh…" });
+    // Bước 1: Thêm dấu câu nếu phụ đề bị thiếu (kể cả phụ đề thường không có dấu), rồi sắp xếp thành từng câu trọn vẹn
+    const punctuated = await ensurePunctuatedCues(rawCues, sourceLang, emitProgress);
+    emitProgress({ pct: 30, stage: "Đang sắp xếp thành câu hoàn chỉnh…" });
     const merged = mergeDubCues(punctuated);
 
     if (!merged.length) throw new Error("Không tìm thấy lời thoại hợp lệ trong phụ đề.");
