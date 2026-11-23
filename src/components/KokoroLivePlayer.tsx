@@ -86,6 +86,12 @@ function loadYT(): Promise<void> {
   return ytPromise;
 }
 
+function detectIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iP(hone|ad|od)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 export default function KokoroLivePlayer({
   videoId,
   title,
@@ -129,7 +135,10 @@ export default function KokoroLivePlayer({
 
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(initialSpeed);
-  const [origVol, setOrigVol] = useState(initialOrigVol);
+  // Trên iOS Safari/WebKit, Apple khoá cứng HTMLMediaElement.volume (setVolume bị bỏ qua, chỉ mute/unMute có tác dụng).
+  // → Mặc định tắt tiếng gốc (mute) trên iOS để không bị át giọng thuyết minh tiếng Việt.
+  const [isIOS] = useState(detectIOS);
+  const [origVol, setOrigVol] = useState(() => (detectIOS() ? 0 : initialOrigVol));
   const [dubVol, setDubVol] = useState(110);
   const [dubMuted, setDubMuted] = useState(false);
   const [activeCueIdx, setActiveCueIdx] = useState<number>(-1);
@@ -345,6 +354,14 @@ export default function KokoroLivePlayer({
             if (ev.data === 1) {
               setPlaying(true);
               getAudioCtx();
+              // Trên iOS Safari, bấm Play trực tiếp trong iframe đôi khi tự bỏ mute → áp lại mức âm gốc ngay khi phát
+              if (player) {
+                if (stateRef.current.origVol <= 0) player.mute();
+                else {
+                  player.unMute();
+                  player.setVolume(stateRef.current.origVol);
+                }
+              }
             } else {
               setPlaying(false);
               stopSpeech();
@@ -643,18 +660,38 @@ export default function KokoroLivePlayer({
           <RotateCcw className="size-3.5" />
         </button>
 
-        <label className="flex items-center gap-1.5 text-muted">
-          <span>Gốc {origVol}%</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={origVol}
-            onChange={(e) => setOrigVol(Number(e.target.value))}
-            className="w-18 sm:w-20"
-          />
-        </label>
+        {isIOS ? (
+          <button
+            type="button"
+            className={`btn btn-sm ${origVol > 0 ? "btn-soft" : ""}`}
+            onClick={() => setOrigVol((v) => (v > 0 ? 0 : 100))}
+            title="iOS chỉ cho bật/tắt tiếng gốc video trong trình duyệt"
+          >
+            {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+            {origVol <= 0 ? "Gốc: Tắt" : "Gốc: Bật"}
+          </button>
+        ) : (
+          <label className="flex items-center gap-1.5 text-muted">
+            <button
+              type="button"
+              className="text-foreground"
+              onClick={() => setOrigVol((v) => (v > 0 ? 0 : 25))}
+              title={origVol <= 0 ? "Bật tiếng gốc video" : "Tắt tiếng gốc video"}
+            >
+              {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+            </button>
+            <span>Gốc {origVol}%</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={origVol}
+              onChange={(e) => setOrigVol(Number(e.target.value))}
+              className="w-18 sm:w-20"
+            />
+          </label>
+        )}
 
         <label className="flex items-center gap-1.5 text-muted">
           <button

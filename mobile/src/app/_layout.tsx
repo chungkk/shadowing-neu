@@ -21,6 +21,7 @@ function AppStack() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="lesson/[id]" options={{ title: "" }} />
             <Stack.Screen name="watch/[videoId]" options={{ title: "" }} />
+            <Stack.Screen name="dub/[videoId]" options={{ title: "" }} />
             <Stack.Screen name="admin/users" options={{ title: "" }} />
             <Stack.Screen name="review" options={{ title: "" }} />
             <Stack.Screen name="stats" options={{ title: "" }} />
