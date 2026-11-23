@@ -18,13 +18,8 @@
       "128": "icons/icon128.png"
     }
   },
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": [
-    "https://hallovn.de/*",
-    "http://localhost:3000/*",
-    "https://*/*",
-    "http://*/*"
-  ],
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://hallovn.de/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -37,7 +32,7 @@
       "all_frames": false
     },
     {
-      "matches": ["https://*/*", "http://*/*"],
+      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle",

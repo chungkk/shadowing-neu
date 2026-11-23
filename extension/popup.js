@@ -78,7 +78,24 @@ function renderStatus(st) {
   }
 }
 
-async function queryActiveTabStatus() {
+function isInjectableUrl(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return false;
+  if (/^https:\/\/(chrome\.google\.com\/webstore|chromewebstore\.google\.com)/i.test(url)) return false;
+  return true;
+}
+
+async function ensureContentInjected(tab) {
+  if (!tab?.id || !isInjectableUrl(tab.url)) return false;
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function queryActiveTabStatus(allowInject = false) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   activeTabId = tab?.id ?? null;
   if (!activeTabId) {
@@ -88,7 +105,15 @@ async function queryActiveTabStatus() {
   try {
     const res = await chrome.tabs.sendMessage(activeTabId, { type: "hvn:get-status" });
     renderStatus(res);
+    return;
   } catch {
+    if (allowInject && (await ensureContentInjected(tab))) {
+      try {
+        const res = await chrome.tabs.sendMessage(activeTabId, { type: "hvn:get-status" });
+        renderStatus(res);
+        return;
+      } catch {}
+    }
     renderStatus(null);
   }
 }
@@ -106,7 +131,6 @@ function applySettingsToUi(s) {
   $("showCaptions").checked = Boolean(s.showCaptions);
   $("showOrig").checked = Boolean(s.showOrig);
   $("autoNextYouTube").checked = Boolean(s.autoNextYouTube);
-  $("apiBase").value = s.apiBase || DEFAULT_SETTINGS.apiBase;
 }
 
 function renderAuth(user) {
@@ -133,8 +157,8 @@ async function init() {
     applySettingsToUi(DEFAULT_SETTINGS);
   }
 
-  await queryActiveTabStatus();
-  const poll = setInterval(() => void queryActiveTabStatus(), 1000);
+  await queryActiveTabStatus(true);
+  const poll = setInterval(() => void queryActiveTabStatus(false), 1000);
   window.addEventListener("unload", () => clearInterval(poll));
 
   $("toggleBtn").addEventListener("click", async () => {
@@ -143,7 +167,7 @@ async function init() {
     try {
       const res = await chrome.tabs.sendMessage(activeTabId, { type: "hvn:toggle" });
       if (res && res.ok === false && res.error) showError(res.error);
-      await queryActiveTabStatus();
+      await queryActiveTabStatus(false);
     } catch {
       showError("Hãy tải lại trang video rồi thử bật lại tiện ích nhé.");
     }
@@ -178,7 +202,6 @@ async function init() {
   $("showCaptions").addEventListener("change", (e) => saveSetting({ showCaptions: e.target.checked }));
   $("showOrig").addEventListener("change", (e) => saveSetting({ showOrig: e.target.checked }));
   $("autoNextYouTube").addEventListener("change", (e) => saveSetting({ autoNextYouTube: e.target.checked }));
-  $("apiBase").addEventListener("change", (e) => saveSetting({ apiBase: e.target.value }));
 
   $("uploadSubBtn").addEventListener("click", () => $("subFileInput").click());
   $("subFileInput").addEventListener("change", async (e) => {

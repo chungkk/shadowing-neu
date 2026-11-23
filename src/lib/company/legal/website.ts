@@ -25,11 +25,11 @@ const body: Record<Locale, LegalSection[]> = {
             id: 'overview',
             title: 'Geltungsbereich und Überblick',
             blocks: [
-                'Diese Erklärung gilt für die Website **hallovn.de** mit allen Bereichen (Deutsch lernen mit Videos, Wortschatz, Führerschein-Theorie, Leben in Deutschland, Sprechräume) und für die App **HalloVN** für iOS und Android. Website und App nutzen dasselbe Konto und denselben Server.',
+                'Diese Erklärung gilt für die Website **hallovn.de** mit allen Bereichen (Deutsch lernen mit Videos, Wortschatz, Führerschein-Theorie, Leben in Deutschland, Sprechräume), für die App **HalloVN** (iOS und Android) sowie für die Browser-Erweiterung **HalloVN — Thuyết minh tiếng Việt cho Video** (Chrome Web Store). Alle Angebote nutzen dasselbe Konto und denselben Server.',
                 {
                     list: [
                         'Die meisten Inhalte können Sie ohne Konto nutzen. Ein kostenloses Konto speichert Ihren Lernstand, damit Sie auf allen Geräten weiterlernen können.',
-                        'Die Website finanziert sich durch Werbung von Google AdSense. Personalisierte Werbung und Werbe-Cookies gibt es nur mit Ihrer Einwilligung. Die App enthält keine Werbung.',
+                        'Die Website finanziert sich durch Werbung von Google AdSense. Personalisierte Werbung und Werbe-Cookies gibt es nur mit Ihrer Einwilligung. Die App und die Browser-Erweiterung enthalten keine Werbung.',
                         'Wir setzen keine Analyse- oder Tracking-Dienste ein, verkaufen keine Daten und erstellen keine Profile zu Werbezwecken.',
                     ],
                 },
@@ -79,6 +79,21 @@ const body: Record<Locale, LegalSection[]> = {
                 'Videolektionen werden mit dem eingebetteten Player von YouTube (Google Ireland Limited) abgespielt, auf der Website und in der App. Sobald Sie eine Videoseite öffnen, baut Ihr Gerät eine Verbindung zu YouTube auf. Google erhält dabei u. a. Ihre IP-Adresse und die aufgerufene Seite und kann Cookies oder ähnliche Technologien einsetzen. Vorschaubilder der Videos werden direkt von Google-Servern (i.ytimg.com) geladen.',
                 'Untertitel und, falls keine vorhanden sind, die Tonspur eines Videos ruft unser Server bei YouTube ab und speichert die Untertitel zwischen. Die App kann Untertitel, die sie auf Ihrem Gerät von YouTube geladen hat, an unseren Server übermitteln; diese werden mit Ihrer Nutzer-ID als Beitrag gespeichert und allen Lernenden zur Verfügung gestellt.',
                 `Rechtsgrundlage ist unser berechtigtes Interesse, Lerninhalte mit Videos anzubieten (Art. 6 Abs. 1 lit. f DSGVO). Näheres: [Datenschutzerklärung von Google](${GOOGLE_PRIVACY}).`,
+            ],
+        },
+        {
+            id: 'extension',
+            title: 'Browser-Erweiterung (Chrome Extension)',
+            blocks: [
+                'Die Browser-Erweiterung **HalloVN — Thuyết minh tiếng Việt cho Video** übersetzt Videountertitel und spielt eine synchronisierte vietnamesische Sprachausgabe direkt im Browser ab.',
+                {
+                    list: [
+                        '**Welche Inhalte gelesen werden:** Die Erweiterung ist standardmäßig nur auf YouTube aktiv (youtube.com, m.youtube.com) und auf anderen Websites erst, nachdem Sie im Browser gezielt auf das HalloVN-Symbol klicken (activeTab). Erst wenn Sie die Synchronisation starten, liest die Erweiterung die Untertitel bzw. Video-ID des aktuell geöffneten Videos oder eine von Ihnen gewählte .SRT/.VTT-Datei und sendet diese an unseren Server (hallovn.de) zur Übersetzung und Sprachsynthese.',
+                        '**Lokale Einstellungen & Anmeldung:** Ihre Einstellungen (Stimme, Lautstärke, Geschwindigkeit, Untertitelanzeige) speichert Chrome lokal bzw. über chrome.storage.sync. Wenn Sie sich freiwillig in der Erweiterung anmelden, wird das Anmeldetoken ausschließlich lokal in chrome.storage.local gespeichert und beim Abmelden sofort gelöscht.',
+                        '**Kein Tracking:** Die Erweiterung erfasst keinen Browserverlauf, liest keine Seiteninhalte ohne Ihre Aktion, enthält keine Werbung und gibt keine Daten zu Werbe- oder Analysezwecken an Dritte weiter.',
+                    ],
+                },
+                'Die Verarbeitung erfolgt auf Grundlage Ihrer Anforderung der Funktion (Art. 6 Abs. 1 lit. b DSGVO).',
             ],
         },
         {
@@ -183,11 +198,11 @@ const body: Record<Locale, LegalSection[]> = {
             id: 'overview',
             title: 'Scope and overview',
             blocks: [
-                'This policy applies to the website **hallovn.de** with all its sections (learning German with videos, vocabulary, driving theory, Leben in Deutschland, speaking rooms) and to the **HalloVN** app for iOS and Android. The website and the app share the same account and server.',
+                'This policy applies to the website **hallovn.de** with all its sections (learning German with videos, vocabulary, driving theory, Leben in Deutschland, speaking rooms), to the **HalloVN** app (iOS and Android), and to the browser extension **HalloVN — Thuyết minh tiếng Việt cho Video** (Chrome Web Store). All of them share the same account and server.',
                 {
                     list: [
                         'You can use most content without an account. A free account stores your learning progress so you can continue on any device.',
-                        'The website is funded by Google AdSense ads. Personalised ads and advertising cookies are only used with your consent. The app contains no ads.',
+                        'The website is funded by Google AdSense ads. Personalised ads and advertising cookies are only used with your consent. The app and the browser extension contain no ads.',
                         'We use no analytics or tracking services, do not sell data and do not build profiles for advertising.',
                     ],
                 },
@@ -237,6 +252,21 @@ const body: Record<Locale, LegalSection[]> = {
                 'Video lessons are played with the embedded YouTube player (Google Ireland Limited), on the website and in the app. As soon as you open a video page, your device connects to YouTube. Google receives, among other things, your IP address and the page visited and may use cookies or similar technologies. Video thumbnails are loaded directly from Google servers (i.ytimg.com).',
                 'Our server fetches subtitles from YouTube and, if there are none, a video’s audio track, and caches the subtitles. The app may send subtitles it has loaded from YouTube on your device to our server; these are stored with your user ID as a contribution and made available to all learners.',
                 `The legal basis is our legitimate interest in offering learning content with videos (Art. 6(1)(f) GDPR). More: [Google’s privacy policy](${GOOGLE_PRIVACY}).`,
+            ],
+        },
+        {
+            id: 'extension',
+            title: 'Browser extension (Chrome Extension)',
+            blocks: [
+                'The browser extension **HalloVN — Thuyết minh tiếng Việt cho Video** translates video subtitles and plays synchronized Vietnamese voice-over dubbing directly in your browser.',
+                {
+                    list: [
+                        '**What content is accessed:** By default the extension only runs on YouTube (youtube.com, m.youtube.com), and on other websites only after you explicitly click the HalloVN toolbar icon (activeTab). Only when you activate dubbing does the extension read the subtitle track or video ID of the currently open video (or a local .SRT/.VTT file you choose) and send it to our server (hallovn.de) for translation and speech synthesis.',
+                        '**Local preferences & optional sign-in:** Your preferences (voice, volume, playback speed, caption display) are stored in Chrome via chrome.storage.sync. If you optionally sign in with a HalloVN account, the authentication token is stored locally in chrome.storage.local and removed immediately when you sign out.',
+                        '**No tracking:** The extension does not collect browsing history, does not read webpages unless you activate it, contains no ads, and never sells or transfers user data for advertising or analytics.',
+                    ],
+                },
+                'Processing is based on providing the feature you request (Art. 6(1)(b) GDPR).',
             ],
         },
         {
@@ -341,11 +371,11 @@ const body: Record<Locale, LegalSection[]> = {
             id: 'overview',
             title: 'Phạm vi và tổng quan',
             blocks: [
-                'Chính sách này áp dụng cho trang web **hallovn.de** với mọi mục (học tiếng Đức qua video, từ vựng, lý thuyết lái xe, Leben in Deutschland, phòng luyện nói) và cho ứng dụng **HalloVN** trên iOS và Android. Trang web và ứng dụng dùng chung một tài khoản và một máy chủ.',
+                'Chính sách này áp dụng cho trang web **hallovn.de** với mọi mục (học tiếng Đức qua video, từ vựng, lý thuyết lái xe, Leben in Deutschland, phòng luyện nói), cho ứng dụng **HalloVN** (iOS và Android) và cho tiện ích trình duyệt **HalloVN — Thuyết minh tiếng Việt cho Video** (Chrome Web Store). Tất cả dùng chung một tài khoản và một máy chủ.',
                 {
                     list: [
                         'Phần lớn nội dung dùng được mà không cần tài khoản. Tài khoản miễn phí lưu tiến độ học để bạn học tiếp trên mọi thiết bị.',
-                        'Trang web có quảng cáo của Google AdSense. Quảng cáo cá nhân hoá và cookie quảng cáo chỉ được dùng khi bạn đồng ý. Ứng dụng không có quảng cáo.',
+                        'Trang web có quảng cáo của Google AdSense. Quảng cáo cá nhân hoá và cookie quảng cáo chỉ được dùng khi bạn đồng ý. Ứng dụng và tiện ích trình duyệt không có quảng cáo.',
                         'Chúng tôi không dùng dịch vụ phân tích hay theo dõi, không bán dữ liệu và không lập hồ sơ người dùng cho mục đích quảng cáo.',
                     ],
                 },
@@ -395,6 +425,21 @@ const body: Record<Locale, LegalSection[]> = {
                 'Bài học video được phát bằng trình phát YouTube nhúng (Google Ireland Limited), trên trang web và trong ứng dụng. Khi bạn mở trang có video, thiết bị của bạn kết nối tới YouTube. Google nhận, trong số các dữ liệu khác, địa chỉ IP và trang bạn xem, và có thể dùng cookie hoặc công nghệ tương tự. Ảnh xem trước của video được tải trực tiếp từ máy chủ của Google (i.ytimg.com).',
                 'Máy chủ của chúng tôi lấy phụ đề từ YouTube, nếu video không có phụ đề thì lấy âm thanh, và lưu đệm phụ đề. Ứng dụng có thể gửi lên máy chủ phụ đề mà nó đã tải từ YouTube trên máy bạn; phụ đề này được lưu kèm mã người dùng của bạn như một đóng góp và dùng chung cho mọi người học.',
                 `Cơ sở pháp lý là lợi ích hợp pháp của chúng tôi trong việc cung cấp bài học bằng video (Điều 6 khoản 1 điểm f GDPR). Xem thêm: [chính sách bảo mật của Google](${GOOGLE_PRIVACY}).`,
+            ],
+        },
+        {
+            id: 'extension',
+            title: 'Tiện ích trình duyệt (Chrome Extension)',
+            blocks: [
+                'Tiện ích trình duyệt **HalloVN — Thuyết minh tiếng Việt cho Video** giúp dịch phụ đề video và phát giọng thuyết minh tiếng Việt đồng bộ trực tiếp trong trình duyệt.',
+                {
+                    list: [
+                        '**Dữ liệu được truy cập:** Tiện ích mặc định chỉ chạy trên YouTube (youtube.com, m.youtube.com), và trên các trang web khác chỉ hoạt động khi bạn chủ động bấm vào biểu tượng HalloVN (activeTab). Chỉ khi bạn bấm bật thuyết minh, tiện ích mới đọc phụ đề hoặc mã video đang xem (hoặc tệp .SRT/.VTT bạn tự chọn) và gửi lên máy chủ hallovn.de để dịch và tạo giọng đọc.',
+                        '**Cài đặt cục bộ & đăng nhập tuỳ chọn:** Các tuỳ chọn (giọng đọc, âm lượng, tốc độ, hiển thị phụ đề) được lưu trên Chrome qua chrome.storage.sync. Nếu bạn chọn đăng nhập tài khoản HalloVN, mã đăng nhập chỉ được lưu cục bộ trong chrome.storage.local và bị xoá ngay khi bạn đăng xuất.',
+                        '**Không theo dõi:** Tiện ích không thu thập lịch sử duyệt web, không đọc nội dung trang khi bạn không kích hoạt, không có quảng cáo và không bán hay chia sẻ dữ liệu cho mục đích quảng cáo hoặc phân tích.',
+                    ],
+                },
+                'Việc xử lý dữ liệu nhằm cung cấp tính năng do bạn yêu cầu (Điều 6 khoản 1 điểm b GDPR).',
             ],
         },
         {

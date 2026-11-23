@@ -885,10 +885,15 @@
       trackEls[0];
 
     if (pickEl && pickEl.src) {
-      const fetched = await chrome.runtime.sendMessage({ type: "hvn:fetch-text", url: pickEl.src });
-      if (fetched?.ok && fetched.text) {
-        const cues = parseSubtitleText(fetched.text);
-        if (cues.length) return { lang: pickEl.srclang || "auto", cues };
+      for (const opts of [{ credentials: "same-origin" }, { credentials: "omit" }]) {
+        try {
+          const res = await fetch(pickEl.src, opts);
+          if (res.ok) {
+            const text = await res.text();
+            const cues = parseSubtitleText(text);
+            if (cues.length) return { lang: pickEl.srclang || "auto", cues };
+          }
+        } catch {}
       }
     }
 

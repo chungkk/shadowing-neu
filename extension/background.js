@@ -16,9 +16,8 @@ async function getConfig() {
     chrome.storage.sync.get(DEFAULT_SETTINGS),
     chrome.storage.local.get({ authToken: "", authUser: null }),
   ]);
-  const apiBase = String(syncData.apiBase || DEFAULT_API_BASE).replace(/\/+$/, "");
   return {
-    settings: { ...DEFAULT_SETTINGS, ...syncData, apiBase },
+    settings: { ...DEFAULT_SETTINGS, ...syncData, apiBase: DEFAULT_API_BASE },
     authToken: typeof localData.authToken === "string" ? localData.authToken : "",
     authUser: localData.authUser || null,
   };
@@ -144,7 +143,7 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-// One-shot RPC cho TTS MP3, tải file phụ đề cross-origin, đăng nhập/đăng xuất HalloVN
+// One-shot RPC cho TTS MP3 và đăng nhập/đăng xuất HalloVN
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || typeof msg.type !== "string") return false;
 
@@ -169,27 +168,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         sendResponse({ ok: true, base64: arrayBufferToBase64(ab) });
       } catch (e) {
         sendResponse({ ok: false, error: e?.message || "Không tải được âm thanh thuyết minh." });
-      }
-    })();
-    return true;
-  }
-
-  if (msg.type === "hvn:fetch-text") {
-    (async () => {
-      try {
-        const url = String(msg.url || "");
-        if (!/^https?:\/\//i.test(url)) {
-          sendResponse({ ok: false, error: "URL phụ đề không hợp lệ." });
-          return;
-        }
-        const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) {
-          sendResponse({ ok: false, error: `HTTP ${res.status}` });
-          return;
-        }
-        sendResponse({ ok: true, text: await res.text() });
-      } catch (e) {
-        sendResponse({ ok: false, error: e?.message || "Không tải được phụ đề." });
       }
     })();
     return true;
