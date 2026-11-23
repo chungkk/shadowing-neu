@@ -459,14 +459,15 @@ const SMART_DUB_SYSTEM = (
     (ctxLines ? `Cẩm nang toàn video (đã đọc hết kịch bản):\n${ctxLines}\n` : "") +
     exampleBlock +
     "Đầu vào JSON gồm:\n" +
+    '- "overview" (tuỳ chọn): vài câu trích rải đều phần giữa & cuối video — chỉ để nắm đúng thể loại, cảm xúc, người nói và cách xưng hô tổng quan của cả bài, KHÔNG dịch lại.\n' +
     '- "prev" (tuỳ chọn): vài câu ngay trước đó — chỉ để nối mạch và giữ đúng xưng hô, KHÔNG dịch lại.\n' +
     '- "items": danh sách câu cần dịch dạng {"1": {"s": số giây, "max": số từ tiếng Việt tham khảo, "text": câu gốc}, …}.\n' +
     '- "next" (tuỳ chọn): vài câu tiếp theo — chỉ để biết mạch câu sắp nói, KHÔNG dịch lại.\n' +
     "Quy tắc bắt buộc:\n" +
-    "1. Việt hóa lời thoại tự nhiên (KHÔNG dịch máy từng chữ): diễn đạt lại theo cách người Việt nói/dẫn chuyện thật, giữ trọn ý, cảm xúc và sắc thái của người nói.\n" +
+    "1. Đọc hiểu cả cụm `prev` + `items` + `next` (và `overview` nếu có) để nắm đúng ý định và văn phong chung của cả video, rồi DIỄN ĐẠT LẠI bằng văn nói tiếng Việt trôi chảy (TUYỆT ĐỐI không dịch bám sát từng từ hay cấu trúc ngữ pháp câu gốc).\n" +
     "2. Tránh bệnh dịch khô kiểu Tây: KHÔNG dịch cứng 'Es ist / It is' thành 'Nó là…'; chuyển câu bị động Tây ('được làm bởi…') sang câu chủ động tự nhiên; tách hoặc đảo lại mệnh đề quan hệ/cụm danh từ dài cho thuận tai. Chuyển thành ngữ và từ đệm (halt, quasi, eben, basically, you know…) sang từ nối hoặc tiểu từ tiếng Việt phù hợp với văn phong video.\n" +
-    "3. Giữ đúng xưng hô và mạch nối dựa vào mẫu phần mở đầu, cẩm nang và `prev`/`next`; nếu là hội thoại nhiều người, phân biệt rõ vai nói.\n" +
-    "4. Tối ưu cho giọng đọc AI (TTS) và thời lượng: dùng dấu phẩy, chấm, hỏi, than đúng nhịp thở để giọng đọc có cảm xúc; giữ độ dài gọn quanh mức `max` từ nhưng ưu tiên câu trôi chảy (đừng cắt cụt từ nối làm câu bị khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc.\n" +
+    "3. Giữ đúng xưng hô và mạch nối dựa vào mẫu phần mở đầu, cẩm nang, `overview` và `prev`/`next`; nếu hai câu liên tiếp là hai vế của cùng một ý bị tách dòng, hãy dịch sao cho đọc nối tiếp nghe liền mạch tự nhiên, không lặp chủ ngữ thừa.\n" +
+    "4. Tối ưu cho giọng đọc AI (TTS) và độ tự nhiên: dùng dấu phẩy, chấm, hỏi, than đúng nhịp thở để giọng đọc có cảm xúc. Coi `max` chỉ là mốc tham khảo mềm — ưu tiên câu trọn ý, trôi chảy, đủ chủ-vị và từ nối (KHÔNG cắt cụt câu hay bỏ từ làm câu bị cộc/khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc.\n" +
     "5. Giữ ĐÚNG số lượng và thứ tự khóa trong `items` (1..N), tuyệt đối không gộp hay bỏ sót câu.\n" +
     'Trả về đúng JSON {"t": {"1": "...", "2": "...", …}}, không giải thích.'
   );
@@ -550,6 +551,7 @@ async function translateSmartDubChunk(
   prevCtx: string[],
   nextCtx: string[],
   systemPrompt: string,
+  overviewCtx: string[] = [],
 ): Promise<string[]> {
   const list = dubProviders();
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
@@ -559,13 +561,14 @@ async function translateSmartDubChunk(
   let formatError = false;
 
   const makePayload = (indices: number[]) => ({
+    ...(overviewCtx.length ? { overview: overviewCtx } : {}),
     ...(prevCtx.length ? { prev: prevCtx } : {}),
     items: Object.fromEntries(
       indices.map((idx, pos) => {
         const it = chunk[idx];
         const s = Math.max(0.6, Math.round(it.availSec * 10) / 10);
-        // Giọng thuyết minh Việt ở 1.1x đọc tự nhiên ~4.4 từ/giây → nới trần đến 120 từ cho câu dài trọn vẹn
-        const max = Math.max(5, Math.min(120, Math.round(s * 4.4)));
+        // Nới mốc tham khảo (~5 từ/giây, tối thiểu 8 từ) vì player tự đẩy tốc độ tới 1.45× → tránh AI ép câu bị cộc/cụt ý
+        const max = Math.max(8, Math.min(120, Math.round(s * 5.0)));
         return [pos + 1, { s, max, text: it.text }];
       }),
     ),
@@ -599,6 +602,7 @@ async function translateSmartDubChunk(
         partPrev,
         partNext,
         systemPrompt,
+        overviewCtx,
       ).catch(() => null);
       part.forEach((idx, k) => {
         if (sub?.[k]) result[idx] = sub[k];
@@ -618,13 +622,14 @@ async function translateSmartDubChunkRetry(
   prevCtx: string[],
   nextCtx: string[],
   systemPrompt: string,
+  overviewCtx: string[] = [],
 ): Promise<string[]> {
   try {
-    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
+    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx);
   } catch (e) {
     console.error("[dub-smart] lô lỗi, thử lại:", (e as Error).message);
     await new Promise((r) => setTimeout(r, CHUNK_RETRY_DELAY_MS));
-    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt);
+    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx);
   }
 }
 
@@ -635,6 +640,23 @@ const STYLE_CARD_DEADLINE_MS = 14_000;
 const FIRST_DUB_BATCH = 10; // Lô đầu 10 câu (~45–60s đầu) dịch siêu nhanh (~1.5–2.5s) để mở video gần như tức thì
 const NEXT_DUB_BATCH = 25; // Các lô sau 25 câu — cân bằng giữa tốc độ và tránh chạm trần TPM / cắt cụt JSON
 const DUB_CONCURRENCY = 3; // 3 luồng song song giúp bám sát giới hạn TPM của Groq 120b, giảm rớt lô 429
+
+/** Trích ~12 câu rải đều giữa & cuối video (~1.200 ký tự) để lô đầu nắm đúng văn phong toàn bài mà không tốn thời gian chờ. */
+function buildQuickOverview(items: DubTranslateItem[], fromIndex: number): string[] {
+  const rest = items.slice(fromIndex);
+  if (!rest.length) return [];
+  const target = Math.min(12, rest.length);
+  const picked: string[] = [];
+  let chars = 0;
+  for (let k = 0; k < target; k++) {
+    const idx = target === 1 ? 0 : Math.floor((k * (rest.length - 1)) / (target - 1));
+    const line = rest[idx].text.trim().slice(0, 140);
+    if (!line || chars + line.length > 1400) break;
+    picked.push(line);
+    chars += line.length;
+  }
+  return picked;
+}
 
 /** Chọn 4–5 cặp câu tiêu biểu đã dịch ở lô đầu làm mẫu giọng văn & xưng hô cho các lô song song phía sau. */
 function pickStyleExamples(items: DubTranslateItem[], translations: string[], count: number): StyleExample[] {
@@ -709,13 +731,18 @@ export async function translateForDubbingSmart(
 
   let doneCount = 0;
 
-  const runRange = async (r: { start: number; end: number }, prompt: string, mustSucceed = false) => {
+  const runRange = async (
+    r: { start: number; end: number },
+    prompt: string,
+    mustSucceed = false,
+    overviewCtx: string[] = [],
+  ) => {
     const chunk = items.slice(r.start, r.end);
     const prevCtx = items.slice(Math.max(0, r.start - 2), r.start).map((x) => x.text);
     const nextCtx = items.slice(r.end, r.end + 2).map((x) => x.text);
     let translated: string[];
     try {
-      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, prompt);
+      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, prompt, overviewCtx);
     } catch (e) {
       // Lô đầu hỏng thì chưa có gì để phát → báo lỗi. Lô sau hỏng thì để trống, các lô khác dịch tiếp.
       if (mustSucceed) throw e;
@@ -730,9 +757,10 @@ export async function translateForDubbingSmart(
     onProgress?.({ phase: "translate", done: doneCount, total: items.length });
   };
 
-  // Lô 0 chạy ngay lập tức (song song với Style Bible) để trình phát mở sau ~2 giây
+  // Lô 0 chạy ngay lập tức (song song với Style Bible), kèm overview rải đều toàn bài để đúng văn phong ngay từ câu 1
   if (ranges.length > 0) {
-    await runRange(ranges[0], initialPrompt, true);
+    const overview = buildQuickOverview(items, ranges[0].end + 2);
+    await runRange(ranges[0], initialPrompt, true, overview);
   }
 
   const style = await stylePromise;

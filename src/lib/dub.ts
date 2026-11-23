@@ -196,18 +196,28 @@ export function parseSubtitleText(raw: string): DubCue[] {
 
 const CJK_SCRIPT = /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}/gu;
 const DUB_ABBREV = new Set(
-  "mr. mrs. ms. dr. prof. st. jr. sr. vs. etc. e.g. i.e. fig. no. vol. approx. z.b. d.h. u.a. usw. bzw. ca. nr. str. evtl. ggf. vgl. bspw. inkl. max. min. mio. mrd. hr. fr. z.t. o.ä. u.ä. sog.".split(
+  "mr. mrs. ms. dr. prof. st. jr. sr. vs. etc. e.g. i.e. fig. no. vol. approx. inc. ltd. co. dept. est. jan. feb. mar. apr. aug. sep. sept. oct. nov. dec. okt. dez. z.b. d.h. u.a. usw. bzw. ca. nr. str. evtl. ggf. vgl. bspw. inkl. max. min. mio. mrd. tsd. hr. fr. z.t. o.ä. u.ä. sog. tel. abs. art. kap.".split(
     " ",
   ),
 );
 
-function endsDubSentence(text: string): boolean {
+function endsDubSentence(text: string, nextText?: string): boolean {
   const t = text.trim().replace(/["»«“”'’)\]]+$/, "");
   if (!t) return false;
-  if (/[!?…！？。]$/.test(t)) return true;
+  // Dấu ngập ngừng "..." / "…" đứng trước chữ viết thường → cùng 1 câu đang nói dở, không cắt vụn
+  if (/(?:\.\.\.|…)$/.test(t)) {
+    const next = nextText?.trim().replace(/^["»«“”'’(\[]+/, "") ?? "";
+    if (next && /^\p{Ll}/u.test(next)) return false;
+    return true;
+  }
+  if (/[!?！？。]$/.test(t)) return true;
   if (!t.endsWith(".")) return false;
   const lastWord = t.split(/\s+/).pop()?.toLowerCase() ?? "";
-  return !DUB_ABBREV.has(lastWord) && !/^\d{1,2}\.$/.test(lastWord);
+  // Không cắt câu ở viết tắt quen thuộc, số thứ tự ("3.", "20."), hay viết tắt nhiều chấm ("U.S.", "e.V.", "a.m.")
+  if (DUB_ABBREV.has(lastWord) || /^\d{1,3}\.$/.test(lastWord) || /^(?:[a-z]\.){2,}$/i.test(lastWord)) {
+    return false;
+  }
+  return true;
 }
 
 function endsClause(text: string): boolean {
@@ -395,24 +405,24 @@ function splitOverlongGroup(g: DubTok[], isCjk: boolean): DubTok[][] {
   return [...splitOverlongGroup(g.slice(0, best), isCjk), ...splitOverlongGroup(g.slice(best), isCjk)];
 }
 
-/** Ghép câu cực ngắn ("Ja.", "Genau!", "Wait.") với câu sát cạnh để TTS đọc tự nhiên, vẫn giữ nguyên câu trọn vẹn. */
+/** Ghép các câu ngắn liên tiếp ("Das ist gut.", "Wait a second.") với câu sát cạnh để dịch & đọc mượt mạch, không bị cộc. */
 function mergeTinySentences(groups: DubTok[][], isCjk: boolean): DubTok[][] {
-  const isTiny = (g: DubTok[]) => {
+  const isShort = (g: DubTok[]) => {
     const dur = g[g.length - 1].end - g[0].start;
-    return isCjk ? joinTokens(g, true).length <= 6 && dur < 1_400 : g.length <= 2 && dur < 1_400;
+    return isCjk ? joinTokens(g, true).length <= 10 && dur < 2_200 : g.length <= 4 && dur < 2_200;
   };
   const fits = (a: DubTok[], b: DubTok[]) => {
     const gap = b[0].start - a[a.length - 1].end;
-    if (gap > 500) return false;
+    if (gap > 750) return false;
     const dur = b[b.length - 1].end - a[0].start;
     const chars = joinTokens(a, isCjk).length + joinTokens(b, isCjk).length + (isCjk ? 0 : 1);
-    return dur <= 16_000 && chars <= (isCjk ? 90 : 220) && (isCjk || a.length + b.length <= 30);
+    return dur <= 13_000 && chars <= (isCjk ? 75 : 200) && (isCjk || a.length + b.length <= 26);
   };
 
   const out: DubTok[][] = [];
   for (const g of groups) {
     const prev = out[out.length - 1];
-    if (prev && (isTiny(prev) || isTiny(g)) && fits(prev, g)) {
+    if (prev && (isShort(prev) || isShort(g)) && fits(prev, g)) {
       out[out.length - 1] = [...prev, ...g];
     } else {
       out.push(g);
@@ -460,13 +470,14 @@ export function mergeDubCues(raw: DubCueInput[]): DubCue[] {
   const sentences: DubTok[][] = [];
   let cur: DubTok[] = [];
 
-  for (const tok of toks) {
+  for (let i = 0; i < toks.length; i++) {
+    const tok = toks[i];
     if (cur.length && tok.start - cur[cur.length - 1].end > SILENCE_BREAK_MS) {
       sentences.push(cur);
       cur = [];
     }
     cur.push(tok);
-    if (endsDubSentence(tok.text)) {
+    if (endsDubSentence(tok.text, toks[i + 1]?.text)) {
       sentences.push(cur);
       cur = [];
     }
