@@ -10,12 +10,16 @@ import { SeaDictionary, phonemizeChunks } from "./kokoro-vi/frontend";
 
 export const SERVER_PIPER_VOICES = {
   "piper:adam_bua": {
-    file: "adam_bua_int8.onnx",
-    url: "https://hallovn.de/download/media/kokoro/adam_bua_int8.onnx?v=2",
+    file: "adam_bua_v3_int8.onnx",
+    url: "https://hallovn.de/download/media/kokoro/adam_bua_v3_int8.onnx",
+    cacheVer: "v3",
+    enableGerman: true,
   },
   "piper:lac_phi": {
     file: "lac_phi_int8.onnx",
     url: "https://hallovn.de/download/media/kokoro/lac_phi_int8.onnx?v=1",
+    cacheVer: "v2",
+    enableGerman: false,
   },
 } as const;
 
@@ -54,7 +58,8 @@ const state = (gd.__serverPiper ??= {
 });
 
 function cacheFileFor(voiceId: ServerPiperVoiceId, speed: number, text: string): string {
-  const key = createHash("sha1").update(`piper-v2|${voiceId}|${speed.toFixed(2)}|${text}`).digest("hex");
+  const ver = SERVER_PIPER_VOICES[voiceId].cacheVer;
+  const key = createHash("sha1").update(`piper-${ver}|${voiceId}|${speed.toFixed(2)}|${text}`).digest("hex");
   return path.join(DUB_TTS_DIR, `${key}.wav`);
 }
 
@@ -196,7 +201,9 @@ function runInference(voiceId: ServerPiperVoiceId, text: string, speed: number):
     const ort = state.ort!;
     const dict = state.dict!;
 
-    const { chunks } = phonemizeChunks(text, dict, config.vocab);
+    const { chunks } = phonemizeChunks(text, dict, config.vocab, {
+      enableGerman: SERVER_PIPER_VOICES[voiceId].enableGerman,
+    });
     const parts: Float32Array[] = [];
     let totalLen = 0;
     const clampedSpeed = Math.min(1.5, Math.max(0.75, speed));
