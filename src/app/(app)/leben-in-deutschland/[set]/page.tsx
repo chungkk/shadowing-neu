@@ -35,12 +35,13 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
   const { set } = await params;
   const s = getSet(set);
   if (!s) return { title: "Không tìm thấy", robots: { index: false, follow: false } };
-  // ?mode=lesen (đọc lướt) cùng nội dung → canonical về trang không tham số. "hoc" trùng "tat-ca" + đổi theo bang → không index
+  // ?mode=lesen (đọc lướt) cùng nội dung → canonical về trang không tham số
   return quizPageMeta({
     path: `/leben-in-deutschland/${set}`,
     title: `${setName(set, s.title)} – Leben in Deutschland tiếng Việt`,
     description: describe(set, s),
-    robots: set === "hoc" ? { index: false, follow: true } : undefined,
+    // Mọi bộ: HTML chỉ có 1 câu + lời mời đăng nhập → trang mỏng với Google / AdSense: không index, vẫn theo link
+    robots: { index: false, follow: true },
   });
 }
 

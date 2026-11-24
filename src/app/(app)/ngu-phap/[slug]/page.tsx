@@ -25,10 +25,11 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const lesson = getGrammarLesson(slug);
-  if (!lesson) return {};
+  if (!lesson) return { title: "Không tìm thấy bài ngữ pháp", robots: { index: false, follow: false } };
 
   return pageMeta({
-    title: `${lesson.title} (${lesson.germanTitle}) – Ngữ pháp tiếng Đức ${lesson.level}`,
+    // Tên bài thường đã có thuật ngữ tiếng Đức trong ngoặc → không lặp lại germanTitle (title dài, lặp từ)
+    title: `${lesson.title.includes("(") ? lesson.title : `${lesson.title} (${lesson.germanTitle})`} – Ngữ pháp tiếng Đức ${lesson.level}`,
     description: clip(stripGrammarMarkup(lesson.summary)),
     path: `/ngu-phap/${lesson.slug}`,
     type: "article",

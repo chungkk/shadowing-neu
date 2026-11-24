@@ -350,7 +350,10 @@ export async function generateMetadata({ params }: PageProps<"/tieng-duc/[slug]"
     image: youtubeThumb(lesson.videoId, lesson.title),
     type: "article",
   });
-  return { ...meta, robots: lesson.published ? undefined : { index: false, follow: false } };
+  if (!lesson.published) return { ...meta, robots: { index: false, follow: false } };
+  // Bài đang khoá với khách: Google chỉ thấy màn "đăng nhập để mở khoá" → trang mỏng với AdSense, không index (bài miễn phí vẫn index)
+  if (accessOf(null)(lesson.id) === "locked") return { ...meta, robots: { index: false, follow: true } };
+  return meta;
 }
 
 export default function Page(props: PageProps<"/tieng-duc/[slug]">) {

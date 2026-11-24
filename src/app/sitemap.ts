@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
+import { accessOf } from "@/lib/access";
 import { listLessons } from "@/lib/db";
 import { listDecks } from "@/lib/decks";
 import { ALL_GRAMMAR_LESSONS } from "@/lib/grammar";
-import { allChapterIds } from "@/lib/laixe";
 import { CHANNEL_MIN_INDEX, activeLessonLevels, lessonChannels, levelCatalogPath } from "@/lib/lesson-seo";
-import { LID_UPDATED, indexableSetIds } from "@/lib/lid";
+import { LID_UPDATED } from "@/lib/lid";
 import { SITE_URL } from "@/lib/site";
 import { channelPath, lessonPath } from "@/lib/slug";
 import { LEGAL_PRODUCTS, NOINDEX_LEGAL_SLUGS } from "@/lib/company/legal";
@@ -61,14 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/leben-in-deutschland/thi-thu`, lastModified: LID_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/thi-thu`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/lai-xe/de-mau`, changeFrequency: "monthly", priority: 0.7 },
-    ...allChapterIds().map((id) => ({ url: `${SITE_URL}/lai-xe/hoc/${id}`, changeFrequency: "monthly" as const, priority: 0.5 })),
-    ...indexableSetIds().map((id) => ({ url: `${SITE_URL}/leben-in-deutschland/${id}`, lastModified: LID_UPDATED, changeFrequency: "monthly" as const, priority: 0.5 })),
+    // Trang từng chương lái xe / từng bộ LiD không có trong sitemap (noindex): HTML chỉ có 1 câu + lời mời đăng nhập → AdSense coi là nội dung mỏng
     ...bizPages(),
-    ...listLessons().map((l) => ({
-      url: SITE_URL + lessonPath(l.slug),
-      lastModified: new Date(l.createdAt.replace(" ", "T") + "Z"),
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    })),
+    // Bài đang khoá với khách: Google chỉ thấy màn "đăng nhập để mở khoá" → noindex, không đưa vào sitemap
+    ...listLessons()
+      .filter((l) => accessOf(null)(l.id) !== "locked")
+      .map((l) => ({
+        url: SITE_URL + lessonPath(l.slug),
+        lastModified: new Date(l.createdAt.replace(" ", "T") + "Z"),
+        changeFrequency: "monthly" as const,
+        priority: 0.8,
+      })),
   ];
 }

@@ -121,8 +121,6 @@ export function getSet(id: string, stateCode = DEFAULT_STATE): { title: string; 
   return { title: `Câu ${set.from}–${set.to}`, subtitle: "300 câu chung", ids: set.ids };
 }
 
-/** Các trang [set] để index (bỏ "hoc": trùng nội dung với "tat-ca" + đổi theo bang; bỏ chủ đề khi dữ liệu chưa gán) */
-export const indexableSetIds = () => LID_SET_IDS.filter((id) => id !== "hoc" && (hasTopics() || !(LID_TOPIC_KEYS as readonly string[]).includes(id)));
 
 const shuffle = <T,>(xs: T[]) => {
   const a = [...xs];

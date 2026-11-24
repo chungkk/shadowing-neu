@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Manrope } from "next/font/google";
+import AdsenseScript from "@/components/AdsenseScript";
 import { DeutschSubnav, HeaderNavFrame, SidebarSkeleton } from "@/components/Sidebar";
 import LoginDialogSlot from "@/components/auth/LoginDialogSlot";
 import Mascot from "@/components/Mascot";
@@ -12,7 +12,7 @@ import SiteFooter from "@/components/SiteFooter";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu, { HeaderNavWithUser, SidebarWithUser } from "@/components/UserMenu";
 import { siteJsonLd, serializeJsonLd } from "@/lib/seo";
-import { SITE_URL } from "@/lib/site";
+import { ADSENSE_CLIENT, SITE_URL } from "@/lib/site";
 import { DEFAULT_THEME, FORCE_DARK, SEASONAL_THEME, THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -27,8 +27,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-const ADSENSE_CLIENT = "ca-pub-5590145594898560";
 
 const SITE_TITLE = "HalloVN – Học tiếng Đức, thi lái xe & Leben in Deutschland cho người Việt";
 const SITE_DESCRIPTION =
@@ -126,11 +124,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense>
           <ShareBar />
         </Suspense>
-        <Script
-          strategy="lazyOnload"
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-          crossOrigin="anonymous"
-        />
+        <Suspense>
+          <AdsenseScript />
+        </Suspense>
         <Suspense>
           <LoginDialogSlot />
         </Suspense>

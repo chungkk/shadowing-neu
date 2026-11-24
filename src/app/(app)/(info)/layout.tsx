@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LocaleProvider } from "@/components/company/LocaleContext";
+import { LocaleMain, LocaleProvider } from "@/components/company/LocaleContext";
 import InfoSubnav from "@/components/company/InfoSubnav";
 import { SITE } from "@/lib/company/site";
 import { OG_LOCALE } from "@/lib/company/seo";
@@ -31,7 +31,7 @@ export default function InfoLayout({ children }: { children: React.ReactNode }) 
     <LocaleProvider>
       <InfoSubnav />
       {/* info-page: phạm vi CSS của các trang thông tin ((app)/globals.css, mục "Trang thông tin") */}
-      <main className="info-page flex-1">{children}</main>
+      <LocaleMain className="info-page flex-1">{children}</LocaleMain>
     </LocaleProvider>
   );
 }

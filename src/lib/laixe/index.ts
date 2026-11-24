@@ -136,8 +136,6 @@ export function scopeQuestions(scope: string, cls: ClassId): { title: string; su
   return null;
 }
 
-/** Các phạm vi học có câu ở ít nhất 1 hạng (cho sitemap) */
-export const allChapterIds = () => [...new Set(ALL.filter((q) => q.cls).map((q) => q.chapter))];
 
 // ---- Đề thi ----
 

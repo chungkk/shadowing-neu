@@ -12,8 +12,11 @@ export function legalProduct(slug: string): LegalProduct {
     return product;
 }
 
-/** Sản phẩm chưa công khai: vẫn có trang support/privacy cho cửa hàng ứng dụng nhưng không lên Google. */
-export const NOINDEX_LEGAL_SLUGS = new Set(['calendar']);
+/**
+ * Trang support/privacy chỉ để cửa hàng ứng dụng trỏ tới, không lên Google: sản phẩm chưa công khai và app riêng không thuộc HalloVN
+ * (trang về app khác, phần lớn tiếng Đức, làm site trông thiếu nhất quán khi AdSense xét duyệt).
+ */
+export const NOINDEX_LEGAL_SLUGS = new Set(['calendar', 'deutsch-redewendung']);
 
 export function supportMetadata(slug: string) {
     const product = legalProduct(slug);

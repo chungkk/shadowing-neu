@@ -40,6 +40,8 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
       `${n} câu hỏi thi lý thuyết lái xe Đức hạng ${s.cls} – ${s.name}: bản dịch tiếng Việt, giải thích, luyện chấm đúng/sai ngay hoặc đọc lướt đáp án.`,
       `${n} câu thi lý thuyết lái xe Đức hạng ${s.cls} – ${s.name}: dịch tiếng Việt, giải thích, luyện chấm ngay.`,
     ),
+    // HTML chỉ có 1 câu (phần còn lại tải sau, xem lib/crawl-guard.ts) → trang mỏng với Google / AdSense: không index, vẫn theo link
+    robots: { index: false, follow: true },
   });
 }
 

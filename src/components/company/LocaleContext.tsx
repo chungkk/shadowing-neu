@@ -86,3 +86,13 @@ export function useT<T>(dict: Record<Locale, T>): T {
     const { locale } = useLocale();
     return dict[locale];
 }
+
+/** <main> của trang thông tin, gắn lang theo ngôn ngữ đang hiện (trang mặc định tiếng Đức trong khung <html lang="vi">) */
+export function LocaleMain({ className, children }: { className?: string; children: ReactNode }) {
+    const { locale } = useContext(LocaleContext);
+    return (
+        <main lang={locale} className={className}>
+            {children}
+        </main>
+    );
+}

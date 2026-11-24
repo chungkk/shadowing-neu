@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { fuehrerscheinGuard } from "@/lib/laixe/guard";
 import { crawlGuard } from "@/lib/crawl-guard";
 import { LID_BASE, LID_PAGES, LID_PRIVATE, LID_SET_IDS } from "@/lib/lid/routes";
+import { ALL_GRAMMAR_LESSONS } from "@/lib/grammar";
 
 // Tên miền chính thức: hallovn.de. ckk.pro (tên cũ) chỉ còn trỏ về app này để link cũ và app di động bản cũ không gãy.
 // ckk.biz KHÔNG còn thuộc HalloVN: là dự án riêng (API) của 2 app Führerschein / Leben in Deutschland.
@@ -27,6 +28,15 @@ const MOVED_TO_CKK_BIZ = /^\/(?:(?:fuehrerschein|lid)(?:\/(?:privacy|support))?|
 const OLD_LEGAL = /^\/(privacy|terms)(\/de)?\/?$/;
 
 const LID_KNOWN = new Set<string>([...LID_SET_IDS, ...LID_PAGES]);
+
+const GRAMMAR_SLUGS = new Set(ALL_GRAMMAR_LESSONS.map((l) => l.slug));
+
+/** /ngu-phap/<slug lạ> → 404 thật (trang stream đã gửi 200 trước khi notFound() chạy → Google coi là soft 404). null = cho qua */
+function grammarRoute(request: NextRequest): NextResponse | null {
+  const m = /^\/ngu-phap\/([^/]+)\/?$/.exec(request.nextUrl.pathname);
+  if (!m || GRAMMAR_SLUGS.has(m[1]) || m[1].startsWith("opengraph-image")) return null;
+  return NextResponse.rewrite(new URL("/ngu-phap/khong-co/khong-co", request.url));
+}
 
 /** null = cho qua */
 function lidRoute(request: NextRequest): NextResponse | null {
@@ -69,7 +79,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/fuehrerschein")) return fuehrerscheinGuard(request);
-  return (await crawlGuard(request)) ?? lidRoute(request) ?? NextResponse.next();
+  return (await crawlGuard(request)) ?? lidRoute(request) ?? grammarRoute(request) ?? NextResponse.next();
 }
 
 export const config = {
