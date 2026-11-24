@@ -1,6 +1,6 @@
 "use client";
 
-import Script from "next/script";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { ADSENSE_CLIENT } from "@/lib/site";
 
@@ -10,6 +10,7 @@ import { ADSENSE_CLIENT } from "@/lib/site";
  * trang phát lại / liệt kê video YouTube của người khác (bài học, kênh, xem video, thuyết minh), trang cá nhân, quản trị và pháp lý —
  * AdSense đánh giá các trang đó là "nội dung giá trị thấp".
  * Script đã nạp thì vẫn còn khi chuyển trang trong app (Auto ads không quét lại), nên lọc theo trang người dùng mở đầu tiên.
+ * Tự chèn thẻ <script> thuần thay cho next/script: next/script gắn data-nscript, AdSense báo "head tag doesn't support data-nscript".
  */
 const AD_PAGES = [
   /^\/$/,
@@ -19,14 +20,27 @@ const AD_PAGES = [
   /^\/leben-in-deutschland(\/chu-de)?$/,
 ];
 
+const SRC = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
+
 export default function AdsenseScript() {
   const path = usePathname();
-  if (!AD_PAGES.some((re) => re.test(path))) return null;
-  return (
-    <Script
-      strategy="lazyOnload"
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-      crossOrigin="anonymous"
-    />
-  );
+  const allowed = AD_PAGES.some((re) => re.test(path));
+
+  useEffect(() => {
+    if (!allowed || document.querySelector(`script[src="${SRC}"]`)) return;
+    const add = () => {
+      if (document.querySelector(`script[src="${SRC}"]`)) return;
+      const el = document.createElement("script");
+      el.async = true;
+      el.src = SRC;
+      el.crossOrigin = "anonymous";
+      document.head.appendChild(el);
+    };
+    // Như strategy="lazyOnload": đợi trang tải xong để không giành băng thông với nội dung chính
+    if (document.readyState === "complete") add();
+    else window.addEventListener("load", add, { once: true });
+    return () => window.removeEventListener("load", add);
+  }, [allowed]);
+
+  return null;
 }
