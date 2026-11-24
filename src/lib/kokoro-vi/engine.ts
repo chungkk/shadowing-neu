@@ -11,11 +11,12 @@ export const PIPER_SAMPLE_RATE = 22_050;
 
 export type PiperVoiceKey = "adam_bua" | "lac_phi";
 
-const PIPER_MODELS: Record<PiperVoiceKey, { url: string; label: string; approxBytes: number }> = {
+const PIPER_MODELS: Record<PiperVoiceKey, { url: string; label: string; approxBytes: number; enableGerman?: boolean }> = {
   adam_bua: {
-    url: "/download/media/kokoro/adam_bua_int8.onnx?v=2",
-    label: "giọng Adam bựa (16 MB)",
+    url: "/download/media/kokoro/adam_bua_v3_int8.onnx",
+    label: "giọng Adam bựa v3 (16 MB)",
     approxBytes: 16_700_000,
+    enableGerman: true,
   },
   lac_phi: {
     url: "/download/media/kokoro/lac_phi_int8.onnx?v=1",
@@ -258,7 +259,9 @@ export function synthesizePiper(
     if (!clean) return { pcm: new Float32Array(0), sampleRate: PIPER_SAMPLE_RATE, synthMs: 0 };
 
     const t0 = performance.now();
-    const { chunks } = phonemizeChunks(clean, dictionary, config.vocab);
+    const { chunks } = phonemizeChunks(clean, dictionary, config.vocab, {
+      enableGerman: Boolean(PIPER_MODELS[voiceKey].enableGerman),
+    });
     const parts: Float32Array[] = [];
     let totalLen = 0;
     const clampedSpeed = Math.min(1.5, Math.max(0.75, speed));

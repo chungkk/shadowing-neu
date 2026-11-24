@@ -1,3 +1,4 @@
+import { germanWordToIpa, isGermanWord, isPriorityGermanWord } from './german-g2p';
 import { normalizeVietnameseSpeech } from './normalize-text';
 
 export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v6';
@@ -132,6 +133,19 @@ export const PRONUNCIATIONS: Readonly<Record<string, string>> = Object.assign(
     runpod: '<en>ɹˈʌnpɑːd',
     'dall-e': '<en>dˈɑːli',
     chatgpt: '<en>ʧˈæt ʤˌiːpˌiːtˈiː',
+    openai: '<en>ˈoʊpən eɪ ˈaɪ',
+    youtube: '<en>jˈuːtuːb',
+    tiktok: '<en>tˈɪktɑːk',
+    github: '<en>ɡˈɪthʌb',
+    docker: '<en>dˈɑːkɚ',
+    kubernetes: '<en>kuːbɚnˈɛtiːz',
+    nextjs: '<en>nˈɛkst ʤeɪ ɛs',
+    typescript: '<en>tˈaɪpskɹɪpt',
+    javascript: '<en>ʤˈɑːvəskɹɪpt',
+    python: '<en>pˈaɪθɑːn',
+    iphone: '<en>ˈaɪfoʊn',
+    macbook: '<en>mˈækbʊk',
+    colab: '<en>kˈoʊlæb',
     // All-caps words said as words, not letters.
     ram: '<en>ɹˈæm',
     sim: '<en>sˈɪm',
@@ -280,7 +294,9 @@ export function phonemizeChunks(
   text: string,
   dictionary: Pick<SeaDictionary, 'lookup'>,
   vocab: Readonly<Record<string, number>>,
+  options?: { enableGerman?: boolean },
 ): { normalized: string; chunks: readonly FrontendChunk[]; warnings: readonly string[] } {
+  const enableGerman = Boolean(options?.enableGerman);
   const normalized = normalizeKokoroText(text),
     warnings: string[] = [],
     chunks: FrontendChunk[] = [];
@@ -323,11 +339,18 @@ export function phonemizeChunks(
     if (/^\p{L}/u.test(token)) {
       // Six or more capitals is a shouted word (OPENROUTER, NVIDIA), not letters to spell.
       const acronym = ACRONYM.test(token) && token.length <= 5;
-      const known = PRONUNCIATIONS[token.toLowerCase()] ?? dictionary.lookup(token, acronym);
-      const compound = known || acronym ? null : compoundReading(token, dictionary);
-      if ((acronym && !known?.startsWith('<en>')) || SPELLED.has(token.toLowerCase()))
+      const dePriority = enableGerman && !acronym && isPriorityGermanWord(token) ? germanWordToIpa(token) : '';
+      const known = dePriority ? null : (PRONUNCIATIONS[token.toLowerCase()] ?? dictionary.lookup(token, acronym));
+      const compound = dePriority || known || acronym ? null : compoundReading(token, dictionary);
+      const deFallback =
+        enableGerman && !dePriority && !known && !acronym && compound === null && isGermanWord(token)
+          ? germanWordToIpa(token)
+          : '';
+      if (dePriority) raw = dePriority;
+      else if ((acronym && !known?.startsWith('<en>')) || SPELLED.has(token.toLowerCase()))
         raw = Array.from(token.toLowerCase(), (char) => LETTERS[char] ?? '').join(' ');
       else if (known) raw = adapt(known, token);
+      else if (deFallback) raw = deFallback;
       else if (compound !== null) raw = compound;
       else {
         warnings.push(`Spelled out-of-dictionary token: ${token}`);
