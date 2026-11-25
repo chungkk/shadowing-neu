@@ -118,7 +118,7 @@ export default function DictationPanel({
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
     const r = checkSlots(text, nextSlots, nextRevealed);
-    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" || w.state === "given" ? [k] : []))) ?? 0;
+    const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
     if (gain > 0) {
       setGained((g) => g + gain);
       emitPoints({ delta: gain, earned: true });

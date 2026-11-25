@@ -54,6 +54,12 @@ export function splitWords(text: string): string[] {
   return splitTokens(text).map((t) => t.text);
 }
 
+/** Số từ phải chép của 1 câu: từ đầu câu hiện sẵn khi câu ≥ 2 từ nên không tính; câu chỉ 1 từ vẫn phải chép */
+export function dictationWordCount(text: string): number {
+  const n = splitWords(text).length;
+  return n > 1 ? n - 1 : n;
+}
+
 /** Câu có chữ / số để chép — câu chỉ gồm ký hiệu ("♪ ♪", "…") không chép được, không bao giờ "xong" */
 export const hasWords = (text: string) => splitTokens(text).length > 0;
 

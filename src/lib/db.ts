@@ -2,7 +2,7 @@ import "server-only";
 import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { POINTS_HINT, splitWords } from "./dictation";
+import { dictationWordCount, POINTS_CORRECT, POINTS_HINT } from "./dictation";
 import { isReservedSlug, slugify } from "./slug";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import { mergeIntoSentences, type Segment } from "./subtitles";
@@ -380,6 +380,32 @@ function open() {
   // Cột trạng thái xử lý góp ý ('open' | 'resolved') cho trang quản trị
   const fbCols = db.prepare("PRAGMA table_info(feedback)").all() as { name: string }[];
   if (!fbCols.some((c) => c.name === "status")) db.exec("ALTER TABLE feedback ADD COLUMN status TEXT NOT NULL DEFAULT 'open'");
+  // Trước đây /points chấm bằng checkDictation (tính cả từ đầu câu vào total) nên câu ≥ 2 từ luôn giữ open = 1 dù đã chép đúng hết
+  if (!db.prepare("SELECT 1 FROM settings WHERE key = 'migration:dict_points_slots'").get()) {
+    db.exec("BEGIN");
+    try {
+      const sources = db.prepare("SELECT DISTINCT source FROM dict_points WHERE open = 1 AND source LIKE '/lesson/%'").all() as { source: string }[];
+      const getSegs = db.prepare("SELECT segments FROM lessons WHERE id = ?");
+      const openRows = db.prepare("SELECT user_id, idx, pts FROM dict_points WHERE source = ? AND open = 1");
+      const closeRow = db.prepare("UPDATE dict_points SET open = 0 WHERE user_id = ? AND source = ? AND idx = ?");
+      for (const { source } of sources) {
+        const id = Number(source.slice("/lesson/".length));
+        if (!Number.isInteger(id)) continue;
+        const lessonRow = getSegs.get(id) as { segments: string } | undefined;
+        if (!lessonRow) continue;
+        const sentences = mergeIntoSentences(JSON.parse(lessonRow.segments) as Segment[]);
+        for (const r of openRows.all(source) as { user_id: number; idx: number; pts: number }[]) {
+          const s = sentences[r.idx];
+          if (s && r.pts >= dictationWordCount(s.text) * POINTS_CORRECT) closeRow.run(r.user_id, source, r.idx);
+        }
+      }
+      db.prepare("INSERT INTO settings (key, value) VALUES ('migration:dict_points_slots', '1')").run();
+      db.exec("COMMIT");
+    } catch (e) {
+      db.exec("ROLLBACK");
+      throw e;
+    }
+  }
   return db;
 }
 
@@ -454,7 +480,7 @@ function lessonStats(id: number) {
     const r = conn().prepare("SELECT segments FROM lessons WHERE id = ?").get(id) as { segments: string } | undefined;
     const segments: Segment[] = r ? JSON.parse(r.segments) : [];
     const sentences = mergeIntoSentences(segments);
-    stats = { sentenceCount: sentences.length, wordCount: sentences.reduce((n, s) => n + splitWords(s.text).length, 0), duration: Math.max(0, ...segments.map((s) => s.end)) };
+    stats = { sentenceCount: sentences.length, wordCount: sentences.reduce((n, s) => n + dictationWordCount(s.text), 0), duration: Math.max(0, ...segments.map((s) => s.end)) };
     statsCache.set(id, stats);
   }
   return stats;

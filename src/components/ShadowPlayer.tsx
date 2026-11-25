@@ -1054,7 +1054,7 @@ export default function ShadowPlayer({
           <button className={`btn btn-lg flex-1 ${playCls} ${dictation ? "" : "max-md:hidden"}`} title="Phát / dừng (Space)" onClick={togglePlay}>
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />} {playing ? "Dừng" : "Phát"}
           </button>
-          <button className="btn btn-lg flex-1" title={dictation ? "Nghe lại câu (Tab)" : "Nghe lại câu"} onClick={() => go(idx)}>
+          <button className="btn btn-lg flex-1" title={dictation ? "Nghe lại câu (Shift+Space)" : "Nghe lại câu"} onClick={() => go(idx)}>
             <RotateCcw className="size-5" /> Nghe lại
           </button>
           {!dictation && (
