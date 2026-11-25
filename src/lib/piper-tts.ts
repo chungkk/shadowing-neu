@@ -12,7 +12,7 @@ export const SERVER_PIPER_VOICES = {
   "piper:adam_bua": {
     file: "adam_bua_v3_int8.onnx",
     url: "https://hallovn.de/download/media/kokoro/adam_bua_v3_int8.onnx",
-    cacheVer: "v3",
+    cacheVer: "v3b",
     enableGerman: true,
   },
   "piper:lac_phi": {
@@ -24,7 +24,7 @@ export const SERVER_PIPER_VOICES = {
   "piper:vtv2_thuyetminh": {
     file: "vtv2_thuyetminh_v3_int8.onnx",
     url: "https://hallovn.de/download/media/kokoro/vtv2_thuyetminh_v3_int8.onnx",
-    cacheVer: "v3",
+    cacheVer: "v3b",
     enableGerman: true,
   },
 } as const;

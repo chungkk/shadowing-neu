@@ -1,7 +1,14 @@
-import { germanWordToIpa, isGermanWord, isPriorityGermanWord } from './german-g2p';
+import {
+  germanWordToIpa,
+  isGermanAcronym,
+  isGermanClauseWord,
+  isGermanWord,
+  isPriorityGermanWord,
+  spellGermanAcronym,
+} from './german-g2p';
 import { normalizeVietnameseSpeech } from './normalize-text';
 
-export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v6';
+export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v7';
 export interface FrontendChunk {
   readonly text: string;
   readonly phonemes: string;
@@ -67,12 +74,28 @@ export class SeaDictionary {
     }
     return null;
   }
-  lookup(word: string, preferEnglish = false): string | null {
+  lookupEntry(
+    word: string,
+  ):
+    | { kind: 'common'; vi: string; en: string }
+    | { kind: 'single'; ipa: string; isEn: boolean }
+    | null {
     const key = word.toLowerCase().normalize('NFC');
     const common = this.search(key, true);
-    return common
-      ? (common[preferEnglish ? 1 : 0] ?? null)
-      : (this.search(key, false)?.[0] ?? null);
+    if (common && common[0] !== undefined && common[1] !== undefined) {
+      return { kind: 'common', vi: common[0], en: common[1] };
+    }
+    const single = this.search(key, false)?.[0];
+    if (single !== undefined) {
+      return { kind: 'single', ipa: single, isEn: single.startsWith('<en>') };
+    }
+    return null;
+  }
+  lookup(word: string, preferEnglish = false): string | null {
+    const entry = this.lookupEntry(word);
+    if (!entry) return null;
+    if (entry.kind === 'common') return preferEnglish ? entry.en : entry.vi;
+    return entry.ipa;
   }
 }
 
@@ -144,8 +167,30 @@ export const PRONUNCIATIONS: Readonly<Record<string, string>> = Object.assign(
     javascript: '<en>ʤˈɑːvəskɹɪpt',
     python: '<en>pˈaɪθɑːn',
     iphone: '<en>ˈaɪfoʊn',
+    ipad: '<en>ˈaɪpæd',
     macbook: '<en>mˈækbʊk',
+    macos: '<en>mˈæk oʊ ˈɛs',
+    ios: '<en>aɪ oʊ ˈɛs',
     colab: '<en>kˈoʊlæb',
+    claude: '<en>klˈɔːd',
+    gemini: '<en>ʤˈɛmɪnaɪ',
+    deepseek: '<en>dˈiːpsiːk',
+    anthropic: '<en>ænθɹˈɑːpɪk',
+    perplexity: '<en>pɚplˈɛksɪti',
+    whatsapp: '<en>wˈɑːtsæp',
+    instagram: '<en>ˈɪnstəɡɹæm',
+    facebook: '<en>fˈeɪsbʊk',
+    linkedin: '<en>lˈɪŋktɪn',
+    telegram: '<en>tˈɛlɪɡɹæm',
+    discord: '<en>dˈɪskɔːɹd',
+    spotify: '<en>spˈɑːtɪfaɪ',
+    netflix: '<en>nˈɛtflɪks',
+    wifi: '<en>wˈaɪfaɪ',
+    podcast: '<en>pˈɑːdkæst',
+    livestream: '<en>lˈaɪvstɹiːm',
+    website: '<en>wˈɛbsaɪt',
+    paypal: '<en>pˈeɪpæl',
+    bitcoin: '<en>bˈɪtkɔɪn',
     // All-caps words said as words, not letters.
     ram: '<en>ɹˈæm',
     sim: '<en>sˈɪm',
@@ -154,9 +199,11 @@ export const PRONUNCIATIONS: Readonly<Record<string, string>> = Object.assign(
 );
 
 /** Acronyms said letter by letter although the dictionary has a (wrong) word reading for them. */
-const SPELLED: ReadonlySet<string> = new Set(['aws', 'ide', 'otp', 'adk', 'adlc']);
+const SPELLED: ReadonlySet<string> = new Set([
+  'aws', 'ide', 'otp', 'adk', 'adlc', 'ai', 'api', 'url', 'pdf', 'vpn', 'gps', 'usb', 'ssd', 'cpu', 'gpu', 'llm', 'tts',
+]);
 
-type Lookup = Pick<SeaDictionary, 'lookup'>;
+type Lookup = Pick<SeaDictionary, 'lookup'> & Partial<Pick<SeaDictionary, 'lookupEntry'>>;
 const ACRONYM = /^[A-Z]{2,}$/u;
 const spell = (word: string): string | null => {
   const letters = Array.from(word.toLowerCase(), (char) => LETTERS[char]);
@@ -268,8 +315,8 @@ export function normalizeKokoroText(text: string): string {
   }
 }
 
-function adapt(raw: string, source: string): string {
-  const english = raw.startsWith('<en>');
+function adapt(raw: string, source: string, forceEnglish = false): string {
+  const english = forceEnglish || raw.startsWith('<en>');
   let phones = raw
     .replace(/<\/?en>/gu, '')
     .replace(/tʃ/gu, 'ʧ')
@@ -290,9 +337,24 @@ function adapt(raw: string, source: string): string {
   return phones;
 }
 
+const VI_DIACRITIC = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/iu;
+const CLAUSE_BREAK = /^[.!?;:—…"“”()]+$/u;
+
+type TokenEntry = ReturnType<SeaDictionary['lookupEntry']>;
+
+function readEntry(dictionary: Lookup, word: string): TokenEntry {
+  if (typeof dictionary.lookupEntry === 'function') return dictionary.lookupEntry(word);
+  const vi = dictionary.lookup(word, false);
+  const en = dictionary.lookup(word, true);
+  if (vi === null && en === null) return null;
+  if (vi !== null && en !== null && vi !== en) return { kind: 'common', vi, en };
+  const ipa = vi ?? en!;
+  return { kind: 'single', ipa, isEn: ipa.startsWith('<en>') };
+}
+
 export function phonemizeChunks(
   text: string,
-  dictionary: Pick<SeaDictionary, 'lookup'>,
+  dictionary: Lookup,
   vocab: Readonly<Record<string, number>>,
   options?: { enableGerman?: boolean },
 ): { normalized: string; chunks: readonly FrontendChunk[]; warnings: readonly string[] } {
@@ -333,34 +395,192 @@ export function phonemizeChunks(
         if (boundary.test(words[index - 1] ?? '')) return index;
     return words.length;
   };
-  for (const token of normalized.match(/[\p{L}\p{M}]+(?:['’-][\p{L}\p{M}]+)*|[^\s\p{L}\p{M}]/gu) ??
-    []) {
+
+  const allTokens = normalized.match(/[\p{L}\p{M}]+(?:['’-][\p{L}\p{M}]+)*|[^\s\p{L}\p{M}]/gu) ?? [];
+
+  // Split into clauses so language context (DE sentence / EN phrase / mixed VI) is accurate per clause.
+  type TokenMeta = {
+    token: string;
+    isWord: boolean;
+    clauseId: number;
+    entry: TokenEntry;
+    hasViDiacritic: boolean;
+    isPureVi: boolean;
+    isExplicitEn: boolean;
+    isCommon: boolean;
+    isDePriority: boolean;
+    isDeClause: boolean;
+    isDeAcronym: boolean;
+  };
+
+  let curClause = 0;
+  const metas: TokenMeta[] = allTokens.map((token) => {
+    const isWord = /^\p{L}/u.test(token);
+    if (!isWord) {
+      const cid = curClause;
+      if (CLAUSE_BREAK.test(token)) curClause++;
+      return {
+        token,
+        isWord: false,
+        clauseId: cid,
+        entry: null,
+        hasViDiacritic: false,
+        isPureVi: false,
+        isExplicitEn: false,
+        isCommon: false,
+        isDePriority: false,
+        isDeClause: false,
+        isDeAcronym: false,
+      };
+    }
+    const lower = token.toLowerCase();
+    const hasViDiacritic = VI_DIACRITIC.test(token);
+    const isDeAcronym = enableGerman && isGermanAcronym(token);
+    const isDePriority = enableGerman && !hasViDiacritic && !isDeAcronym && isPriorityGermanWord(token);
+    const isDeClause = enableGerman && !hasViDiacritic && isGermanClauseWord(token);
+    const hasPron = PRONUNCIATIONS[lower] !== undefined;
+    const entry = hasViDiacritic || isDePriority || hasPron ? readEntry(dictionary, token) : readEntry(dictionary, token);
+    const isCommon = !hasViDiacritic && !hasPron && entry?.kind === 'common';
+    const isExplicitEn = !hasViDiacritic && !isDePriority && !isDeAcronym && (hasPron || (entry?.kind === 'single' && entry.isEn));
+    const isPureVi = hasViDiacritic || (!isDePriority && !isDeAcronym && !hasPron && entry?.kind === 'single' && !entry.isEn);
+    return {
+      token,
+      isWord: true,
+      clauseId: curClause,
+      entry,
+      hasViDiacritic,
+      isPureVi,
+      isExplicitEn,
+      isCommon,
+      isDePriority,
+      isDeClause,
+      isDeAcronym,
+    };
+  });
+
+  // Compute clause-level German / English modes
+  const clauseStats = new Map<
+    number,
+    { viDiacritics: number; pureVi: number; deStrong: number; deClause: number; enExplicit: number; common: number; words: number }
+  >();
+  for (const m of metas) {
+    if (!m.isWord) continue;
+    let st = clauseStats.get(m.clauseId);
+    if (!st) {
+      st = { viDiacritics: 0, pureVi: 0, deStrong: 0, deClause: 0, enExplicit: 0, common: 0, words: 0 };
+      clauseStats.set(m.clauseId, st);
+    }
+    st.words++;
+    if (m.hasViDiacritic) st.viDiacritics++;
+    if (m.isPureVi && !m.isDeClause) st.pureVi++;
+    if (m.isDePriority || m.isDeAcronym) st.deStrong++;
+    if (m.isDeClause) st.deClause++;
+    if (m.isExplicitEn && !m.isDeClause) st.enExplicit++;
+    if (m.isCommon) st.common++;
+  }
+
+  const clauseMode = new Map<number, 'de' | 'en' | 'vi'>();
+  for (const [cid, st] of clauseStats) {
+    if (enableGerman && st.viDiacritics === 0 && st.pureVi === 0 && (st.deClause >= 2 || (st.deStrong >= 1 && st.deClause >= 1)) && st.deClause + st.deStrong >= st.enExplicit) {
+      clauseMode.set(cid, 'de');
+    } else if (st.viDiacritics === 0 && st.pureVi === 0 && st.enExplicit >= 1 && st.enExplicit + st.common >= 2) {
+      clauseMode.set(cid, 'en');
+    } else {
+      clauseMode.set(cid, 'vi');
+    }
+  }
+
+  // Helper: find nearest previous / next word in the same clause (spanning commas for EN phrases/lists)
+  const findNeighborWord = (idx: number, dir: -1 | 1): TokenMeta | null => {
+    const cid = metas[idx]!.clauseId;
+    for (let j = idx + dir; j >= 0 && j < metas.length; j += dir) {
+      const m = metas[j]!;
+      if (m.clauseId !== cid) return null;
+      if (m.isWord) return m;
+    }
+    return null;
+  };
+
+  for (let idx = 0; idx < metas.length; idx++) {
+    const m = metas[idx]!;
+    const { token } = m;
     let raw: string;
-    if (/^\p{L}/u.test(token)) {
+    if (m.isWord) {
+      const lower = token.toLowerCase();
+      const mode = clauseMode.get(m.clauseId) ?? 'vi';
       // Six or more capitals is a shouted word (OPENROUTER, NVIDIA), not letters to spell.
       const acronym = ACRONYM.test(token) && token.length <= 5;
-      const dePriority = enableGerman && !acronym && isPriorityGermanWord(token) ? germanWordToIpa(token) : '';
-      const known = dePriority ? null : (PRONUNCIATIONS[token.toLowerCase()] ?? dictionary.lookup(token, acronym));
-      const compound = dePriority || known || acronym ? null : compoundReading(token, dictionary);
-      const deFallback =
-        enableGerman && !dePriority && !known && !acronym && compound === null && isGermanWord(token)
-          ? germanWordToIpa(token)
-          : '';
-      if (dePriority) raw = dePriority;
-      else if ((acronym && !known?.startsWith('<en>')) || SPELLED.has(token.toLowerCase()))
-        raw = Array.from(token.toLowerCase(), (char) => LETTERS[char] ?? '').join(' ');
-      else if (known) raw = adapt(known, token);
-      else if (deFallback) raw = deFallback;
-      else if (compound !== null) raw = compound;
-      else {
-        warnings.push(`Spelled out-of-dictionary token: ${token}`);
-        // Letters the voice cannot say (other scripts) are left out rather than failing the line.
-        raw = Array.from(token.toLowerCase(), (char) => LETTERS[char] ?? '')
-          .filter(Boolean)
-          .join(' ');
-        if (!raw) {
-          warnings.push(`Unpronounceable token left out: ${token}`);
-          continue;
+      const pronOverride = PRONUNCIATIONS[lower] ?? null;
+
+      // Decide if an ambiguous VI/EN common word should use English IPA in this local context
+      let preferEnglish = acronym || mode === 'en';
+      if (!preferEnglish && m.isCommon) {
+        const prev = findNeighborWord(idx, -1);
+        const next = findNeighborWord(idx, 1);
+        const prevForeign = Boolean(prev && (prev.isExplicitEn || prev.isCommon));
+        const nextForeign = Boolean(next && (next.isExplicitEn || next.isCommon));
+        const prevStrongEn = Boolean(prev && prev.isExplicitEn);
+        const nextStrongEn = Boolean(next && next.isExplicitEn);
+        // Either flanked by EN/common on both sides (e.g. "welcome to my YouTube", "can, man, plan"),
+        // or at start/end of a clause directly touching a strong EN word (e.g. "The model", "sign in").
+        if (
+          (prevForeign && nextForeign && (prevStrongEn || nextStrongEn)) ||
+          (!prev && nextStrongEn) ||
+          (!next && prevStrongEn)
+        ) {
+          preferEnglish = true;
+        }
+      }
+
+      // 1. German acronym (ARD, ZDF, WDR, AOK, GmbH, BMW...)
+      if (m.isDeAcronym) {
+        raw = spellGermanAcronym(token);
+      }
+      // 2. German clause mode: read German words via German G2P (keep explicit English brands/acronyms intact)
+      else if (mode === 'de' && !pronOverride && !(acronym && !m.isDeAcronym) && !SPELLED.has(lower)) {
+        raw = germanWordToIpa(token);
+      }
+      // 3. Priority German word inside a Vietnamese/mixed sentence (Berlin, Sparkasse, Tagesschau, Rewe, Anmeldung...)
+      else if (m.isDePriority && !acronym) {
+        raw = germanWordToIpa(token);
+      }
+      // 4. Explicit spelled acronyms (AI, API, AWS, URL...)
+      else if (SPELLED.has(lower)) {
+        raw = Array.from(lower, (char) => LETTERS[char] ?? '').join(' ');
+      }
+      // 5. Curated English/brand pronunciations
+      else if (pronOverride) {
+        raw = adapt(pronOverride, token, true);
+      }
+      // 6. Standard acronym not in English dictionary
+      else if (acronym && !(m.entry?.kind === 'single' && m.entry.isEn)) {
+        raw = Array.from(lower, (char) => LETTERS[char] ?? '').join(' ');
+      }
+      // 7. Dictionary lookup (with context-aware preferEnglish & proper adapt flag!)
+      else if (m.entry) {
+        if (m.entry.kind === 'common') {
+          raw = adapt(preferEnglish ? m.entry.en : m.entry.vi, token, preferEnglish);
+        } else {
+          raw = adapt(m.entry.ipa, token, m.entry.isEn);
+        }
+      }
+      // 8. Out-of-dictionary fallback: try German BEFORE English compound splitting when enableGerman is on
+      else if (enableGerman && isGermanWord(token)) {
+        raw = germanWordToIpa(token);
+      } else {
+        const compound = acronym ? null : compoundReading(token, dictionary);
+        if (compound !== null) {
+          raw = compound;
+        } else {
+          warnings.push(`Spelled out-of-dictionary token: ${token}`);
+          // Letters the voice cannot say (other scripts) are left out rather than failing the line.
+          raw = Array.from(lower, (char) => LETTERS[char] ?? '')
+            .filter(Boolean)
+            .join(' ');
+          if (!raw) {
+            warnings.push(`Unpronounceable token left out: ${token}`);
+            continue;
+          }
         }
       }
     } else if (/^[.,!?;:—…"()“”]$/u.test(token)) raw = token;
