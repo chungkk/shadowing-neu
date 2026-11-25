@@ -179,9 +179,9 @@ async function Detail({ params, searchParams }: PageProps<"/admin/users/[id]">) 
                 </div>
               </Row>
               <Row label="Ngôn ngữ app">{user.lang ?? <span className="text-muted">chưa chọn</span>}</Row>
-              <Row label="Mở khoá bài">
-                {unlocks.count} bài · đã trả {unlocks.spent} kim cương
-              </Row>
+              {unlocks.count > 0 && (
+                <Row label="Bài từng mở / lưu riêng">{unlocks.count} bài</Row>
+              )}
             </dl>
           </SectionCard>
         </div>

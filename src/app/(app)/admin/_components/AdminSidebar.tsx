@@ -107,9 +107,8 @@ const GROUPS: NavGroup[] = [
     items: [
       {
         href: "/admin/access",
-        label: "Khoá bài & Kim cương",
+        label: "Kim cương & Xếp hạng",
         icon: Lock,
-        badge: (c) => (c.lockEnabled ? { text: "Bật", tone: "ok" } : { text: "Tắt", tone: "muted" }),
       },
       {
         href: "/admin/system",

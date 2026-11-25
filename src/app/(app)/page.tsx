@@ -85,7 +85,7 @@ const HOW_IT_WORKS = [
 const HOME_FAQ = [
   {
     q: "HalloVN có miễn phí thật không?",
-    a: "Có. Bạn dùng miễn phí toàn bộ chức năng cốt lõi bằng một tài khoản duy nhất. Khi luyện chép chính tả bạn kiếm thêm kim cương để mở thêm bài học hoặc lưu bài từ video YouTube riêng.",
+    a: "Có. Toàn bộ bài học video và chức năng cốt lõi đều mở miễn phí bằng một tài khoản duy nhất. Khi luyện chép chính tả bạn tích thêm kim cương để tính điểm trên bảng xếp hạng học viên.",
   },
   {
     q: "Có cần tạo tài khoản trước khi học thử không?",

@@ -39,7 +39,7 @@ function OwnVideo() {
         </p>
       </div>
       <YouTubeUrlForm secondary />
-      <p className="text-xs text-muted">Học thử miễn phí (không lưu tiến độ) — hoặc đổi kim cương để lưu thành bài học riêng.</p>
+      <p className="text-xs text-muted">Học thử miễn phí ngay lập tức — hoặc lưu thành bài học riêng để giữ tiến độ.</p>
     </section>
   );
 }

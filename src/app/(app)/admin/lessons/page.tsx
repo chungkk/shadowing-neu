@@ -8,14 +8,12 @@ import {
   FolderKanban,
   LayoutList,
   ListVideo,
-  Lock,
   Plus,
   Search,
   Sparkles,
   UserRound,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
-import { lockSettings } from "@/lib/access";
 import { fillLessonChannels } from "@/lib/channels";
 import {
   adminListOwnLessons,
@@ -28,7 +26,7 @@ import {
 import { channelPath, lessonPath } from "@/lib/slug";
 import LevelBadge from "@/components/LevelBadge";
 import { ListSkeleton } from "@/components/Skeleton";
-import { removeLesson, toggleFreeLesson, toggleLessonPublished } from "../actions";
+import { removeLesson, toggleLessonPublished } from "../actions";
 import DeleteButton from "../DeleteButton";
 import AdminPageHeader from "../_components/AdminPageHeader";
 import KpiCard from "../_components/KpiCard";
@@ -42,7 +40,7 @@ const fmtDur = (sec?: number) => {
 };
 
 type Summary = ReturnType<typeof listLessons>[number];
-type Filter = "all" | "published" | "draft" | "free" | "no_dict";
+type Filter = "all" | "published" | "draft" | "no_dict";
 type ViewMode = "channel" | "table";
 type TabMode = "site" | "own";
 
@@ -50,12 +48,11 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Tất cả" },
   { id: "published", label: "Đã đăng" },
   { id: "draft", label: "Nháp" },
-  { id: "free", label: "Miễn phí" },
   { id: "no_dict", label: "Tắt Dictation" },
 ];
 const NO_CHANNEL = "Chưa rõ kênh";
 
-function LessonRow({ l, free, showChannel = false }: { l: Summary; free: boolean; showChannel?: boolean }) {
+function LessonRow({ l, showChannel = false }: { l: Summary; showChannel?: boolean }) {
   const dur = fmtDur(l.duration);
   return (
     <li className="flex flex-wrap items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-card-2/50 sm:px-4">
@@ -89,16 +86,6 @@ function LessonRow({ l, free, showChannel = false }: { l: Summary; free: boolean
           >
             {l.published ? <CircleCheck className="size-3.5" aria-hidden /> : <Circle className="size-3.5" aria-hidden />}
             {l.published ? "Đã đăng" : "Nháp"}
-          </button>
-        </form>
-        <form action={toggleFreeLesson.bind(null, l.id, !free)}>
-          <button
-            title={free ? "Bấm để bỏ miễn phí" : "Bấm để cho khách học miễn phí bài này"}
-            aria-pressed={free}
-            className={`badge hit-44 min-h-7 cursor-pointer gap-1 px-2.5 transition-shadow hover:ring-1 hover:ring-current/40 ${free ? "badge-gold" : "badge-muted"}`}
-          >
-            {free ? <CircleCheck className="size-3.5" aria-hidden /> : <Circle className="size-3.5" aria-hidden />}
-            Miễn phí
           </button>
         </form>
         <Link href={lessonPath(l.slug)} className="btn btn-ghost btn-sm">
@@ -135,7 +122,7 @@ function byChannel(lessons: Summary[]): Group[] {
   );
 }
 
-function ChannelGroup({ g, free }: { g: Group; free: Set<number> }) {
+function ChannelGroup({ g }: { g: Group }) {
   const published = g.lessons.filter((l) => l.published).length;
   const drafts = g.lessons.length - published;
   const known = g.name !== NO_CHANNEL;
@@ -181,7 +168,7 @@ function ChannelGroup({ g, free }: { g: Group; free: Set<number> }) {
       </summary>
       <ul className="divide-y divide-line">
         {g.lessons.map((l) => (
-          <LessonRow key={l.id} l={l} free={free.has(l.id)} />
+          <LessonRow key={l.id} l={l} />
         ))}
       </ul>
     </details>
@@ -227,7 +214,7 @@ function OwnLessonsList({ items }: { items: AdminOwnLessonRow[] }) {
               </Link>
               <DeleteButton
                 action={removeLesson.bind(null, l.id)}
-                confirmText={`Xoá bài riêng “${l.title}” của ${l.ownerName}? Kim cương đã dùng tạo bài sẽ được hoàn lại.`}
+                confirmText={`Xoá bài riêng “${l.title}” của ${l.ownerName}?`}
               />
             </div>
           </li>
@@ -249,14 +236,11 @@ async function LessonsContent({ searchParams }: { searchParams: Promise<Record<s
 
   const lessons = listLessons({ includeDrafts: true });
   const ownLessons = adminListOwnLessons();
-  const lock = lockSettings();
-  const free = new Set(lock.free.filter((id) => lessons.some((l) => l.id === id)));
 
   const counts: Record<Filter, number> = {
     all: lessons.length,
     published: lessons.filter((l) => l.published).length,
     draft: lessons.filter((l) => !l.published).length,
-    free: free.size,
     no_dict: lessons.filter((l) => !l.dictation).length,
   };
   const channelCount = byChannel(lessons).filter((g) => g.name !== NO_CHANNEL).length;
@@ -264,14 +248,7 @@ async function LessonsContent({ searchParams }: { searchParams: Promise<Record<s
   const qNorm = q.toLowerCase();
   const shown = lessons.filter(
     (l) =>
-      (filter === "all" ||
-        (filter === "published"
-          ? l.published
-          : filter === "draft"
-            ? !l.published
-            : filter === "free"
-              ? free.has(l.id)
-              : !l.dictation)) &&
+      (filter === "all" || (filter === "published" ? l.published : filter === "draft" ? !l.published : !l.dictation)) &&
       (!lv || l.level === lv) &&
       (!qNorm || l.title.toLowerCase().includes(qNorm) || (l.channel?.toLowerCase().includes(qNorm) ?? false) || l.slug.includes(qNorm)),
   );
@@ -310,27 +287,11 @@ async function LessonsContent({ searchParams }: { searchParams: Promise<Record<s
         }
       />
 
-      {/* Dải trạng thái khoá bài học gọn — cấu hình chi tiết ở /admin/access */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-sidebar px-4 py-2.5 text-xs">
-        <div className="flex flex-wrap items-center gap-2">
-          <Lock className={`size-4 ${lock.enabled ? "text-ok-text" : "text-muted"}`} aria-hidden />
-          <span className="font-semibold text-foreground">Khoá bài học:</span>
-          {lock.enabled ? (
-            <span className="badge badge-ok">Đang bật · {fmt(free.size)} bài miễn phí</span>
-          ) : (
-            <span className="badge badge-muted">Đang tắt — mọi bài đều mở</span>
-          )}
-        </div>
-        <Link href="/admin/access" className="font-semibold text-link hover:underline">
-          Cấu hình khoá & kim cương →
-        </Link>
-      </div>
-
       {/* 4 KPI chuẩn hoá */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard tone="de" label="Đã đăng" value={counts.published} sub={`${fmt(channelCount)} kênh YouTube`} />
         <KpiCard tone="laixe" label="Bản nháp" value={counts.draft} sub="Ẩn với người học" />
-        <KpiCard tone="gem" label="Bật Dictation" value={lessons.length - counts.no_dict} sub={`${fmt(counts.free)} bài miễn phí`} />
+        <KpiCard tone="gem" label="Bật Dictation" value={lessons.length - counts.no_dict} sub="Mọi bài đã đăng đều mở" />
         <KpiCard
           tone="ink"
           label="Bài riêng học viên"
@@ -425,14 +386,14 @@ async function LessonsContent({ searchParams }: { searchParams: Promise<Record<s
             view === "channel" ? (
               <div className="flex flex-col gap-3">
                 {groups.map((g) => (
-                  <ChannelGroup key={g.name} g={g} free={free} />
+                  <ChannelGroup key={g.name} g={g} />
                 ))}
               </div>
             ) : (
               <div className="card overflow-hidden p-0">
                 <ul className="divide-y divide-line">
                   {shown.map((l) => (
-                    <LessonRow key={l.id} l={l} free={free.has(l.id)} showChannel />
+                    <LessonRow key={l.id} l={l} showChannel />
                   ))}
                 </ul>
               </div>

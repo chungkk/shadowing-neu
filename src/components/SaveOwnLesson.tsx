@@ -80,7 +80,7 @@ export default function SaveOwnLesson({
         )}
       </p>
       <p className="text-muted">
-        Phụ đề được làm kỹ hơn (Whisper AI nghe lại khi video chỉ có phụ đề tự động), lưu tiến độ, có chế độ Chính tả — chỉ mình bạn thấy. Bài riêng không tính kim cương.
+        Phụ đề được làm kỹ hơn (Whisper AI nghe lại khi video chỉ có phụ đề tự động), lưu tiến độ, có chế độ Chính tả — chỉ mình bạn thấy. Bài riêng không tính kim cương xếp hạng.
       </p>
       {!loggedIn ? (
         <LoginLink href="/login" className="btn btn-primary self-start max-sm:w-full">
@@ -102,7 +102,7 @@ export default function SaveOwnLesson({
                   ? `Cần thêm ${fmt(price - points)} kim cương`
                   : price
                     ? `Lưu bài · ${fmt(price)} kim cương`
-                    : "Lưu bài (admin miễn phí)"}
+                    : "Lưu thành bài học riêng"}
           </button>
         </>
       )}

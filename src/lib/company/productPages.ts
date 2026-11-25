@@ -83,7 +83,7 @@ const shadowing: ProductPage = {
                 {
                     title: 'Deutsch mit echten Videos',
                     body: 'Die Bibliothek sammelt Videos aus dem deutschen Alltag: Nachrichten, Reportagen und Lernvideos, jeweils mit Niveau und Anzahl der Sätze. Oder du fügst einen YouTube-Link ein und übst mit genau dem Video, das dich interessiert.',
-                    points: ['Lektionen nach Niveau filtern', 'Jedes YouTube-Video mit deutschen Untertiteln wird zur Übung', 'Einige Lektionen sind ohne Anmeldung frei'],
+                    points: ['Lektionen nach Niveau filtern', 'Jedes YouTube-Video mit deutschen Untertiteln wird zur Übung', 'Alle Lektionen sind frei zugänglich'],
                     link: { href: '/tieng-duc', label: 'Zu den Lektionen' },
                 },
                 {
@@ -118,7 +118,7 @@ const shadowing: ProductPage = {
             galleryTitle: 'Screenshots',
             faq: [
                 { q: 'Für wen ist HalloVN?', a: 'Für Vietnamesinnen und Vietnamesen, die in Deutschland leben oder bald hierherkommen, etwa zum Studium, zur Ausbildung, zur Arbeit oder zur Familie. Erklärungen, Bedeutungen und Übersetzungen sind auf Vietnamesisch.' },
-                { q: 'Was kostet HalloVN?', a: 'Nichts. Das Konto ist kostenlos und es gibt keine Käufe. Einige Video-Lektionen sind ohne Anmeldung frei, mit Konto wählst du zwei weitere selbst. Weitere Lektionen schaltest du mit Diamanten frei, die du beim Üben sammelst.' },
+                { q: 'Was kostet HalloVN?', a: 'Nichts. Das Konto ist kostenlos, es gibt keine Käufe und alle Video-Lektionen sind frei zugänglich. Beim Diktat sammelst du Diamanten als Punkte für die Bestenliste.' },
                 { q: 'Brauche ich ein Konto?', a: 'Zum Ausprobieren nicht. Mit einem Konto wird dein Fortschritt gespeichert, du hast ein eigenes Vokabelheft und siehst deine Statistik in allen Bereichen.' },
                 { q: 'In welcher Sprache ist die Oberfläche?', a: 'Die Oberfläche, die Bedeutungen und die Übersetzungen sind auf Vietnamesisch. Videos, Transkripte und Prüfungsfragen sind auf Deutsch, so wie in der Prüfung.' },
                 { q: 'Welche Videos kann ich nutzen?', a: 'Die Lektionen der Bibliothek oder jedes YouTube-Video mit deutschen Untertiteln, dessen Link du einfügst. Die Videos bleiben Eigentum ihrer Urheber auf YouTube.' },
@@ -138,7 +138,7 @@ const shadowing: ProductPage = {
                 {
                     title: 'German with real videos',
                     body: 'The library collects videos from everyday German life: news, documentaries and learning videos, each with its level and number of sentences. Or paste a YouTube link and practise with exactly the video you care about.',
-                    points: ['Filter lessons by level', 'Any YouTube video with German subtitles becomes an exercise', 'Some lessons are free without signing in'],
+                    points: ['Filter lessons by level', 'Any YouTube video with German subtitles becomes an exercise', 'All lessons are open to everyone'],
                     link: { href: '/tieng-duc', label: 'Go to the lessons' },
                 },
                 {
@@ -173,7 +173,7 @@ const shadowing: ProductPage = {
             galleryTitle: 'Screenshots',
             faq: [
                 { q: 'Who is HalloVN for?', a: 'For Vietnamese people who live in Germany or are about to move here, for example to study, train, work or join family. Explanations, meanings and translations are in Vietnamese.' },
-                { q: 'How much does HalloVN cost?', a: 'Nothing. The account is free and there are no purchases. Some video lessons are free without signing in; with an account you pick two more yourself. Further lessons are unlocked with diamonds you collect while practising.' },
+                { q: 'How much does HalloVN cost?', a: 'Nothing. The account is free, there are no purchases and all video lessons are open to everyone. In dictation mode you collect diamonds as points for the leaderboard.' },
                 { q: 'Do I need an account?', a: 'Not to try it out. With an account your progress is saved, you get your own vocabulary notebook and you see your statistics in every section.' },
                 { q: 'What language is the interface in?', a: 'The interface, meanings and translations are in Vietnamese. Videos, transcripts and exam questions are in German, just like in the exam.' },
                 { q: 'Which videos can I use?', a: 'The library lessons, or any YouTube video with German subtitles whose link you paste in. The videos remain the property of their creators on YouTube.' },
@@ -193,7 +193,7 @@ const shadowing: ProductPage = {
                 {
                     title: 'Tiếng Đức qua video thật',
                     body: 'Thư viện gồm video đời sống ở Đức: thời sự, phóng sự và video học tiếng, mỗi bài ghi rõ trình độ và số câu. Hoặc dán link YouTube để luyện với đúng video bạn thích.',
-                    points: ['Lọc bài học theo trình độ', 'Video YouTube nào có phụ đề tiếng Đức cũng thành bài luyện', 'Một số bài học miễn phí, không cần đăng nhập'],
+                    points: ['Lọc bài học theo trình độ', 'Video YouTube nào có phụ đề tiếng Đức cũng thành bài luyện', 'Tất cả bài học đều mở tự do'],
                     link: { href: '/tieng-duc', label: 'Xem bài học' },
                 },
                 {
@@ -228,7 +228,7 @@ const shadowing: ProductPage = {
             galleryTitle: 'Ảnh chụp màn hình',
             faq: [
                 { q: 'HalloVN dành cho ai?', a: 'Cho người Việt đang sống ở Đức hoặc sắp sang, ví dụ để du học, học nghề, đi làm hay đoàn tụ gia đình. Giải thích, nghĩa từ và bản dịch đều bằng tiếng Việt.' },
-                { q: 'HalloVN có mất phí không?', a: 'Không. Tài khoản miễn phí và không có mua bán gì. Một số bài video học được mà không cần đăng nhập, có tài khoản thì tự chọn thêm 2 bài. Các bài khác mở bằng kim cương bạn kiếm được khi luyện tập.' },
+                { q: 'HalloVN có mất phí không?', a: 'Không. Tài khoản miễn phí, không có mua bán gì và toàn bộ bài học video đều mở tự do. Khi chép chính tả bạn tích kim cương làm điểm trên bảng xếp hạng.' },
                 { q: 'Có cần tài khoản không?', a: 'Học thử thì không cần. Có tài khoản thì tiến độ được lưu lại, bạn có sổ từ vựng riêng và xem được thống kê ở mọi phần.' },
                 { q: 'Giao diện dùng ngôn ngữ gì?', a: 'Giao diện, nghĩa từ và bản dịch bằng tiếng Việt. Video, transcript và câu hỏi thi giữ nguyên tiếng Đức như khi thi thật.' },
                 { q: 'Luyện được với những video nào?', a: 'Các bài trong thư viện, hoặc bất kỳ video YouTube có phụ đề tiếng Đức mà bạn dán link vào. Video vẫn thuộc quyền sở hữu của tác giả trên YouTube.' },

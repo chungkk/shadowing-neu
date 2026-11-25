@@ -1,14 +1,14 @@
 /**
- * Khoá bài học (admin bật trong Cài đặt): khách chỉ học được các bài admin chọn miễn phí (không giới hạn số bài); người đã đăng nhập chọn thêm
- * FREE_PICKS bài bất kỳ, sau đó mỗi bài mở khoá tốn LESSON_PRICE kim cương (điểm chính tả). Dùng được cả trình duyệt lẫn server.
+ * Mọi bài học đã đăng đều mở tự do; kim cương chỉ dùng làm điểm tích luỹ trên bảng xếp hạng.
+ * Giữ các hằng số và kiểu dữ liệu để tương thích ngược với API và ứng dụng di động.
  */
 
-export const FREE_PICKS = 2; // số bài người dùng mới được tự chọn mở miễn phí
-export const LESSON_PRICE = 1000; // kim cương / bài sau khi hết lượt chọn
-export const OWN_LESSON_PRICE = 1000; // kim cương để lưu 1 video YouTube tự dán thành bài học riêng (lib/own-lesson.ts)
+export const FREE_PICKS = 0;
+export const LESSON_PRICE = 0;
+export const OWN_LESSON_PRICE = 0;
 
-/** open = không khoá (chưa bật khoá / admin) · free = bài miễn phí · unlocked = người này đã mở · locked = chưa mở */
+/** open = mở tự do · các giá trị còn lại giữ cho kiểu dữ liệu tương thích ngược */
 export type LessonAccess = "open" | "free" | "unlocked" | "locked";
 
-/** Tình trạng khoá bài của người đang xem — enabled = false thì mọi bài đều mở */
+/** Tình trạng khoá bài — enabled luôn là false (mọi bài đều mở) */
 export type LockInfo = { enabled: boolean; loggedIn: boolean; picksLeft: number; price: number; points: number };

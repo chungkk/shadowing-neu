@@ -1554,8 +1554,9 @@ export function deleteProgress(userId: number, source: string) {
 export type Points = { total: number; today: number }; // today: điểm hôm nay (theo giờ máy người học) — có thể âm
 
 /**
- * Điểm = cộng của các câu đúng − điểm trừ khi xem từ − điểm đã trả để mở khoá bài (khoản mở khoá không tính vào "hôm nay":
- * hôm nay chỉ đo điểm kiếm được). tzOffset: phút, như Date.getTimezoneOffset() (VN = -420) */
+ * Điểm = cộng của các câu đúng − điểm trừ khi xem từ (kim cương thuần tuý tích điểm cho bảng xếp hạng, không bị trừ khi mở/lưu bài).
+ * tzOffset: phút, như Date.getTimezoneOffset() (VN = -420)
+ */
 export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Points {
   const dayStart = Date.parse(new Date(now - tzOffset * 60_000).toISOString().slice(0, 10)) + tzOffset * 60_000;
   const r = conn()
@@ -1563,10 +1564,9 @@ export function getPoints(userId: number, tzOffset = 0, now = Date.now()): Point
       `SELECT COALESCE(SUM(pts), 0) AS total, COALESCE(SUM(CASE WHEN at >= ? THEN pts END), 0) AS today FROM (
          SELECT pts, at FROM dict_points WHERE user_id = ?
          UNION ALL SELECT -n * pts, at FROM dict_hints WHERE user_id = ?
-         UNION ALL SELECT -cost, NULL FROM lesson_unlocks WHERE user_id = ?
        )`,
     )
-    .get(dayStart, userId, userId, userId) as Points;
+    .get(dayStart, userId, userId) as Points;
   return { total: r.total, today: r.today };
 }
 
@@ -1964,8 +1964,7 @@ export function adminListUsers(): AdminUserRow[] {
          ${LAST_ACTIVE_SQL} AS last_active,
          (SELECT COALESCE(SUM(p), 0) FROM (
             SELECT pts AS p FROM dict_points WHERE user_id = u.id
-            UNION ALL SELECT -n * pts FROM dict_hints WHERE user_id = u.id
-            UNION ALL SELECT -cost FROM lesson_unlocks WHERE user_id = u.id)) AS points,
+            UNION ALL SELECT -n * pts FROM dict_hints WHERE user_id = u.id)) AS points,
          (SELECT COUNT(*) FROM vocab WHERE user_id = u.id) AS vocab_n,
          (SELECT COUNT(*) FROM progress WHERE user_id = u.id) AS lessons_n,
          (SELECT COUNT(*) FROM quiz_answers WHERE user_id = u.id) AS quiz_n,

@@ -16,8 +16,6 @@ import {
   ChristmasVideoIcon as ListVideo,
 } from "@/components/FestiveIcons";
 import { requireAdmin } from "@/lib/auth";
-import { earnableFreePoints, lockSettings } from "@/lib/access";
-import { LESSON_PRICE } from "@/lib/lesson-lock";
 import {
   adminActivityDays,
   adminDashboardStats,
@@ -60,9 +58,6 @@ async function Overview() {
   const now = nowMs();
   const stats = adminDashboardStats(now);
   const days = adminActivityDays(30, now);
-  const lock = lockSettings();
-  const earnable = earnableFreePoints();
-  const lockShort = earnable < LESSON_PRICE;
 
   const recentUsers = adminListUsers().slice(0, 5);
   const recentFeedback = listFeedback(5);
@@ -87,16 +82,6 @@ async function Overview() {
       sub: "Kiểm tra phụ đề, bật Dictation và đăng công khai khi sẵn sàng.",
       href: "/admin/lessons?f=draft",
       cta: "Xem nháp",
-    });
-  }
-  if (lockShort) {
-    queueItems.push({
-      id: "lock",
-      tone: "warn",
-      title: "Bài miễn phí chưa đủ kim cương để bật khoá",
-      sub: `Hiện kiếm tối đa ${fmt(earnable)} / ${fmt(LESSON_PRICE)} kim cương cần để mở 1 bài.`,
-      href: "/admin/access",
-      cta: "Cấu hình",
     });
   }
   if (stats.users.unverified > 0) {
@@ -155,16 +140,12 @@ async function Overview() {
           sub={`Đậu ${pct(stats.quizzes.passed30, stats.quizzes.exams30)} · ${fmt(stats.quizzes.answersTotal)} lượt trả lời`}
         />
         <KpiCard
-          href={stats.feedback.open > 0 ? "/admin/feedback?status=open" : "/admin/access"}
-          tone={stats.feedback.open > 0 ? "red" : lock.enabled ? "ok" : "muted"}
-          label="Góp ý & Khoá bài"
-          icon={stats.feedback.open > 0 ? <MessageSquare className="size-4" aria-hidden /> : <Lock className="size-4" aria-hidden />}
-          value={stats.feedback.open > 0 ? `${fmt(stats.feedback.open)} mới` : lock.enabled ? "Khoá: Bật" : "Khoá: Tắt"}
-          sub={
-            stats.feedback.open > 0
-              ? `Tổng ${fmt(stats.feedback.total)} góp ý · Khoá bài ${lock.enabled ? "đang bật" : "đang tắt"}`
-              : `Không có góp ý tồn · ${fmt(lock.free.length)} bài miễn phí`
-          }
+          href={stats.feedback.open > 0 ? "/admin/feedback?status=open" : "/admin/feedback"}
+          tone={stats.feedback.open > 0 ? "red" : "ok"}
+          label="Góp ý & Báo lỗi"
+          icon={<MessageSquare className="size-4" aria-hidden />}
+          value={stats.feedback.open > 0 ? `${fmt(stats.feedback.open)} mới` : "0 tồn"}
+          sub={`Tổng ${fmt(stats.feedback.total)} góp ý · Mọi bài học đều mở`}
         />
       </div>
 
@@ -279,7 +260,7 @@ async function Overview() {
             {[
               { href: "/admin/new", label: "Tạo bài học YouTube mới", sub: "Dán link & lấy phụ đề tự động", icon: Plus },
               { href: "/admin/channels", label: "Duyệt video từ Kênh", sub: `${fmt(stats.lessons.channels)} kênh đã lưu`, icon: Tv },
-              { href: "/admin/access", label: "Khoá bài & Kim cương", sub: lock.enabled ? `Đang bật · ${lock.free.length} bài miễn phí` : "Đang tắt — mở toàn bộ", icon: Lock },
+              { href: "/admin/access", label: "Kim cương & Xếp hạng", sub: "Mọi bài đều mở · tích điểm xếp hạng", icon: Lock },
               { href: "/admin/catalog", label: "Kho nội dung chuẩn", sub: "Lái xe · LiD · Từ vựng · Ngữ pháp", icon: BookOpenCheck },
             ].map((q) => (
               <Link
