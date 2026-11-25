@@ -2,7 +2,7 @@ import "server-only";
 import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { dictationWordCount, POINTS_CORRECT, POINTS_HINT } from "./dictation";
+import { comboGain, dictationWordCount, POINTS_CORRECT, POINTS_HINT } from "./dictation";
 import { isReservedSlug, slugify } from "./slug";
 import { isDue, MASTERY_GAP_DAYS, masteryOf, nextSchedule, type Grade, type Mastery } from "./srs";
 import { mergeIntoSentences, type Segment } from "./subtitles";
@@ -291,6 +291,8 @@ function open() {
   }
   // Tăng lên khi "đăng xuất mọi thiết bị": nằm trong chữ ký phiên nên mọi token cũ hết hiệu lực
   if (!userCols.some((c) => c.name === "session_version")) db.exec("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0");
+  // Chuỗi từ chép chính tả đúng liên tiếp hiện tại (để tính thưởng combo xuyên qua các câu/bài; sai hoặc xem từ → về 0)
+  if (!userCols.some((c) => c.name === "dict_streak")) db.exec("ALTER TABLE users ADD COLUMN dict_streak INTEGER NOT NULL DEFAULT 0");
   // Bài có luyện Chính tả không (admin bật khi thêm / sửa bài; bài cũ mặc định tắt)
   const lessonCols = db.prepare("PRAGMA table_info(lessons)").all() as { name: string }[];
   if (!lessonCols.some((c) => c.name === "dictation")) db.exec("ALTER TABLE lessons ADD COLUMN dictation INTEGER NOT NULL DEFAULT 0");
@@ -324,6 +326,11 @@ function open() {
   if (!pointCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_points ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
   // Điểm theo từng từ: câu có thể mới được điểm một phần
   if (!pointCols.some((c) => c.name === "open")) db.exec("ALTER TABLE dict_points ADD COLUMN open INTEGER NOT NULL DEFAULT 0");
+  // Số từ đúng đã tính điểm của câu (tách riêng với pts vì pts có thể cộng thêm thưởng chuỗi combo)
+  if (!pointCols.some((c) => c.name === "words")) {
+    db.exec("ALTER TABLE dict_points ADD COLUMN words INTEGER NOT NULL DEFAULT 0");
+    db.exec("UPDATE dict_points SET words = pts");
+  }
   // Điểm trừ khi xem từ lưu theo từng lần xem (trước đây luôn −1) — đổi mức trừ không ảnh hưởng các lần đã xem
   const hintCols = db.prepare("PRAGMA table_info(dict_hints)").all() as { name: string }[];
   if (!hintCols.some((c) => c.name === "pts")) db.exec("ALTER TABLE dict_hints ADD COLUMN pts INTEGER NOT NULL DEFAULT 1");
@@ -1608,6 +1615,25 @@ export function getOpenPoints(userId: number, source: string): Record<number, nu
   return Object.fromEntries(rows.map((r) => [r.idx, r.pts]));
 }
 
+/** Các câu của 1 bài mới được điểm một phần: câu → số từ đúng đã tính điểm */
+export function getOpenWords(userId: number, source: string): Record<number, number> {
+  const rows = conn()
+    .prepare("SELECT idx, CASE WHEN words > 0 THEN words ELSE pts END AS words FROM dict_points WHERE user_id = ? AND source = ? AND open = 1")
+    .all(userId, source) as { idx: number; words: number }[];
+  return Object.fromEntries(rows.map((r) => [r.idx, r.words]));
+}
+
+/** Chuỗi từ đúng liên tiếp hiện tại của người học */
+export function getDictStreak(userId: number): number {
+  const r = conn().prepare("SELECT dict_streak FROM users WHERE id = ?").get(userId) as { dict_streak: number } | undefined;
+  return r?.dict_streak ?? 0;
+}
+
+/** Đứt chuỗi từ đúng liên tiếp (khi bấm Kiểm tra còn sai hoặc bỏ dở từ sai sang ô/câu khác) */
+export function resetDictStreak(userId: number) {
+  conn().prepare("UPDATE users SET dict_streak = 0 WHERE id = ? AND dict_streak != 0").run(userId);
+}
+
 /** Điểm của lượt đang làm (để hiện lại khi mở lại bài): các câu được điểm + số từ đã xem của từng câu, tính từ lúc bắt đầu lượt */
 export function getRoundPoints(userId: number, source: string, p: Progress): { dictRoundEarned: number[]; dictRoundPts: Record<number, number>; dictRoundSpent: Record<number, number> } {
   if (!p.dictRoundAt) return { dictRoundEarned: [], dictRoundPts: {}, dictRoundSpent: {} }; // lượt bắt đầu trước khi có dict_round_at
@@ -1624,24 +1650,67 @@ export function getRoundPoints(userId: number, source: string, p: Progress): { d
 }
 
 /**
- * Câu idx giờ đáng `pts` điểm (số từ đúng) → nâng điểm của câu lên mức đó; chỉ lên chứ không xuống nên gõ xoá gõ lại không cộng thêm.
- * open = false: đã đúng hết, câu khép lại. Câu đã khép hoặc không có từ đúng mới → awarded = false, không cộng.
+ * Câu idx hiện có `correctWords` / `totalWords` từ đúng: chỉ phần từ đúng mới vượt mốc `words` đã ghi nhận mới được cộng điểm + nối chuỗi combo.
+ * Gõ xoá gõ lại không tăng `words` nên không cộng thêm. `clientStreak` (chuỗi phía client sau khi gõ) dùng để hạ chuỗi nếu phía client vừa đứt chuỗi,
+ * nhưng luôn bị chặn trên bởi `serverStreak` nên không thể giả mạo chuỗi cao hơn thực tế.
  */
-export function awardDictWords(userId: number, source: string, idx: number, pts: number, open: boolean, tzOffset = 0): Points & { awarded: boolean } {
-  const r = conn()
-    .prepare(
-      `INSERT INTO dict_points (user_id, source, idx, at, pts, open) VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT (user_id, source, idx) DO UPDATE SET at = excluded.at, pts = excluded.pts, open = excluded.open
-       WHERE dict_points.open = 1 AND excluded.pts > dict_points.pts`,
-    )
-    .run(userId, source, idx, Date.now(), pts, open ? 1 : 0);
-  return { ...getPoints(userId, tzOffset), awarded: r.changes > 0 };
+export function awardDictWords(
+  userId: number,
+  source: string,
+  idx: number,
+  correctWords: number,
+  totalWords: number,
+  clientStreak?: number,
+  tzOffset = 0,
+): Points & { awarded: boolean; streak: number; gain: number } {
+  const db = conn();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const cur = db
+      .prepare("SELECT pts, words, open FROM dict_points WHERE user_id = ? AND source = ? AND idx = ?")
+      .get(userId, source, idx) as { pts: number; words: number; open: number } | undefined;
+    const u = db.prepare("SELECT dict_streak FROM users WHERE id = ?").get(userId) as { dict_streak: number } | undefined;
+    const serverStreak = u?.dict_streak ?? 0;
+    const prevWords = cur ? (cur.words || cur.pts) : 0;
+    if ((cur && !cur.open) || correctWords <= prevWords) {
+      db.exec("COMMIT");
+      return { ...getPoints(userId, tzOffset), awarded: false, streak: serverStreak, gain: 0 };
+    }
+    const newWords = correctWords - prevWords;
+    const baseStreak =
+      typeof clientStreak === "number" && Number.isFinite(clientStreak)
+        ? Math.max(0, Math.min(serverStreak, Math.floor(clientStreak) - newWords))
+        : serverStreak;
+    const gain = comboGain(baseStreak, newWords);
+    const nextStreak = baseStreak + newWords;
+    const nextPts = (cur?.pts ?? 0) + gain;
+    const nextOpen = correctWords < totalWords ? 1 : 0;
+    db.prepare(
+      `INSERT INTO dict_points (user_id, source, idx, at, pts, words, open) VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (user_id, source, idx) DO UPDATE SET at = excluded.at, pts = excluded.pts, words = excluded.words, open = excluded.open`,
+    ).run(userId, source, idx, Date.now(), nextPts, correctWords, nextOpen);
+    db.prepare("UPDATE users SET dict_streak = ? WHERE id = ?").run(nextStreak, userId);
+    db.exec("COMMIT");
+    return { ...getPoints(userId, tzOffset), awarded: true, streak: nextStreak, gain };
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
 }
 
-/** Xem n từ của câu idx → −n × POINTS_HINT */
-export function chargeDictHints(userId: number, source: string, idx: number, n: number, tzOffset = 0): Points {
-  conn().prepare("INSERT INTO dict_hints (user_id, source, idx, n, at, pts) VALUES (?, ?, ?, ?, ?, ?)").run(userId, source, idx, n, Date.now(), POINTS_HINT);
-  return getPoints(userId, tzOffset);
+/** Xem n từ của câu idx → −n × POINTS_HINT và đứt chuỗi đúng liên tiếp về 0 */
+export function chargeDictHints(userId: number, source: string, idx: number, n: number, tzOffset = 0): Points & { streak: number } {
+  const db = conn();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("INSERT INTO dict_hints (user_id, source, idx, n, at, pts) VALUES (?, ?, ?, ?, ?, ?)").run(userId, source, idx, n, Date.now(), POINTS_HINT);
+    db.prepare("UPDATE users SET dict_streak = 0 WHERE id = ? AND dict_streak != 0").run(userId);
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+  return { ...getPoints(userId, tzOffset), streak: 0 };
 }
 
 // ---- Thống kê học tập (màn Thống kê trên app) ----

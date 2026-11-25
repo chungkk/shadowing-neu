@@ -40,7 +40,7 @@ async function AccessContent() {
 
       <SectionCard
         title="Chế độ truy cập bài học"
-        description="Mọi bài học đã đăng đều mở tự do cho tất cả người học. Gõ đúng mỗi từ chính tả được +1 💎, bấm xem gợi ý −2 💎."
+        description="Mọi bài học đã đăng đều mở tự do cho tất cả người học. Đúng 1 từ +1 💎, chuỗi đúng liên tiếp thưởng tới +4 💎/từ (3–4: +2, 5–9: +3, 10+: +4), sai hoặc bấm xem từ (−2 💎) sẽ reset chuỗi."
       >
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="badge badge-ok gap-1.5">

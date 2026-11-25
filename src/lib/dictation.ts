@@ -5,9 +5,27 @@
 
 export type DictationLevel = "easy" | "normal" | "hard";
 
-/** Điểm chính tả: gõ đúng 1 từ → +1 ngay (từ đã xem không tính), mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 */
+/**
+ * Điểm chính tả: gõ đúng 1 từ → +1 cơ bản, đúng liên tiếp được thưởng chuỗi (3–4: +2/từ, 5–9: +3/từ, 10+: +4/từ),
+ * sai / bỏ dở từ sai / bấm xem gợi ý → chuỗi về 0; mỗi từ bấm xem → −2. Mỗi từ của câu chỉ được tính điểm 1 lần.
+ */
 export const POINTS_CORRECT = 1;
 export const POINTS_HINT = 2;
+
+/** Điểm kim cương cho từ đúng thứ `streak` liên tiếp (streak ≥ 1): 1–2 → +1, 3–4 → +2, 5–9 → +3, 10+ → +4 */
+export function comboPoints(streak: number): number {
+  if (streak >= 10) return 4;
+  if (streak >= 5) return 3;
+  if (streak >= 3) return 2;
+  return POINTS_CORRECT;
+}
+
+/** Tổng điểm khi nối tiếp `count` từ đúng mới kể từ chuỗi `baseStreak` hiện tại */
+export function comboGain(baseStreak: number, count: number): number {
+  let sum = 0;
+  for (let k = 1; k <= count; k++) sum += comboPoints(baseStreak + k);
+  return sum;
+}
 
 export type WordState =
   | "correct" // gõ đúng
@@ -196,6 +214,12 @@ export function checkSlots(reference: string, slots: readonly string[], revealed
 }
 
 export const isOpenWord = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed" && w.state !== "given";
+
+/** Bản nháp hiện tại có ô nào đã gõ chữ nhưng chưa đúng không (rời câu lúc này tính là bỏ dở từ sai → đứt chuỗi) */
+export function hasWrongSlot(reference: string, slots: readonly string[], revealed: ReadonlySet<number> = new Set()): boolean {
+  const r = checkSlots(reference, slots, revealed);
+  return r.words.some((w, k) => !!slots[k] && isOpenWord(w));
+}
 
 /** Ô chưa xong gần nhất theo hướng dir (hết thì quay vòng); không còn ô nào → giữ nguyên */
 export function nextOpenSlot(words: CheckedWord[], from: number, dir: 1 | -1 = 1): number {

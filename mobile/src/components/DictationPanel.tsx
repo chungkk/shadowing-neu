@@ -3,7 +3,7 @@ import { Animated, Easing, Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Text, TextInput } from "./Text";
 import { SymbolView } from "expo-symbols";
-import { checkSlots, hintFor, isOpenWord, nextOpenSlot, POINTS_HINT, slotForTyped, slotsFromInput, splitWords, type DictationLevel, type WordState } from "@shared/dictation";
+import { checkSlots, comboPoints, hintFor, isOpenWord, nextOpenSlot, POINTS_HINT, slotForTyped, slotsFromInput, splitWords, type DictationLevel, type WordState } from "@shared/dictation";
 import { AnimatedMascot } from "./Mascot";
 import { Gem, useReduceMotion } from "./Points";
 import { Button } from "./ui";
@@ -60,6 +60,8 @@ export function DictationPanel({
   onDraft,
   onHint,
   onEarn,
+  streak = 0,
+  onBreakStreak,
   onWord,
   translation,
   autoFocus,
@@ -71,6 +73,8 @@ export function DictationPanel({
   onNext: () => void;
   onDone: (correct: number, total: number) => void;
   onEarn?: (correct: number, total: number, input: string, revealed: number[]) => number; // input, revealed: câu đang chép + các từ đã xem, server chấm lại
+  streak?: number;
+  onBreakStreak?: () => void;
   hasNext: boolean;
   draft?: DictDraft; // bản nháp lần trước (trong phiên học này)
   saved?: { correct: number; total: number }; // kết quả đã lưu của câu này
@@ -119,6 +123,7 @@ export function DictationPanel({
   // Vừa nhảy ô: JS xoá ô nhập nhưng gõ nhanh thì bản gốc có thể chưa kịp xoá ("also" + "n" → "alson") → cắt phần từ trước đi
   const justDone = useRef("");
   const moveTo = (k: number) => {
+    if (k !== active && slots[active] && isOpenWord(result.words[active])) onBreakStreak?.();
     justDone.current = "";
     setActive(k);
   };
@@ -150,7 +155,10 @@ export function DictationPanel({
     const value = fresh.replace(/\s/g, "").replace(/^[^\p{L}\p{N}]+/u, ""); // dấu câu gõ theo thói quen ngay sau khi nhảy ô thì bỏ
     const at = slotForTyped(result.words, active, value);
     const next = [...slots];
-    if (at !== active) next[active] = "";
+    if (at !== active) {
+      if (slots[active] && isOpenWord(result.words[active])) onBreakStreak?.();
+      next[active] = "";
+    }
     next[at] = value;
     const r = change(next, revealed);
     if (r.words[at].state === "correct") {
@@ -177,15 +185,17 @@ export function DictationPanel({
   const reveal = (ks: number[]) => {
     const fresh = ks.filter((k) => isOpenWord(result.words[k]));
     if (!fresh.length) return;
+    onBreakStreak?.();
     const r = change(slots, new Set([...revealed, ...fresh]));
-    if (!isOpenWord(r.words[active])) moveTo(nextOpenSlot(r.words, active));
+    if (!isOpenWord(r.words[active])) setActive(nextOpenSlot(r.words, active));
     onHint?.(fresh.length);
   };
   const check = () => {
     setChecked(true);
     if (result.done) return;
+    onBreakStreak?.();
     nope();
-    moveTo(nextOpenSlot(result.words, result.words.length - 1));
+    setActive(nextOpenSlot(result.words, result.words.length - 1));
   };
   const submit = () => (result.done ? onNext() : check());
 
@@ -239,6 +249,22 @@ export function DictationPanel({
               </Text>
             </View>
           </View>
+          {streak >= 2 && (
+            <View
+              style={{
+                borderRadius: 999,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderWidth: 1,
+                borderColor: streak >= 10 ? alpha(C.gem, 0.5) : streak >= 5 ? alpha(C.coral, 0.5) : alpha(C.goldDark, 0.5),
+                backgroundColor: streak >= 10 ? alpha(C.gem, 0.12) : streak >= 5 ? alpha(C.coral, 0.12) : C.goldSoft,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "800", color: streak >= 10 ? C.gem : streak >= 5 ? C.coral : C.amber }}>
+                🔥 {streak}{onHint && comboPoints(streak) > 1 ? ` · +${comboPoints(streak)}💎` : ""}
+              </Text>
+            </View>
+          )}
           <Pressable onPress={onReplay} hitSlop={6} style={{ marginLeft: "auto" }}>
             <Text style={{ color: C.link, fontWeight: "800", fontSize: 12 }}>{t("dict.replay")}</Text>
           </Pressable>

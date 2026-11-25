@@ -8,6 +8,40 @@
     background-color: var(--card);
   }
 
+  .dict-combo {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-xs leading-none font-bold tabular-nums select-none;
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line));
+    background-color: var(--gold-soft);
+    color: var(--amber);
+    animation: combo-pop 240ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+  .dict-combo-hot {
+    border-color: color-mix(in srgb, var(--coral) 60%, var(--line));
+    background-color: var(--coral-soft);
+    color: var(--coral-text);
+  }
+  .dict-combo-max {
+    border-color: color-mix(in srgb, var(--gem) 60%, var(--line));
+    background-color: var(--gem-soft);
+    color: var(--gem);
+  }
+  @keyframes combo-pop {
+    0% {
+      transform: scale(0.88);
+    }
+    55% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dict-combo {
+      animation: none;
+    }
+  }
+
   /* Ô từng từ — nền tối sâu hơn card để dễ nhận diện, viền rõ, độ tương phản cao */
   .dict-box {
     @apply min-h-9 min-w-10 max-w-full rounded-lg px-2.5 py-1 text-center font-mono text-[0.9375rem] font-semibold break-all;

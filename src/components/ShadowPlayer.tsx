@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
-import { hasWords, pickDictation, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@/lib/dictation";
+import { comboGain, hasWords, hasWrongSlot, pickDictation, POINTS_HINT, slotsFromInput, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
 import { clientApi } from "@/lib/client-api";
@@ -277,7 +277,10 @@ export default function ShadowPlayer({
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả
   const [dictPick, setDictPick] = useState<number[]>([]); // lượt chính tả đang làm: các câu chưa chép, lần lượt từ đầu đến cuối bài
   const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
-  const awarded = useRef<Record<number, number>>({}); // điểm đã cộng của các câu chưa tính đủ — đọc ngay khi gõ nhanh, không chờ render
+  const awardedWords = useRef<Record<number, number>>({}); // số từ đúng đã tính điểm của các câu chưa khép — đọc ngay khi gõ nhanh
+  const streakRef = useRef(0); // chuỗi từ đúng liên tiếp hiện tại
+  const [dictStreak, setDictStreak] = useState(0);
+  const draftsRef = useRef<Record<number, DictDraft>>({});
   const [earned, setEarned] = useState<Record<number, number>>({}); // điểm được của từng câu trong lượt này
   const [spent, setSpent] = useState<Record<number, number>>({}); // số từ đã bấm xem của từng câu trong lần mở bài này (điểm bị trừ)
   const [tr, setTr] = useState<Record<string, string>>({}); // câu gốc → bản dịch tiếng Việt
@@ -314,7 +317,26 @@ export default function ShadowPlayer({
   const live = useRef({ settings, stored, segments, idx, recorder, nextIdx, prevIdx, picked });
   useEffect(() => {
     live.current = { settings, stored, segments, idx, recorder, nextIdx, prevIdx, picked };
+    draftsRef.current = dictDrafts;
   });
+
+  const dictBreakStreak = useCallback(() => {
+    if (streakRef.current === 0) return;
+    streakRef.current = 0;
+    setDictStreak(0);
+    if (loggedIn && sourceUrl && saveProgress && earnPoints) {
+      clientApi("/points", { method: "POST", body: { resetStreak: true, tz: new Date().getTimezoneOffset() } }).catch(() => {});
+    }
+  }, [loggedIn, sourceUrl, saveProgress, earnPoints]);
+
+  const checkLeaveDraft = useCallback(
+    (fromIdx: number) => {
+      const d = draftsRef.current[fromIdx];
+      const text = live.current.segments[fromIdx]?.text;
+      if (d && text && hasWrongSlot(text, slotsFromInput(text, d.input), new Set(d.revealed))) dictBreakStreak();
+    },
+    [dictBreakStreak],
+  );
 
   const update = useCallback(
     // Ghi lên cài đặt đã lưu (không phải bản đã ép Shadowing) → video không có Chính tả không làm mất lựa chọn ở bài khác
@@ -370,10 +392,11 @@ export default function ShadowPlayer({
   /** Người dùng chủ động chọn câu → reset bộ đếm lặp */
   const go = useCallback(
     (i: number) => {
+      if (i !== live.current.idx && live.current.settings.practice === "dictation") checkLeaveDraft(live.current.idx);
       repeatCountRef.current = 0;
       playSegment(i);
     },
-    [playSegment],
+    [playSegment, checkLeaveDraft],
   );
 
   const pause = useCallback(() => {
@@ -725,6 +748,7 @@ export default function ShadowPlayer({
 
   /** Chọn câu `i` mà không phát (bấm ▶ để nghe) */
   const select = (i: number) => {
+    if (i !== idx && dictation) checkLeaveDraft(idx);
     pause();
     setIdx(i);
     if (segments[i]) handleRef.current?.seek(segments[i].start);
@@ -827,14 +851,18 @@ export default function ShadowPlayer({
     };
   }, [syncProgress, sourceUrl, segments.length, texts, allowDictation, update]);
 
-  // ---- Điểm chính tả: gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 (cần tài khoản, như tiến độ) ----
+  // ---- Điểm chính tả: đúng 1 từ +1 cơ bản, chuỗi đúng liên tiếp thưởng tới +4/từ; sai / bấm xem reset chuỗi; bấm xem −2 ----
   useEffect(() => {
     if (!syncPoints) return;
     let alive = true;
-    clientApi<{ idx: number[]; open: Record<number, number> }>(`/points?source=${encodeURIComponent(sourceUrl!)}`)
+    clientApi<{ idx: number[]; open: Record<number, number>; openWords?: Record<number, number>; streak?: number }>(`/points?source=${encodeURIComponent(sourceUrl!)}`)
       .then((r) => {
         if (!alive) return;
-        awarded.current = { ...r.open, ...awarded.current };
+        awardedWords.current = { ...(r.openWords ?? r.open), ...awardedWords.current };
+        if (typeof r.streak === "number" && streakRef.current === 0) {
+          streakRef.current = r.streak;
+          setDictStreak(r.streak);
+        }
         setPointIdx((s) => new Set([...s, ...r.idx]));
       })
       .catch(() => { });
@@ -842,18 +870,37 @@ export default function ShadowPlayer({
       alive = false;
     };
   }, [syncPoints, sourceUrl]);
-  /** Số từ đúng của câu i vừa tăng quá số đã được điểm → cộng phần chênh (hiện ngay, gửi server sau), trả về số điểm vừa được */
+  /** Số từ đúng của câu i vừa tăng quá mốc từ đã tính → cộng điểm kèm thưởng combo (hiện ngay, gửi server sau) */
   const dictEarn = (i: number, correct: number, total: number, input: string, revealed: number[]) => {
-    const gain = correct * POINTS_CORRECT - (awarded.current[i] ?? 0);
-    if (!syncPoints || gain <= 0 || pointIdx.has(i)) return 0;
-    awarded.current[i] = correct * POINTS_CORRECT;
-    setEarned((e) => ({ ...e, [i]: (e[i] ?? 0) + gain }));
+    if (pointIdx.has(i)) return 0;
+    const prevWords = awardedWords.current[i] ?? 0;
+    const newWords = correct - prevWords;
+    if (newWords <= 0) return 0;
+    const prevStreak = streakRef.current;
+    const nextStreak = prevStreak + newWords;
+    awardedWords.current[i] = correct;
+    streakRef.current = nextStreak;
+    setDictStreak(nextStreak);
     if (correct === total) setPointIdx((s) => new Set(s).add(i));
-    clientApi<{ total: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, revealed, tz: new Date().getTimezoneOffset() } })
-      .then((r) => emitPoints({ total: r.total }))
+    if (!syncPoints) return 0;
+    const gain = comboGain(prevStreak, newWords);
+    setEarned((e) => ({ ...e, [i]: (e[i] ?? 0) + gain }));
+    clientApi<{ total: number; streak?: number }>("/points", {
+      method: "POST",
+      body: { source: sourceUrl, idx: i, input, revealed, streak: nextStreak, tz: new Date().getTimezoneOffset() },
+    })
+      .then((r) => {
+        emitPoints({ total: r.total });
+        if (typeof r.streak === "number" && streakRef.current === nextStreak) {
+          streakRef.current = r.streak;
+          setDictStreak(r.streak);
+        }
+      })
       .catch(() => {
         // Chưa lưu được → bỏ điểm tạm tính, từ đúng tiếp theo của câu này sẽ tính lại cả phần này
-        awarded.current[i] = Math.max((awarded.current[i] ?? 0) - gain, 0);
+        awardedWords.current[i] = prevWords;
+        streakRef.current = Math.max(0, streakRef.current - newWords);
+        setDictStreak(streakRef.current);
         setPointIdx((s) => new Set([...s].filter((k) => k !== i)));
         setEarned((e) => ({ ...e, [i]: Math.max((e[i] ?? 0) - gain, 0) }));
         emitPoints({ delta: -gain });
@@ -862,8 +909,10 @@ export default function ShadowPlayer({
   };
   /** Làm xong câu chính tả → lưu kết quả */
   const dictFinished = (i: number, correct: number, total: number) => setDictDone((d) => ({ ...d, [i]: { correct, total } }));
-  /** Bấm xem n từ của câu i → trừ điểm ngay, gửi server sau */
+  /** Bấm xem n từ của câu i → đứt chuỗi + trừ điểm ngay, gửi server sau */
   const dictHint = (i: number, n: number) => {
+    streakRef.current = 0;
+    setDictStreak(0);
     const cost = n * POINTS_HINT;
     setSpent((s) => ({ ...s, [i]: (s[i] ?? 0) + n }));
     emitPoints({ delta: -cost });
@@ -1300,6 +1349,8 @@ export default function ShadowPlayer({
               onNextSentence={next}
               onDone={(correct, total) => dictFinished(idx, correct, total)}
               onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
+              streak={dictStreak}
+              onBreakStreak={dictBreakStreak}
               onHint={syncPoints ? (n) => dictHint(idx, n) : undefined}
               hasNext={dictNextIdx !== undefined}
               draft={dictDrafts[idx]}

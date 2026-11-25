@@ -68,7 +68,7 @@ export default function PointsBadge({ initial }: { initial: number }) {
 
   return (
     <span
-      title="Điểm chính tả — mỗi từ gõ đúng +1, mỗi từ bấm xem −2"
+      title="Điểm chính tả — đúng 1 từ +1 (chuỗi đúng liên tiếp thưởng tới +4/từ), bấm xem từ −2"
       className="relative inline-flex h-8 items-center gap-1.5 rounded-lg border border-gem/20 bg-gem-soft pr-2.5 pl-1.5 text-sm font-bold text-gem tabular-nums select-none"
     >
       <span className="relative inline-flex">

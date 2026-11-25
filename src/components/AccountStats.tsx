@@ -91,7 +91,9 @@ export default function AccountStats({ stats }: { stats: AccountStatsData }) {
         <h2 className="section-title flex items-center gap-2">
           <Trophy className="size-5 shrink-0 text-muted" aria-hidden /> Thành tích học tập
         </h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted">Mỗi từ chép chính tả đúng được +1 kim cương, mỗi lần bấm xem từ −2.</p>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          Mỗi từ chép chính tả đúng được +1 kim cương (chuỗi đúng liên tiếp thưởng tới +4/từ, sai sẽ reset chuỗi), mỗi lần bấm xem từ −2.
+        </p>
       </div>
 
       <div className="stats-gem">

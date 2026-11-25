@@ -40,7 +40,7 @@ import { addPoints, setPointsTotal, usePoints } from "@/lib/points";
 import { noteProgress, progressSaved } from "@/lib/progress";
 import { prefetchGerman } from "@/lib/speak";
 import { C, alpha, stageBg } from "@/lib/theme";
-import { hasWords, POINTS_CORRECT, POINTS_HINT, type DictationLevel } from "@shared/dictation";
+import { comboGain, hasWords, POINTS_HINT, type DictationLevel } from "@shared/dictation";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 
@@ -203,7 +203,9 @@ export default function Player({
   const [pointsEarned, setPointsEarned] = useState(0); // tăng mỗi lần vừa được điểm → huy hiệu điểm hiện "+N"
   const [pointsGain, setPointsGain] = useState(0); // N của lần vừa được điểm
   const [pointIdx, setPointIdx] = useState<Set<number>>(new Set()); // câu đã được tính điểm (server + vừa được) — mỗi câu chỉ 1 lần
-  const awarded = useRef<Record<number, number>>({}); // điểm đã cộng của các câu chưa tính đủ — đọc ngay khi gõ nhanh, không chờ render
+  const awardedWords = useRef<Record<number, number>>({}); // số từ đúng đã tính điểm của các câu chưa khép — đọc ngay khi gõ nhanh
+  const streakRef = useRef(0);
+  const [dictStreak, setDictStreak] = useState(0);
   const [earned, setEarned] = useState<Record<number, number>>({}); // điểm được của từng câu trong lượt này
   const [spent, setSpent] = useState<Record<number, number>>({}); // số từ đã chạm xem của từng câu trong lần mở bài này (điểm bị trừ)
   const [recordings, setRecordings] = useState<Record<number, string>>({});
@@ -569,15 +571,19 @@ export default function Player({
     };
   }, [user, sourceUrl, segments.length, texts, allowDictation]);
 
-  // ---- Điểm chính tả: gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ chạm xem → −2 ----
+  // ---- Điểm chính tả: đúng 1 từ +1 cơ bản, chuỗi đúng liên tiếp thưởng tới +4/từ; sai / chạm xem reset chuỗi; chạm xem −2 ----
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    api<Points & { idx?: number[]; open?: Record<number, number> }>(`/points?source=${encodeURIComponent(sourceUrl)}&tz=${new Date().getTimezoneOffset()}`)
+    api<Points & { idx?: number[]; open?: Record<number, number>; openWords?: Record<number, number>; streak?: number }>(`/points?source=${encodeURIComponent(sourceUrl)}&tz=${new Date().getTimezoneOffset()}`)
       .then((r) => {
         if (!alive || !r.idx) return; // server cũ chưa có điểm
         setPointsTotal(user.id, r.total);
-        awarded.current = { ...r.open, ...awarded.current };
+        awardedWords.current = { ...(r.openWords ?? r.open), ...awardedWords.current };
+        if (typeof r.streak === "number" && streakRef.current === 0) {
+          streakRef.current = r.streak;
+          setDictStreak(r.streak);
+        }
         setPointIdx((s) => new Set([...s, ...r.idx!]));
       })
       .catch(() => {});
@@ -585,21 +591,43 @@ export default function Player({
       alive = false;
     };
   }, [user, sourceUrl]);
-  /** Số từ đúng của câu i vừa tăng quá số đã được điểm → cộng phần chênh (hiện ngay, gửi server sau), trả về số điểm vừa được */
+  const dictBreakStreak = () => {
+    if (streakRef.current === 0) return;
+    streakRef.current = 0;
+    setDictStreak(0);
+    if (user) api("/points", { method: "POST", body: { resetStreak: true, tz: new Date().getTimezoneOffset() } }).catch(() => {});
+  };
+  /** Số từ đúng của câu i vừa tăng quá mốc từ đã tính → cộng điểm kèm thưởng combo (hiện ngay, gửi server sau) */
   const dictEarn = (i: number, correct: number, total: number, input: string, revealed: number[]) => {
-    const gain = correct * POINTS_CORRECT - (awarded.current[i] ?? 0);
-    if (!user || gain <= 0 || pointIdx.has(i)) return 0;
-    awarded.current[i] = correct * POINTS_CORRECT;
-    setEarned((e) => ({ ...e, [i]: (e[i] ?? 0) + gain }));
+    if (pointIdx.has(i)) return 0;
+    const prevWords = awardedWords.current[i] ?? 0;
+    const newWords = correct - prevWords;
+    if (newWords <= 0) return 0;
+    const prevStreak = streakRef.current;
+    const nextStreak = prevStreak + newWords;
+    awardedWords.current[i] = correct;
+    streakRef.current = nextStreak;
+    setDictStreak(nextStreak);
     if (correct === total) setPointIdx((s) => new Set(s).add(i));
+    if (!user) return 0;
+    const gain = comboGain(prevStreak, newWords);
+    setEarned((e) => ({ ...e, [i]: (e[i] ?? 0) + gain }));
     addPoints(user.id, gain);
     setPointsGain(gain);
     setPointsEarned((n) => n + 1);
-    api<Points>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, revealed, tz: new Date().getTimezoneOffset() } })
-      .then((r) => setPointsTotal(user.id, r.total))
+    api<Points & { streak?: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, revealed, streak: nextStreak, tz: new Date().getTimezoneOffset() } })
+      .then((r) => {
+        setPointsTotal(user.id, r.total);
+        if (typeof r.streak === "number" && streakRef.current === nextStreak) {
+          streakRef.current = r.streak;
+          setDictStreak(r.streak);
+        }
+      })
       .catch(() => {
         // Chưa lưu được → bỏ điểm tạm tính, từ đúng tiếp theo của câu này sẽ tính lại cả phần này
-        awarded.current[i] = Math.max((awarded.current[i] ?? 0) - gain, 0);
+        awardedWords.current[i] = prevWords;
+        streakRef.current = Math.max(0, streakRef.current - newWords);
+        setDictStreak(streakRef.current);
         setPointIdx((s) => new Set([...s].filter((k) => k !== i)));
         setEarned((e) => ({ ...e, [i]: Math.max((e[i] ?? 0) - gain, 0) }));
         addPoints(user.id, -gain);
@@ -608,8 +636,10 @@ export default function Player({
   };
   /** Làm xong câu chính tả → lưu kết quả */
   const dictFinished = (i: number, correct: number, total: number) => setDictDone((d) => ({ ...d, [i]: { correct, total } }));
-  /** Chạm xem n từ của câu i → trừ điểm ngay, gửi server sau */
+  /** Chạm xem n từ của câu i → đứt chuỗi + trừ điểm ngay, gửi server sau */
   const dictHint = (i: number, n: number) => {
+    streakRef.current = 0;
+    setDictStreak(0);
     if (!user) return;
     const cost = n * POINTS_HINT;
     setSpent((s) => ({ ...s, [i]: (s[i] ?? 0) + n }));
@@ -924,6 +954,8 @@ export default function Player({
               hasNext={dictNextIdx !== undefined}
               onDone={(correct, total) => dictFinished(idx, correct, total)}
               onEarn={(correct, total, input, revealed) => dictEarn(idx, correct, total, input, revealed)}
+              streak={dictStreak}
+              onBreakStreak={dictBreakStreak}
               onHint={user ? (n) => dictHint(idx, n) : undefined}
               onWord={pickWord}
               translation={
