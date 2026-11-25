@@ -9,7 +9,7 @@ const ORT_WASM_PATH = "/download/media/kokoro/ort/";
 
 export const PIPER_SAMPLE_RATE = 22_050;
 
-export type PiperVoiceKey = "adam_bua" | "lac_phi";
+export type PiperVoiceKey = "adam_bua" | "lac_phi" | "vtv2_thuyetminh";
 
 const PIPER_MODELS: Record<PiperVoiceKey, { url: string; label: string; approxBytes: number; enableGerman?: boolean }> = {
   adam_bua: {
@@ -22,6 +22,12 @@ const PIPER_MODELS: Record<PiperVoiceKey, { url: string; label: string; approxBy
     url: "/download/media/kokoro/lac_phi_int8.onnx?v=1",
     label: "giọng Lạc Phi (16 MB)",
     approxBytes: 16_700_000,
+  },
+  vtv2_thuyetminh: {
+    url: "/download/media/kokoro/vtv2_thuyetminh_v3_int8.onnx",
+    label: "giọng VTV2 thuyết minh v3 (16 MB)",
+    approxBytes: 16_773_498,
+    enableGerman: true,
   },
 };
 

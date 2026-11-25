@@ -21,6 +21,12 @@ export const SERVER_PIPER_VOICES = {
     cacheVer: "v2",
     enableGerman: false,
   },
+  "piper:vtv2_thuyetminh": {
+    file: "vtv2_thuyetminh_v3_int8.onnx",
+    url: "https://hallovn.de/download/media/kokoro/vtv2_thuyetminh_v3_int8.onnx",
+    cacheVer: "v3",
+    enableGerman: true,
+  },
 } as const;
 
 export type ServerPiperVoiceId = keyof typeof SERVER_PIPER_VOICES;

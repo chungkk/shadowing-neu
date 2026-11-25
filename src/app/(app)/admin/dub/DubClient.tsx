@@ -63,6 +63,7 @@ type StatusPayload = {
 const BROWSER_VOICES: DubVoice[] = [
   { id: "piper:adam_bua", label: "🚀 Trình duyệt · Adam bựa (Nam · Bắc · Nghe ngay · 0đ)" },
   { id: "piper:lac_phi", label: "🚀 Trình duyệt · Lạc Phi (Nam · Thuyết minh · Nghe ngay · 0đ)" },
+  { id: "piper:vtv2_thuyetminh", label: "🚀 Trình duyệt · VTV2 Thuyết minh (Nghe ngay · 0đ)" },
 ];
 
 const ACTIVE_STATUSES = new Set(["queued", "downloading", "synthesizing", "mixing"]);

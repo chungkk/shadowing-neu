@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HalloVN — Thuyết minh tiếng Việt cho Video",
   "short_name": "HalloVN Dub",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Xem video YouTube và các trang web có phụ đề với giọng thuyết minh tiếng Việt tự nhiên, đồng bộ trực tiếp ngay trong trình duyệt.",
   "icons": {
     "16": "icons/icon16.png",
