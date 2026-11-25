@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
-import { deleteProgress, getProgress, getRoundPoints, listProgress, saveProgress, type DictDraft, type DictResult } from "@/lib/db";
+import { getProgress, getRoundPoints, listProgress, resetProgress, saveProgress, type DictDraft, type DictResult } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { lockedSource } from "@/lib/access";
+import { percent } from "@/lib/progress";
 
 /**
  * Tiến độ học của người đang đăng nhập — đồng bộ giữa web và app.
@@ -93,12 +94,16 @@ export async function PUT(req: Request) {
   return Response.json({ progress: getProgress(user.id, source) });
 }
 
-/** DELETE ?source=… → học lại từ đầu (xoá tiến độ bài này) · at = thời điểm xoá (cùng đồng hồ với updatedAt, để app so bản nào mới hơn) */
+/**
+ * DELETE ?source=…[&done=1] → học lại từ đầu (xoá tiến độ lượt này) · at = thời điểm xoá (cùng đồng hồ với updatedAt, để app so bản nào mới hơn).
+ * Đã học xong (đủ 100% hoặc client báo done=1 — vd. chép hết các câu chép được) → vẫn giữ là "đã hoàn thành" (completed + 1).
+ */
 export async function DELETE(req: NextRequest) {
   const user = await apiUser();
   if (user instanceof Response) return user;
   const source = req.nextUrl.searchParams.get("source") ?? "";
   if (!SOURCE_RE.test(source)) return fail("source không hợp lệ");
-  deleteProgress(user.id, source);
+  const prev = getProgress(user.id, source);
+  resetProgress(user.id, source, !!prev && (percent(prev) >= 100 || req.nextUrl.searchParams.get("done") === "1"));
   return Response.json({ ok: true, at: Date.now() });
 }

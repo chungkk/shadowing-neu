@@ -44,7 +44,8 @@ type Item = {
   sentences: number;
   duration: number;
   dictation: boolean;
-  percent: number; // % đã học — 0: chưa học
+  percent: number; // % đã học (lượt đang học) — 0: chưa học
+  completed: number; // số lần đã học xong cả bài (>0: vẫn là "đã hoàn thành" dù đang học lại)
   isNew: boolean;
   access: LessonAccess;
   channel: string | null; // tên kênh YouTube (null / rỗng = chưa biết)
@@ -237,9 +238,10 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
             <span className="ml-auto font-mono text-[11px] text-muted tabular-nums">{l.sentences} câu</span>
           </div>
 
-          {l.percent >= 100 ? (
-            <p className="flex items-center gap-1 text-xs font-semibold text-ok-text">
+          {l.percent >= 100 || l.completed > 0 ? (
+            <p className="flex items-center gap-1 text-xs font-semibold text-ok-text tabular-nums">
               <CircleCheck className="size-3.5" aria-hidden /> Đã hoàn thành
+              {l.percent > 0 && l.percent < 100 && <span className="font-medium text-muted">· đang học lại {l.percent}%</span>}
             </p>
           ) : (
             l.percent > 0 && (

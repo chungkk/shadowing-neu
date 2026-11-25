@@ -28,6 +28,7 @@ export function lessonGridItems(user: User | null, filter?: (l: LessonSummary) =
         duration: l.duration ?? 0,
         dictation: l.dictation,
         percent: p ? percent(p) : 0,
+        completed: p?.completed ?? 0,
         isNew: now - +new Date(l.createdAt.replace(" ", "T") + "Z") < NEW_MS,
         access: access(l.id),
         channel: l.channel,

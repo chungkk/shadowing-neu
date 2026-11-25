@@ -696,7 +696,10 @@ export default function Player({
     pendingSave.current = null;
     if (user) {
       const seq = noteProgress(user.id, sourceUrl, null);
-      api<{ at?: number }>(`/progress?source=${encodeURIComponent(sourceUrl)}`, { method: "DELETE" })
+      // Đã làm hết cả bài → báo server giữ là "đã hoàn thành" (web hiện vậy ở danh sách bài)
+      const doneN = Object.keys(dictDone).length;
+      const finished = dictation ? dictTotal > 0 && doneN >= dictTotal : new Set(seen).add(idx).size >= segments.length;
+      api<{ at?: number }>(`/progress?source=${encodeURIComponent(sourceUrl)}${finished ? "&done=1" : ""}`, { method: "DELETE" })
         .then((r) => progressSaved(user.id, sourceUrl, seq, r.at ?? 0))
         .catch(() => {});
     }

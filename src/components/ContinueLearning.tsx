@@ -18,7 +18,7 @@ export default function ContinueLearning({ userId }: { userId: number }) {
           const dictCount = Object.keys(p.dictDone).length;
           const completed = Math.min(p.total, p.mode === "dictation" ? dictCount : p.seen.length);
           const n = p.total && completed ? Math.max(1, Math.floor((completed * 100) / p.total)) : 0;
-          const modeLabel = p.mode === "dictation" ? "Chính tả" : "Shadowing";
+          const modeLabel = `${p.completed > 0 ? "Học lại · " : ""}${p.mode === "dictation" ? "Chính tả" : "Shadowing"}`;
           return (
             <Link
               key={p.source}

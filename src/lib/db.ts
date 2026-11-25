@@ -340,6 +340,8 @@ function open() {
   if (!progressCols.some((c) => c.name === "dict_round_at")) db.exec("ALTER TABLE progress ADD COLUMN dict_round_at INTEGER NOT NULL DEFAULT 0");
   // Chính tả: chữ đã gõ dở / từ đã xem của từng câu trong lượt → F5 hay vào lại không phải gõ lại
   if (!progressCols.some((c) => c.name === "dict_drafts")) db.exec("ALTER TABLE progress ADD COLUMN dict_drafts TEXT NOT NULL DEFAULT '{}'"); // {"3": {"input": "…", "revealed": [1]}}
+  // Số lần đã học xong cả bài — "Học lại từ đầu" chỉ xoá tiến độ lượt đang học, vẫn giữ là đã hoàn thành
+  if (!progressCols.some((c) => c.name === "completed")) db.exec("ALTER TABLE progress ADD COLUMN completed INTEGER NOT NULL DEFAULT 0");
   // Lịch ôn từ vựng (lặp lại ngắt quãng): mức nhớ, hạn ôn tiếp, số lần quên
   const vocabCols = db.prepare("PRAGMA table_info(vocab)").all() as { name: string }[];
   if (!vocabCols.some((c) => c.name === "srs_stage")) {
@@ -1486,6 +1488,7 @@ export type Progress = {
   dictPick: number[]; // Chính tả: các câu của lượt đang làm ([] = chưa chọn)
   dictRoundAt: number; // lúc bắt đầu lượt đang làm (ms, 0 = chưa biết)
   dictDrafts: Record<string, DictDraft>; // Chính tả: chữ đã gõ dở / từ đã xem của từng câu trong lượt
+  completed: number; // số lần đã học xong cả bài (giữ lại khi "Học lại từ đầu")
   updatedAt: number;
 };
 export type DictDraft = { input: string; revealed: number[] };
@@ -1502,6 +1505,7 @@ type ProgressRow = {
   dict_pick: string;
   dict_round_at: number;
   dict_drafts: string;
+  completed: number;
   updated_at: number;
 };
 
@@ -1517,6 +1521,7 @@ const toProgress = (r: ProgressRow): Progress => ({
   dictPick: JSON.parse(r.dict_pick ?? "[]"),
   dictRoundAt: r.dict_round_at ?? 0,
   dictDrafts: JSON.parse(r.dict_drafts ?? "{}"),
+  completed: r.completed ?? 0,
   updatedAt: r.updated_at,
 });
 
@@ -1532,7 +1537,8 @@ export function listProgress(userId: number): Progress[] {
 
 const MAX_PROGRESS = 300;
 
-export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
+/** Lưu tiến độ — cột completed không đổi ở đây (chỉ resetProgress tăng) */
+export function saveProgress(userId: number, p: Omit<Progress, "updatedAt" | "completed">) {
   conn()
     .prepare(
       `INSERT INTO progress (user_id, source, title, idx, total, mode, dict_level, dict_done, seen, dict_pick, dict_round_at, dict_drafts, updated_at)
@@ -1554,6 +1560,22 @@ export function saveProgress(userId: number, p: Omit<Progress, "updatedAt">) {
 
 export function deleteProgress(userId: number, source: string) {
   conn().prepare("DELETE FROM progress WHERE user_id = ? AND source = ?").run(userId, source);
+}
+
+/**
+ * "Học lại từ đầu": xoá tiến độ lượt đang học. Đã học xong (lượt này hoặc trước đó) → giữ hàng với completed tăng
+ * để danh sách bài vẫn hiện "Đã hoàn thành"; chưa xong lần nào → xoá hẳn như cũ.
+ */
+export function resetProgress(userId: number, source: string, finished: boolean) {
+  const prev = getProgress(userId, source);
+  const completed = (prev?.completed ?? 0) + (finished ? 1 : 0);
+  if (!prev || !completed) return deleteProgress(userId, source);
+  conn()
+    .prepare(
+      `UPDATE progress SET idx = 0, dict_done = '{}', seen = '[]', dict_pick = '[]', dict_round_at = 0, dict_drafts = '{}',
+         completed = ?, updated_at = ? WHERE user_id = ? AND source = ?`,
+    )
+    .run(completed, Date.now(), userId, source);
 }
 
 // ---- Điểm chính tả ----

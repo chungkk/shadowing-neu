@@ -978,7 +978,10 @@ export default function ShadowPlayer({
   const restartProgress = () => {
     pause();
     pendingSave.current = null;
-    if (syncProgress) clientApi(`/progress?source=${encodeURIComponent(sourceUrl!)}`, { method: "DELETE" }).catch(() => { });
+    // Đã làm hết cả bài (chép hết các câu chép được / nghe hết các câu) → báo server giữ là "đã hoàn thành"
+    const finished = dictation ? dictTotal > 0 && doneCount >= dictTotal : seenCount >= segments.length;
+    if (syncProgress)
+      clientApi(`/progress?source=${encodeURIComponent(sourceUrl!)}${finished ? "&done=1" : ""}`, { method: "DELETE" }).catch(() => { });
     const round = dictation ? pickDictation(texts, {}) : [];
     setIdx(round.length ? round[0] : 0);
     setSeen(new Set());
