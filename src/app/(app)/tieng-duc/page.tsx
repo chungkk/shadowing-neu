@@ -65,8 +65,8 @@ async function DeutschContent() {
         <RecentVideos />
       )}
 
-      {/* ── Learning Levels (A1–C2) + Explore by Topic + Video Library ── */}
-      <LessonGrid lessons={allLessons} lock={lockInfo(admin ? null : user)} admin={admin} showExplore />
+      {/* ── Video Library ── */}
+      <LessonGrid lessons={allLessons} lock={lockInfo(admin ? null : user)} admin={admin} />
     </>
   );
 }
