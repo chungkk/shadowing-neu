@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Play } from "lucide-react";
-import { percent, unfinished } from "@/lib/progress";
+import { unfinished } from "@/lib/progress";
 import { SectionHeader } from "./LessonGrid";
 
 const SHOWN = 4;
@@ -15,9 +15,9 @@ export default function ContinueLearning({ userId }: { userId: number }) {
       <SectionHeader title="Tiếp tục học" count={items.length} />
       <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {items.map(({ p, href, title, videoId }) => {
-          const n = percent(p);
           const dictCount = Object.keys(p.dictDone).length;
-          const completed = p.mode === "dictation" && dictCount ? dictCount : Math.min(p.total, p.idx + 1);
+          const completed = Math.min(p.total, p.mode === "dictation" ? dictCount : p.seen.length);
+          const n = p.total && completed ? Math.max(1, Math.floor((completed * 100) / p.total)) : 0;
           const modeLabel = p.mode === "dictation" ? "Chính tả" : "Shadowing";
           return (
             <Link

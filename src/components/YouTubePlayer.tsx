@@ -23,7 +23,7 @@ declare global {
         opts: {
           videoId: string;
           playerVars?: Record<string, number | string>;
-          events?: { onReady?: () => void; onApiChange?: () => void };
+          events?: { onReady?: () => void; onApiChange?: () => void; onStateChange?: (e: { data: number }) => void };
         },
       ) => YTPlayer;
     };
@@ -31,13 +31,24 @@ declare global {
   }
 }
 
+export type YouTubePlayState = "playing" | "paused" | "ended";
+
 let apiPromise: Promise<void> | null = null;
 function loadYouTubeApi(): Promise<void> {
   if (window.YT?.Player) return Promise.resolve();
-  apiPromise ??= new Promise((resolve) => {
-    window.onYouTubeIframeAPIReady = () => resolve();
+  apiPromise ??= new Promise((resolve, reject) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      prev?.();
+      resolve();
+    };
     const s = document.createElement("script");
     s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = () => {
+      apiPromise = null;
+      s.remove();
+      reject(new Error("Không tải được trình phát YouTube"));
+    };
     document.head.appendChild(s);
   });
   return apiPromise;
@@ -52,18 +63,22 @@ function hideCaptions(p: YTPlayer) {
 export default function YouTubePlayer({
   videoId,
   onReady,
+  onStateChange,
   captions = true,
 }: {
   videoId: string;
   onReady: (handle: PlayerHandle) => void;
+  onStateChange?: (state: YouTubePlayState) => void;
   captions?: boolean; // false → luôn tắt phụ đề YouTube (Chính tả: phụ đề = đáp án)
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const onReadyRef = useRef(onReady);
+  const onStateChangeRef = useRef(onStateChange);
   const captionsRef = useRef(captions);
   useEffect(() => {
     onReadyRef.current = onReady;
+    onStateChangeRef.current = onStateChange;
     captionsRef.current = captions;
   });
   // Đổi sang chế độ tắt phụ đề khi trình phát đã chạy
@@ -77,31 +92,44 @@ export default function YouTubePlayer({
     const el = document.createElement("div");
     hostRef.current?.appendChild(el);
 
-    loadYouTubeApi().then(() => {
-      if (cancelled || !window.YT) return;
-      player = new window.YT.Player(el, {
-        videoId,
-        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, cc_load_policy: 0 },
-        events: {
-          onReady: () => {
-            const p = player!;
-            playerRef.current = p;
-            if (!captionsRef.current) hideCaptions(p);
-            onReadyRef.current({
-              play: () => p.playVideo(),
-              pause: () => p.pauseVideo(),
-              seek: (t) => p.seekTo(t, true),
-              getTime: () => p.getCurrentTime() ?? 0,
-              setRate: (r) => p.setPlaybackRate(r),
-            });
+    loadYouTubeApi()
+      .then(() => {
+        if (cancelled || !window.YT) return;
+        player = new window.YT.Player(el, {
+          videoId,
+          playerVars: { playsinline: 1, rel: 0, modestbranding: 1, cc_load_policy: 0 },
+          events: {
+            onReady: () => {
+              const p = player!;
+              playerRef.current = p;
+              if (!captionsRef.current) hideCaptions(p);
+              onReadyRef.current({
+                play: () => p.playVideo(),
+                pause: () => p.pauseVideo(),
+                seek: (t) => p.seekTo(t, true),
+                getTime: () => p.getCurrentTime() ?? 0,
+                setRate: (r) => p.setPlaybackRate(r),
+              });
+            },
+            // Module phụ đề chỉ nạp khi bắt đầu phát / bấm CC → gỡ lại mỗi lần nó nạp
+            onApiChange: () => {
+              if (player && !captionsRef.current) hideCaptions(player);
+            },
+            onStateChange: (e) => {
+              if (cancelled) return;
+              if (e.data === 1) {
+                if (player && !captionsRef.current) hideCaptions(player);
+                onStateChangeRef.current?.("playing");
+              } else if (e.data === 2) {
+                onStateChangeRef.current?.("paused");
+              } else if (e.data === 0) {
+                onStateChangeRef.current?.("ended");
+              }
+            },
           },
-          // Module phụ đề chỉ nạp khi bắt đầu phát / bấm CC → gỡ lại mỗi lần nó nạp
-          onApiChange: () => {
-            if (player && !captionsRef.current) hideCaptions(player);
-          },
-        },
-      });
-    });
+        });
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;

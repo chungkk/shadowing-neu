@@ -38,7 +38,7 @@ import { emitPoints } from "@/lib/points";
 import { prefetchGerman } from "@/lib/speak";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import YouTubePlayer from "./YouTubePlayer";
+import YouTubePlayer, { type YouTubePlayState } from "./YouTubePlayer";
 import LevelBadge from "./LevelBadge";
 import DictationPanel, { type DictDraft } from "./DictationPanel";
 import Mascot from "./Mascot";
@@ -291,6 +291,7 @@ export default function ShadowPlayer({
   const recorder = useRecorder();
 
   const handleRef = useRef<PlayerHandle | null>(null);
+  const playingRef = useRef(false);
   const stopAtRef = useRef<number | null>(null);
   // Sau khi seek, YouTube còn trả về vị trí cũ (vd. cuối câu vừa phát) một lúc trong khi tải → chỉ kiểm tra điểm dừng
   // khi đã thấy thời gian nằm trong câu mới (hoặc quá hạn chờ), tránh dừng ngay khiến phải bấm phát lần nữa
@@ -343,9 +344,11 @@ export default function ShadowPlayer({
       const s = segments[i];
       if (!h || !s) return;
       clearGap();
+      live.current.recorder.stopPlay();
       if (!guestOpen(`${videoId}:${i}`)) {
         h.pause();
         stopAtRef.current = null;
+        playingRef.current = false;
         setPlaying(false);
         return;
       }
@@ -354,11 +357,12 @@ export default function ShadowPlayer({
       live.current.idx = i;
       h.setRate(settings.rate);
       h.seek(s.start);
-      h.play();
       armAtRef.current = { start: s.start, since: Date.now() };
       // Chính tả luôn dừng sau mỗi câu
       stopAtRef.current = settings.mode === "free" && settings.practice !== "dictation" ? null : s.end;
+      playingRef.current = true;
       setPlaying(true);
+      h.play();
     },
     [clearGap, markSeen, guestOpen, videoId],
   );
@@ -375,7 +379,9 @@ export default function ShadowPlayer({
   const pause = useCallback(() => {
     handleRef.current?.pause();
     stopAtRef.current = null;
+    armAtRef.current = null;
     clearGap();
+    playingRef.current = false;
     setPlaying(false);
   }, [clearGap]);
 
@@ -434,6 +440,7 @@ export default function ShadowPlayer({
         if (t >= stopAtRef.current - 0.03) {
           h.pause();
           stopAtRef.current = null;
+          playingRef.current = false;
           setPlaying(false);
           onSegmentEnd();
         }
@@ -443,6 +450,7 @@ export default function ShadowPlayer({
         if (i !== idx) {
           if (!guestOpen(`${videoId}:${i}`)) {
             h.pause();
+            playingRef.current = false;
             setPlaying(false);
             return;
           }
@@ -548,8 +556,20 @@ export default function ShadowPlayer({
         if (nextIdx !== undefined) go(nextIdx);
       } else if (e.key === "r" || e.key === "R") {
         if (recorder.recordingKey !== null) recorder.stop();
-        else void recorder.start(idx);
-      } else if (e.key === "p" || e.key === "P") recorder.play(idx);
+        else {
+          handleRef.current?.pause();
+          stopAtRef.current = null;
+          armAtRef.current = null;
+          playingRef.current = false;
+          setPlaying(false);
+          void recorder.start(idx);
+        }
+      } else if (e.key === "p" || e.key === "P") {
+        if (recorder.recordings[idx]) {
+          pause();
+          recorder.play(idx);
+        }
+      }
       else if ((e.key === "h" || e.key === "H") && live.current.settings.practice !== "dictation") toggleHideText();
     };
     window.addEventListener("keydown", onKey);
@@ -559,6 +579,56 @@ export default function ShadowPlayer({
   const onReady = useCallback((h: PlayerHandle) => {
     handleRef.current = h;
   }, []);
+
+  /** Đồng bộ khi người học bấm phát/dừng trực tiếp trên khung YouTube (hoặc video chạy tới hết) */
+  const onPlayerState = useCallback(
+    (state: YouTubePlayState) => {
+      if (state === "ended") {
+        const hadStop = stopAtRef.current !== null;
+        stopAtRef.current = null;
+        armAtRef.current = null;
+        playingRef.current = false;
+        setPlaying(false);
+        if (hadStop) onSegmentEnd();
+        return;
+      }
+      if (state === "paused") {
+        // Đang seek sang câu mới YouTube có thể báo PAUSED thoáng qua trước khi phát → bỏ qua
+        if (armAtRef.current && Date.now() - armAtRef.current.since < 800) return;
+        if (!playingRef.current) return;
+        stopAtRef.current = null;
+        playingRef.current = false;
+        setPlaying(false);
+        return;
+      }
+      if (playingRef.current) return;
+      const h = handleRef.current;
+      const { segments, settings, idx, recorder } = live.current;
+      if (!h || !segments.length) return;
+      recorder.stopPlay();
+      clearGap();
+      const t = h.getTime();
+      let i = segments.findIndex((s, k) => t >= s.start - 0.5 && t < (segments[k + 1]?.start ?? Infinity));
+      if (i === -1) i = idx;
+      if (!guestOpen(`${videoId}:${i}`)) {
+        h.pause();
+        stopAtRef.current = null;
+        playingRef.current = false;
+        setPlaying(false);
+        return;
+      }
+      setIdx(i);
+      markSeen(i);
+      live.current.idx = i;
+      h.setRate(settings.rate);
+      const end = segments[i]?.end ?? null;
+      stopAtRef.current =
+        (settings.mode === "free" && settings.practice !== "dictation") || (end !== null && t >= end - 0.05) ? null : end;
+      playingRef.current = true;
+      setPlaying(true);
+    },
+    [clearGap, guestOpen, markSeen, onSegmentEnd, videoId],
+  );
 
   const current = segments[idx];
 
@@ -636,11 +706,15 @@ export default function ShadowPlayer({
         const { star } = await clientApi<{ star: { id: number } }>("/stars", { method: "POST", body: { text, sourceUrl, sourceTitle: title } });
         setStars((s) => new Map(s).set(key, star.id));
       } else {
-        setStars((s) => {
-          const m = new Map(s);
-          m.delete(key);
-          return m;
-        });
+        const nextStars = new Map(stars);
+        nextStars.delete(key);
+        setStars(nextStars);
+        if (starredOnly && current?.text.toLowerCase() === key) {
+          const remaining = segments.flatMap((s, i) => (nextStars.has(s.text.toLowerCase()) ? [i] : []));
+          const next = remaining.find((k) => k > idx) ?? remaining.at(-1);
+          if (next !== undefined) select(next);
+          else setStarFilter(false);
+        }
         await clientApi("/stars", { method: "DELETE", body: { id } });
       }
     } catch (e) {
@@ -946,7 +1020,24 @@ export default function ShadowPlayer({
 
   // Bước của câu đang học → chỉ 1 nút chính: chưa ghi âm thì "Ghi âm", ghi xong thì "Câu tiếp theo"
   const hasRec = !!recorder.recordings[idx];
-  const toggleRecord = () => (isRecording ? recorder.stop() : void recorder.start(idx));
+  const toggleRecord = () => {
+    if (isRecording) {
+      recorder.stop();
+      return;
+    }
+    // Dừng video YouTube trước khi thu (giữ nguyên thanh gap nếu đang trong quãng nghỉ nói)
+    handleRef.current?.pause();
+    stopAtRef.current = null;
+    armAtRef.current = null;
+    playingRef.current = false;
+    setPlaying(false);
+    void recorder.start(idx);
+  };
+  const playRecording = (i: number) => {
+    if (!recorder.recordings[i]) return;
+    pause();
+    recorder.play(i);
+  };
   const recordLabel = isRecording ? "Dừng ghi" : hasRec ? "Ghi lại" : "Ghi âm";
   const step = dictation ? "dict" : isRecording || gap ? "speak" : playing ? "listen" : recorder.recordings[idx] ? "compare" : seen.has(idx) ? "speak" : "listen";
   // Mỗi bước chỉ 1 nút tô màu: nghe → "Phát" xanh · nói → "Ghi âm" hồng · so sánh → "Câu tiếp theo" xanh
@@ -1037,11 +1128,11 @@ export default function ShadowPlayer({
             className={
               mediaHidden || typing
                 ? "h-0 overflow-hidden"
-                : "overflow-hidden rounded-ui border border-line bg-background max-md:sticky max-md:top-0 max-md:z-20 max-sm:-mx-3 max-md:rounded-none max-md:border-x-0 sm:max-md:-mx-4"
+                : "overflow-hidden rounded-ui border border-line bg-background max-md:sticky max-md:top-14 max-md:z-20 max-sm:-mx-3 max-md:rounded-none max-md:border-x-0 sm:max-md:-mx-4 sm:max-md:top-15"
             }
           >
           {/* Chính tả: tắt phụ đề YouTube (phụ đề = đáp án) */}
-          <YouTubePlayer videoId={videoId} onReady={onReady} captions={!dictation} />
+          <YouTubePlayer videoId={videoId} onReady={onReady} onStateChange={onPlayerState} captions={!dictation} />
         </div>
         {mediaHidden && (
           <p className="surface flex items-center justify-center gap-2 text-center text-sm font-semibold text-muted">
@@ -1346,7 +1437,7 @@ export default function ShadowPlayer({
                 {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
                 {recordLabel}
               </button>
-              <button className="btn btn-lg" disabled={!hasRec} onClick={() => recorder.play(idx)}>
+              <button className="btn btn-lg" disabled={!hasRec} onClick={() => playRecording(idx)}>
                 <Volume2 className="size-5" /> Nghe lại
               </button>
             </div>
@@ -1409,7 +1500,7 @@ export default function ShadowPlayer({
               {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
               {recordLabel}
             </button>
-            <button className="btn-icon shrink-0" aria-label="Nghe lại bản ghi" disabled={!hasRec} onClick={() => recorder.play(idx)}>
+            <button className="btn-icon shrink-0" aria-label="Nghe lại bản ghi" disabled={!hasRec} onClick={() => playRecording(idx)}>
               <Volume2 className="size-6" />
             </button>
             <button
@@ -1501,7 +1592,7 @@ export default function ShadowPlayer({
                           aria-label="Nghe bản ghi của bạn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            recorder.play(i);
+                            playRecording(i);
                           }}
                         >
                           <Volume2 className="size-[18px]" />
