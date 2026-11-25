@@ -44,7 +44,7 @@ export const LIVE_VOICES: { id: LiveVoiceId; label: string; short: string }[] = 
   { id: "edge:vi-VN-HoaiMyNeural", label: "Edge · Hoài My (Nữ · Tự nhiên)", short: "Edge · Hoài My (Nữ)" },
   { id: "piper:adam_bua", label: "Adam bựa (Nam · Bắc · Trình duyệt)", short: "Adam bựa (Nam · Trình duyệt)" },
   { id: "piper:lac_phi", label: "Lạc Phi (Nam · Thuyết minh · Trình duyệt)", short: "Lạc Phi (Nam · Trình duyệt)" },
-  { id: "piper:vtv2_thuyetminh", label: "VTV2 Thuyết minh (Trình duyệt)", short: "VTV2 (Thuyết minh · Trình duyệt)" },
+  { id: "piper:vtv2_thuyetminh", label: "Eva (Thuyết minh · Trình duyệt)", short: "Eva (Thuyết minh · Trình duyệt)" },
 ];
 
 function resolveInitialVoice(v?: LiveVoiceId): LiveVoiceId {
@@ -914,7 +914,7 @@ export default function KokoroLivePlayer({
             {showDebugMeta && (
               <span>
                 {localEngineKey === "vtv2_thuyetminh"
-                  ? "VTV2 thuyết minh trình duyệt (INT8)"
+                  ? "Eva trình duyệt (INT8)"
                   : localEngineKey === "lac_phi"
                     ? "Lạc Phi trình duyệt (INT8)"
                     : usingLocalWasm

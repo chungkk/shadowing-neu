@@ -25,7 +25,7 @@ const PIPER_MODELS: Record<PiperVoiceKey, { url: string; label: string; approxBy
   },
   vtv2_thuyetminh: {
     url: "/download/media/kokoro/vtv2_thuyetminh_v3_int8.onnx",
-    label: "giọng VTV2 thuyết minh v3 (16 MB)",
+    label: "giọng Eva (16 MB)",
     approxBytes: 16_773_498,
     enableGerman: true,
   },

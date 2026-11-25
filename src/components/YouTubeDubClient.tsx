@@ -62,7 +62,7 @@ const VOICE_PILLS: { id: LiveVoiceId; name: string; tag: string }[] = [
   { id: "edge:vi-VN-HoaiMyNeural", name: "Hoài My", tag: "Nữ · Tự nhiên" },
   { id: "piper:adam_bua", name: "Adam bựa", tag: "Trình duyệt" },
   { id: "piper:lac_phi", name: "Lạc Phi", tag: "Thuyết minh" },
-  { id: "piper:vtv2_thuyetminh", name: "VTV2", tag: "Thuyết minh" },
+  { id: "piper:vtv2_thuyetminh", name: "Eva", tag: "Thuyết minh" },
 ];
 
 /** Trạng thái hiển thị thân thiện, không lộ chi tiết kỹ thuật xử lý phía sau. */
