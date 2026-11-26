@@ -37,7 +37,7 @@ export const metadata: Metadata = pageMeta({
 type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
 
 const METRICS: { value: string; label: string }[] = [
-  { value: "1.100+", label: "Câu lý thuyết lái xe hạng B" },
+  { value: "1.700+", label: "Câu lý thuyết lái xe · 13 hạng bằng" },
   { value: "460", label: "Câu Leben in Deutschland (BAMF)" },
   { value: "A1 – C2", label: "Video bản xứ & từ vựng Goethe" },
   { value: "0 €", label: "Miễn phí · một tài khoản" },
@@ -93,7 +93,7 @@ const HOME_FAQ = [
   },
   {
     q: "Bộ câu hỏi Lái xe và Leben in Deutschland có đúng đề chính thức không?",
-    a: "Có. Lái xe dùng bộ câu hỏi lý thuyết chính thức của Đức (hơn 1.100 câu hạng B và các hạng khác, chấm điểm lỗi đúng quy định). Leben in Deutschland bám sát danh mục BAMF 2025 gồm 300 câu chung + 10 câu riêng cho từng bang.",
+    a: "Có. Lái xe dùng bộ câu hỏi lý thuyết chính thức của Đức (hơn 1.700 câu cho 13 hạng bằng, riêng hạng B gồm 1.169 câu, chấm điểm lỗi đúng quy định). Leben in Deutschland bám sát danh mục BAMF 2025 gồm 300 câu chung + 10 câu riêng cho từng bang.",
   },
   {
     q: "Mọi câu hỏi đều có bản dịch tiếng Việt chứ?",
@@ -115,7 +115,7 @@ export default function Home() {
               <ChristmasSnowflakeIcon className="size-3.5 text-link" />
               {SEASONAL_THEME === "noel"
                 ? "Giáng Sinh an lành · Dành cho người Việt tại Đức · Miễn phí 0 €"
-                : "Mùa Giáng Sinh · Dành cho người Việt tại Đức · Miễn phí 0 €"}
+                : "Dành cho người Việt tại Đức · Miễn phí 0 €"}
             </span>
 
             <h1 className="noel-headline display max-w-[18ch]">
@@ -123,7 +123,7 @@ export default function Home() {
             </h1>
 
             <p className="lead max-w-[48ch]">
-              HalloVN đồng hành cùng người Việt tại Đức với video bản xứ, hơn 1.100 câu lý thuyết lái xe và 460 câu Leben in Deutschland — tất cả đều có bản dịch tiếng Việt rõ ràng.
+              HalloVN đồng hành cùng người Việt tại Đức với video bản xứ, hơn 1.700 câu lý thuyết lái xe cho 13 hạng bằng (1.169 câu hạng B) và 460 câu Leben in Deutschland — tất cả đều có bản dịch tiếng Việt rõ ràng.
             </p>
 
             <div className="flex w-full flex-col gap-2.5 pt-1 sm:w-auto sm:flex-row">
@@ -212,9 +212,9 @@ export default function Home() {
 
       {/* ── Dải số liệu thật: phẳng, sắc nét, phân cách bằng hairline ── */}
       <section aria-label="Số liệu nền tảng" className="border-b border-line bg-background">
-        <ul className={`${wrap} grid grid-cols-2 divide-y divide-line sm:grid-cols-3 lg:grid-cols-5 lg:divide-x lg:divide-y-0`}>
+        <ul className={`${wrap} grid grid-cols-2 gap-y-4 py-4 sm:py-5 lg:grid-cols-4 lg:gap-y-0 lg:divide-x lg:divide-line`}>
           {METRICS.map((m) => (
-            <li key={m.label} className="flex flex-col gap-1 py-4 sm:px-5 sm:py-5 first:sm:pl-0">
+            <li key={m.label} className="flex flex-col gap-1 pr-3 lg:px-6 first:lg:pl-0 last:lg:pr-0">
               <span className="font-display text-xl font-bold tracking-[-0.02em] text-foreground tabular-nums sm:text-2xl">{m.value}</span>
               <span className="text-xs leading-snug text-muted">{m.label}</span>
             </li>
@@ -303,9 +303,9 @@ export default function Home() {
         <article data-sec="laixe" className="card flex flex-col gap-5 p-6 sm:p-7">
           <div className="flex items-start justify-between gap-3">
             <span className="badge badge-gold">
-              <Car className="size-3.5" /> Führerschein · Hạng B &amp; các hạng khác
+              <Car className="size-3.5" /> Führerschein · 13 hạng bằng (Hạng B: 1.169 câu)
             </span>
-            <span className="font-mono text-xs text-muted tabular-nums">1.100+ câu</span>
+            <span className="font-mono text-xs text-muted tabular-nums">1.700+ câu</span>
           </div>
           <div className="flex flex-col gap-2">
             <h2 className="font-display text-xl font-bold tracking-[-0.02em] sm:text-2xl">Luyện thi lý thuyết bằng lái xe Đức</h2>
@@ -418,14 +418,14 @@ export default function Home() {
 
       {/* ── App di động + CTA cuối trang ── */}
       <section className={`${wrap} grid gap-5 pt-10 pb-2 md:grid-cols-[0.85fr_1.15fr]`}>
-        <Link href="/about" className="group card card-link flex flex-col justify-between gap-5 p-6">
+        <Link href="/about?lang=vi" className="group card card-link flex flex-col justify-between gap-5 p-6">
           <span className="icon-bubble tint-accent size-10">
             <Smartphone className="size-5" />
           </span>
           <div className="flex flex-col gap-1.5">
-            <h2 className="section-title">Đồng bộ với app điện thoại</h2>
+            <h2 className="section-title">App điện thoại (sắp ra mắt)</h2>
             <p className="text-sm leading-relaxed text-muted">
-              Học tiếng Đức, lý thuyết lái xe và Leben in Deutschland trên iOS &amp; Android với chung một tài khoản HalloVN.
+              Ứng dụng HalloVN cho iOS &amp; Android dùng chung tài khoản đang được hoàn thiện. Hiện bạn có thể học mượt ngay trên trình duyệt điện thoại.
             </p>
             <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-link">
               Tìm hiểu thêm <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

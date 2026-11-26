@@ -118,7 +118,7 @@ const CLIENT_NAV_FACTOR = 5;
 // Đề mẫu (/lai-xe/de-mau/<n>): mỗi trang là trọn 30 câu + đáp án → mỗi IP chỉ mở được SHEET_MAX đề khác nhau / giờ.
 // Đếm theo số đề, không theo request: đổi chế độ Đọc/Luyện/Thi, tải lại, nộp bài trong cùng đề không bị tính thêm.
 const SHEET_RE = /^\/lai-xe\/de-mau\/(\d+)\/?$/;
-const SHEET_MAX = 2;
+const SHEET_MAX = 5;
 const SHEET_WINDOW_MS = 3_600_000;
 const sheets = new Map<string, { ids: Set<string>; resetAt: number }>();
 

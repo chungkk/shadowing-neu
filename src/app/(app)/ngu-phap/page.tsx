@@ -8,7 +8,7 @@ import { pageMeta } from "@/lib/page-meta";
 export const metadata: Metadata = pageMeta({
   title: "Ngữ pháp tiếng Đức A1–B2 – 9 chương chi tiết dễ hiểu bằng tiếng Việt",
   description:
-    "Hệ thống ngữ pháp tiếng Đức từ A1 đến B2 chia thành 9 chương, 58 bài chuyên sâu: 4 Cách, mạo từ, đại từ, động từ, các thì, tính từ, giới từ và cấu trúc câu kèm phát âm & bài tập nhanh.",
+    "Hệ thống ngữ pháp tiếng Đức từ A1 đến B2 chia thành 9 chương, 58 bài chuyên sâu: 4 Cách, mạo từ, đại từ, động từ, các thì, tính từ, giới từ, trạng từ & tiểu từ và cấu trúc câu kèm phát âm & bài tập nhanh.",
   path: "/ngu-phap",
 });
 

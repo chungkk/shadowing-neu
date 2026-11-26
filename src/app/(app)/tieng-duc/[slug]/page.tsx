@@ -4,11 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, ChevronDown, FileText, MessageSquareQuote } from "lucide-react";
 import ShadowPlayer from "@/components/ShadowPlayer";
-import LockedLesson from "@/components/LockedLesson";
 import LevelBadge from "@/components/LevelBadge";
-import { getLesson, getLessonBySlug, type Lesson } from "@/lib/db";
+import { getLessonBySlug, type Lesson } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { accessOf, canViewLesson, lockInfo, lockSettings } from "@/lib/access";
+import { canViewLesson } from "@/lib/access";
 import { PlayerSkeleton } from "@/components/Skeleton";
 import { channelPath, lessonPath } from "@/lib/slug";
 import { SITE_URL } from "@/lib/site";
@@ -134,7 +133,7 @@ function LessonStudyGuide({ lesson }: { lesson: Lesson }) {
         .slice(0, 5);
 
   return (
-    <article aria-label={`Nội dung bài học ${lesson.title}`} className="flex flex-col gap-5 pt-2 max-md:hidden">
+    <article aria-label={`Nội dung bài học ${lesson.title}`} className="flex flex-col gap-5 pt-2">
       <section className="card flex flex-col p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
           <Link href="/tieng-duc" className="font-bold hover:text-foreground">
@@ -292,20 +291,6 @@ async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
   // Bài nháp chỉ admin và người đã trả để mở xem được
   const user = await getCurrentUser();
   if (!lesson || !canViewLesson(user, lesson)) notFound();
-  // Admin bật khoá bài học mà người này chưa mở bài → màn mở khoá (không gửi phụ đề xuống trình duyệt)
-  if (accessOf(user)(lesson.id) === "locked") {
-    const free = lockSettings()
-      .free.map(getLesson)
-      .filter((l) => l?.published)
-      .map((l) => ({ title: l!.title, slug: l!.slug }));
-    const { id, title, level, videoId, description } = lesson;
-    return (
-      <>
-        {lesson.published && <LessonJsonLd lesson={lesson} />}
-        <LockedLesson lesson={{ id, title, level, videoId, description }} lock={lockInfo(user)} freeLessons={free} />
-      </>
-    );
-  }
 
   const own = !!lesson.ownerId; // bài học riêng người dùng tự tạo (chỉ chủ bài xem)
   const draft = !lesson.published && !own && user?.role === "admin";
@@ -332,8 +317,12 @@ async function LessonView({ params }: PageProps<"/tieng-duc/[slug]">) {
             {lesson.description && <p className="whitespace-pre-line text-muted">{lesson.description}</p>}
           </div>
         )}
-        {lesson.published && !own && <LessonStudyGuide lesson={lesson} />}
       </ShadowPlayer>
+      {lesson.published && !own && (
+        <div data-sec="de" className="mx-auto w-full max-w-[1800px] px-3 pb-6 sm:px-4 md:px-6">
+          <LessonStudyGuide lesson={lesson} />
+        </div>
+      )}
     </>
   );
 }
@@ -351,8 +340,6 @@ export async function generateMetadata({ params }: PageProps<"/tieng-duc/[slug]"
     type: "article",
   });
   if (!lesson.published) return { ...meta, robots: { index: false, follow: false } };
-  // Bài đang khoá với khách: Google chỉ thấy màn "đăng nhập để mở khoá" → trang mỏng với AdSense, không index (bài miễn phí vẫn index)
-  if (accessOf(null)(lesson.id) === "locked") return { ...meta, robots: { index: false, follow: true } };
   return meta;
 }
 

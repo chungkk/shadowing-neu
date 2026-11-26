@@ -11,8 +11,8 @@ import {
   ChristmasChannelIcon as Tv,
   ChristmasChatIcon as MessageSquare,
   ChristmasDashboardIcon as LayoutDashboard,
-  ChristmasLockIcon as Lock,
   ChristmasSystemIcon as Server,
+  ChristmasTrophyIcon as Trophy,
   ChristmasUsersIcon as Users,
   ChristmasVideoIcon as ListVideo,
 } from "@/components/FestiveIcons";
@@ -108,7 +108,7 @@ const GROUPS: NavGroup[] = [
       {
         href: "/admin/access",
         label: "Kim cương & Xếp hạng",
-        icon: Lock,
+        icon: Trophy,
       },
       {
         href: "/admin/system",

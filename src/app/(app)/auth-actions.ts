@@ -98,7 +98,7 @@ export async function resetPasswordAction(_: ResetState, formData: FormData): Pr
   });
   if (typeof res === "string") return { error: res };
   await createSession(res);
-  redirect("/");
+  redirect(safeNext(formData.get("next")));
 }
 
 export async function logout() {

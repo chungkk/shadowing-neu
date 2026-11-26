@@ -106,7 +106,7 @@ export default function DictationPanel({
   const keepFocus = (e: { preventDefault: () => void }) => e.preventDefault(); // bấm nút không làm đóng bàn phím
   const composing = useRef(false); // đang ghép chữ (bộ gõ, dấu ä…): chưa chấm, chưa nhảy ô
   const revealedCount = result.words.filter((w) => w.state === "revealed").length; // số từ đã bấm xem
-  const hintCost = onHint ? `−${POINTS_HINT} điểm` : "tính là lỗi";
+  const hintCost = onHint ? `−${POINTS_HINT} kim cương` : "tính là lỗi";
 
   const breakStreak = () => {
     if (streak >= 2) setBrokeCombo(true);
@@ -378,7 +378,7 @@ export default function DictationPanel({
       <p className="text-xs text-muted">
         {gained > 0 && (
           <span className="badge badge-gem mr-1.5">
-            <Gem className="size-3.5" /> +{gained} điểm{lastGain > 1 ? ` (combo +${lastGain})` : ""}
+            <Gem className="size-3.5" /> +{gained} kim cương{lastGain > 1 ? ` (combo +${lastGain})` : ""}
           </span>
         )}
         {brokeCombo && streak === 0 && (
@@ -434,7 +434,7 @@ export default function DictationPanel({
           </button>
           <button className="btn btn-lg flex-1 whitespace-nowrap pointer-coarse:hidden" onMouseDown={keepFocus} onClick={revealAll} title={`Hiện cả câu (mỗi từ chưa gõ đúng: ${hintCost})`}>
             <Eye className="size-4" /> Hiện tất cả
-            {onHint && <span className="text-xs font-normal opacity-80">(−{POINTS_HINT}/từ)</span>}
+            {onHint && <span className="text-xs font-normal opacity-80">(−{POINTS_HINT} 💎/từ)</span>}
           </button>
           <button
             className="btn btn-lg min-w-0 flex-1 whitespace-nowrap max-sm:gap-1 max-sm:px-2.5 pointer-fine:hidden"

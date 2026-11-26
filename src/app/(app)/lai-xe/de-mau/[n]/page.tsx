@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { quizBookmarks, quizStats } from "@/lib/db";
 import { WEB_BOGEN_LIMIT, bogenIds, classInfo, forClient, prefs } from "@/lib/laixe";
 import DrivingRunner from "@/components/laixe/DrivingRunner";
+import { ExamLoginGate } from "@/components/lid/LidParts";
 import { ListSkeleton } from "@/components/Skeleton";
 
 type P = PageProps<"/lai-xe/de-mau/[n]">;
@@ -20,12 +21,21 @@ async function Sheet({ params, searchParams }: P) {
   const { n } = await params;
   const num = /^\d+$/.test(n) ? Number(n) : 0;
   const ids = bogenIds(num);
-  // Web chỉ có vài đề đầu (chống crawl trọn bộ đề); đề còn lại chỉ có trên app
+  // Web chỉ mở vài đề đầu (chống crawl trọn bộ đề); trọn bộ đề sẽ có trên ứng dụng di động đang hoàn thiện
   if (!ids || num > WEB_BOGEN_LIMIT) notFound();
   const m = (await searchParams).mode;
   const mode = m === "lesen" ? "lesen" : m === "ueben" ? "ueben" : "exam";
   const { lang } = await prefs();
   const user = await getCurrentUser();
+  if (mode === "exam" && !user) {
+    return (
+      <ExamLoginGate
+        next="/lai-xe/de-mau"
+        lead={`Đăng ký miễn phí để thi thử Đề mẫu ${num} hạng B (30 câu · bấm giờ như thi thật), chấm điểm lỗi và ôn lại câu sai.`}
+        secondBenefit="Lưu kết quả từng đề mẫu và gom câu sai để ôn lại"
+      />
+    );
+  }
   const exam = classInfo("B").exam;
   return (
     <DrivingRunner
@@ -42,13 +52,14 @@ async function Sheet({ params, searchParams }: P) {
       bookmarks={user ? quizBookmarks(user.id, "fuehrerschein") : []}
       exam={mode === "exam" ? { kind: "bogen", ref: String(num), cls: "B", minutes: exam.minutes, maxErrorPoints: exam.maxErrorPoints } : undefined}
       modeLinks={{ lesen: `/lai-xe/de-mau/${num}?mode=lesen`, ueben: `/lai-xe/de-mau/${num}?mode=ueben` }}
+      resumeKey={mode !== "exam" ? `laixe:pos:bogen:${num}:${mode}` : undefined}
     />
   );
 }
 
 export default function Page(props: P) {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Sheet {...props} />
       </Suspense>

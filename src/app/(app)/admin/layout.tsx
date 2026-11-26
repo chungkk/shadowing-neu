@@ -1,8 +1,14 @@
 import { Suspense, type ReactNode } from "react";
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { lockSettings } from "@/lib/access";
 import { adminSidebarCounts } from "@/lib/db";
 import AdminSidebar, { AdminSidebarSkeleton } from "./_components/AdminSidebar";
+
+export const metadata: Metadata = {
+  title: "Quản trị — HalloVN",
+  robots: { index: false, follow: false },
+};
 
 async function AdminSidebarData() {
   const user = await getCurrentUser();

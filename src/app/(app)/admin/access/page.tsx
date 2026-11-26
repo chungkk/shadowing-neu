@@ -51,15 +51,15 @@ async function AccessContent() {
       </SectionCard>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard tone="gem" label="Tổng 💎 tối đa thư viện" value={earnable} sub={`Từ ${fmt(dictLessons)} bài bật Dictation`} icon={<Coins className="size-4" aria-hidden />} />
+        <KpiCard tone="gem" label="Tổng 💎 cơ bản thư viện" value={earnable} sub={`Từ ${fmt(dictLessons)} bài bật Dictation`} icon={<Coins className="size-4" aria-hidden />} />
         <KpiCard tone="de" label="Học viên có hạng" value={board.players} sub="Có điểm chính tả > 0" icon={<Users className="size-4" aria-hidden />} href="/leaderboard" />
         <KpiCard tone="ink" label="Dẫn đầu hiện tại" value={board.top[0]?.total ?? 0} sub={board.top[0] ? board.top[0].name : "Chưa có ai"} icon={<Trophy className="size-4" aria-hidden />} href="/leaderboard" />
         <KpiCard tone="laixe" label="Bài riêng tự tạo" value={stats.own} sub="Không tính điểm xếp hạng" icon={<Sparkles className="size-4" aria-hidden />} href="/admin/lessons?tab=own" />
       </div>
 
       <SectionCard
-        title="Điểm kim cương tối đa theo từng bài học"
-        description={`Tổng cộng ${fmt(lessons.length)} bài đã đăng, sắp xếp theo lượng kim cương tối đa từ cao xuống thấp.`}
+        title="Điểm kim cương cơ bản theo từng bài học (chưa tính thưởng combo)"
+        description={`Tổng cộng ${fmt(lessons.length)} bài đã đăng, sắp xếp theo lượng kim cương cơ bản từ cao xuống thấp.`}
         aside={
           <Link href="/admin/lessons" className="text-xs font-semibold text-link hover:underline">
             Về danh sách bài học →

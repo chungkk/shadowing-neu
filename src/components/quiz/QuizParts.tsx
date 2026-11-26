@@ -14,6 +14,8 @@ export function ProgressBar({ total, ok, wrong }: { total: number; ok: number; w
   );
 }
 
+const fmt = (n: number) => n.toLocaleString("de-DE");
+
 /** Tiến trình cả khu: thanh đúng/sai + chú thích gọn */
 export function QuizProgress({ total, ok, wrong, done }: { total: number; ok: number; wrong: number; done: number }) {
   const pct = total ? Math.round((ok / total) * 100) : 0;
@@ -22,13 +24,13 @@ export function QuizProgress({ total, ok, wrong, done }: { total: number; ok: nu
       <ProgressBar total={total} ok={ok} wrong={wrong} />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-muted sm:text-sm">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-ok" aria-hidden /> Đúng <b className="font-semibold text-foreground tabular-nums">{ok}</b>
+          <span className="size-2 rounded-full bg-ok" aria-hidden /> Đúng <b className="font-semibold text-foreground tabular-nums">{fmt(ok)}</b>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-red" aria-hidden /> Sai <b className="font-semibold text-foreground tabular-nums">{wrong}</b>
+          <span className="size-2 rounded-full bg-red" aria-hidden /> Sai <b className="font-semibold text-foreground tabular-nums">{fmt(wrong)}</b>
         </span>
         <span className="ml-auto tabular-nums">
-          <b className="font-semibold text-foreground">{done}</b> / {total} câu ({pct}% đúng)
+          <b className="font-semibold text-foreground">{fmt(done)}</b> / {fmt(total)} câu ({pct}% đúng)
         </span>
       </div>
     </div>

@@ -41,7 +41,7 @@ async function Review({ params }: PageProps<"/lai-xe/thi-thu/[id]">) {
 
 export default function Page(props: PageProps<"/lai-xe/thi-thu/[id]">) {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Review {...props} />
       </Suspense>

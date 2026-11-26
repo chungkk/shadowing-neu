@@ -5,7 +5,7 @@ import { Check, Clock, Delete, Dumbbell, Flame, Lightbulb, PartyPopper, RotateCc
 import { gradeWord } from "@/app/(app)/account-actions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clientApi } from "@/lib/client-api";
-import { speak, useHasGermanVoice } from "@/lib/german-voice";
+import { speakGerman, stopSpeaking } from "@/lib/speak";
 import {
   buildQueue,
   canCloze,
@@ -118,16 +118,17 @@ function Context({ text, word, blank, fill }: { text: string; word: string; blan
   );
 }
 
-function SpeakButton({ text, tts, big }: { text: string; tts: boolean; big?: boolean }) {
+function SpeakButton({ text, tts = true, big }: { text: string; tts?: boolean; big?: boolean }) {
   if (!tts) return null;
   return (
     <button
       type="button"
-      title="Nghe phát âm"
+      title="Nghe phát âm (Shift + bấm để nghe chậm)"
+      aria-label={`Nghe phát âm ${text}`}
       className={big ? `${tile} ${tone("idle")} flex size-14 shrink-0 items-center justify-center text-link` : "btn-icon size-8 shrink-0 text-link"}
       onClick={(e) => {
         e.stopPropagation();
-        speak(text);
+        void speakGerman(text, { slow: e.shiftKey });
       }}
     >
       <Volume2 className={big ? "size-7" : "size-4"} />
@@ -139,10 +140,22 @@ function SpeakButton({ text, tts, big }: { text: string; tts: boolean; big?: boo
 function ListenButtons({ word }: { word: string }) {
   return (
     <div className="flex items-end justify-center gap-3">
-      <button className={`${tile} flex size-24 items-center justify-center rounded-sheet border-link bg-link-soft text-link`} onClick={() => speak(word, 0.85)} title="Nghe lại">
+      <button
+        type="button"
+        className={`${tile} flex size-24 items-center justify-center rounded-sheet border-link bg-link-soft text-link`}
+        onClick={() => void speakGerman(word)}
+        title="Nghe lại"
+        aria-label="Nghe lại"
+      >
         <Volume2 className="size-12" />
       </button>
-      <button className={`${tile} ${tone("idle")} flex size-14 items-center justify-center text-link`} onClick={() => speak(word, 0.5)} title="Nghe chậm">
+      <button
+        type="button"
+        className={`${tile} ${tone("idle")} flex size-14 items-center justify-center text-link`}
+        onClick={() => void speakGerman(word, { slow: true })}
+        title="Nghe chậm"
+        aria-label="Nghe chậm"
+      >
         <Snail className="size-6" />
       </button>
     </div>
@@ -173,12 +186,12 @@ export default function VocabReview({
   pool: VocabItem[];
   onClose: (changed: boolean) => void;
 }) {
-  const tts = useHasGermanVoice();
+  const tts = true;
   const [sound, setSound] = useLocalStorage("vocab-review-speak", true);
   const [streak, setStreak] = useLocalStorage<Streak>("vocab-streak", { day: "", count: 0 });
   const [queue, setQueue] = useState(() => {
     const q = buildQueue(items);
-    return q.length ? [resolveStep(q[0], pool, false), ...q.slice(1)] : q;
+    return q.length ? [resolveStep(q[0], pool, true), ...q.slice(1)] : q;
   });
   const [pos, setPos] = useState(0);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -233,8 +246,8 @@ export default function VocabReview({
 
   // Tự đọc khi tới thẻ làm quen / thẻ nghe
   useEffect(() => {
-    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") speak(spoken(v.word), 0.85);
-    else if (kind === "intro" && sound) speak(spoken(v.word));
+    if (kind === "listen-choose" || kind === "listen-type" || kind === "listen-order") void speakGerman(spoken(v.word));
+    else if (kind === "intro" && sound) void speakGerman(spoken(v.word));
   }, [step?.id, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -249,7 +262,7 @@ export default function VocabReview({
     setBestCombo((b) => Math.max(b, nextCombo));
     if (sound) {
       sfx(ok);
-      if (kind !== "match") setTimeout(() => speak(spoken(v.word)), 350);
+      if (kind !== "match") setTimeout(() => void speakGerman(spoken(v.word)), 350);
     }
     if (s.role === "graded") {
       const entry: Graded = { item: v, correct: ok };
@@ -346,7 +359,7 @@ export default function VocabReview({
     if (pick.id === id) {
       const m = [...matched, id];
       setMatched(m);
-      if (sound) speak(spoken(step!.pairs!.find((p) => p.id === id)!.word));
+      if (sound) void speakGerman(spoken(step!.pairs!.find((p) => p.id === id)!.word));
       if (m.length === step!.pairs!.length) answer(true, "Ghép đúng hết!");
     } else {
       setBadPair([pick.side + pick.id, side + id]);
@@ -400,7 +413,7 @@ export default function VocabReview({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
-      if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+      stopSpeaking();
     };
   }, []);
 
@@ -473,7 +486,7 @@ export default function VocabReview({
                     onClick={() => {
                       setSel(opt);
                       // Chọn từ tiếng Đức thì đọc lên cho quen tai (dạng nghe thì không, kẻo lộ đáp án)
-                      if (sound && kind !== "choose-meaning" && kind !== "listen-choose") speak(spoken(opt));
+                      if (sound && kind !== "choose-meaning" && kind !== "listen-choose") void speakGerman(spoken(opt));
                     }}
                     disabled={!!feedback}
                   >

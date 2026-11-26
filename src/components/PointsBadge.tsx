@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { POINTS_EVENT, type PointsEvent } from "@/lib/points";
+import { SEASONAL_THEME } from "@/lib/theme";
 
-/** Kim cương điểm phiên bản Giáng Sinh (pha lê băng xanh + ánh sao vàng Noel) — dùng ở huy hiệu và các chỗ hiện điểm. */
+/** Kim cương điểm pha lê xanh (mùa Giáng Sinh có thêm hoa tuyết & sao vàng) — dùng ở huy hiệu và các chỗ hiện điểm. */
 export function Gem({ className = "size-5" }: { className?: string }) {
   const id = useId(); // mỗi viên 1 id gradient riêng
   const outline = "M7.2 3.5h9.6l4.7 5.6L12 21 2.5 9.1z";
@@ -21,11 +23,15 @@ export function Gem({ className = "size-5" }: { className?: string }) {
       <path d="M9.6 9.1h4.8L12 21z" fill="#7dd3fc" />
       <path d="M14.4 9.1h7.1L12 21z" fill="#0284c7" fillOpacity="0.45" />
       <path d={outline} fill="none" stroke="#0369a1" strokeWidth="1.3" strokeLinejoin="round" />
-      {/* Hoa tuyết pha lê mảnh trong lõi kim cương */}
-      <path d="M12 10.6v4.6M10.1 11.8l3.8 2.2M13.9 11.8l-3.8 2.2" stroke="#f8fafc" strokeWidth="1.15" strokeLinecap="round" opacity="0.9" />
       <path d="M5.6 8.2 7.7 5.6" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" />
-      {/* Tia sao vàng Giáng Sinh lấp lánh ở góc */}
-      <path d="M20.4 1c.32 1.25.7 1.65 1.95 1.95-1.25.32-1.65.7-1.95 1.95-.32-1.25-.7-1.65-1.95-1.95 1.25-.32 1.65-.7 1.95-1.95z" fill="#fbbf24" />
+      {SEASONAL_THEME === "noel" && (
+        <>
+          {/* Hoa tuyết pha lê mảnh trong lõi kim cương */}
+          <path d="M12 10.6v4.6M10.1 11.8l3.8 2.2M13.9 11.8l-3.8 2.2" stroke="#f8fafc" strokeWidth="1.15" strokeLinecap="round" opacity="0.9" />
+          {/* Tia sao vàng Giáng Sinh lấp lánh ở góc */}
+          <path d="M20.4 1c.32 1.25.7 1.65 1.95 1.95-1.25.32-1.65.7-1.95 1.95-.32-1.25-.7-1.65-1.95-1.95 1.25-.32 1.65-.7 1.95-1.95z" fill="#fbbf24" />
+        </>
+      )}
     </svg>
   );
 }
@@ -67,9 +73,10 @@ export default function PointsBadge({ initial }: { initial: number }) {
   }
 
   return (
-    <span
-      title="Điểm chính tả — đúng 1 từ +1 (chuỗi đúng liên tiếp thưởng tới +4/từ), bấm xem từ −2"
-      className="relative inline-flex h-8 items-center gap-1.5 rounded-lg border border-gem/20 bg-gem-soft pr-2.5 pl-1.5 text-sm font-bold text-gem tabular-nums select-none"
+    <Link
+      href="/leaderboard"
+      title="Điểm chính tả — đúng 1 từ +1 (chuỗi đúng liên tiếp thưởng tới +4/từ), bấm xem từ −2 · Xem bảng xếp hạng"
+      className="relative inline-flex h-8 items-center gap-1.5 rounded-lg border border-gem/20 bg-gem-soft pr-2.5 pl-1.5 text-sm font-bold text-gem tabular-nums transition-colors select-none hover:border-gem/40"
     >
       <span className="relative inline-flex">
         <span key={`c${bump}`} className={bump ? "points-bump" : undefined}>
@@ -94,6 +101,6 @@ export default function PointsBadge({ initial }: { initial: number }) {
           +{pop.n}
         </span>
       )}
-    </span>
+    </Link>
   );
 }

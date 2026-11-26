@@ -60,9 +60,9 @@ type PrepareResult = {
 const VOICE_PILLS: { id: LiveVoiceId; name: string; tag: string }[] = [
   { id: "edge:vi-VN-NamMinhNeural", name: "Nam Minh", tag: "Nam · Tự nhiên" },
   { id: "edge:vi-VN-HoaiMyNeural", name: "Hoài My", tag: "Nữ · Tự nhiên" },
-  { id: "piper:adam_bua", name: "Adam bựa", tag: "Trình duyệt" },
-  { id: "piper:lac_phi", name: "Lạc Phi", tag: "Thuyết minh" },
-  { id: "piper:vtv2_thuyetminh", name: "Eva", tag: "Thuyết minh" },
+  { id: "piper:adam_bua", name: "Adam", tag: "Nam · Trình duyệt" },
+  { id: "piper:lac_phi", name: "Lạc Phi", tag: "Thuyết minh · Trình duyệt" },
+  { id: "piper:vtv2_thuyetminh", name: "Eva", tag: "Thuyết minh · Trình duyệt" },
 ];
 
 /** Trạng thái hiển thị thân thiện, không lộ chi tiết kỹ thuật xử lý phía sau. */
@@ -467,7 +467,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
       <form onSubmit={handleSubmit} className="card flex flex-col gap-3.5 p-4 sm:p-5">
         {/* Hàng 1: Ô dán link (tự tải ngay khi dán) + Nút chạy / Loading + Huỷ */}
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
-          <div className="input-group min-w-0 flex-1 pr-2">
+          <div className="input-group min-w-0 flex-1 pr-1.5">
             <Link2 className="size-4 shrink-0 text-muted" aria-hidden />
             <input
               ref={inputRef}
@@ -501,9 +501,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                 onClick={clearInput}
                 title="Xoá link để dán bài khác"
                 aria-label="Xoá link"
-                className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-card-2 hover:text-foreground"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-card-2 hover:text-foreground"
               >
-                <X className="size-3.5" />
+                <X className="size-4" />
               </button>
             )}
           </div>
@@ -559,37 +559,39 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
           </div>
         </div>
 
-        {/* Hàng 2: Chọn giọng dạng pill gọn gàng + gợi ý ngắn */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-line/70 pt-3">
-          <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Chọn giọng thuyết minh">
-            <span className="mr-1 text-xs font-medium text-muted">Giọng đọc:</span>
-            {VOICE_PILLS.map((v) => {
-              const active = voiceId === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setVoiceId(v.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                    active
-                      ? "border-sec bg-sec-soft text-sec-text"
-                      : "border-line bg-card-2/50 text-muted hover:border-line-strong hover:text-foreground"
-                  }`}
-                >
-                  <span>{v.name}</span>
-                  <span className={`text-[10px] font-normal ${active ? "text-sec-text/80" : "text-muted/80"}`}>
-                    {v.tag}
-                  </span>
-                </button>
-              );
-            })}
+        {/* Hàng 2: Chọn giọng dạng pill gọn gàng + gợi ý ngắn (ẩn khi player đã mở vì trên thanh player đã có chọn giọng) */}
+        {!session && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-line/70 pt-3">
+            <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Chọn giọng thuyết minh">
+              <span className="mr-1 text-xs font-medium text-muted">Giọng đọc:</span>
+              {VOICE_PILLS.map((v) => {
+                const active = voiceId === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setVoiceId(v.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      active
+                        ? "border-sec bg-sec-soft text-sec-text"
+                        : "border-line bg-card-2/50 text-muted hover:border-line-strong hover:text-foreground"
+                    }`}
+                  >
+                    <span>{v.name}</span>
+                    <span className={`text-[10px] font-normal ${active ? "text-sec-text/80" : "text-muted/80"}`}>
+                      {v.tag}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <span className="text-[11px] text-muted">
+              Dán link là tự động mở · Hỗ trợ nhiều ngôn ngữ
+            </span>
           </div>
-          <span className="text-[11px] text-muted">
-            Dán link là tự động mở · Hỗ trợ nhiều ngôn ngữ
-          </span>
-        </div>
+        )}
 
         {/* Khung chờ gọn đẹp, không lộ quy trình kỹ thuật phía sau */}
         {loading && prep && (
@@ -751,9 +753,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                     onClick={() => removeRecent(r.videoId)}
                     title="Xoá khỏi danh sách gần đây"
                     aria-label="Xoá khỏi danh sách gần đây"
-                    className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-black/65 text-white opacity-90 transition hover:bg-black/85 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    className="absolute top-1.5 right-1.5 flex size-8 items-center justify-center rounded-full bg-black/65 text-white opacity-90 transition hover:bg-black/85 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                   >
-                    <X className="size-3.5" />
+                    <X className="size-4" />
                   </button>
                 </div>
               );

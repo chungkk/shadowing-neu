@@ -167,11 +167,11 @@ export function ResetProgress({ module = "fuehrerschein", userId }: { module?: "
           setError("");
           try {
             await clientApi("/quiz", { method: "DELETE", body: { module, all: true } });
-            // Vị trí học dở của tài khoản này (localStorage "pos:u<id>:lid:…") cũng là tiến độ → xoá theo
-            if (module === "lid" && userId !== undefined)
-              try {
-                for (const k of Object.keys(localStorage)) if (k.startsWith(`pos:u${userId}:lid:`)) localStorage.removeItem(k);
-              } catch {}
+            // Vị trí học dở của phần này cũng là tiến độ → xoá theo
+            try {
+              const prefix = module === "lid" ? (userId !== undefined ? `pos:u${userId}:lid:` : "pos:lid:") : "pos:laixe:";
+              for (const k of Object.keys(localStorage)) if (k.startsWith(prefix)) localStorage.removeItem(k);
+            } catch {}
             router.refresh();
           } catch (e) {
             setError((e as Error).message);

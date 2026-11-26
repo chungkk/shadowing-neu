@@ -63,7 +63,7 @@ const shadowing: ProductPage = {
     shape: 'landscape',
     screens: [web('home'), web('lesson'), web('vocab')],
     hero: [1],
-    sections: [[0], [1], [2], [], []],
+    sections: [[0], [1], [], [2], [], [], []],
     seo: {
         title: 'HalloVN – Deutsch, Führerschein und Leben in Deutschland auf Vietnamesisch',
         description:
@@ -92,6 +92,12 @@ const shadowing: ProductPage = {
                     points: ['Automatische Pause nach jedem Satz, Tempo und Wiederholung einstellbar', 'Aufnehmen und Anhören der eigenen Stimme', 'Vietnamesische Übersetzung pro Satz, Video oder Text ausblendbar', 'Wort antippen: Bedeutung sehen und ins Vokabelheft speichern'],
                 },
                 {
+                    title: 'Grammatik A1–B2 klar strukturiert',
+                    body: '58 systematische Grammatiklektionen von A1 bis B2 erklären Regeln, Tabellen und typische Stolperfallen verständlich auf Vietnamesisch, ergänzt durch Beispiele aus dem Alltag und kurze Übungen.',
+                    points: ['58 Lektionen nach GER-Niveaus A1, A2, B1 und B2 geordnet', 'Übersichtliche Tabellen zu Fällen, Verben, Satzbau und Konnektoren', 'Direkt im Browser nachschlagen und üben'],
+                    link: { href: '/ngu-phap', label: 'Zur Grammatik' },
+                },
+                {
                     title: 'Wortschatz, der bleibt',
                     body: 'Die Wortlisten folgen den Goethe-Niveaus A1, A2 und B1, dazu Aspekte neu für B2, Nomen-Verb-Verbindungen und Wortschatz für die Pflege. Alle Wörter haben eine vietnamesische Bedeutung. Was du behalten willst, kommt ins Vokabelheft und wird zur richtigen Zeit wiederholt.',
                     points: ['Goethe A1, A2 und B1, Aspekte neu B2', 'Nomen-Verb-Verbindungen und Wortschatz Pflege', 'Vokabelheft mit Wiederholung (mit Konto)'],
@@ -108,6 +114,12 @@ const shadowing: ProductPage = {
                     body: 'Der offizielle Fragenkatalog des BAMF (Stand 7. Mai 2025): 300 allgemeine Fragen und 10 Fragen für jedes Bundesland, alle mit vietnamesischer Übersetzung. Du wählst dein Bundesland und übst genau die Fragen, die im Test vorkommen.',
                     points: ['Lernen nach Themen: Politik, Geschichte, Gesellschaft', 'Testsimulation: 33 Fragen, 60 Minuten, ab 17 richtigen bestanden', 'Falsch beantwortete Fragen wiederholen', 'Kurze Erklärungen auf Vietnamesisch bei vielen Fragen'],
                     link: { href: '/leben-in-deutschland', label: 'Zu Leben in Deutschland' },
+                },
+                {
+                    title: 'YouTube mit vietnamesischer Sprachausgabe',
+                    body: 'Verfolge deutschsprachige YouTube-Videos mit synchronisierter vietnamesischer Übersetzung und Vorlesestimme – direkt im Webplayer oder über die Browser-Erweiterung.',
+                    points: ['Zweisprachige Untertitel und vietnamesische Sprachausgabe im Takt des Videos', 'Ideal für Nachrichten, Dokumentationen und Fachvideos', 'Auch als Chrome-Erweiterung verfügbar'],
+                    link: { href: '/thuyet-minh', label: 'Zu YouTube mit Sprachausgabe' },
                 },
             ],
             alts: [
@@ -147,6 +159,12 @@ const shadowing: ProductPage = {
                     points: ['Automatic pause after each sentence, adjustable speed and repeats', 'Record and play back your own voice', 'Vietnamese translation per sentence, hide video or text', 'Tap a word to see its meaning and save it to your notebook'],
                 },
                 {
+                    title: 'Grammar A1–B2 made clear',
+                    body: '58 structured grammar lessons from A1 to B2 explain German rules, tables and common pitfalls clearly in Vietnamese, with everyday examples and quick practice.',
+                    points: ['58 lessons organised by CEFR levels A1, A2, B1 and B2', 'Clear tables for cases, verbs, word order and connectors', 'Easy reference and practice right in your browser'],
+                    link: { href: '/ngu-phap', label: 'Go to grammar' },
+                },
+                {
                     title: 'Vocabulary that sticks',
                     body: 'The word lists follow the Goethe levels A1, A2 and B1, plus Aspekte neu for B2, noun-verb collocations and vocabulary for nursing. Every word has a Vietnamese meaning. What you want to keep goes into your notebook and comes back for review at the right time.',
                     points: ['Goethe A1, A2 and B1, Aspekte neu B2', 'Noun-verb collocations and nursing vocabulary', 'Notebook with spaced review (with an account)'],
@@ -163,6 +181,12 @@ const shadowing: ProductPage = {
                     body: 'The official BAMF question catalogue (as of 7 May 2025): 300 general questions and 10 for each federal state, all translated into Vietnamese. Choose your state and practise exactly the questions that appear in the test.',
                     points: ['Learn by topic: politics, history, society', 'Mock test: 33 questions, 60 minutes, pass with 17 correct', 'Repeat the questions you got wrong', 'Short explanations in Vietnamese for many questions'],
                     link: { href: '/leben-in-deutschland', label: 'Go to Leben in Deutschland' },
+                },
+                {
+                    title: 'YouTube with Vietnamese voice-over',
+                    body: 'Watch German YouTube videos with synchronized Vietnamese subtitles and voice-over dubbing – directly in the web player or with the browser extension.',
+                    points: ['Bilingual subtitles and Vietnamese voice-over synced to the video', 'Great for news, documentaries and specialist topics', 'Also available as a Chrome extension'],
+                    link: { href: '/thuyet-minh', label: 'Watch dubbed YouTube' },
                 },
             ],
             alts: [
@@ -202,6 +226,12 @@ const shadowing: ProductPage = {
                     points: ['Tự dừng sau mỗi câu, chỉnh được tốc độ và số lần lặp', 'Ghi âm và nghe lại giọng của bạn', 'Dịch tiếng Việt từng câu, ẩn video hoặc ẩn chữ', 'Chạm vào từ để xem nghĩa và lưu vào sổ từ'],
                 },
                 {
+                    title: 'Ngữ pháp A1–B2 hệ thống & dễ hiểu',
+                    body: '58 bài ngữ pháp từ A1 đến B2 trình bày ngắn gọn bằng tiếng Việt kèm bảng tra cứu nhanh, ví dụ thực tế và bài tập củng cố ngay sau lý thuyết.',
+                    points: ['58 bài chia rõ theo trình độ A1, A2, B1 và B2', 'Bảng chia động từ, cách (Kasus), trật tự câu và liên từ rõ ràng', 'Tra cứu và luyện nhanh ngay trên trình duyệt'],
+                    link: { href: '/ngu-phap', label: 'Xem ngữ pháp' },
+                },
+                {
                     title: 'Từ vựng nhớ lâu',
                     body: 'Các bộ từ theo trình độ Goethe A1, A2, B1, thêm Aspekte neu cho B2, Nomen-Verb-Verbindungen và từ vựng điều dưỡng. Từ nào cũng có nghĩa tiếng Việt. Từ muốn nhớ thì lưu vào sổ từ và ôn đúng lúc.',
                     points: ['Goethe A1, A2 và B1, Aspekte neu B2', 'Nomen-Verb-Verbindungen và từ vựng điều dưỡng', 'Sổ từ vựng có lịch ôn (cần tài khoản)'],
@@ -218,6 +248,12 @@ const shadowing: ProductPage = {
                     body: 'Bộ câu hỏi chính thức của BAMF (bản ngày 7/5/2025): 300 câu chung và 10 câu riêng của từng bang, câu nào cũng có dịch tiếng Việt. Chọn bang của bạn để ôn đúng những câu sẽ có trong bài thi.',
                     points: ['Học theo 3 chủ đề: chính trị, lịch sử, xã hội', 'Thi thử 33 câu trong 60 phút, đúng 17 câu là đậu', 'Ôn lại các câu hay sai', 'Nhiều câu có giải thích ngắn bằng tiếng Việt'],
                     link: { href: '/leben-in-deutschland', label: 'Ôn Leben in Deutschland' },
+                },
+                {
+                    title: 'Xem YouTube thuyết minh tiếng Việt',
+                    body: 'Xem video YouTube tiếng Đức kèm phụ đề song ngữ và giọng đọc thuyết minh tiếng Việt đồng bộ theo từng câu — trực tiếp trên web hoặc qua tiện ích trình duyệt.',
+                    points: ['Phụ đề song ngữ và giọng thuyết minh tiếng Việt khớp nhịp video', 'Hữu ích khi xem tin tức, phóng sự và video kiến thức tại Đức', 'Có thêm tiện ích mở rộng trên Chrome'],
+                    link: { href: '/thuyet-minh', label: 'Xem YouTube thuyết minh' },
                 },
             ],
             alts: [

@@ -33,7 +33,7 @@ const COPY = {
         terms: 'Nutzungsbedingungen',
         all: 'Support-Center',
         hubTitle: 'Support-Center',
-        hubIntro: 'Hilfe zu HalloVN – Deutschlernen, Vokabeln, Führerscheintheorie und Leben in Deutschland – und zu unseren weiteren Apps.',
+        hubIntro: 'Hilfe zu HalloVN – Deutschlernen, Grammatik, Vokabeln, Führerscheintheorie und Leben in Deutschland.',
         quick: 'Schnelle Hilfe',
         quickLinks: [
             { href: '/shadowing/support', label: 'Häufige Fragen zu HalloVN', desc: 'Konto, Gastzugang, Vokabelheft, Diamanten, Sprache und mehr' },
@@ -62,7 +62,7 @@ const COPY = {
         terms: 'Terms of use',
         all: 'Support center',
         hubTitle: 'Support center',
-        hubIntro: 'Help with HalloVN – learning German, vocabulary, driving theory and Leben in Deutschland – and with our other apps.',
+        hubIntro: 'Help with HalloVN – learning German, grammar, vocabulary, driving theory and Leben in Deutschland.',
         quick: 'Quick help',
         quickLinks: [
             { href: '/shadowing/support', label: 'HalloVN FAQ', desc: 'Account, guest access, vocabulary book, diamonds, language and more' },
@@ -91,7 +91,7 @@ const COPY = {
         terms: 'Điều khoản sử dụng',
         all: 'Trung tâm hỗ trợ',
         hubTitle: 'Trung tâm hỗ trợ',
-        hubIntro: 'Hỗ trợ cho HalloVN – học tiếng Đức, từ vựng, ôn lý thuyết lái xe và Leben in Deutschland – cùng các ứng dụng khác của chúng tôi.',
+        hubIntro: 'Hỗ trợ cho HalloVN – học tiếng Đức, ngữ pháp, từ vựng, ôn lý thuyết lái xe và Leben in Deutschland.',
         quick: 'Trợ giúp nhanh',
         quickLinks: [
             { href: '/shadowing/support', label: 'Câu hỏi thường gặp về HalloVN', desc: 'Tài khoản, học thử khi chưa đăng nhập, sổ từ, kim cương, ngôn ngữ…' },
@@ -268,7 +268,7 @@ export function SupportHub() {
                     <section aria-labelledby="products" className="card flex flex-col gap-3 sm:p-6">
                         <CardTitle id="products" icon={FileText}>{COPY[l].products}</CardTitle>
                         <ul className="flex flex-col divide-y divide-line border-t border-line dark:divide-border dark:border-border">
-                            {LEGAL_PRODUCTS.map((product) => (
+                            {LEGAL_PRODUCTS.filter((product) => product.slug === HALLOVN_SLUG).map((product) => (
                                 <li key={product.slug} className="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="min-w-0">
                                         <strong className="block font-display text-lg leading-snug font-bold">{product.name}</strong>

@@ -1,4 +1,43 @@
 import type { SVGProps } from "react";
+import {
+  BarChart3,
+  Bell,
+  BookMarked,
+  BookOpen,
+  BookOpenCheck,
+  Briefcase,
+  Captions,
+  Car,
+  Coffee,
+  FileStack,
+  Film,
+  Flag,
+  Flame,
+  GraduationCap,
+  Headphones,
+  House,
+  Landmark,
+  Languages,
+  Layers,
+  LayoutDashboard,
+  Lock,
+  MessageSquare,
+  Mic,
+  MonitorPlay,
+  Newspaper,
+  PencilLine,
+  RotateCcw,
+  Server,
+  Settings,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Star,
+  Trophy,
+  Tv,
+  Users,
+} from "lucide-react";
+import { SEASONAL_THEME } from "@/lib/theme";
 
 export type FestiveIconProps = SVGProps<SVGSVGElement> & {
   className?: string;
@@ -16,6 +55,7 @@ const base = (strokeWidth = 1.85) => ({
 
 /** 1. Trang chủ — Ngôi nhà mái tuyết & sao Giáng Sinh */
 export function ChristmasHomeIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <House className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M3 10.5 12 3.5l9 7" />
@@ -30,6 +70,7 @@ export function ChristmasHomeIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 2. Tiếng Đức — Bong bóng ngôn ngữ đội mũ ông già Noel */
 export function ChristmasDeutschIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Languages className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4 11.5c0-3.6 3.4-6.5 7.5-6.5s7.5 2.9 7.5 6.5-3.4 6.5-7.5 6.5c-1.2 0-2.4-.2-3.4-.7L4.5 19l1-3.1C4.5 14.7 4 13.2 4 11.5z" />
@@ -45,6 +86,7 @@ export function ChristmasDeutschIcon({ className = "size-5", strokeWidth = 1.85,
 
 /** 3. Lái xe — Ô tô chở cây thông Noel trên nóc */
 export function ChristmasCarIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Car className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       {/* Cây thông Noel buộc trên nóc xe */}
@@ -63,6 +105,7 @@ export function ChristmasCarIcon({ className = "size-5", strokeWidth = 1.85, ...
 
 /** 4. Leben in Deutschland — Cổng lịch sử Đức treo vòng nguyệt quế Noel */
 export function ChristmasLidIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Landmark className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M3 20h18" />
@@ -78,6 +121,7 @@ export function ChristmasLidIcon({ className = "size-5", strokeWidth = 1.85, ...
 
 /** 5. Thông báo — Chuông Giáng Sinh có lá nhựa ruồi & nơ đỏ */
 export function ChristmasBellIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Bell className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M18 10a6 6 0 0 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5" />
@@ -91,6 +135,7 @@ export function ChristmasBellIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 6. Ôn tập / Sổ từ — Chồng thẻ quà tặng thắt nơ vàng */
 export function ChristmasReviewIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Layers className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="4" y="8" width="16" height="4.5" rx="1.2" />
@@ -104,6 +149,7 @@ export function ChristmasReviewIcon({ className = "size-5", strokeWidth = 1.85, 
 
 /** 7. Bài học video — Màn hình video có ngôi sao Giáng Sinh */
 export function ChristmasVideoIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <MonitorPlay className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="2.5" y="4.5" width="19" height="13" rx="2.2" />
@@ -116,6 +162,7 @@ export function ChristmasVideoIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 8. Ngữ pháp — Mũ tốt nghiệp gắn quả nhựa ruồi Giáng Sinh */
 export function ChristmasGrammarIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <GraduationCap className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="m2.5 9.5 9.5-4.5 9.5 4.5L12 14 2.5 9.5z" />
@@ -130,6 +177,7 @@ export function ChristmasGrammarIcon({ className = "size-5", strokeWidth = 1.85,
 
 /** 9. Kho từ vựng — Sách từ vựng có ruy-băng đỏ & sao vàng */
 export function ChristmasVocabIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <BookMarked className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4.5 19.5A2.5 2.5 0 0 1 7 17h12.5" />
@@ -143,6 +191,7 @@ export function ChristmasVocabIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 10. Học theo chương — Sách mở tỏa sao tuyết */
 export function ChristmasBookIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <BookOpen className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M12 8.5c-1.8-1.4-4.5-2-8-2v12c3.5 0 6.2.6 8 2 1.8-1.4 4.5-2 8-2v-12c-3.5 0-6.2.6-8 2z" />
@@ -155,6 +204,7 @@ export function ChristmasBookIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 11. Bảng xếp hạng / Thành tích — Cúp ngôi sao Giáng Sinh */
 export function ChristmasTrophyIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Trophy className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M7 4h10v6a5 5 0 0 1-10 0V4z" />
@@ -170,6 +220,7 @@ export function ChristmasTrophyIcon({ className = "size-5", strokeWidth = 1.85, 
 
 /** 12. Thi thử — Cờ đích gắn ngôi sao Giáng Sinh */
 export function ChristmasFlagIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Flag className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M5 21V5.5" />
@@ -183,6 +234,7 @@ export function ChristmasFlagIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 13. Đề mẫu — Xấp đề thi gắn bông tuyết */
 export function ChristmasFileStackIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <FileStack className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="6" y="3" width="13" height="15" rx="2" />
@@ -196,6 +248,7 @@ export function ChristmasFileStackIcon({ className = "size-5", strokeWidth = 1.8
 
 /** 14. Thống kê — Biểu đồ cột chạm sao Giáng Sinh */
 export function ChristmasChartIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <BarChart3 className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M3.5 20h17" />
@@ -209,6 +262,7 @@ export function ChristmasChartIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 15. Cài đặt — Bánh răng bông tuyết (Snowflake Gear) */
 export function ChristmasSettingsIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Settings className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <circle cx="12" cy="12" r="3.2" />
@@ -221,6 +275,7 @@ export function ChristmasSettingsIcon({ className = "size-5", strokeWidth = 1.85
 
 /** 16. Quản trị — Khiên ngôi sao Giáng Sinh */
 export function ChristmasAdminIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <ShieldCheck className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3z" />
@@ -231,6 +286,7 @@ export function ChristmasAdminIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 17. Chuỗi ngày học — Ngọn nến Giáng Sinh ấm áp (Adventskerze) */
 export function ChristmasFlameIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Flame className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       {/* Ngọn lửa nến vàng ấm */}
@@ -245,6 +301,7 @@ export function ChristmasFlameIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 18. Ngôi sao Giáng Sinh 8 cánh */
 export function ChristmasStarIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Star className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M12 2.5 14.3 9l6.7 1-5 4.4 1.4 6.6-5.4-3.3-5.4 3.3 1.4-6.6-5-4.4 6.7-1z" />
@@ -255,6 +312,7 @@ export function ChristmasStarIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 19. Ôn câu sai — Vòng lặp kèm điểm nhựa ruồi đỏ */
 export function ChristmasWrongIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <RotateCcw className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9" />
@@ -266,6 +324,7 @@ export function ChristmasWrongIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 20. Nghe từng câu — Tai nghe đội mũ Noel nhỏ */
 export function ChristmasHeadphonesIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Headphones className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
@@ -280,6 +339,7 @@ export function ChristmasHeadphonesIcon({ className = "size-5", strokeWidth = 1.
 
 /** 21. Ghi âm nói theo — Micro thắt nơ đỏ Giáng Sinh */
 export function ChristmasMicIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Mic className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="9" y="3" width="6" height="10" rx="3" />
@@ -293,6 +353,7 @@ export function ChristmasMicIcon({ className = "size-5", strokeWidth = 1.85, ...
 
 /** 22. Chép chính tả — Bút viết tỏa sao Giáng Sinh */
 export function ChristmasPencilIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <PencilLine className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4 20h4.5L19 9.5a2.1 2.1 0 0 0-3-3L5.5 17 4 20z" />
@@ -304,6 +365,7 @@ export function ChristmasPencilIcon({ className = "size-5", strokeWidth = 1.85, 
 
 /** 23. App di động — Điện thoại hiện cây thông Noel nhỏ */
 export function ChristmasSmartphoneIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Smartphone className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
@@ -316,6 +378,7 @@ export function ChristmasSmartphoneIcon({ className = "size-5", strokeWidth = 1.
 
 /** 24. Chủ đề Đời sống hằng ngày — Ly ca cao / Glühwein mùa đông */
 export function ChristmasCocoaIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Coffee className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4.5 9h11.5v7.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5V9z" />
@@ -329,6 +392,7 @@ export function ChristmasCocoaIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 25. Chủ đề Hội thoại — Bong bóng trò chuyện gắn lá nhựa ruồi */
 export function ChristmasChatIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <MessageSquare className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4.5 11.5a7.5 6.5 0 1 1 3 5.2L4 19l1.2-3.4c-.5-1.2-.7-2.6-.7-4.1z" />
@@ -341,6 +405,7 @@ export function ChristmasChatIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 26. Chủ đề Công việc — Cặp công sở thắt ruy-băng đỏ */
 export function ChristmasWorkIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Briefcase className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="3.5" y="7.5" width="17" height="12.5" rx="2" />
@@ -353,6 +418,7 @@ export function ChristmasWorkIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 27. Chủ đề Tin tức Đức — Tờ báo có bông tuyết mùa đông */
 export function ChristmasNewsIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Newspaper className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M4.5 5.5A1.5 1.5 0 0 1 6 4h12a1.5 1.5 0 0 1 1.5 1.5v13a1.5 1.5 0 0 1-1.5 1.5H6a2 2 0 0 1-2-2V5.5z" />
@@ -364,6 +430,7 @@ export function ChristmasNewsIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 28. Chủ đề Văn hóa & Giải trí — Quả châu Giáng Sinh (Christbaumkugel) */
 export function ChristmasOrnamentIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Film className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <circle cx="12" cy="13.5" r="7" />
@@ -376,6 +443,7 @@ export function ChristmasOrnamentIcon({ className = "size-5", strokeWidth = 1.85
 
 /** 29. Admin Dashboard — Lưới 4 ô có ô sao Giáng Sinh */
 export function ChristmasDashboardIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <LayoutDashboard className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
@@ -388,6 +456,7 @@ export function ChristmasDashboardIcon({ className = "size-5", strokeWidth = 1.8
 
 /** 30. Kênh YouTube — TV phát sáng sao Giáng Sinh */
 export function ChristmasChannelIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Tv className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="3" y="7" width="18" height="13" rx="2" />
@@ -400,6 +469,7 @@ export function ChristmasChannelIcon({ className = "size-5", strokeWidth = 1.85,
 
 /** 31. Kho phụ đề — Khung phụ đề có sao tuyết */
 export function ChristmasCaptionsIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Captions className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -411,6 +481,7 @@ export function ChristmasCaptionsIcon({ className = "size-5", strokeWidth = 1.85
 
 /** 32. Kho nội dung chuẩn — Sách có dấu sao hoàn thành */
 export function ChristmasCatalogIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <BookOpenCheck className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M12 7c-1.8-1.3-4.5-1.8-8-1.8V18c3.5 0 6.2.5 8 1.8 1.8-1.3 4.5-1.8 8-1.8V5.2c-3.5 0-6.2.5-8 1.8z" />
@@ -422,6 +493,7 @@ export function ChristmasCatalogIcon({ className = "size-5", strokeWidth = 1.85,
 
 /** 33. Người dùng — Nhóm học viên đội mũ Noel nhỏ */
 export function ChristmasUsersIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Users className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <circle cx="9.5" cy="9.5" r="3" />
@@ -437,6 +509,7 @@ export function ChristmasUsersIcon({ className = "size-5", strokeWidth = 1.85, .
 
 /** 34. Khoá bài & Kim cương — Ổ khoá gắn nơ quà đỏ */
 export function ChristmasLockIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Lock className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
@@ -449,6 +522,7 @@ export function ChristmasLockIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 35. Hệ thống & Cache — Máy chủ mùa đông có đèn bông tuyết */
 export function ChristmasSystemIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Server className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <rect x="3.5" y="4" width="17" height="6.5" rx="1.6" />
@@ -462,6 +536,7 @@ export function ChristmasSystemIcon({ className = "size-5", strokeWidth = 1.85, 
 
 /** 36. Cây thông Giáng Sinh tinh gọn (dùng cho badge / footer / điểm nhấn) */
 export function ChristmasTreeIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Sparkles className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M12 4.5 6.5 12h2.4L5 18h14l-3.9-6h2.4z" fill="#22C55E" fillOpacity="0.16" stroke="#22C55E" />
@@ -475,6 +550,7 @@ export function ChristmasTreeIcon({ className = "size-5", strokeWidth = 1.85, ..
 
 /** 37. Bông tuyết tinh thể 6 cánh */
 export function ChristmasSnowflakeIcon({ className = "size-5", strokeWidth = 1.85, ...p }: FestiveIconProps) {
+  if (SEASONAL_THEME !== "noel") return <Sparkles className={className} strokeWidth={strokeWidth} aria-hidden {...p} />;
   return (
     <svg {...base(strokeWidth)} className={className} aria-hidden {...p}>
       <path d="M12 2.5v19M3.8 7.2l16.4 9.6M20.2 7.2 3.8 16.8" />

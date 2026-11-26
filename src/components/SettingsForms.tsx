@@ -127,7 +127,7 @@ function NameRow({ name }: { name: string }) {
     <Row
       icon={UserRound}
       title="Tên hiển thị"
-      desc="Hiện trên bảng xếp hạng và phòng chơi."
+      desc="Hiện trên bảng xếp hạng học viên."
       value={!open && <span className="truncate">{name}</span>}
       action={<EditToggle open={open} onToggle={() => setOpen(!open)} />}
     >
@@ -488,8 +488,8 @@ export default function SettingsForms({
               <span className="font-display text-2xl font-extrabold tabular-nums">{fmt(points)}</span>
               <span className="text-xs font-semibold">kim cương</span>
             </span>
-            <span className="ml-auto flex items-center gap-0.5 text-xs font-bold sm:hidden">
-              <BarChart3 className="size-3.5" /> Thống kê <ChevronRight className="size-3.5" />
+            <span className="ml-auto flex items-center gap-0.5 pl-1.5 text-xs font-bold">
+              <BarChart3 className="size-3.5 sm:hidden" /> Thống kê <ChevronRight className="size-3.5" />
             </span>
           </Link>
         </section>

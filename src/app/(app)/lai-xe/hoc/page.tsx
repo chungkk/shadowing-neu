@@ -65,9 +65,9 @@ async function Topics() {
                 <h2 id={`part-${part.key}`} className="section-title">
                   {part.title}
                 </h2>
-                <p className="text-sm text-muted">
-                  {part.subtitle} · {user ? `${ps.done}/` : ""}
-                  {ps.total} câu · {part.themes.length} chủ đề
+                <p className="text-sm text-muted tabular-nums">
+                  {part.subtitle} · {user ? `${fmtNum(ps.done)}/` : ""}
+                  {fmtNum(ps.total)} câu · {part.themes.length} chủ đề
                 </p>
               </div>
               <div className="flex gap-2 max-sm:w-full">
@@ -96,8 +96,8 @@ async function Topics() {
                           <span className="font-semibold">{t.vi || t.de}</span> <span className="text-sm text-muted">· {t.de}</span>
                         </span>
                         <span className="badge badge-muted shrink-0 tabular-nums">
-                          {user ? `${ts.done}/` : ""}
-                          {ts.total}
+                          {user ? `${fmtNum(ts.done)}/` : ""}
+                          {fmtNum(ts.total)}
                         </span>
                       </span>
                       {user && (
@@ -130,9 +130,9 @@ async function Topics() {
                                 {user && <ProgressBar {...cs} />}
                               </div>
                               <span className="flex items-center gap-2">
-                                <span className="flex-1 text-xs font-semibold text-muted tabular-nums sm:w-16 sm:flex-none sm:text-right">
-                                  {user ? `${cs.done}/` : ""}
-                                  {cs.total} câu
+                                <span className="flex-1 text-xs font-semibold text-muted tabular-nums sm:w-20 sm:flex-none sm:text-right">
+                                  {user ? `${fmtNum(cs.done)}/` : ""}
+                                  {fmtNum(cs.total)} câu
                                 </span>
                                 <Link href={`/lai-xe/hoc/${c.id}?mode=lesen`} className="btn btn-sm">
                                   Đọc

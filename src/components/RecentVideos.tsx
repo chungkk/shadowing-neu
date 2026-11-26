@@ -10,14 +10,16 @@ const KEY = "shadow-recent";
 const EMPTY: Recent[] = [];
 
 /** Danh sách video YouTube người dùng đã tự mở (lưu trong trình duyệt) */
-export function RecentVideos() {
+export function RecentVideos({ excludeVideoIds }: { excludeVideoIds?: string[] } = {}) {
   const [recent] = useLocalStorage(KEY, EMPTY);
-  if (!recent.length) return null;
+  const excluded = excludeVideoIds?.length ? new Set(excludeVideoIds) : null;
+  const items = excluded ? recent.filter((r) => !excluded.has(r.videoId)) : recent;
+  if (!items.length) return null;
   return (
     <section className="flex flex-col gap-3.5">
-      <SectionHeader title="Video đã mở gần đây" count={recent.length} />
+      <SectionHeader title="Video đã mở gần đây" count={items.length} />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4" data-sec="de">
-        {recent.map((r) => (
+        {items.map((r) => (
           <Link key={r.videoId} href={`/watch/${r.videoId}`} className="group card card-link flex flex-col overflow-hidden p-0">
             <div className="aspect-video overflow-hidden bg-card-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}

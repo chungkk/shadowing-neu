@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, KeyRound, Mail } from "lucide-react";
 import {
   requestPasswordReset,
@@ -18,6 +19,9 @@ const ErrorBox = ({ children }: { children?: string }) =>
 
 /** Trang "Quên mật khẩu": nhập email → nhận mã 6 số → nhập mã + mật khẩu mới (đặt xong là đăng nhập luôn) */
 export function ForgotForm() {
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get("next") ?? "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
   const [state, action, pending] = useActionState<ResetState, FormData>(
     resetPasswordAction,
     {},
@@ -98,6 +102,7 @@ export function ForgotForm() {
           ) : (
             <form action={action} className="flex flex-col gap-3">
               <input type="hidden" name="email" value={email} />
+              <input type="hidden" name="next" value={next} />
               <p className="alert alert-info">
                 <Mail className="mt-px size-4 shrink-0" aria-hidden />
                 <span>
@@ -166,7 +171,7 @@ export function ForgotForm() {
           )}
 
           <Link
-            href="/login"
+            href={next !== "/" ? `/login?next=${encodeURIComponent(next)}` : "/login"}
             className="mx-auto inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-link hover:underline"
           >
             <ArrowLeft className="size-4" /> Quay lại đăng nhập

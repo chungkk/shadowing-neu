@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { ChristmasFileStackIcon as FileStack } from "@/components/FestiveIcons";
 import { SubHeader } from "@/components/quiz/QuizParts";
+import { LoginLink } from "@/components/auth/LoginDialog";
 import { getCurrentUser } from "@/lib/auth";
 import { bogenProgress } from "@/lib/db";
 import { BOGEN_COUNT, WEB_BOGEN_LIMIT } from "@/lib/laixe";
@@ -38,10 +39,10 @@ async function Sheets() {
       ) : (
         <p className="alert alert-info">
           <span>
-            <Link href="/login?next=/lai-xe/de-mau" className="font-bold underline underline-offset-2">
+            <LoginLink href={`/login?next=${encodeURIComponent("/lai-xe/de-mau")}`} className="font-bold underline underline-offset-2">
               Đăng nhập
-            </Link>{" "}
-            để lưu kết quả từng đề.
+            </LoginLink>{" "}
+            để thi thử có bấm giờ và lưu kết quả từng đề.
           </span>
         </p>
       )}
@@ -70,9 +71,15 @@ async function Sheets() {
                 <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}?mode=ueben`} className="btn btn-sm flex-1">
                   Luyện
                 </Link>
-                <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="btn btn-sm btn-primary flex-1">
-                  Thi
-                </Link>
+                {user ? (
+                  <Link prefetch={false} rel="nofollow" href={`/lai-xe/de-mau/${n}`} className="btn btn-sm btn-primary flex-1">
+                    Thi
+                  </Link>
+                ) : (
+                  <LoginLink href={`/login?next=${encodeURIComponent(`/lai-xe/de-mau/${n}`)}`} className="btn btn-sm btn-primary flex-1" title="Đăng nhập để thi thử có giờ">
+                    Thi
+                  </LoginLink>
+                )}
               </span>
             </li>
           );

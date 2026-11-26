@@ -273,73 +273,75 @@ export function UserDropdown({ user }: { user: NavUser }) {
   );
 
   return (
-    <>
-      <Link href="/stats" title="Thành tích & cài đặt" className="flex items-center gap-2 rounded-lg p-1 transition hover:bg-card-2 md:hidden">
+    <div ref={box} className="relative" onPointerEnter={(e) => e.pointerType === "mouse" && show()} onPointerLeave={(e) => e.pointerType === "mouse" && hide()}>
+      <button
+        type="button"
+        className={`flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-colors hover:bg-card-2 sm:py-1 sm:pr-2 sm:pl-2.5 ${open ? "bg-card-2" : ""}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Tài khoản ${user.name}`}
+        onClick={() => setOpen((o) => !o)}
+      >
         {trigger}
-      </Link>
-      <div ref={box} className="relative max-md:hidden" onPointerEnter={(e) => e.pointerType === "mouse" && show()} onPointerLeave={(e) => e.pointerType === "mouse" && hide()}>
-        <button
-          className={`flex cursor-pointer items-center gap-2 rounded-lg py-1 pr-2 pl-2.5 transition-colors hover:bg-card-2 ${open ? "bg-card-2" : ""}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-        >
-          {trigger}
-          <ChevronDown className={`size-3.5 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
-        </button>
-        {open && (
-          <div className="absolute top-full right-0 z-50 w-64 pt-1.5">
-            <div role="menu" className="popover flex max-h-[calc(100dvh-6rem)] flex-col gap-0.5 overflow-y-auto">
-              <div className="mb-1 flex items-center gap-2.5 rounded-lg bg-card-2 px-3 py-2.5">
-                <Avatar user={user} className="size-10 text-base ring-1 ring-line" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm leading-tight font-semibold">{user.name}</p>
-                  <p className={`badge mt-1 ${admin ? "badge-gold" : "badge-accent"}`}>{admin ? "Quản trị viên" : "Học viên"}</p>
-                </div>
+        <ChevronDown className={`size-3.5 text-muted transition-transform duration-150 max-sm:hidden ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 z-50 w-64 max-w-[calc(100vw-1.5rem)] pt-1.5">
+          <div role="menu" className="popover flex max-h-[calc(100dvh-6rem)] flex-col gap-0.5 overflow-y-auto">
+            <div className="mb-1 flex items-center gap-2.5 rounded-lg bg-card-2 px-3 py-2.5">
+              <Avatar user={user} className="size-10 text-base ring-1 ring-line" />
+              <div className="min-w-0">
+                <p className="truncate text-sm leading-tight font-semibold">{user.name}</p>
+                <p className={`badge mt-1 ${admin ? "badge-gold" : "badge-accent"}`}>{admin ? "Quản trị viên" : "Học viên"}</p>
               </div>
-              <p className="menu-label">Cá nhân</p>
-              {USER_ITEMS.map(item)}
-              <div className="menu-sep" />
-              <p className="menu-label">Học tập & ôn tập</p>
-              {LEARN_QUICK.map(item)}
-              {admin && (
-                <>
-                  <div className="menu-sep" />
-                  <p className="menu-label">Quản trị</p>
-                  {ADMIN_ITEMS.map(item)}
-                </>
-              )}
-              <div className="menu-sep" />
-              <form action={logout}>
-                <button
-                  role="menuitem"
-                  className="menu-item text-red-400 hover:bg-red-soft focus-visible:bg-red-soft"
-                >
-                  <LogOut className="size-4" /> Đăng xuất
-                </button>
-              </form>
             </div>
+            <p className="menu-label">Cá nhân</p>
+            {USER_ITEMS.map(item)}
+            <div className="menu-sep" />
+            <p className="menu-label">Học tập & ôn tập</p>
+            {LEARN_QUICK.map(item)}
+            {admin && (
+              <>
+                <div className="menu-sep" />
+                <p className="menu-label">Quản trị</p>
+                {ADMIN_ITEMS.map(item)}
+              </>
+            )}
+            <div className="menu-sep" />
+            <form action={logout}>
+              <button
+                role="menuitem"
+                className="menu-item text-red-400 hover:bg-red-soft focus-visible:bg-red-soft"
+              >
+                <LogOut className="size-4" /> Đăng xuất
+              </button>
+            </form>
           </div>
-        )}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 }
 
 const showDeutschSubnav = (p: string) =>
   p === "/tieng-duc" ||
   p.startsWith("/tieng-duc/trinh-do/") ||
+  p.startsWith("/tieng-duc/kenh/") ||
+  p === "/sprechen" ||
   p === "/ngu-phap" ||
   p.startsWith("/ngu-phap/") ||
   p === "/vocab" ||
-  p.startsWith("/vocab/") ||
+  p === "/vocab/notebook" ||
   p === "/leaderboard";
 
 const showLaixeSubnav = (p: string) =>
-  p === "/lai-xe" || p === "/lai-xe/hoc" || p === "/lai-xe/de-mau" || p === "/lai-xe/thi-thu" || p === "/lai-xe/thong-ke" || p === "/lai-xe/cau-sai" || p === "/lai-xe/danh-dau" || p === "/lai-xe/hang";
+  p === "/lai-xe" || p === "/lai-xe/hoc" || p === "/lai-xe/de-mau" || p === "/lai-xe/thi-thu" || p === "/lai-xe/thong-ke";
 
 const showLidSubnav = (p: string) =>
-  p === "/leben-in-deutschland" || p === "/leben-in-deutschland/chu-de" || p === "/leben-in-deutschland/thi-thu" || p === "/leben-in-deutschland/thong-ke" || p === "/leben-in-deutschland/cau-sai" || p === "/leben-in-deutschland/danh-dau" || p === "/leben-in-deutschland/cai-dat";
+  p === "/leben-in-deutschland" ||
+  p === "/leben-in-deutschland/chu-de" ||
+  p === "/leben-in-deutschland/thi-thu" ||
+  p === "/leben-in-deutschland/thong-ke";
 
 /** Hàng tab con thống nhất theo từng sản phẩm học tập (Tiếng Đức · Lái xe · Leben in DE), tự ẩn trong màn học/thi */
 export function DeutschSubnav() {
@@ -353,9 +355,10 @@ export function DeutschSubnav() {
     sec = "de";
     label = "Tiếng Đức";
     items = DEUTSCH;
-    current = pathname.startsWith("/tieng-duc/trinh-do/")
-      ? "/tieng-duc"
-      : DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+    current =
+      pathname.startsWith("/tieng-duc/trinh-do/") || pathname.startsWith("/tieng-duc/kenh/") || pathname === "/sprechen"
+        ? "/tieng-duc"
+        : DEUTSCH.filter((it) => pathname === it.href || pathname.startsWith(it.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   } else if (showLaixeSubnav(pathname)) {
     sec = "laixe";
     label = "Lý thuyết lái xe";

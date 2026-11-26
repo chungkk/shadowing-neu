@@ -40,7 +40,7 @@ async function Stats() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold">Tiếng Đức</span>
-              <span className="block text-xs text-muted">{stats.lessons} bài đã mở</span>
+              <span className="block text-xs text-muted">{stats.lessons} bài đã học</span>
             </span>
             <ArrowRight className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
           </Link>

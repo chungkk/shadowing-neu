@@ -73,7 +73,7 @@ async function SetView({ params, searchParams }: P) {
       key={`${mode}:${s.ids.join()}`} // đổi chế độ / đổi bang → màn mới
       mode={mode}
       title={mode === "lesen" ? `${s.title} · Đọc lướt` : s.title}
-      backHref="/leben-in-deutschland"
+      backHref="/leben-in-deutschland/chu-de"
       questions={await forClient(s.ids)}
       userId={user?.id}
       lang={lang}

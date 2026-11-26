@@ -1,12 +1,13 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CircleCheck, Clock, ListChecks, Play, TriangleAlert } from "lucide-react";
+import { CircleCheck, Clock, ListChecks, LogIn, Play, TriangleAlert } from "lucide-react";
 import {
   ChristmasFileStackIcon as FileStack,
   ChristmasFlagIcon as Flag,
 } from "@/components/FestiveIcons";
 import { SubHeader } from "@/components/quiz/QuizParts";
+import { LoginLink } from "@/components/auth/LoginDialog";
 import { getCurrentUser } from "@/lib/auth";
 import { listQuizExams } from "@/lib/db";
 import { DEFAULT_CLASS, classInfo, prefs } from "@/lib/laixe";
@@ -33,7 +34,7 @@ async function Start() {
     { icon: ListChecks, text: <><b>{info.exam.questions} câu</b>: {info.exam.grundstoff} câu phần cơ bản + {zusatz} câu phần riêng hạng {cls}</> },
     { icon: Clock, text: <><b>{info.exam.minutes} phút</b>, hết giờ tự nộp bài</> },
     { icon: CircleCheck, text: <>Đậu khi <b>≤ {info.exam.maxErrorPoints} điểm lỗi</b> (mỗi câu sai 2–5 điểm, câu bỏ trống tính là sai)</> },
-    { icon: TriangleAlert, text: <>Trượt nếu <b>sai từ 2 câu 5 điểm</b>, kể cả khi tổng chỉ 10 điểm</> },
+    { icon: TriangleAlert, text: <>Trượt nếu <b>sai từ 2 câu 5 điểm</b>{info.exam.maxErrorPoints >= 10 ? ", kể cả khi tổng chỉ 10 điểm" : ""}</> },
   ];
   return (
     <>
@@ -57,10 +58,16 @@ async function Start() {
             </li>
           ))}
         </ul>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Link href="/lai-xe/thi-thu/lam-bai" className="btn btn-lg btn-primary">
-            <Play className="size-4" /> Bắt đầu thi
-          </Link>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          {user ? (
+            <Link href="/lai-xe/thi-thu/lam-bai" prefetch={false} className="btn btn-lg btn-primary">
+              <Play className="size-4" /> Bắt đầu thi
+            </Link>
+          ) : (
+            <LoginLink href={`/login?next=${encodeURIComponent("/lai-xe/thi-thu")}`} className="btn btn-lg btn-primary">
+              <LogIn className="size-4" /> Đăng nhập để thi thử
+            </LoginLink>
+          )}
           {cls === "B" && (
             <Link href="/lai-xe/de-mau" className="btn btn-lg">
               <FileStack className="size-4" /> Làm đề mẫu chính thức
@@ -70,6 +77,7 @@ async function Start() {
             Đổi hạng
           </Link>
         </div>
+        {!user && <p className="field-hint">Thi thử cần tài khoản (miễn phí) để chấm điểm lỗi, lưu lịch sử và ôn lại câu sai.</p>}
       </section>
       {user && history.length > 0 && (
         <section className="flex flex-col gap-3">

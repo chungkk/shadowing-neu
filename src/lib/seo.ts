@@ -13,6 +13,7 @@ type JsonLd = Record<string, unknown>;
 /** Organization HalloVN (đơn vị phát hành mọi app / trang học) */
 export function organizationJsonLd(): JsonLd {
   const [postalCode, ...city] = COMPANY.postalCity.split(" ");
+  const sameAs = [FACEBOOK_PAGE_URL].filter(Boolean);
   return {
     "@type": "Organization",
     "@id": ORGANIZATION_ID,
@@ -29,7 +30,7 @@ export function organizationJsonLd(): JsonLd {
       url: `${SITE_URL}/support`,
       availableLanguage: ["vi", "de", "en"],
     },
-    sameAs: [FACEBOOK_PAGE_URL],
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
 

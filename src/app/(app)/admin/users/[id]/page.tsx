@@ -134,7 +134,7 @@ async function Detail({ params, searchParams }: PageProps<"/admin/users/[id]">) 
               <Gem className="size-5" /> {stats.points.total.toLocaleString("vi-VN")}
             </span>
           }
-          sub={`Mở khoá ${unlocks.count} bài (${unlocks.spent} 💎)`}
+          sub={unlocks.count > 0 ? `Mở khoá ${unlocks.count} bài (${unlocks.spent} 💎)` : undefined}
         />
         <KpiCard tone="laixe" label="Chuỗi ngày học" value={stats.streak} sub={stats.studiedToday ? "Hôm nay đã học" : "Hôm nay chưa học"} />
         <KpiCard tone="de" label="Sổ từ vựng" value={words} sub={`${stats.dueToday} từ đến hạn ôn`} />

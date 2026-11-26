@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps<"/vocab/decks/[slug
 
 export default function Page(props: PageProps<"/vocab/decks/[slug]">) {
   return (
-    <main className="page">
+    <main className="page" data-sec="de">
       <Suspense fallback={<VocabSkeleton />}>
         <DeckView {...props} />
       </Suspense>

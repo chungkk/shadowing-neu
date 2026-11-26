@@ -39,9 +39,12 @@ const NETWORKS = [
   },
 ];
 
-/** Chỉ hiện ở nơi có nội dung đáng chia sẻ: bài học (/watch/…, /<slug>) và bộ từ (/vocab/decks/…) */
-const RESERVED = /^\/(admin|settings|stats|vocab|leaderboard|sprechen|login|register|forgot-password|privacy|terms)(\/|$)/;
-const shareable = (p: string) => /^\/(watch|vocab\/decks)\/./.test(p) || (/^\/[^/]+$/.test(p) && !RESERVED.test(p));
+/** Chỉ hiện trên trang nội dung chi tiết đáng chia sẻ: bài học video, bài ngữ pháp, video tự dán và bộ từ vựng */
+const shareable = (p: string) =>
+  /^\/tieng-duc\/(?!(?:kenh|trinh-do)(?:\/|$))[^/]+\/?$/.test(p) ||
+  /^\/ngu-phap\/[^/]+\/?$/.test(p) ||
+  /^\/watch\/[^/]+/.test(p) ||
+  /^\/vocab\/decks\/[^/]+/.test(p);
 
 /** Link trang đang xem (bỏ ?query) + tiêu đề trang */
 const current = () => ({ url: location.origin + location.pathname, title: document.title });

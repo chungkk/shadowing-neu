@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, Car, Landmark, Languages } from "lucide-react";
+import { ArrowRight, BookMarked, Car, GraduationCap, Landmark, Languages } from "lucide-react";
 import Mascot from "@/components/Mascot";
 
 const PLACES = [
   { href: "/tieng-duc", label: "Tiếng Đức – bài học video", icon: Languages },
+  { href: "/ngu-phap", label: "Ngữ pháp tiếng Đức A1–B2", icon: GraduationCap },
+  { href: "/vocab", label: "Kho từ vựng A1–C1", icon: BookMarked },
   { href: "/lai-xe", label: "Lý thuyết lái xe Đức", icon: Car },
   { href: "/leben-in-deutschland", label: "Leben in Deutschland", icon: Landmark },
 ];

@@ -80,13 +80,14 @@ async function Learn({ params, searchParams }: P) {
       stats={user ? quizStats(user.id, "fuehrerschein") : {}}
       bookmarks={user ? quizBookmarks(user.id, "fuehrerschein") : []}
       modeLinks={{ lesen: `/lai-xe/hoc/${scope}?mode=lesen`, ueben: `/lai-xe/hoc/${scope}` }}
+      resumeKey={`laixe:pos:${cls}:${scope}`}
     />
   );
 }
 
 export default function Page(props: P) {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <ScopeLd params={props.params} />
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Learn {...props} />

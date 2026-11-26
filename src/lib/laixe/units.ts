@@ -12,6 +12,30 @@ const min = { unit: "Minuten" };
 const std = { unit: "Stunden" };
 const mon = { unit: "Monate" };
 
+/** Chú thích tiếng Việt gọn nhẹ cho các nhãn / đơn vị tiếng Đức trong câu điền số */
+export const NUM_PRE_VI: Record<string, string> = {
+  "Der Bremsweg wird": "Quãng đường phanh dài gấp",
+  Notrufnummer: "Số khẩn cấp",
+  Fahrlinie: "Đường chạy số",
+  "Ab einer Länge von mehr als": "Từ chiều dài trên",
+  "Lkws über": "Xe tải trên",
+  Bis: "Đến",
+  Zeichen: "Biển báo số",
+  Nach: "Sau",
+  "Für Fahrzeuge über": "Cho xe trên",
+  "Ab einer Breite von mehr als": "Từ chiều rộng trên",
+};
+
+export const NUM_UNIT_VI: Record<string, string> = {
+  t: "tấn",
+  "-mal so lang": "lần",
+  Minuten: "phút",
+  Stunden: "giờ",
+  Monate: "tháng",
+  Jahre: "tuổi",
+  Anhänger: "rơ-moóc",
+};
+
 export const NUM_HINTS: Record<string, NumHint> = {
   "1.2.02-111": kmh,
   "1.2.03-101": kmh,
@@ -90,6 +114,7 @@ export const NUM_HINTS: Record<string, NumHint> = {
   "2.6.06-401": m,
   "2.6.06-404": m,
   "2.6.06-405": { pre: "Ab einer Breite von mehr als", unit: "m" },
+  "2.6.06-406": m,
   "2.7.05-003": mm,
   "2.7.05-009": mm,
   "2.7.05-108": mm,

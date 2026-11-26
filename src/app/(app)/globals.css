@@ -292,16 +292,19 @@
 [data-theme="dark"] .theme-fahrschule {
   color-scheme: light;
   --background: #e8f5ec;
+  --sidebar: #dceee2;
   --foreground: #0f291c;
   --ink: #b9dcc6;
   --line: #cde7d6;
   --line-strong: #4a7360;
   --card: #ffffff;
   --card-2: #d8eee0;
+  --card-hover: #f0f9f3;
   --raised: #ffffff;
   --border: #b9dcc6;
   --muted: #3b5a4b;
   --link: #1d4ed8;
+  --link-soft: #dbeafe;
   --on-link: #ffffff;
   --accent: #2563eb;
   --accent-dark: #1d4ed8;
@@ -316,6 +319,13 @@
   --amber-dark: #78350f;
   --gold: #f59e0b;
   --gold-dark: #d97706;
+  --gold-soft: #fef3c7;
+  --coral-soft: #ffedd5;
+  --coral-text: #9a3412;
+  --grape-soft: #f3e8ff;
+  --grape-text: #6b21a8;
+  --gem: #0369a1;
+  --gem-soft: #e0f2fe;
   --red: #dc2626;
   --red-dark: #b91c1c;
   --red-soft: #fef2f2;
@@ -763,7 +773,7 @@ select {
 
   /* Nền tối: màu nhấn sáng để làm chữ/viền, còn mảng nền dưới chữ trắng dùng bậc đậm để đạt AA (≥4.5:1) */
   /* Nền tối: nút chính dùng trực tiếp Primary Accent (#22C55E) + chữ đậm (#07130C) đạt chuẩn AAA; nút đỏ/ghi âm dùng bậc đậm để chữ trắng ≥ 4.5:1 */
-  [data-theme="dark"] :where(.btn-primary) {
+  [data-theme="dark"] :where(.btn-primary:not(.theme-fahrschule, .theme-fahrschule *)) {
     --fill: var(--accent-dark);
     --fill-hover: color-mix(in srgb, var(--accent-dark) 86%, #000);
     --fill: var(--accent);

@@ -37,7 +37,9 @@ export const SERVICES: Service[] = [
                 tagline: 'Deutsch lernen und in Deutschland ankommen – mit Erklärungen auf Vietnamesisch.',
                 features: [
                     'Deutsch mit echten Videos: hören, nachsprechen, mitschreiben',
+                    'Deutsche Grammatik A1–B2 (58 Lektionen) verständlich auf Vietnamesisch erklärt',
                     'Goethe-Wortschatz A1–B1, Aspekte B2 und Pflege, mit Vokabelheft',
+                    'YouTube-Videos mit synchronisierter vietnamesischer Sprachausgabe ansehen',
                     'Führerscheintheorie mit vietnamesischer Übersetzung',
                     'Leben in Deutschland: alle Fragen mit Übersetzung und Testsimulation',
                 ],
@@ -49,7 +51,9 @@ export const SERVICES: Service[] = [
                 tagline: 'Learn German and settle in Germany – with explanations in Vietnamese.',
                 features: [
                     'German with real videos: listen, repeat, write along',
+                    'German grammar A1–B2 (58 lessons) explained clearly in Vietnamese',
                     'Goethe vocabulary A1–B1, Aspekte B2 and nursing, with a notebook',
+                    'Watch YouTube videos with synchronized Vietnamese voice-over',
                     'Driving theory test with Vietnamese translation',
                     'Leben in Deutschland: every question translated, plus a mock test',
                 ],
@@ -61,7 +65,9 @@ export const SERVICES: Service[] = [
                 tagline: 'Học tiếng Đức và ổn định cuộc sống ở Đức, có giải thích bằng tiếng Việt.',
                 features: [
                     'Tiếng Đức qua video thật: nghe, nói theo, chép chính tả',
+                    'Ngữ pháp tiếng Đức A1–B2 (58 bài) giải thích dễ hiểu bằng tiếng Việt',
                     'Từ vựng Goethe A1–B1, Aspekte B2 và điều dưỡng, có sổ từ để ôn',
+                    'Xem YouTube thuyết minh tiếng Việt đồng bộ theo từng câu',
                     'Lý thuyết thi bằng lái xe Đức, dịch tiếng Việt từng câu',
                     'Leben in Deutschland: đủ bộ câu hỏi có dịch và thi thử',
                 ],

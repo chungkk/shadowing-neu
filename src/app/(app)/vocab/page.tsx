@@ -43,7 +43,7 @@ function VocabHero() {
       icon={Library}
       mascot
       title="Kho từ vựng"
-      sub="Học theo bộ từ chuẩn Goethe A1–B2, lưu từ vào sổ cá nhân và ôn tập theo lịch lặp lại ngắt quãng (SRS)."
+      sub="Học theo bộ từ chuẩn Goethe A1–B1, Aspekte neu B2 & chuyên ngành, lưu từ vào sổ cá nhân và ôn tập theo lịch lặp lại ngắt quãng (SRS)."
       meta={
         <Suspense>
           <DueBadgeMeta />

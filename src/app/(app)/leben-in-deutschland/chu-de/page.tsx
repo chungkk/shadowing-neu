@@ -79,7 +79,7 @@ function Part({ title, subtitle, ids, stats, user, open, children }: { title: st
 }
 
 async function Topics() {
-  const { state } = await prefs();
+  const { state, chosen } = await prefs();
   const user = await getCurrentUser();
   const stats = user ? quizStats(user.id, "lid") : {};
   const mine = [...generalIds(), ...stateIds(state.code)];
@@ -91,6 +91,17 @@ async function Topics() {
 
   return (
     <>
+      {!chosen && (
+        <p className="alert flex-wrap items-center justify-between gap-2 text-sm">
+          <span>
+            Đang tạm dùng bang <b className="text-foreground">{state.name}</b> —{" "}
+            <Link href="/leben-in-deutschland/cai-dat" className="font-bold text-sec-text underline underline-offset-2">
+              Đổi bang
+            </Link>
+          </span>
+        </p>
+      )}
+
       {/* Cùng 3 thẻ, cùng thứ tự với Lái xe › Học theo chủ đề */}
       <div className="grid gap-3 sm:grid-cols-3">
         <ActionCard

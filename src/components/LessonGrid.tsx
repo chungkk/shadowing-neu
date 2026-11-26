@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -17,22 +18,18 @@ import {
   ChristmasChatIcon as MessageSquare,
   ChristmasCocoaIcon as Coffee,
   ChristmasGrammarIcon as GraduationCap,
-  ChristmasLockIcon as Lock,
   ChristmasMicIcon as Mic,
   ChristmasNewsIcon as Newspaper,
   ChristmasOrnamentIcon as Film,
-  ChristmasStarIcon as Sparkles,
   ChristmasWorkIcon as Briefcase,
 } from "./FestiveIcons";
 import type { ComponentType } from "react";
-import { FREE_PICKS, type LessonAccess, type LockInfo } from "@/lib/lesson-lock";
+import type { LessonAccess, LockInfo } from "@/lib/lesson-lock";
 import { channelPath, lessonPath } from "@/lib/slug";
-
-const levelCatalogPath = (lv: string) => `/tieng-duc/trinh-do/${lv.toLowerCase()}`;
 import LevelBadge from "./LevelBadge";
 import Mascot from "./Mascot";
-import { Gem } from "./PointsBadge";
-import UnlockDialog from "./UnlockDialog";
+
+const levelCatalogPath = (lv: string) => `/tieng-duc/trinh-do/${lv.toLowerCase()}`;
 
 type Item = {
   id: number;
@@ -164,17 +161,10 @@ function formatDuration(total: number) {
   return s >= 3600 ? `${Math.floor(s / 3600)}:${mmss}` : mmss;
 }
 
-/** onLocked: bấm thẻ bài đang khoá → mở popup mở khoá tại chỗ (mở tab mới / Ctrl+bấm → vẫn sang trang bài) */
-function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: Item) => void; className?: string }) {
-  const locked = l.access === "locked";
+function LessonCard({ l, className = "" }: { l: Item; className?: string }) {
   return (
     <Link
       href={lessonPath(l.slug)}
-      onClick={(e) => {
-        if (!locked || !onLocked || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        e.preventDefault();
-        onLocked(l);
-      }}
       className={`group card card-link flex flex-col overflow-hidden p-0 ${className}`}
     >
       <div className="relative aspect-video overflow-hidden bg-sidebar">
@@ -183,34 +173,16 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
           src={`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`}
           alt=""
           loading="lazy"
-          className={`size-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none ${locked ? "opacity-75 saturate-75" : ""}`}
+          className="size-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
         />
-        <div className="absolute top-2 left-2 flex items-center gap-1.5">
-          {l.access === "free" && (
-            <span className="badge border border-ok/30 bg-sidebar/92 px-2 py-0.5 text-[11px] font-semibold text-ok-text">
-              Miễn phí
-            </span>
-          )}
-          {locked && (
-            <span className="badge border border-gold/30 bg-sidebar/92 px-2 py-0.5 text-[11px] font-semibold text-amber">
-              <Lock className="size-2.5" aria-hidden /> Premium
-            </span>
-          )}
-          {l.isNew && (
+        {l.isNew && (
+          <div className="absolute top-2 left-2 flex items-center gap-1.5">
             <span className="badge bg-gold px-1.5 py-0.5 text-[11px] font-bold text-[#0b0f14]">
               Mới
             </span>
-          )}
-        </div>
-        <LevelBadge level={l.level} className="absolute top-2 right-2 bg-sidebar/92" />
-        {locked && (
-          <span className="absolute inset-0 flex items-center justify-center bg-background/25">
-            <span className="flex size-9 items-center justify-center rounded-full border border-line bg-sidebar/95 text-amber">
-              <Lock className="size-4" />
-              <span className="sr-only">Khoá</span>
-            </span>
-          </span>
+          </div>
         )}
+        <LevelBadge level={l.level} className="absolute top-2 right-2 bg-sidebar/92" />
         {l.duration > 0 && (
           <span className="pill absolute right-2 bottom-2 border border-white/10 bg-background/85 px-2 py-0.5 font-mono text-[11px] text-foreground tabular-nums">
             <Clock className="size-2.5 text-muted" aria-hidden /> {formatDuration(l.duration)}
@@ -259,31 +231,6 @@ function LessonCard({ l, onLocked, className = "" }: { l: Item; onLocked?: (l: I
   );
 }
 
-/** Dòng giải thích khoá bài dưới tiêu đề mục (admin bật khoá bài học) */
-function LockNote({ lock, admin }: { lock: LockInfo; admin?: boolean }) {
-  const price = (
-    <span className="inline-flex items-center gap-1 font-bold text-gem">
-      <Gem className="size-4" /> {lock.price.toLocaleString("vi-VN")}
-    </span>
-  );
-  return (
-    <p className="alert alert-info flex-wrap items-center gap-x-1">
-      <Lock className="size-4 shrink-0 text-gem" />
-      {admin ? (
-        <>Khoá bài đang bật — nhãn bên dưới là những gì khách thấy. Admin vẫn mở được mọi bài.</>
-      ) : !lock.loggedIn ? (
-        <>Khách học thử được các bài “Miễn phí” — đăng nhập để tự chọn thêm {FREE_PICKS} bài.</>
-      ) : lock.picksLeft > 0 ? (
-        <>
-          Bạn còn <b className="text-foreground">{lock.picksLeft}</b> lượt chọn bài miễn phí — bấm vào bài có ổ khoá để mở. Sau đó mỗi bài <span className="whitespace-nowrap">{price}.</span>
-        </>
-      ) : (
-        <>Mở thêm bài: mỗi bài {price} (bạn có {lock.points.toLocaleString("vi-VN")}).</>
-      )}
-    </p>
-  );
-}
-
 type Group = { key: string; name: string; url: string | null; avatar: string | null; lessons: Item[] };
 const OTHER = "Kênh khác";
 
@@ -325,7 +272,7 @@ function ChannelTitle({ href, className, title, children }: { href: string | nul
 }
 
 /** 1 kênh: tiêu đề bấm được để mở toàn bộ danh sách bài + 1 hàng thẻ vuốt / cuộn ngang (có nút mũi tên ‹ › trên màn hình rộng) */
-function ChannelSection({ g, onLocked, href }: { g: Group; onLocked?: (l: Item) => void; href: string | null }) {
+function ChannelSection({ g, href }: { g: Group; href: string | null }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [nav, setNav] = useState({ left: false, right: false });
 
@@ -413,7 +360,6 @@ function ChannelSection({ g, onLocked, href }: { g: Group; onLocked?: (l: Item) 
           <LessonCard
             key={l.id}
             l={l}
-            onLocked={onLocked}
             className={`snap-start ${g.lessons.length > 1 ? "w-[78vw] max-w-[272px] sm:w-[256px] lg:w-[268px]" : "w-full sm:w-[268px]"}`}
           />
         ))}
@@ -422,33 +368,31 @@ function ChannelSection({ g, onLocked, href }: { g: Group; onLocked?: (l: Item) 
   );
 }
 
-type ExtraFilter = "all" | "free" | "dictation";
+type ExtraFilter = "all" | "dictation";
 
 /**
- * Thư viện bài học chia theo kênh / chủ đề, lọc theo cấp độ CEFR (lưu trên URL: ?level=B1), chủ đề, miễn phí và chính tả.
- * `showExplore`: bật 2 khu vực Trình độ CEFR (A1–C2) và Khám phá theo chủ đề (6 chủ đề) ngay trên thư viện ở /tieng-duc.
+ * Thư viện bài học chia theo kênh / chủ đề, lọc theo cấp độ CEFR (lưu trên URL: ?level=B1), chủ đề và chính tả.
+ * `showExplore`: bật 2 khu vực Trình độ CEFR (A1–C2) và Khám phá theo chủ đề (6 chủ đề) ngay trên thư viện.
  * `channel`: đang ở trang của 1 kênh → bỏ nav kênh, hiện lưới toàn bộ bài.
+ * `flat`: hiển thị dạng lưới phẳng 3–4 cột (vd. trang danh mục theo trình độ).
  */
 export default function LessonGrid({
   lessons,
-  lock,
-  admin,
   channel,
+  flat: flatProp = false,
   showExplore = false,
 }: {
   lessons: Item[];
   lock?: LockInfo;
   admin?: boolean;
   channel?: string;
+  flat?: boolean;
   showExplore?: boolean;
 }) {
   const searchParams = useSearchParams();
-  const [opening, setOpening] = useState<Item | null>(null);
   const [query, setQuery] = useState("");
   const [topicId, setTopicId] = useState<string | null>(null);
   const [extra, setExtra] = useState<ExtraFilter>("all");
-
-  useLayoutEffect(() => () => setOpening(null), []);
 
   if (!lessons.length)
     return (
@@ -459,13 +403,13 @@ export default function LessonGrid({
       </div>
     );
 
-  const levelCounts = new Map<string, number>();
-  for (const lv of LEVELS) levelCounts.set(lv, 0);
-  for (const l of lessons) levelCounts.set(l.level, (levelCounts.get(l.level) ?? 0) + 1);
+  const totalLevelCounts = new Map<string, number>();
+  for (const lv of LEVELS) totalLevelCounts.set(lv, 0);
+  for (const l of lessons) totalLevelCounts.set(l.level, (totalLevelCounts.get(l.level) ?? 0) + 1);
 
-  const levels = LEVELS.map((lv) => ({ level: lv, count: levelCounts.get(lv) ?? 0 })).filter((g) => g.count);
+  const levels = LEVELS.filter((lv) => (totalLevelCounts.get(lv) ?? 0) > 0);
   const param = searchParams.get("level");
-  const level = levels.some((g) => g.level === param) ? param : null;
+  const level = levels.some((lv) => lv === param) ? param : null;
   const allGroups = byChannel(lessons);
 
   const setLevel = (lv: string | null) => {
@@ -483,27 +427,26 @@ export default function LessonGrid({
   const channelHref = (g: Group) => (g.name === OTHER ? null : `${channelPath(g.key)}${level ? `?level=${level}` : ""}`);
 
   const qNorm = query.trim().toLowerCase();
-  const byLevel = level ? lessons.filter((l) => l.level === level) : lessons;
-  const byTopic = activeTopic ? byLevel.filter((l) => matchesTopic(l, activeTopic)) : byLevel;
-  const byExtra =
-    extra === "free"
-      ? byTopic.filter((l) => l.access !== "locked")
-      : extra === "dictation"
-        ? byTopic.filter((l) => l.dictation)
-        : byTopic;
-  const shown = qNorm
+  // Lọc theo chủ đề + chính tả + từ khóa trước để số đếm trên các chip trình độ luôn khớp bộ lọc đang chọn
+  const byTopic = activeTopic ? lessons.filter((l) => matchesTopic(l, activeTopic)) : lessons;
+  const byExtra = extra === "dictation" ? byTopic.filter((l) => l.dictation) : byTopic;
+  const filteredBase = qNorm
     ? byExtra.filter(
-      (l) =>
-        l.title.toLowerCase().includes(qNorm) ||
-        l.description.toLowerCase().includes(qNorm) ||
-        (l.channel?.toLowerCase().includes(qNorm) ?? false),
-    )
+        (l) =>
+          l.title.toLowerCase().includes(qNorm) ||
+          l.description.toLowerCase().includes(qNorm) ||
+          (l.channel?.toLowerCase().includes(qNorm) ?? false),
+      )
     : byExtra;
-  const groups = byChannel(shown);
-  const flat = !!channel || (allGroups.length === 1 && allGroups[0].name === OTHER) || !!activeTopic || !!qNorm;
-  const onLocked = lock?.enabled && !admin ? setOpening : undefined;
 
-  const hasFree = lessons.some((l) => l.access === "free" || l.access === "locked");
+  const filterLevelCounts = new Map<string, number>();
+  for (const lv of LEVELS) filterLevelCounts.set(lv, 0);
+  for (const l of filteredBase) filterLevelCounts.set(l.level, (filterLevelCounts.get(l.level) ?? 0) + 1);
+
+  const shown = level ? filteredBase.filter((l) => l.level === level) : filteredBase;
+  const groups = byChannel(shown);
+  const flat = flatProp || !!channel || (allGroups.length === 1 && allGroups[0].name === OTHER) || !!activeTopic || !!qNorm;
+
   const hasDictation = lessons.some((l) => l.dictation);
   const hasActiveFilters = !!level || !!activeTopic || extra !== "all" || !!qNorm;
 
@@ -535,7 +478,7 @@ export default function LessonGrid({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {LEVELS.map((lv) => {
               const meta = LEVEL_META[lv];
-              const count = levelCounts.get(lv) ?? 0;
+              const count = totalLevelCounts.get(lv) ?? 0;
               const inner = (
                 <>
                   <div className="flex items-center justify-between gap-2">
@@ -633,7 +576,7 @@ export default function LessonGrid({
             title={channel ? `Bài học từ ${channel}` : "Thư viện video bài học"}
             count={shown.length}
           />
-          <label className="input-group w-full sm:w-72">
+          <label className="input-group w-full pr-2 sm:w-72">
             <Search className="size-4 shrink-0 text-muted" aria-hidden />
             <input
               type="search"
@@ -643,56 +586,60 @@ export default function LessonGrid({
               aria-label={channel ? "Tìm bài học" : "Tìm bài học hoặc kênh"}
             />
             {query && (
-              <button type="button" onClick={() => setQuery("")} aria-label="Xóa từ khóa" className="text-muted hover:text-foreground">
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Xóa từ khóa"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-card-2 hover:text-foreground"
+              >
                 <X className="size-3.5" />
               </button>
             )}
           </label>
         </div>
 
-        {/* Bộ lọc trình độ + tính năng (Miễn phí / Chính tả / Chủ đề) */}
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          {levels.length > 1 && (
-            <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
-              {chip(null, lessons.length)}
-              {levels.map((g) => chip(g.level, g.count))}
+        {/* Bộ lọc trình độ + tính năng (Chính tả / Chủ đề) */}
+        {(levels.length > 1 || hasDictation || !!activeTopic) && (
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            {levels.length > 1 && (
+              <div className="scroll-row flex gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+                {chip(null, filteredBase.length)}
+                {levels.map((lv) => chip(lv, filterLevelCounts.get(lv) ?? 0))}
+              </div>
+            )}
+
+            <div className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+              {hasDictation && (
+                <button
+                  type="button"
+                  onClick={() => setExtra((e) => (e === "dictation" ? "all" : "dictation"))}
+                  aria-pressed={extra === "dictation"}
+                  className="chip text-xs"
+                >
+                  <Keyboard className="size-3.5" aria-hidden /> Có chính tả
+                </button>
+              )}
+              {activeTopic && (
+                <button
+                  type="button"
+                  onClick={() => setTopicId(null)}
+                  className="chip chip-on text-xs"
+                >
+                  {activeTopic.label} <X className="size-3" aria-hidden />
+                </button>
+              )}
             </div>
-          )}
-
-          <div className="scroll-row flex items-center gap-2 max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
-            {hasFree && (
-              <button
-                type="button"
-                onClick={() => setExtra((e) => (e === "free" ? "all" : "free"))}
-                aria-pressed={extra === "free"}
-                className="chip text-xs"
-              >
-                <Sparkles className="size-3.5" aria-hidden /> Miễn phí
-              </button>
-            )}
-            {hasDictation && (
-              <button
-                type="button"
-                onClick={() => setExtra((e) => (e === "dictation" ? "all" : "dictation"))}
-                aria-pressed={extra === "dictation"}
-                className="chip text-xs"
-              >
-                <Keyboard className="size-3.5" aria-hidden /> Có chính tả
-              </button>
-            )}
-            {activeTopic && (
-              <button
-                type="button"
-                onClick={() => setTopicId(null)}
-                className="chip chip-on text-xs"
-              >
-                {activeTopic.label} <X className="size-3" aria-hidden />
-              </button>
-            )}
           </div>
-        </div>
+        )}
 
-        {lock?.enabled && <LockNote lock={lock} admin={admin} />}
+        {level && !channel && !flatProp && (
+          <Link
+            href={levelCatalogPath(level)}
+            className="inline-flex items-center gap-1 self-start text-xs font-semibold text-link hover:underline"
+          >
+            Xem trang tổng hợp trình độ {level} <ArrowRight className="size-3.5" aria-hidden />
+          </Link>
+        )}
 
         {!shown.length ? (
           <div className="card empty">
@@ -720,17 +667,16 @@ export default function LessonGrid({
         ) : flat ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {shown.map((l) => (
-              <LessonCard key={l.id} l={l} onLocked={onLocked} />
+              <LessonCard key={l.id} l={l} />
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-7 sm:gap-8">
             {groups.map((g) => (
-              <ChannelSection key={`${level}-${extra}-${g.key}`} g={g} onLocked={onLocked} href={channelHref(g)} />
+              <ChannelSection key={`${level}-${extra}-${g.key}`} g={g} href={channelHref(g)} />
             ))}
           </div>
         )}
-        {opening && lock && <UnlockDialog lesson={opening} lock={lock} onClose={() => setOpening(null)} />}
       </section>
     </div>
   );

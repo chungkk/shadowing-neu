@@ -46,11 +46,11 @@ const FAQ = [
   },
   {
     q: "Có bản dịch tiếng Việt không?",
-    a: "Có — mọi câu hỏi và phương án đều có bản dịch tiếng Việt, phần lớn câu có thêm giải thích ngắn vì sao đáp án đúng. Câu gốc tiếng Đức luôn hiện; bản dịch bật / tắt bằng nút „Hiện bản dịch\", màn thi thử mặc định ẩn bản dịch.",
+    a: "Có — mọi câu hỏi và phương án đều có bản dịch tiếng Việt, phần lớn câu có giải thích tiếng Việt vì sao đáp án đúng. Câu gốc tiếng Đức luôn hiện; bản dịch bật / tắt bằng nút „Hiện bản dịch\", màn thi thử mặc định ẩn bản dịch.",
   },
   {
     q: "Có đề mẫu chính thức để luyện không?",
-    a: `Có ${BOGEN_COUNT} đề mẫu chính thức hạng B (Musterbögen), mỗi đề ${B.questions} câu. Trên web làm thử được ${WEB_BOGEN_LIMIT} đề đầu, trọn bộ ${BOGEN_COUNT} đề có trong app HalloVN. Ngoài ra có thi thử với đề ngẫu nhiên cho mọi hạng.`,
+    a: `Có ${BOGEN_COUNT} đề mẫu chính thức hạng B (Musterbögen), mỗi đề ${B.questions} câu. Trên web làm thử được ${WEB_BOGEN_LIMIT} đề đầu (trọn bộ ${BOGEN_COUNT} đề trên ứng dụng di động đang hoàn thiện). Ngoài ra có thi thử với đề ngẫu nhiên cho mọi hạng.`,
   },
 ];
 
@@ -73,7 +73,7 @@ async function Home() {
         icon={Car}
         mascot
         title="Lý thuyết lái xe Đức"
-        sub={`Ôn thi Führerschein hạng ${cls} (${info.vi}) · bộ đề chính thức từ 01.04.2025`}
+        sub={`Ôn thi Führerschein hạng ${cls} (${info.vi}) · bộ đề chính thức hiện hành`}
         meta={<span className="badge badge-gold font-mono tabular-nums">Hạng {cls}</span>}
         actions={
           <Link href={settingsHref} className="btn btn-sm">
@@ -88,7 +88,7 @@ async function Home() {
             <Link href="/login?next=/lai-xe" className="font-semibold underline underline-offset-2">
               Đăng nhập
             </Link>{" "}
-            để lưu tiến độ học, tự động gom câu sai và theo dõi lịch sử thi thử.
+            để lưu tiến độ học, gom câu sai và làm bài thi thử có chấm điểm.
           </span>
         </p>
       )}
@@ -117,7 +117,7 @@ async function Home() {
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-foreground group-hover:text-sec-text">Grundstoff (cơ bản)</span>
               <span className="font-mono text-muted tabular-nums">
-                {grund.done}/{grund.total} câu
+                {fmtNum(grund.done)}/{fmtNum(grund.total)} câu
               </span>
             </div>
             <ProgressBar {...grund} />
@@ -126,7 +126,7 @@ async function Home() {
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-foreground group-hover:text-sec-text">Zusatzstoff (riêng hạng {cls})</span>
               <span className="font-mono text-muted tabular-nums">
-                {zusatz.done}/{zusatz.total} câu
+                {fmtNum(zusatz.done)}/{fmtNum(zusatz.total)} câu
               </span>
             </div>
             <ProgressBar {...zusatz} />
@@ -140,7 +140,7 @@ async function Home() {
           href="/lai-xe/hoc"
           icon={BookOpen}
           title="Học theo chương & chủ đề"
-          text={`Luyện ${fmtNum(ids.length)} câu có bản dịch tiếng Việt và giải thích chi tiết từng đáp án.`}
+          text={`Luyện ${fmtNum(ids.length)} câu có bản dịch tiếng Việt, phần lớn câu có giải thích tiếng Việt.`}
           badge={`${fmtNum(ids.length)} câu`}
           cta="Mở danh sách chương"
         />

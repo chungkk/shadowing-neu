@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, Flag, Languages, LayoutGrid, Lightbulb, RotateCw, Star, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, Flag, Languages, LayoutGrid, Lightbulb, RotateCcw, RotateCw, Star, X, ZoomIn } from "lucide-react";
 import Mascot from "../Mascot";
 import { clientApi } from "@/lib/client-api";
 import { isRight, type DrivingQ, type ExamAnswer, type ExamResult, type Lang } from "@/lib/laixe/rules";
@@ -12,6 +12,7 @@ import { sendAnswer, watchOutbox } from "@/lib/quiz/outbox";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { GuestTrialNote, GuestWall, useGuestCount, useGuestQuota } from "../GuestQuota";
+import { ImageLightbox } from "../quiz/ImageLightbox";
 import { ProgressBar } from "../quiz/QuizParts";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useExamLeaveGuard } from "@/hooks/useExamLeaveGuard";
@@ -75,6 +76,7 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
     setMarked(new Set(bookmarks));
   }
   const [picker, setPicker] = useState(false);
+  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null);
   const [startedAt] = useState(() => Date.now());
   const loggedIn = userId !== undefined;
   // Vị trí học dở trên máy: mỗi tài khoản một khoá riêng (2 người dùng chung trình duyệt không lẫn chỗ học)
@@ -96,6 +98,7 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
   const submitted = mode === "review";
   const testing = mode === "exam" && !abandoned;
   const answeredCount = questions.filter((x) => picked[x.id]?.length).length;
+  const onBookmarksPage = pathname.endsWith("/danh-dau");
   const buzz = (p: number | number[]) => vibrate && navigator.vibrate?.(p);
 
   const go = useCallback(
@@ -108,22 +111,30 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
     [questions.length],
   );
 
-  // Mở lại đúng câu đang học dở
+  // Mở lại đúng câu đang học dở (không nhảy vào câu đang bị GuestWall chặn)
   useEffect(() => {
     if (!posKey) return;
     try {
       const id = localStorage.getItem(posKey);
       const i = id ? questions.findIndex((x) => x.id === id) : -1;
-      if (i > 0) setIdx(i); // eslint-disable-line react-hooks/set-state-in-effect -- localStorage chỉ đọc được sau khi hydrate
+      if (i > 0) {
+        if (quota.canOpen(questions[i].id)) {
+          setIdx(i); // eslint-disable-line react-hooks/set-state-in-effect -- localStorage chỉ đọc được sau khi hydrate
+        } else {
+          const fallback = questions.findLastIndex((x, k) => k < i && quota.canOpen(x.id));
+          if (fallback > 0) setIdx(fallback);
+        }
+      }
     } catch {}
     setReady(true);
-  }, [posKey, questions]);
+  }, [posKey, questions, quota]);
+
   useEffect(() => {
-    if (!posKey || !ready || !questions[idx]) return;
+    if (!posKey || !ready || !questions[idx] || blocked || !quota.canOpen(questions[idx].id)) return;
     try {
       localStorage.setItem(posKey, questions[idx].id);
     } catch {}
-  }, [posKey, ready, idx, questions]);
+  }, [posKey, ready, idx, questions, blocked, quota]);
 
   // Gửi lại tiến độ còn chờ (lần trước mất mạng)
   useEffect(() => (userId !== undefined ? watchOutbox(userId) : undefined), [userId]);
@@ -139,6 +150,7 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
     return () => {
       hiddenAt.current = Date.now();
       setPicker(false);
+      setZoom(null);
     };
   }, [mode, router]);
 
@@ -187,8 +199,8 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
     requestAnimationFrame(() => nav.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
     if (userId === undefined) return;
     sendAnswer(userId, "lid", { qid: q.id, picked: [key] });
-    // Như app: sai tự đánh dấu, đúng tự bỏ đánh dấu
-    if (autoMark && marked.has(q.id) === ok) setMark(q.id, !ok).catch(() => {});
+    // Như app: sai tự đánh dấu, đúng tự bỏ đánh dấu — riêng trang /danh-dau không tự xoá dấu sao của người học khi làm đúng
+    if (autoMark && !(onBookmarksPage && ok) && marked.has(q.id) === ok) setMark(q.id, !ok).catch(() => {});
   };
 
   // Nộp bài: server chấm (trình duyệt không có đáp án) → lưu lịch sử → mở trang xem lại bài
@@ -215,14 +227,27 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setMark/buzz chỉ đọc state hiện tại
   }, [exam, saving, abandoned, questions, picked, startedAt, autoMark, marked, leave]);
 
-  // Phím tắt: ←/→ chuyển câu, 1–4 chọn đáp án (không chạy khi đang mở hộp thoại nào)
+  const answeredNow = mode === "ueben" && answer !== null;
+
+  // Phím tắt: ←/→ chuyển câu, 1–4 chọn đáp án, Enter sang câu tiếp sau khi đã chấm (không chạy khi đang mở hộp thoại hoặc bị GuestWall chặn)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (picker || e.metaKey || e.ctrlKey || e.altKey || t?.closest("input, textarea, select, [contenteditable]") || document.querySelector('[aria-modal="true"]')) return;
+      if (
+        blocked ||
+        picker ||
+        zoom !== null ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        t?.closest("input, textarea, select, [contenteditable]") ||
+        document.querySelector('[aria-modal="true"]')
+      )
+        return;
       if (e.key === "ArrowRight") go(idx + 1);
       else if (e.key === "ArrowLeft") go(idx - 1);
       else if (/^[1-4]$/.test(e.key) && q?.options[Number(e.key) - 1]) choose(q.options[Number(e.key) - 1].key);
+      else if (e.key === "Enter" && answeredNow && idx < questions.length - 1 && !t?.closest("button:not(:disabled), a[href]")) go(idx + 1);
       else return;
       e.preventDefault();
     };
@@ -270,15 +295,24 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
 
   const isMarked = marked.has(q.id);
   const mine = isExam ? (picked[q.id]?.[0] ?? null) : answer;
-  const answeredNow = mode === "ueben" && answer !== null;
-  const rightNow = answeredNow && isRight(q, [answer]);
+  const rightNow = answeredNow && isRight(q, [answer!]);
   const trOn = showTr && !testing && !!q.tr;
   const showExplain = !!q.explain && (answeredNow || mode === "lesen" || submitted);
-  // Thanh tiến độ: học = đúng/sai lần gần nhất · xem lại = kết quả bài thi
-  const okCount = submitted ? questions.filter((x) => isRight(x, picked[x.id])).length : questions.filter((x) => local[x.id]?.lastOk === true).length;
-  const badCount = submitted ? questions.length - okCount : questions.filter((x) => local[x.id]?.lastOk === false).length;
+  // Thanh tiến độ: chỉ hiện ở chế độ học (ở màn xem lại bài thi đã có thanh tiến độ trong thẻ Kết quả)
+  const okCount = questions.filter((x) => local[x.id]?.lastOk === true).length;
+  const badCount = questions.filter((x) => local[x.id]?.lastOk === false).length;
   const left = questions.length - answeredCount;
   const result = review?.result;
+  const wrongCount = result ? result.total - result.correct : 0;
+
+  // Khi khách hết lượt 10 câu/ngày, cho phép lùi về câu đã mở trước đó trong cùng bộ thay vì khóa cứng
+  const fallbackAllowedIdx =
+    !loggedIn && quota.wall
+      ? (() => {
+          const prevIdx = questions.findLastIndex((x, k) => k < idx && quota.canOpen(x.id));
+          return prevIdx >= 0 ? prevIdx : questions.findIndex((x) => quota.canOpen(x.id));
+        })()
+      : -1;
 
   return (
     <div ref={top} className="flex scroll-mt-20 flex-col gap-4">
@@ -306,10 +340,22 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
         )}
       </div>
 
-      {!testing && <ProgressBar total={questions.length} ok={okCount} wrong={badCount} />}
+      {!isExam && <ProgressBar total={questions.length} ok={okCount} wrong={badCount} />}
 
       {!loggedIn && !isExam && <GuestTrialNote area="lid" quota={quota} extra="lưu tiến độ và đánh dấu câu" />}
-      <GuestWall area="lid" quota={quota} backHref={backHref} />
+      <GuestWall
+        area="lid"
+        quota={quota}
+        backHref={backHref}
+        onBack={
+          fallbackAllowedIdx >= 0
+            ? () => {
+                quota.dismiss();
+                go(fallbackAllowedIdx);
+              }
+            : undefined
+        }
+      />
 
       {/* Kết quả bài thi */}
       {submitted && result && (
@@ -318,7 +364,9 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
             <span className={`flex size-14 shrink-0 items-center justify-center rounded-xl text-white sm:size-16 ${result.passed ? "bg-ok" : "bg-red"}`} aria-hidden>
               {result.passed ? <Check className="size-8" strokeWidth={3} /> : <X className="size-8" strokeWidth={3} />}
             </span>
-            <p className={`min-w-0 font-display text-2xl leading-tight font-extrabold tracking-[-0.02em] sm:text-3xl ${result.passed ? "text-ok-text" : "text-red-400"}`}>{result.passed ? "Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}</p>
+            <p className={`min-w-0 font-display text-2xl leading-tight font-extrabold tracking-[-0.02em] sm:text-3xl ${result.passed ? "text-ok-text" : "text-red-400"}`}>
+              {result.passed ? "Bestanden — Đậu!" : "Nicht bestanden — Chưa đậu"}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="stat rounded-ui bg-card p-3">
@@ -338,6 +386,16 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
           <div className="progress bg-card" aria-hidden>
             <div className={`progress-bar ${result.passed ? "bg-ok" : "bg-red"}`} style={{ width: `${result.total ? (result.correct / result.total) * 100 : 0}%` }} />
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/leben-in-deutschland/thi-thu/lam-bai" prefetch={false} className="btn btn-primary">
+              <RotateCw className="size-4" /> Thi đề mới
+            </Link>
+            {wrongCount > 0 && (
+              <Link href="/leben-in-deutschland/cau-sai?tu=bai-thi" prefetch={false} className="btn">
+                <RotateCcw className="size-4" /> Ôn lại câu sai ({wrongCount})
+              </Link>
+            )}
+          </div>
           <p className="text-sm text-muted">Mở bảng chọn câu bên dưới để xem lại từng câu: viền xanh lá = đáp án đúng, viền đỏ = chọn sai.</p>
         </section>
       )}
@@ -346,9 +404,17 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
       <article className={`card flex min-h-[26rem] flex-col gap-4 sm:p-6 ${answeredNow && !rightNow ? "shake" : ""}`}>
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
           {q.chapter && <span className="badge badge-muted">{q.chapter}</span>}
+          {submitted && !mine && <span className="badge badge-red">Bỏ trống</span>}
           <span className="flex-1" />
           {loggedIn && (
-            <button type="button" onClick={toggleMark} aria-pressed={isMarked} className={`btn-icon size-11 ${isMarked ? "tint-gold" : ""}`} aria-label={isMarked ? "Bỏ đánh dấu" : "Đánh dấu câu này"} title="Đánh dấu">
+            <button
+              type="button"
+              onClick={toggleMark}
+              aria-pressed={isMarked}
+              className={`btn-icon size-11 ${isMarked ? "tint-gold" : ""}`}
+              aria-label={isMarked ? "Bỏ đánh dấu" : "Đánh dấu câu này"}
+              title="Đánh dấu"
+            >
               <Star className={`size-5 ${isMarked ? "fill-gold text-gold" : ""}`} />
             </button>
           )}
@@ -361,10 +427,33 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
 
         {q.images.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {q.images.map((src) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={src} src={src} alt={`Hình của ${q.chapter.toLowerCase()} — xem các hình đánh số 1–4`} loading="lazy" className="max-h-64 w-auto max-w-full rounded-ui border border-line bg-white object-contain shadow-xs sm:max-h-72" />
-            ))}
+            {q.images.map((src) => {
+              const alt = `Hình của ${q.chapter.toLowerCase()} — xem các hình đánh số 1–4`;
+              return (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setZoom({ src, alt })}
+                  aria-label={`Phóng to hình của ${q.chapter.toLowerCase()}`}
+                  title="Chạm để phóng to"
+                  className="group relative cursor-zoom-in overflow-hidden rounded-ui"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={alt}
+                    loading="lazy"
+                    className="max-h-64 w-auto max-w-full rounded-ui border border-line bg-white object-contain shadow-xs sm:max-h-72"
+                  />
+                  <span
+                    className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-xs font-semibold text-white opacity-80 transition-opacity group-hover:opacity-100"
+                    aria-hidden
+                  >
+                    <ZoomIn className="size-3.5" />
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -440,14 +529,26 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
             <button type="button" className="btn min-h-12 min-w-12 px-3 md:min-h-11" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Câu trước">
               <ChevronLeft className="size-5" /> <span className="hidden sm:inline">Trước</span>
             </button>
-            <button type="button" onClick={() => setPicker(true)} className="btn min-h-12 min-w-0 flex-1 md:min-h-11" aria-haspopup="dialog" aria-label={`Câu ${idx + 1} trên ${questions.length} — mở bảng chọn câu`}>
+            <button
+              type="button"
+              onClick={() => setPicker(true)}
+              className="btn min-h-12 min-w-0 flex-1 md:min-h-11"
+              aria-haspopup="dialog"
+              aria-label={`Câu ${idx + 1} trên ${questions.length} — mở bảng chọn câu`}
+            >
               <LayoutGrid className="size-4 text-muted" aria-hidden />
               <span className="truncate tabular-nums">
                 {idx + 1} / {questions.length}
                 {testing ? ` · ${answeredCount} đã trả lời` : ""}
               </span>
             </button>
-            <button type="button" className={`btn min-h-12 min-w-12 px-3 md:min-h-11 ${answeredNow || submitted ? "btn-primary" : ""}`} onClick={() => go(idx + 1)} disabled={idx === questions.length - 1} aria-label="Câu tiếp">
+            <button
+              type="button"
+              className={`btn min-h-12 min-w-12 px-3 md:min-h-11 ${answeredNow || submitted ? "btn-primary" : ""}`}
+              onClick={() => go(idx + 1)}
+              disabled={idx === questions.length - 1}
+              aria-label="Câu tiếp"
+            >
               <span className={answeredNow ? "" : "hidden sm:inline"}>Tiếp</span> <ChevronRight className="size-5" />
             </button>
           </div>
@@ -480,7 +581,7 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
         </div>
       )}
 
-      <p className="hidden text-xs text-muted sm:block">Phím tắt: ← → chuyển câu · 1–4 chọn đáp án</p>
+      <p className="hidden text-xs text-muted sm:block">Phím tắt: ← → chuyển câu · 1–4 chọn đáp án{mode === "ueben" ? " · Enter sang câu tiếp" : ""}</p>
       {confirmDialog}
 
       {picker && (
@@ -490,6 +591,8 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
           onPick={go}
           onClose={() => setPicker(false)}
           testing={testing}
+          submitted={submitted}
+          picked={picked}
           status={(x) => {
             if (testing) return picked[x.id]?.length ? "answered" : null;
             if (submitted) return isRight(x, picked[x.id]) ? "ok" : "bad";
@@ -499,6 +602,8 @@ export default function LidRunner({ mode, title, backHref, questions, userId, st
           marked={marked}
         />
       )}
+
+      {zoom && <ImageLightbox src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
     </div>
   );
 }
@@ -515,6 +620,8 @@ function QuestionPicker({
   status,
   marked,
   testing,
+  submitted,
+  picked,
 }: {
   questions: DrivingQ[];
   idx: number;
@@ -523,6 +630,8 @@ function QuestionPicker({
   status: (q: DrivingQ) => Status;
   marked: Set<string>;
   testing: boolean;
+  submitted: boolean;
+  picked: Record<string, string[]>;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const current = useRef<HTMLButtonElement>(null);
@@ -584,6 +693,7 @@ function QuestionPicker({
           {rows.length === 0 && <li className="empty py-6">Không có câu nào.</li>}
           {rows.map(({ x, i, s }) => {
             const on = i === idx;
+            const skipped = submitted && !picked[x.id]?.length;
             return (
               <li key={x.id}>
                 <button
@@ -594,6 +704,7 @@ function QuestionPicker({
                 >
                   <span className={`w-10 shrink-0 font-bold tabular-nums ${on ? "text-accent-text" : "text-muted"}`}>{i + 1}</span>
                   <span className={`line-clamp-2 min-w-0 flex-1 text-sm ${on ? "font-bold" : ""}`}>{x.q}</span>
+                  {skipped && <span className="ml-2 shrink-0 text-[11px] font-bold text-red-400">Bỏ trống</span>}
                   {marked.has(x.id) && <Star className="ml-2 size-3.5 shrink-0 fill-gold text-gold" aria-label="Đã đánh dấu" />}
                   {s && <span className={`ml-2 size-2.5 shrink-0 rounded-full ${dot[s]}`} aria-label={s === "ok" ? "Đúng" : s === "bad" ? "Sai" : "Đã trả lời"} />}
                 </button>

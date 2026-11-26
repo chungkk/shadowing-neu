@@ -34,7 +34,7 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
           <Link href="/" className="btn">
             Về trang chủ
           </Link>
-          <Link href="/support" className="btn btn-ghost">
+          <Link href="/support?lang=vi" className="btn btn-ghost">
             Báo lỗi
           </Link>
         </div>

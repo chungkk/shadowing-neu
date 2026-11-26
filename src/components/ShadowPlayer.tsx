@@ -1169,7 +1169,19 @@ export default function ShadowPlayer({
         </div>
       </div>
 
-      {!loggedIn && <GuestTrialNote area="shadow" quota={quota} extra="tra từ, lưu tiến độ và nhận kim cương" />}
+      {!loggedIn && (
+        <GuestTrialNote
+          area="shadow"
+          quota={quota}
+          extra={
+            !saveProgress
+              ? "tra từ và lưu thành bài học riêng"
+              : allowDictation && earnPoints
+                ? "tra từ, lưu tiến độ và nhận kim cương"
+                : "tra từ và lưu tiến độ"
+          }
+        />
+      )}
       <GuestWall area="shadow" quota={quota} backHref={backHref} />
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
@@ -1274,7 +1286,7 @@ export default function ShadowPlayer({
             {/* Điện thoại không có bàn phím → ẩn phím tắt */}
             <p className="leading-7 text-muted max-md:hidden min-[400px]:col-span-2">
               <kbd>Space</kbd> phát/dừng · <kbd>←</kbd> <kbd>→</kbd> câu trước/sau · <kbd>R</kbd> ghi âm · <kbd>P</kbd>{" "}
-              nghe lại · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
+              nghe bản ghi · <kbd>H</kbd> ẩn chữ · <kbd>Esc</kbd> đóng bảng tra từ. Nên đeo tai nghe khi ghi âm.
             </p>
           </div>
         )}
@@ -1319,6 +1331,12 @@ export default function ShadowPlayer({
 
         {dictation && current && dictPick.length > 0 && (
           <>
+            <div className="flex items-center gap-2 text-xs text-muted md:hidden" title="Số câu đã chép trong cả bài">
+              <div className="progress h-1.5 flex-1">
+                <div className="progress-bar" style={{ width: `${progress}%` }} />
+              </div>
+              <span className="shrink-0 font-semibold text-foreground tabular-nums">Cả bài {progress}%</span>
+            </div>
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div className="flex items-center gap-0.5">
                 <button className="btn-icon" title="Câu trước (↑)" aria-label="Câu trước" onClick={prev} disabled={prevIdx === undefined}>
@@ -1382,7 +1400,7 @@ export default function ShadowPlayer({
             )}
             {roundDone && roundPoints !== 0 && (
               <p className="badge badge-gem gap-2 self-start py-1 pr-3 pl-1.5 text-sm">
-                <Gem className="size-6" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} điểm lượt này
+                <Gem className="size-5" /> {roundPoints > 0 ? `+${roundPoints}` : `−${-roundPoints}`} kim cương lượt này
               </p>
             )}
             <p className="text-sm text-muted">
@@ -1492,7 +1510,7 @@ export default function ShadowPlayer({
                 {recordLabel}
               </button>
               <button className="btn btn-lg" disabled={!hasRec} onClick={() => playRecording(idx)}>
-                <Volume2 className="size-5" /> Nghe lại
+                <Volume2 className="size-5" /> Nghe bản ghi
               </button>
             </div>
 
@@ -1554,7 +1572,7 @@ export default function ShadowPlayer({
               {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
               {recordLabel}
             </button>
-            <button className="btn-icon shrink-0" aria-label="Nghe lại bản ghi" disabled={!hasRec} onClick={() => playRecording(idx)}>
+            <button className="btn-icon shrink-0" aria-label="Nghe bản ghi" disabled={!hasRec} onClick={() => playRecording(idx)}>
               <Volume2 className="size-6" />
             </button>
             <button
@@ -1629,7 +1647,7 @@ export default function ShadowPlayer({
                       <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ok-text">
                         <Check className="size-3.5" /> {dictDone[i].correct}/{dictDone[i].total}
                         {pointIdx.has(i) && (
-                          <span title="Câu này đã được tính điểm">
+                          <span title="Câu này đã được tính kim cương">
                             <Gem className="ml-1 size-4" />
                           </span>
                         )}

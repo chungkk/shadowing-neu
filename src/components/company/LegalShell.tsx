@@ -75,13 +75,15 @@ function MoreNav({ nav, title, locale }: { nav: LegalNavItem[]; title: string; l
     );
 }
 
-export default function LegalShell({ title, intro, content, showUpdated = true, nav = NAV, badge, variant = 'prose' }: LegalShellProps) {
+export default function LegalShell({ title, intro, content, showUpdated = true, nav, badge, variant = 'prose' }: LegalShellProps) {
     const { locale } = useLocale();
     const pathname = usePathname();
     const l = LABELS[locale];
     const sticker = showUpdated ? `${l.updated}: ${LEGAL_UPDATED[locale]}` : badge?.[locale];
+    // Ẩn mục /refund khỏi menu mặc định của HalloVN (vì HalloVN miễn phí, không bán gói); chỉ hiện khi đang mở trực tiếp /refund
+    const visibleNav = nav ?? NAV.filter((item) => item.href !== '/refund' || pathname === '/refund');
     // Icon trên bìa: icon của trang đang xem trong mục lục (pháp lý / hỗ trợ), không có thì tờ giấy
-    const icon = [...nav, ...NAV].find((item) => item.href === pathname)?.icon ?? (variant === 'cards' ? LifeBuoy : FileText);
+    const icon = [...visibleNav, ...NAV].find((item) => item.href === pathname)?.icon ?? (variant === 'cards' ? LifeBuoy : FileText);
 
     return (
         <div data-sec="ink" className="page gap-6 md:gap-8">
@@ -103,7 +105,7 @@ export default function LegalShell({ title, intro, content, showUpdated = true, 
                     <div className="flex min-w-0 flex-col gap-6">{content[locale]}</div>
                 )}
                 <aside className="lg:sticky lg:top-24">
-                    <MoreNav nav={nav} title={l.more} locale={locale} />
+                    <MoreNav nav={visibleNav} title={l.more} locale={locale} />
                 </aside>
             </div>
         </div>

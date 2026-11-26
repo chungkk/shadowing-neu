@@ -62,7 +62,7 @@ const body: Record<Locale, LegalSection[]> = {
                 'Mit Konto speichern wir auf unserem Server, was Sie beim Lernen anlegen oder erreichen:',
                 {
                     list: [
-                        'Deutsch: Vokabelheft mit Notizen und Beispielsätzen, markierte Sätze, Fortschritt je Lektion und Video, Diktat-Ergebnisse, Wiederholungsplan und -verlauf, freigeschaltete Lektionen.',
+                        'Deutsch: Vokabelheft mit Notizen und Beispielsätzen, markierte Sätze, Fortschritt je Lektion und Video, Diktat-Ergebnisse sowie Wiederholungsplan und -verlauf.',
                         'Führerschein-Theorie und Leben in Deutschland: beantwortete Fragen (richtig/falsch), Merkliste, Probeprüfungen und Einstellungen wie Führerscheinklasse oder Bundesland.',
                         'Motivation: Punkte, Diamanten und Lernserie. Punkte und Diamanten haben keinen Geldwert.',
                     ],
@@ -114,7 +114,7 @@ const body: Record<Locale, LegalSection[]> = {
                     list: [
                         '**Nachsprechen (Shadowing):** Ihre Aufnahmen bleiben auf Ihrem Gerät, damit Sie sie anhören und vergleichen können. Auf der Website liegen sie nur im Speicher der geöffneten Seite. Sie werden nicht hochgeladen.',
                         '**Aussprachebewertung:** Soweit diese Funktion angeboten wird, wird die Aufnahme eines einzelnen Satzes an unseren Server und von dort an einen Transkriptionsdienst (Groq oder OpenAI) gesendet. Der erkannte Text wird mit dem Originalsatz verglichen; die Aufnahme wird nicht gespeichert.',
-                        `**Sprechräume:** Gespräche mit anderen Lernenden laufen über WebRTC direkt zwischen den Geräten der Teilnehmer. Unser Server vermittelt nur den Verbindungsaufbau und speichert Räume ausschließlich im Arbeitsspeicher. Für den Aufbau werden STUN-Server von Google genutzt; dabei sehen Google und die anderen Teilnehmer technisch Ihre IP-Adresse. Wenn eine direkte Verbindung nicht möglich ist, kann der Ton verschlüsselt über einen Relay-Server (TURN) weitergeleitet werden. Wir zeichnen Gespräche nicht auf.`,
+                        `**Sprechräume:** Dies ist eine optionale Funktion, die beim Öffnen eine direkte Peer-to-Peer-Verbindung (WebRTC) zwischen den Geräten der Teilnehmer nutzt. Unser Server vermittelt nur den Verbindungsaufbau und speichert Räume ausschließlich im Arbeitsspeicher. Für den Aufbau werden STUN-Server von Google genutzt; dabei sehen Google und die anderen Teilnehmer technisch Ihre IP-Adresse. Wenn eine direkte Verbindung nicht möglich ist, kann der Ton verschlüsselt über einen Relay-Server (TURN) weitergeleitet werden. Wir zeichnen Gespräche nicht auf.`,
                         `**Spracherkennung des Geräts:** Falls die App die Spracherkennung des Betriebssystems verwendet, verarbeitet Apple bzw. Google die Audiodaten nach deren eigenen Bestimmungen.`,
                     ],
                 },
@@ -186,7 +186,7 @@ const body: Record<Locale, LegalSection[]> = {
             title: 'Speicherdauer, Datenkopie und Kontolöschung',
             blocks: [
                 'Konto- und Lerndaten speichern wir, solange Ihr Konto besteht. Bestätigungscodes verfallen nach kurzer Zeit.',
-                `**Datenkopie:** Unter Einstellungen → „Meine Daten herunterladen“ (Website) bzw. Einstellungen → Datenschutz (App) erhalten Sie eine Kopie aller Konto- und Lerndaten als JSON-Datei per E-Mail.`,
+                `**Datenkopie:** Auf der Website unter [Einstellungen](/settings) → „Bản sao dữ liệu“ → „Gửi qua email“ (Datenkopie per E-Mail senden) bzw. in der App unter Einstellungen → Datenschutz erhalten Sie eine Kopie aller Konto- und Lerndaten als JSON-Datei per E-Mail.`,
                 `**Konto löschen:** Auf der Website unter [Einstellungen](/settings) oder in der App unter Einstellungen → „Konto löschen“. Dabei werden Konto, Profilbild, Vokabelheft, Fortschritt, Antworten, Punkte und Anmeldungen mit Google/Apple sofort und dauerhaft gelöscht; eine Anmeldung mit Apple wird bei Apple widerrufen. Bereits gesendetes Feedback bleibt ohne Verbindung zu Ihrem Konto und ohne E-Mail-Adresse erhalten. Alternativ genügt eine E-Mail an [${MAIL}](mailto:${MAIL}).`,
                 '**Sicherungskopien:** Wir sichern die Datenbank täglich. Sicherungen werden verschlüsselt übertragen, nur vom Betreiber verwahrt und nach spätestens 60 Tagen überschrieben; gelöschte Daten verschwinden spätestens dann auch aus den Sicherungen.',
                 'Anfragen und Feedback löschen wir, wenn sie erledigt sind und keine gesetzlichen Aufbewahrungspflichten bestehen.',
@@ -235,7 +235,7 @@ const body: Record<Locale, LegalSection[]> = {
                 'With an account we store on our server what you create or achieve while learning:',
                 {
                     list: [
-                        'German: vocabulary book with notes and example sentences, starred sentences, progress per lesson and video, dictation results, review schedule and history, unlocked lessons.',
+                        'German: vocabulary book with notes and example sentences, starred sentences, progress per lesson and video, dictation results, and review schedule and history.',
                         'Driving theory and Leben in Deutschland: answered questions (right/wrong), saved questions, mock exams and settings such as licence class or federal state.',
                         'Motivation: points, diamonds and learning streak. Points and diamonds have no monetary value.',
                     ],
@@ -287,7 +287,7 @@ const body: Record<Locale, LegalSection[]> = {
                     list: [
                         '**Shadowing:** Your recordings stay on your device so you can listen and compare. On the website they are only held in the memory of the open page. They are not uploaded.',
                         '**Pronunciation scoring:** Where this feature is offered, the recording of a single sentence is sent to our server and from there to a transcription service (Groq or OpenAI). The recognised text is compared with the original sentence; the recording is not stored.',
-                        '**Speaking rooms:** Conversations with other learners run over WebRTC directly between the participants’ devices. Our server only arranges the connection and keeps rooms in memory only. Google STUN servers are used to set up the connection, so Google and the other participants can technically see your IP address. If a direct connection is not possible, the audio may be relayed in encrypted form through a relay server (TURN). We do not record conversations.',
+                        '**Speaking rooms (Sprechräume):** This optional feature, when opened, uses a direct peer-to-peer connection (WebRTC) between the participants’ devices. Our server only arranges the connection and keeps rooms in memory only. Google STUN servers are used to set up the connection, so Google and the other participants can technically see your IP address. If a direct connection is not possible, the audio may be relayed in encrypted form through a relay server (TURN). We do not record conversations.',
                         '**Device speech recognition:** If the app uses the operating system’s speech recognition, Apple or Google processes the audio under their own terms.',
                     ],
                 },
@@ -359,7 +359,7 @@ const body: Record<Locale, LegalSection[]> = {
             title: 'Retention, data copy and account deletion',
             blocks: [
                 'We keep account and learning data as long as your account exists. Verification codes expire after a short time.',
-                '**Data copy:** Under Settings → “Download my data” (website) or Settings → Privacy (app) you receive a copy of all account and learning data as a JSON file by email.',
+                '**Data copy:** On the website under [Settings](/settings) → “Bản sao dữ liệu” → “Gửi qua email” (send data copy by email) or in the app under Settings → Privacy you receive a copy of all account and learning data as a JSON file by email.',
                 `**Delete account:** On the website under [Settings](/settings) or in the app under Settings → “Delete account”. This immediately and permanently deletes your account, profile picture, vocabulary book, progress, answers, points and Google/Apple sign-in links; a Sign in with Apple link is revoked at Apple. Feedback you already sent is kept without any link to your account and without your email address. Alternatively, an email to [${MAIL}](mailto:${MAIL}) is enough.`,
                 '**Backups:** We back up the database daily. Backups are transferred encrypted, kept only by the operator and overwritten after 60 days at the latest; deleted data disappears from the backups by then at the latest.',
                 'We delete requests and feedback once they are handled and no statutory retention duties apply.',
@@ -408,7 +408,7 @@ const body: Record<Locale, LegalSection[]> = {
                 'Khi có tài khoản, chúng tôi lưu trên máy chủ những gì bạn tạo ra hoặc đạt được khi học:',
                 {
                     list: [
-                        'Tiếng Đức: sổ từ vựng kèm ghi chú và câu ví dụ, câu đã đánh dấu, tiến độ từng bài học và video, kết quả chép chính tả, lịch và lịch sử ôn tập, các bài đã mở khoá.',
+                        'Tiếng Đức: sổ từ vựng kèm ghi chú và câu ví dụ, câu đã đánh dấu, tiến độ từng bài học và video, kết quả chép chính tả, lịch và lịch sử ôn tập.',
                         'Lý thuyết lái xe và Leben in Deutschland: câu đã trả lời (đúng/sai), câu đã lưu, bài thi thử và cài đặt như hạng bằng lái hoặc bang.',
                         'Động lực học: điểm, kim cương và chuỗi ngày học. Điểm và kim cương không có giá trị tiền tệ.',
                     ],
@@ -460,7 +460,7 @@ const body: Record<Locale, LegalSection[]> = {
                     list: [
                         '**Nói đuổi (Shadowing):** Bản ghi nằm trên thiết bị của bạn để nghe lại và so sánh. Trên trang web, bản ghi chỉ nằm trong bộ nhớ của trang đang mở. Bản ghi không được tải lên.',
                         '**Chấm phát âm:** Khi tính năng này được cung cấp, bản ghi của một câu được gửi tới máy chủ của chúng tôi và từ đó tới dịch vụ chuyển giọng nói thành văn bản (Groq hoặc OpenAI). Văn bản nhận được được so với câu gốc; bản ghi không được lưu.',
-                        '**Phòng luyện nói:** Cuộc trò chuyện với người học khác đi qua WebRTC trực tiếp giữa các thiết bị của người tham gia. Máy chủ của chúng tôi chỉ giúp kết nối và giữ thông tin phòng trong bộ nhớ tạm. Để kết nối, máy chủ STUN của Google được dùng; vì vậy về mặt kỹ thuật Google và những người cùng phòng thấy được địa chỉ IP của bạn. Nếu không kết nối trực tiếp được, âm thanh có thể được chuyển tiếp ở dạng mã hoá qua máy chủ trung gian (TURN). Chúng tôi không ghi âm cuộc trò chuyện.',
+                        '**Phòng luyện nói (Sprechräume):** Đây là tính năng khi mở sẽ sử dụng kết nối ngang hàng (peer-to-peer qua WebRTC) trực tiếp giữa các thiết bị của người tham gia. Máy chủ của chúng tôi chỉ giúp kết nối và giữ thông tin phòng trong bộ nhớ tạm. Để kết nối, máy chủ STUN của Google được dùng; vì vậy về mặt kỹ thuật Google và những người cùng phòng thấy được địa chỉ IP của bạn. Nếu không kết nối trực tiếp được, âm thanh có thể được chuyển tiếp ở dạng mã hoá qua máy chủ trung gian (TURN). Chúng tôi không ghi âm cuộc trò chuyện.',
                         '**Nhận dạng giọng nói của thiết bị:** Nếu ứng dụng dùng tính năng nhận dạng giọng nói của hệ điều hành, Apple hoặc Google xử lý âm thanh theo điều khoản của họ.',
                     ],
                 },
@@ -532,7 +532,7 @@ const body: Record<Locale, LegalSection[]> = {
             title: 'Thời gian lưu, bản sao dữ liệu và xoá tài khoản',
             blocks: [
                 'Dữ liệu tài khoản và dữ liệu học được lưu khi tài khoản còn tồn tại. Mã xác nhận hết hạn sau thời gian ngắn.',
-                '**Bản sao dữ liệu:** Tại Cài đặt → “Tải dữ liệu của tôi” (trang web) hoặc Cài đặt → Quyền riêng tư (ứng dụng), bạn nhận bản sao toàn bộ dữ liệu tài khoản và dữ liệu học dạng tệp JSON qua email.',
+                '**Bản sao dữ liệu:** Trên trang web tại [Cài đặt](/settings) → Bản sao dữ liệu → “Gửi qua email” hoặc trong ứng dụng tại Cài đặt → Quyền riêng tư, bạn nhận bản sao toàn bộ dữ liệu tài khoản và dữ liệu học dạng tệp JSON qua email.',
                 `**Xoá tài khoản:** Trên trang web tại [Cài đặt](/settings) hoặc trong ứng dụng tại Cài đặt → “Xoá tài khoản”. Việc này xoá ngay và vĩnh viễn tài khoản, ảnh đại diện, sổ từ vựng, tiến độ, câu trả lời, điểm và liên kết đăng nhập Google/Apple; liên kết Đăng nhập bằng Apple được thu hồi phía Apple. Góp ý đã gửi được giữ lại nhưng không còn gắn với tài khoản và không kèm email. Bạn cũng có thể gửi email tới [${MAIL}](mailto:${MAIL}).`,
                 '**Bản sao lưu:** Cơ sở dữ liệu được sao lưu hằng ngày. Bản sao lưu được truyền ở dạng mã hoá, chỉ người vận hành giữ và bị ghi đè sau tối đa 60 ngày; dữ liệu đã xoá chậm nhất khi đó cũng biến mất khỏi bản sao lưu.',
                 'Yêu cầu và góp ý được xoá khi đã giải quyết xong và không còn nghĩa vụ lưu trữ theo luật.',

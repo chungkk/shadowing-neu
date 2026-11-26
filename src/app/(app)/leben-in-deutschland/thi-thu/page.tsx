@@ -23,7 +23,7 @@ export const metadata: Metadata = quizPageMeta({
 
 /** Màn bắt đầu thi như Lái xe: thẻ luật thi + nút chính "Bắt đầu thi" */
 async function Start() {
-  const { state } = await prefs();
+  const { state, chosen } = await prefs();
   const user = await getCurrentUser();
   const history = user ? listQuizExams(user.id, "lid", 10) : [];
   const rules: { icon: typeof Clock; text: ReactNode }[] = [
@@ -33,6 +33,16 @@ async function Start() {
   ];
   return (
     <>
+      {!chosen && (
+        <p className="alert flex-wrap items-center justify-between gap-2 text-sm">
+          <span>
+            Đang tạm dùng bang <b className="text-foreground">{state.name}</b> —{" "}
+            <Link href="/leben-in-deutschland/cai-dat" className="font-bold text-sec-text underline underline-offset-2">
+              Đổi bang
+            </Link>
+          </span>
+        </p>
+      )}
       <section className="card flex flex-col gap-5 sm:p-6" aria-labelledby="lid-rules">
         <div className="flex items-center gap-3">
           <span className="icon-bubble tint-sec size-12" aria-hidden>

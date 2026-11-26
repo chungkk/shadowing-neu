@@ -30,13 +30,14 @@ async function Marked({ searchParams }: P) {
       stats={quizStats(user.id, "fuehrerschein")}
       bookmarks={ids}
       modeLinks={{ lesen: "/lai-xe/danh-dau?mode=lesen", ueben: "/lai-xe/danh-dau" }}
+      resumeKey={`laixe:pos:danh-dau:${mode}`}
     />
   );
 }
 
 export default function Page(props: P) {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Marked {...props} />
       </Suspense>

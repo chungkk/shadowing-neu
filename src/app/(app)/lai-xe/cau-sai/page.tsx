@@ -49,7 +49,7 @@ async function Wrong({ searchParams }: P) {
 
 export default function Page(props: P) {
   return (
-    <main className="page">
+    <main className="page" data-sec="laixe">
       <Suspense fallback={<ListSkeleton rows={4} />}>
         <Wrong {...props} />
       </Suspense>

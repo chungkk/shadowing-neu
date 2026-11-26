@@ -13,14 +13,12 @@ import { PlayerSkeleton } from "@/components/Skeleton";
 import { clientIp } from "@/lib/rate-limit";
 import { lessonPath } from "@/lib/slug";
 import SaveOwnLesson from "@/components/SaveOwnLesson";
-import { getPoints, ownLessonOfVideo } from "@/lib/db";
-import { ownLessonPrice } from "@/lib/own-lesson";
-import { OWN_LESSON_PRICE } from "@/lib/lesson-lock";
+import { ownLessonOfVideo } from "@/lib/db";
 
 // Video YouTube bất kỳ người dùng dán vào: không phải nội dung của site (và tạo phụ đề tốn API) → không cho index
 export const metadata: Metadata = {
   title: "Luyện shadowing tiếng Đức với video YouTube",
-  description: "Dán link YouTube có phụ đề tiếng Đức để luyện nghe nói từng câu: shadowing, ghi âm, chép chính tả và lưu từ vựng.",
+  description: "Dán link YouTube tiếng Đức để tách câu tự động, luyện nghe nói Shadowing, ghi âm, tra từ và lưu miễn phí thành bài học riêng kèm chế độ Chính tả.",
   robots: { index: false, follow: true },
 };
 
@@ -72,10 +70,7 @@ async function Watch({ params }: PageProps<"/watch/[videoId]">) {
       >
         <SaveOwnLesson
           videoId={data.videoId}
-          title={data.title}
           loggedIn={!!user}
-          price={user ? ownLessonPrice(user) : OWN_LESSON_PRICE}
-          points={user ? getPoints(user.id).total : 0}
           own={own?.slug ?? null}
         />
         <div className="flex flex-wrap items-end gap-2 text-xs">
@@ -95,7 +90,7 @@ export default function Page(props: PageProps<"/watch/[videoId]">) {
       fallback={
         <PlayerSkeleton>
           <p className="text-xs text-muted">
-            Đang lấy phụ đề… Nếu video không có phụ đề, Whisper (AI) sẽ tạo — có thể mất tới 1 phút.
+            Đang lấy phụ đề… Nếu bạn đã đăng nhập và video chưa có phụ đề, Whisper (AI) sẽ tự động tạo — có thể mất tới 1 phút.
           </p>
         </PlayerSkeleton>
       }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, ChevronLeft, Languages } from "lucide-react";
 import { connection } from "next/server";
-import { lockInfo } from "@/lib/access";
 import { getCurrentUser } from "@/lib/auth";
 import { lessonGridItems } from "@/lib/lesson-items";
 import {
@@ -116,7 +115,7 @@ async function LevelCatalogView({ params }: PageProps<"/tieng-duc/trinh-do/[leve
         >
           {active.length > 1 && (
             <nav aria-label="Chuyển trình độ" className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-xs font-semibold text-muted">Trình độ khác:</span>
+              <span className="text-xs font-semibold text-muted">Trình độ:</span>
               {active.map(({ info: other, count }) => (
                 <Link
                   key={other.level}
@@ -155,7 +154,7 @@ async function LevelCatalogView({ params }: PageProps<"/tieng-duc/trinh-do/[leve
         </Link>
       )}
 
-      <LessonGrid lessons={lessons} lock={lockInfo(admin ? null : user)} admin={admin} />
+      <LessonGrid lessons={lessons} admin={admin} flat />
     </>
   );
 }

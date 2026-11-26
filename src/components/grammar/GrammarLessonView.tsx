@@ -6,17 +6,18 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Check,
   CheckCircle2,
   CircleCheck,
   Info,
   Lightbulb,
   ListChecks,
+  PlayCircle,
   RotateCcw,
   Square,
   Volume2,
 } from "lucide-react";
-import LevelBadge from "@/components/LevelBadge";
 import { CaseLegend, GrammarText } from "@/components/grammar/GrammarText";
 import {
   stripGrammarMarkup,
@@ -208,32 +209,55 @@ function GrammarBlockRenderer({
             <h4 className="text-xs font-bold tracking-wide text-muted uppercase">{block.title}</h4>
           )}
           <ol className="flex flex-col gap-2.5">
-            {block.items.map((item, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-3 rounded-xl border border-line bg-card p-3.5 sm:p-4"
-              >
-                <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent-soft font-mono text-xs font-bold text-accent-text">
-                  {idx + 1}
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="text-sm font-bold text-foreground">
-                    <GrammarText text={item.step} />
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted sm:text-sm">
-                    <GrammarText text={item.detail} />
-                  </p>
-                  {item.example && (
-                    <div
-                      lang="de"
-                      className="mt-1 rounded-lg border border-line/80 bg-sidebar px-3 py-2 text-xs leading-relaxed text-foreground sm:text-sm"
-                    >
-                      <GrammarText text={item.example} />
+            {block.items.map((item, idx) => {
+              const exKey = `${blockKey}-step-${idx}`;
+              const isExPlaying = playingKey === exKey;
+              const cleanEx = item.example
+                ? stripGrammarMarkup(item.example).replace(/\s*·\s*/g, ". ")
+                : "";
+              return (
+                <li
+                  key={idx}
+                  className="flex items-start gap-3 rounded-xl border border-line bg-card p-3.5 sm:p-4"
+                >
+                  <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent-soft font-mono text-xs font-bold text-accent-text">
+                    {idx + 1}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="text-sm font-bold text-foreground">
+                      <GrammarText text={item.step} />
                     </div>
-                  )}
-                </div>
-              </li>
-            ))}
+                    <p className="text-xs leading-relaxed text-muted sm:text-sm">
+                      <GrammarText text={item.detail} />
+                    </p>
+                    {item.example && (
+                      <div className="mt-1 flex items-center gap-2 rounded-lg border border-line/80 bg-sidebar px-3 py-2 text-xs leading-relaxed text-foreground sm:text-sm">
+                        <button
+                          type="button"
+                          onClick={(e) => onSpeak(exKey, cleanEx, e.shiftKey)}
+                          aria-label={isExPlaying ? "Dừng phát âm" : `Nghe ví dụ: ${cleanEx}`}
+                          title="Nghe phát âm tiếng Đức (Shift + bấm để nghe chậm)"
+                          className={`inline-flex size-7 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                            isExPlaying
+                              ? "border-accent bg-accent-soft text-accent-text"
+                              : "border-line bg-card text-muted hover:border-line-strong hover:text-foreground"
+                          }`}
+                        >
+                          {isExPlaying ? (
+                            <Square className="size-3 fill-current" aria-hidden />
+                          ) : (
+                            <Volume2 className="size-3.5" aria-hidden />
+                          )}
+                        </button>
+                        <div lang="de" className="min-w-0 flex-1">
+                          <GrammarText text={item.example} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         </div>
       );
@@ -568,12 +592,58 @@ export default function GrammarLessonView({
                   onClick={() => markDone(lesson.slug)}
                   className="btn btn-primary"
                 >
-                  <CircleCheck className="size-4" aria-hidden /> Đánh dấu đã học xong bài này
+                  <CircleCheck className="size-4" aria-hidden /> Đánh dấu đã học xong
                 </button>
               </div>
             )}
           </section>
         )}
+
+        {/* Dải gợi ý thực hành nghe nói & từ vựng cùng trình độ */}
+        <section
+          aria-label="Luyện tập thêm cùng trình độ"
+          className="grid gap-3 sm:grid-cols-2"
+        >
+          <Link
+            href={
+              lesson.level.match(/A1|A2|B1|B2|C1|C2/)
+                ? `/tieng-duc?level=${lesson.level.match(/A1|A2|B1|B2|C1|C2/)![0]}`
+                : "/tieng-duc"
+            }
+            className="card card-link flex items-center gap-3 p-3.5 sm:p-4"
+          >
+            <span className="icon-bubble tint-sec size-9 shrink-0">
+              <PlayCircle className="size-4" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-foreground">
+                Luyện video trình độ {lesson.level}
+              </span>
+              <span className="block truncate text-xs text-muted">
+                Áp dụng ngữ pháp vào hội thoại thật qua Shadowing &amp; Chính tả
+              </span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-muted" aria-hidden />
+          </Link>
+
+          <Link
+            href="/vocab"
+            className="card card-link flex items-center gap-3 p-3.5 sm:p-4"
+          >
+            <span className="icon-bubble tint-ok size-9 shrink-0">
+              <BookOpen className="size-4" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-foreground">
+                Bộ từ vựng {lesson.level}
+              </span>
+              <span className="block truncate text-xs text-muted">
+                Học từ chuẩn kèm giống der/die/das, câu ví dụ &amp; ôn SRS
+              </span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-muted" aria-hidden />
+          </Link>
+        </section>
 
         {/* Thanh đánh dấu hoàn thành & Chuyển bài trước/sau */}
         <footer className="flex flex-col gap-4 border-t border-line pt-6">
@@ -585,10 +655,11 @@ export default function GrammarLessonView({
             <button
               type="button"
               onClick={() => toggleDone(lesson.slug)}
+              title={done ? "Nhấn để bỏ đánh dấu đã học xong" : "Đánh dấu đã học xong bài này"}
               className={`btn ${done ? "btn-soft border-ok/40 text-ok-text" : "btn-primary"}`}
             >
               <CheckCircle2 className="size-4" aria-hidden />
-              {done ? "Đã học xong (nhấn để bỏ đánh dấu)" : "Đánh dấu đã học xong"}
+              {done ? "Đã học xong" : "Đánh dấu đã học xong"}
             </button>
           </div>
 
@@ -639,22 +710,17 @@ export default function GrammarLessonView({
 
       {/* ── Cột phụ dính (Desktop TOC + trạng thái) ── */}
       <aside className="hidden lg:sticky lg:top-24 lg:flex lg:flex-col lg:gap-4">
-        <div className="card flex flex-col gap-3 p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold text-muted">{lesson.code}</span>
-            <LevelBadge level={lesson.level} />
-          </div>
-          <button
-            type="button"
-            onClick={() => toggleDone(lesson.slug)}
-            className={`btn w-full justify-center text-xs ${
-              done ? "btn-soft border-ok/40 text-ok-text" : "btn-primary"
-            }`}
-          >
-            <CheckCircle2 className="size-4" aria-hidden />
-            {done ? "Đã hoàn thành" : "Đánh dấu đã học"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => toggleDone(lesson.slug)}
+          title={done ? "Nhấn để bỏ đánh dấu đã học xong" : "Đánh dấu đã học xong bài này"}
+          className={`btn w-full justify-center text-xs ${
+            done ? "btn-soft border-ok/40 text-ok-text" : "btn-primary"
+          }`}
+        >
+          <CheckCircle2 className="size-4" aria-hidden />
+          {done ? "Đã học xong" : "Đánh dấu đã học xong"}
+        </button>
 
         <nav aria-label="Mục lục trong bài" className="card flex flex-col gap-2 p-4">
           <div className="text-xs font-bold tracking-wide text-muted uppercase">Trong bài này</div>
@@ -694,11 +760,6 @@ export default function GrammarLessonView({
             )}
           </ul>
         </nav>
-
-        <div className="card flex flex-col gap-2 p-4">
-          <div className="text-xs font-bold tracking-wide text-muted uppercase">Màu 4 Cách</div>
-          <CaseLegend compact />
-        </div>
 
         <Link
           href="/ngu-phap"

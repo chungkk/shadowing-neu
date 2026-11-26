@@ -294,7 +294,7 @@
   }
   /* Tab phần thi (Grundstoff / hạng) dính vào thanh số câu */
   .sim-tab {
-    @apply h-11 min-w-14 cursor-pointer px-4 text-base font-bold sm:px-6 sm:text-lg;
+    @apply h-10 min-w-12 cursor-pointer px-3 text-sm font-bold whitespace-nowrap sm:h-11 sm:min-w-14 sm:px-5 sm:text-base lg:px-6 lg:text-lg;
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     border: 1px solid rgb(0 0 0 / 0.2);
     border-bottom: 0;

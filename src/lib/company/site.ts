@@ -37,8 +37,8 @@ export const COMPANY = {
   vatId: '',
 } as const;
 
-// Fanpage Facebook (xem docs/fanpage-plan.md). Có thể override qua biến môi trường.
+// Fanpage Facebook (xem docs/fanpage-plan.md). Có thể cấu hình qua biến môi trường.
 export const FACEBOOK_PAGE_URL =
-  process.env.NEXT_PUBLIC_FACEBOOK_PAGE_URL || 'https://www.facebook.com/ckk.biz';
+  process.env.NEXT_PUBLIC_FACEBOOK_URL ?? process.env.NEXT_PUBLIC_FACEBOOK_PAGE_URL ?? '';
 
 export const LEGAL_UPDATED = { de: 'November 2026', en: 'November 2026', vi: 'Tháng 11/2026' } as const;

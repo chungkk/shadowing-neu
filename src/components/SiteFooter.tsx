@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import ConsentSettings from "@/components/company/ConsentSettings";
 import { SITE } from "@/lib/company/site";
+import { SEASONAL_THEME } from "@/lib/theme";
 import Mascot from "./Mascot";
 import { ChristmasTreeIcon } from "./FestiveIcons";
 
@@ -11,7 +12,7 @@ const COLUMNS = [
     title: "Sản phẩm",
     links: [
       { href: "/tieng-duc", label: "Tiếng Đức – bài học video" },
-      { href: "/vocab", label: "Từ vựng Goethe A1–B1" },
+      { href: "/vocab", label: "Kho từ vựng A1–C1" },
       { href: "/lai-xe", label: "Lý thuyết lái xe Đức" },
       { href: "/leben-in-deutschland", label: "Leben in Deutschland" },
       { href: "/thuyet-minh", label: "Xem YouTube thuyết minh" },
@@ -24,7 +25,6 @@ const COLUMNS = [
       { href: "/support?lang=vi", label: "Hỗ trợ & câu hỏi thường gặp" },
       { href: "/terms?lang=vi", label: "Điều khoản sử dụng" },
       { href: "/privacy?lang=vi", label: "Chính sách bảo mật" },
-      { href: "/refund?lang=vi", label: "Mua hàng & hoàn tiền" },
       { href: "/impressum?lang=vi", label: "Thông tin pháp lý (Impressum)" },
     ],
   },
@@ -91,9 +91,11 @@ export default function SiteFooter() {
               <Link href="/about" className="underline underline-offset-2 hover:text-foreground">
                 hallovn.de
               </Link>
-              <span className="ml-2 inline-flex items-center gap-1 align-middle text-muted">
-                <ChristmasTreeIcon className="size-3.5" /> Giáng Sinh an lành
-              </span>
+              {SEASONAL_THEME === "noel" && (
+                <span className="ml-2 inline-flex items-center gap-1 align-middle text-muted">
+                  <ChristmasTreeIcon className="size-3.5" /> Giáng Sinh an lành
+                </span>
+              )}
             </p>
             <p>Video thuộc quyền sở hữu của tác giả trên YouTube.</p>
           </div>

@@ -197,7 +197,7 @@ function VocabRow({
         )}
         <Stage v={v} now={now} />
       </div>
-      <div className="col-start-2 row-start-1 flex items-center text-muted lg:col-start-4">
+      <div className="col-start-2 row-start-1 flex items-center gap-1 text-muted lg:col-start-4">
         <button
           type="button"
           title="Nghe phát âm (Shift + bấm để nghe chậm)"
@@ -210,8 +210,8 @@ function VocabRow({
         <button type="button" title="Dịch nghĩa bằng AI" className="btn-icon size-8 text-muted hover:text-amber" onClick={ai} disabled={aiPending}>
           <Sparkles className={`size-4 ${aiPending ? "animate-pulse text-amber" : ""}`} />
         </button>
-        <form action={removeWord.bind(null, v.id)} onSubmit={(e) => !confirm(`Xoá “${v.word}”?`) && e.preventDefault()}>
-          <button title="Xoá" className="btn-icon size-8 text-muted hover:text-red-400">
+        <form action={removeWord.bind(null, v.id)} onSubmit={(e) => !confirm(`Xoá “${v.word}” khỏi sổ từ vựng?`) && e.preventDefault()}>
+          <button title="Xoá" aria-label={`Xoá ${v.word}`} className="btn-icon size-8 text-muted hover:text-red-400">
             <Trash2 className="size-4" />
           </button>
         </form>
@@ -637,6 +637,7 @@ export default function VocabList({ items, autoReview = false }: { items: VocabI
         onSave={async () => {}}
         onRemove={async () => {
           if (!detailWord) return;
+          if (!confirm(`Xoá “${detailWord.item.word}” khỏi sổ từ vựng?`)) return;
           const id = detailWord.item.id;
           setDetailWord(null);
           await removeWord(id);

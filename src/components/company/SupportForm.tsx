@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { clientApi } from '@/lib/client-api';
 import { SITE } from '@/lib/company/site';
 import { useLocale, useT } from '@/components/company/LocaleContext';
 import { ChevronDown, CircleAlert, CircleCheck, Loader2, PenLine, Send } from 'lucide-react';
@@ -117,7 +118,28 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
     const t = useT(COPY);
     const { locale } = useLocale();
     const [form, setForm] = useState(EMPTY);
+    const [prefill, setPrefill] = useState({ name: '', email: '' });
     const [status, setStatus] = useState<Status>({ state: 'idle' });
+
+    useEffect(() => {
+        let cancelled = false;
+        clientApi<{ user?: { name?: string; email?: string } }>('/me')
+            .then((r) => {
+                if (cancelled || !r?.user) return;
+                const name = r.user.name?.trim() ?? '';
+                const email = r.user.email?.trim() ?? '';
+                setPrefill({ name, email });
+                setForm((prev) => ({
+                    ...prev,
+                    name: prev.name || name,
+                    email: prev.email || email,
+                }));
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const submit = async (event: FormEvent) => {
         event.preventDefault();
@@ -144,7 +166,7 @@ export default function SupportForm({ product, topics = ALL_TOPICS }: SupportFor
                 }),
             });
             if (res.ok) {
-                setForm(EMPTY);
+                setForm({ ...EMPTY, ...prefill });
                 setStatus({ state: 'sent' });
                 return;
             }

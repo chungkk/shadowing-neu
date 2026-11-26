@@ -75,12 +75,17 @@ export default async function GrammarLessonPage({ params }: PageProps) {
         icon={GraduationCap}
         title={lesson.title}
         sub={
-          <>
-            <span lang="de" className="font-semibold text-foreground/85">
-              {lesson.germanTitle}
-            </span>
-            <span> — {lesson.summary}</span>
-          </>
+          lesson.title.includes("(") ||
+          lesson.title.toLowerCase().includes(lesson.germanTitle.toLowerCase()) ? (
+            lesson.summary
+          ) : (
+            <>
+              <span lang="de" className="font-semibold text-foreground/85">
+                {lesson.germanTitle}
+              </span>
+              <span> — {lesson.summary}</span>
+            </>
+          )
         }
         meta={
           <>

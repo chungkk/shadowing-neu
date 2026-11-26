@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronLeft, Eye, Lightbulb, List, PartyPopper, RotateCcw, Volume2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Eye, Lightbulb, List, LogIn, PartyPopper, RotateCcw, Volume2, X } from "lucide-react";
 import { addDeck } from "@/app/(app)/account-actions";
 import { blankExample, checkGuess, fullWord, hintOf, quizOptions, STUDY_MODES, type StudyMode } from "@/lib/deck-study";
 import type { DeckTopic, DeckWord } from "@/lib/decks";
-import { speak, useHasGermanVoice } from "@/lib/german-voice";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { shuffle } from "@/lib/review";
+import { speakGerman, stopSpeaking } from "@/lib/speak";
+import { LoginLink } from "./auth/LoginDialog";
 import DeckWords from "./DeckWords";
 import { GuestTrialNote, GuestWall, useGuestQuota } from "./GuestQuota";
 
@@ -47,10 +48,17 @@ function German({ w, className = "" }: { w: DeckWord; className?: string }) {
 }
 
 function SpeakButton({ w, big }: { w: DeckWord; big?: boolean }) {
-  const tts = useHasGermanVoice();
-  if (!tts) return null;
   return (
-    <button type="button" title="Nghe phát âm" className={`btn-icon shrink-0 text-link ${big ? "size-12" : "size-9"}`} onClick={() => speak(fullWord(w))}>
+    <button
+      type="button"
+      title="Nghe phát âm (Shift + bấm để nghe chậm)"
+      aria-label={`Nghe phát âm ${fullWord(w)}`}
+      className={`btn-icon shrink-0 text-link ${big ? "size-12" : "size-9"}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        void speakGerman(fullWord(w), { slow: e.shiftKey });
+      }}
+    >
       <Volume2 className={big ? "size-6" : "size-4"} />
     </button>
   );
@@ -99,10 +107,58 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
 
   // Nghe viết: đọc từ ngay khi hiện thẻ
   useEffect(() => {
-    if (mode === "listen") speak(fullWord(w), 0.85);
+    if (mode === "listen") void speakGerman(fullWord(w));
   }, [mode, w]);
 
   const correct = picked !== null ? picked === answerOf(w, mode) : result === "ok" || result === "almost";
+
+  // Phím tắt trên máy tính: Space lật thẻ · ← / → chấm thẻ lật · 1–4 chọn đáp án trắc nghiệm · Enter tiếp tục
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select")) return;
+      if ((e.key === "Enter" || e.code === "Space") && target?.closest("button, a, [role=button]")) return;
+
+      if (mode === "flash") {
+        if (e.code === "Space") {
+          e.preventDefault();
+          setFlipped((f) => !f);
+        } else if (flipped && (e.key === "ArrowLeft" || e.key === "1")) {
+          e.preventDefault();
+          onDone(false);
+        } else if (flipped && (e.key === "ArrowRight" || e.key === "2")) {
+          e.preventDefault();
+          onDone(true);
+        }
+        return;
+      }
+
+      if (mode === "quiz" || mode === "reverse") {
+        if (picked === null) {
+          const idx = Number(e.key) - 1;
+          const opt = idx >= 0 && idx < options.length ? options[idx] : undefined;
+          if (opt !== undefined) {
+            e.preventDefault();
+            setPicked(opt);
+            if (mode === "reverse" || opt === answerOf(w, mode)) void speakGerman(fullWord(w));
+          }
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          onDone(correct);
+        }
+        return;
+      }
+
+      if (result !== null && e.key === "Enter") {
+        e.preventDefault();
+        onDone(correct);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode, flipped, picked, options, w, result, correct, onDone]);
+
   const next = (
     <button autoFocus className={`btn h-12 w-full max-w-sm ${correct ? "btn-primary" : "btn-red"}`} onClick={() => onDone(correct)}>
       Tiếp tục
@@ -123,7 +179,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
               <Picture w={w} icon={icon} />
               <German w={w} className="text-3xl font-extrabold" />
               {!!w.plural && w.plural !== w.word && <span className="text-sm text-muted">die {w.plural}</span>}
-              <span className="badge badge-muted">Bấm để lật thẻ</span>
+              <span className="badge badge-muted">Bấm để lật thẻ (Space)</span>
             </>
           ) : (
             <>
@@ -135,10 +191,10 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         <SpeakButton w={w} big />
         {flipped ? (
           <div className="grid w-full max-w-lg grid-cols-2 gap-3">
-            <button className="btn h-12" onClick={() => onDone(false)}>
+            <button className="btn h-12" onClick={() => onDone(false)} title="Phím ←">
               <X className="size-4 text-red-400" /> Chưa thuộc
             </button>
-            <button autoFocus className="btn btn-primary h-12" onClick={() => onDone(true)}>
+            <button autoFocus className="btn btn-primary h-12" onClick={() => onDone(true)} title="Phím →">
               <Check className="size-4" /> Đã thuộc
             </button>
           </div>
@@ -166,7 +222,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
         )}
         <p className="text-sm font-bold text-muted">{mode === "quiz" ? "Chọn nghĩa đúng" : "Chọn từ tiếng Đức đúng"}</p>
         <div className="grid w-full max-w-xl gap-2.5 sm:grid-cols-2">
-          {options.map((o) => {
+          {options.map((o, idx) => {
             const state = picked === null ? "" : o === right ? "border-ok bg-ok-soft text-ok-text" : o === picked ? "border-red bg-red-soft text-red-400" : "disabled:opacity-50";
             return (
               <button
@@ -174,18 +230,21 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
                 disabled={picked !== null}
                 onClick={() => {
                   setPicked(o);
-                  if (mode === "reverse" || o === right) speak(fullWord(w));
+                  if (mode === "reverse" || o === right) void speakGerman(fullWord(w));
                 }}
-                className={`btn min-h-12 justify-start text-left text-base whitespace-normal normal-case ${state.startsWith("border") ? "disabled:opacity-100" : ""} ${state}`}
+                className={`btn min-h-12 justify-start gap-2.5 text-left text-base whitespace-normal normal-case ${state.startsWith("border") ? "disabled:opacity-100" : ""} ${state}`}
               >
-                {o}
+                <span className="hidden size-6 shrink-0 items-center justify-center rounded-md border border-current/35 font-mono text-xs opacity-65 sm:inline-flex">
+                  {idx + 1}
+                </span>
+                <span>{o}</span>
               </button>
             );
           })}
         </div>
         {picked !== null && (
           <>
-            {picked !== right && <Reveal w={w} tone="bad" title="Chưa đúng" />}
+            <Reveal w={w} tone={picked === right ? "ok" : "bad"} title={picked === right ? "Chính xác!" : "Chưa đúng"} />
             {next}
           </>
         )}
@@ -197,14 +256,19 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: Word; mode: StudyMode; 
   const check = (skip: boolean) => {
     const r = skip ? "skip" : checkGuess(input, w);
     setResult(r);
-    if (r !== "wrong" && r !== "skip") speak(fullWord(w));
+    if (r !== "wrong" && r !== "skip") void speakGerman(fullWord(w));
   };
   return (
     <div className="flex flex-col items-center gap-4">
       {/* Nghe viết: ảnh lộ đáp án → chỉ hiện biểu tượng chủ đề */}
       <Picture w={mode === "listen" ? { ...w, image: null } : w} icon={icon} />
       {mode === "listen" ? (
-        <button type="button" className="btn btn-soft h-14 px-6 text-base" onClick={() => speak(fullWord(w), 0.85)}>
+        <button
+          type="button"
+          className="btn btn-soft h-14 px-6 text-base"
+          title="Shift + bấm để nghe chậm"
+          onClick={(e) => void speakGerman(fullWord(w), { slow: e.shiftKey })}
+        >
           <Volume2 className="size-6" /> Nghe lại
         </button>
       ) : (
@@ -283,6 +347,8 @@ const answerOf = (w: DeckWord, mode: StudyMode) => (mode === "reverse" ? fullWor
  * Trả lời sai → từ quay lại sau 3 thẻ; hết hàng đợi → hoàn thành
  */
 function Session({
+  slug,
+  loggedIn,
   words,
   pool,
   mode,
@@ -293,6 +359,8 @@ function Session({
   nextTopic,
   onShow,
 }: {
+  slug: string;
+  loggedIn: boolean;
   onShow: (w: Word) => void;
   words: Word[];
   pool: DeckWord[];
@@ -316,13 +384,22 @@ function Session({
           <PartyPopper className="size-10" strokeWidth={2} />
         </span>
         <p className="font-display text-2xl font-bold text-foreground">{practice ? "Đã ôn xong chủ đề này" : "Bạn đã học hết chủ đề này"}</p>
-        <p className="max-w-md">Các từ đã nằm trong Sổ từ vựng và sẽ được nhắc ôn đúng lúc để nhớ lâu.</p>
+        <p className="max-w-md text-muted">
+          {loggedIn
+            ? "Các từ đã nằm trong Sổ từ vựng và sẽ được nhắc ôn đúng lúc để nhớ lâu."
+            : "Đăng nhập miễn phí để lưu các từ vừa học vào Sổ từ vựng và được nhắc ôn theo lịch SRS."}
+        </p>
         <div className="flex flex-wrap justify-center gap-3 max-sm:w-full max-sm:flex-col">
+          {!loggedIn && (
+            <LoginLink href={`/login?next=/vocab/decks/${slug}`} className="btn btn-primary btn-lg">
+              <LogIn className="size-4" /> Đăng nhập để lưu từ
+            </LoginLink>
+          )}
           <button className="btn btn-lg" onClick={onPractice}>
             <RotateCcw className="size-4" /> Ôn lại chủ đề
           </button>
           {nextTopic && (
-            <button className="btn btn-primary btn-lg" onClick={nextTopic}>
+            <button className={`btn btn-lg ${loggedIn ? "btn-primary" : "btn-soft"}`} onClick={nextTopic}>
               Chủ đề tiếp theo
             </button>
           )}
@@ -379,16 +456,17 @@ export default function DeckStudy({
   const quota = useGuestQuota("deck", loggedIn);
   const { open } = quota;
   const onShow = useCallback((w: Word) => void open(`${slug}:${w.key}`), [open, slug]);
-  const tts = useHasGermanVoice();
   const mounted = useMounted();
+
+  useEffect(() => () => stopSpeaking(), []);
 
   const topic = topics.find((t) => t.id === topicId) ?? topics[0];
   const topicWords = useMemo(() => words.filter((w) => w.topic === topic.id), [words, topic.id]);
   const pool = topicWords.length >= 4 ? topicWords : words;
   const learned = topicWords.filter((w) => w.learned).length;
-  const modes = STUDY_MODES.filter((m) => m.mode !== "listen" || tts);
+  const modes = STUDY_MODES;
   // Chủ đề chưa học từ nào → bắt đầu bằng Thẻ lật (không bắt gõ từ chưa từng thấy), trừ khi vừa tự chọn chế độ khác
-  const study: Mode = !picked && learned === 0 && mode !== "list" ? "flash" : mode === "listen" && !tts ? "guess" : mode;
+  const study: Mode = !picked && learned === 0 && mode !== "list" ? "flash" : mode;
 
   const markSaved = (keys: string[]) => {
     const set = new Set(keys);
@@ -498,6 +576,8 @@ export default function DeckStudy({
             ) : (
               <Session
                 key={`${topic.id}|${study}|${practice}`}
+                slug={slug}
+                loggedIn={loggedIn}
                 words={topicWords}
                 pool={pool}
                 mode={study}

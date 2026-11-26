@@ -40,11 +40,11 @@ export type LiveVoiceId =
   | "piper:vtv2_thuyetminh";
 
 export const LIVE_VOICES: { id: LiveVoiceId; label: string; short: string }[] = [
-  { id: "edge:vi-VN-NamMinhNeural", label: "Edge · Nam Minh (Nam · Tự nhiên)", short: "Edge · Nam Minh (Nam)" },
-  { id: "edge:vi-VN-HoaiMyNeural", label: "Edge · Hoài My (Nữ · Tự nhiên)", short: "Edge · Hoài My (Nữ)" },
-  { id: "piper:adam_bua", label: "Adam bựa (Nam · Bắc · Trình duyệt)", short: "Adam bựa (Nam · Trình duyệt)" },
-  { id: "piper:lac_phi", label: "Lạc Phi (Nam · Thuyết minh · Trình duyệt)", short: "Lạc Phi (Nam · Trình duyệt)" },
-  { id: "piper:vtv2_thuyetminh", label: "Eva (Thuyết minh · Trình duyệt)", short: "Eva (Thuyết minh · Trình duyệt)" },
+  { id: "edge:vi-VN-NamMinhNeural", label: "Nam Minh (Nam · Tự nhiên)", short: "Nam Minh (Nam · Tự nhiên)" },
+  { id: "edge:vi-VN-HoaiMyNeural", label: "Hoài My (Nữ · Tự nhiên)", short: "Hoài My (Nữ · Tự nhiên)" },
+  { id: "piper:adam_bua", label: "Adam (Nam · Trình duyệt)", short: "Adam (Nam · Trình duyệt)" },
+  { id: "piper:lac_phi", label: "Lạc Phi (Nam · Thuyết minh · Trình duyệt)", short: "Lạc Phi (Thuyết minh · Trình duyệt)" },
+  { id: "piper:vtv2_thuyetminh", label: "Eva (Nữ · Thuyết minh · Trình duyệt)", short: "Eva (Thuyết minh · Trình duyệt)" },
 ];
 
 function resolveInitialVoice(v?: LiveVoiceId): LiveVoiceId {
@@ -918,8 +918,8 @@ export default function KokoroLivePlayer({
                   : localEngineKey === "lac_phi"
                     ? "Lạc Phi trình duyệt (INT8)"
                     : usingLocalWasm
-                      ? "Adam bựa trình duyệt (INT8)"
-                      : "Edge Neural TTS"}
+                      ? "Adam trình duyệt (INT8)"
+                      : "Neural TTS"}
                 {lastSynthMs !== null ? ` · ${lastSynthMs}ms` : ""}
               </span>
             )}
@@ -1119,12 +1119,13 @@ export default function KokoroLivePlayer({
                   {origVol <= 0 ? "Gốc: Tắt" : "Gốc: Bật"}
                 </button>
               ) : (
-                <label className="flex items-center gap-1.5 text-muted">
+                <div className="flex items-center gap-1.5 text-muted">
                   <button
                     type="button"
                     className="text-foreground transition hover:text-sec-text"
                     onClick={() => setOrigVol((v) => (v > 0 ? 0 : 25))}
                     title={origVol <= 0 ? "Bật tiếng gốc video" : "Tắt tiếng gốc video"}
+                    aria-label={origVol <= 0 ? "Bật tiếng gốc video" : "Tắt tiếng gốc video"}
                   >
                     {origVol <= 0 ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
                   </button>
@@ -1136,17 +1137,19 @@ export default function KokoroLivePlayer({
                     step={5}
                     value={origVol}
                     onChange={(e) => setOrigVol(Number(e.target.value))}
+                    aria-label="Âm lượng tiếng gốc"
                     className="w-16 sm:w-20"
                   />
-                </label>
+                </div>
               )}
 
-              <label className="flex items-center gap-1.5 text-muted">
+              <div className="flex items-center gap-1.5 text-muted">
                 <button
                   type="button"
                   className="text-foreground transition hover:text-sec-text"
                   onClick={() => setDubMuted((m) => !m)}
                   title={dubMuted ? "Bật thuyết minh" : "Tắt thuyết minh"}
+                  aria-label={dubMuted ? "Bật thuyết minh" : "Tắt thuyết minh"}
                 >
                   {dubMuted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
                 </button>
@@ -1161,9 +1164,10 @@ export default function KokoroLivePlayer({
                     setDubMuted(false);
                     setDubVol(Number(e.target.value));
                   }}
+                  aria-label="Âm lượng thuyết minh"
                   className="w-16 sm:w-20"
                 />
-              </label>
+              </div>
 
               <label className="flex items-center gap-1.5 text-muted" title="Tốc độ giọng thuyết minh">
                 <span className="min-w-10 font-mono font-semibold text-foreground tabular-nums">{speed.toFixed(2)}×</span>
@@ -1174,6 +1178,7 @@ export default function KokoroLivePlayer({
                   step={0.05}
                   value={speed}
                   onChange={(e) => setSpeed(Number(e.target.value))}
+                  aria-label="Tốc độ giọng thuyết minh"
                   className="w-16"
                 />
               </label>

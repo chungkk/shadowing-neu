@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, BarChart3, Gem, LogIn, Star } from "lucide-react";
+import { ArrowLeft, BarChart3, Gem, LogIn, RotateCcw, Star } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { LoginLink } from "./auth/LoginDialog";
 import Mascot from "./Mascot";
@@ -38,6 +38,17 @@ export function useGuestQuota(area: GuestArea, loggedIn: boolean) {
   const [wall, setWall] = useState(false); // câu đang mở bị chặn
   const used = stored?.day === today() ? (stored.ids[area]?.length ?? 0) : 0;
 
+  /** Kiểm tra nhanh (không ghi thêm lượt): câu `id` có được phép xem hay không */
+  const canOpen = useCallback(
+    (id: string): boolean => {
+      if (loggedIn) return true;
+      const s = readStore();
+      const ids = s.ids[area] ?? [];
+      return ids.includes(id) || ids.length < limit;
+    },
+    [loggedIn, area, limit],
+  );
+
   /** Khách mở câu `id`: còn lượt (hoặc đã đếm rồi) → true và đếm câu này · hết lượt → false và hiện popup */
   const open = useCallback(
     (id: string): boolean => {
@@ -59,7 +70,9 @@ export function useGuestQuota(area: GuestArea, loggedIn: boolean) {
     [loggedIn, area, limit, setStored],
   );
 
-  return { limit, used, left: loggedIn ? Infinity : Math.max(0, limit - used), open, wall: !loggedIn && wall };
+  const dismiss = useCallback(() => setWall(false), []);
+
+  return { limit, used, left: loggedIn ? Infinity : Math.max(0, limit - used), open, canOpen, dismiss, wall: !loggedIn && wall };
 }
 
 /** Đếm câu đang hiện (đổi câu → đếm câu mới); trả về true nếu câu này đang bị chặn */
@@ -87,16 +100,28 @@ export function GuestTrialNote({ area, quota, extra }: { area: GuestArea; quota:
 }
 
 /**
- * Popup hết lượt học thử: chỉ có Đăng nhập / Đăng ký hoặc quay lại (đăng nhập xong trang tự mở khoá).
+ * Popup hết lượt học thử: Đăng nhập / Đăng ký, lùi về câu đã mở trong ngày (nếu có) hoặc quay lại.
  * exam: thi thử cần tài khoản (1 bài thi dài hơn số câu học thử)
  */
-export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; quota: ReturnType<typeof useGuestQuota>; backHref: string; exam?: boolean }) {
+export function GuestWall({
+  area,
+  quota,
+  backHref,
+  exam,
+  onBack,
+}: {
+  area: GuestArea;
+  quota: ReturnType<typeof useGuestQuota>;
+  backHref: string;
+  exam?: boolean;
+  onBack?: () => void;
+}) {
   const pathname = usePathname();
   if (!quota.wall && !exam) return null;
   const { unit, name } = GUEST_LIMITS[area];
   return (
     <div className="dialog-backdrop">
-      <div className="dialog max-w-sm" role="dialog" aria-modal="true" aria-label="Hết lượt học thử">
+      <div className="dialog max-w-sm" role="dialog" aria-modal="true" aria-label={exam ? "Thi thử cần tài khoản" : "Hết lượt học thử"}>
         <div className="flex items-center gap-3">
           <Mascot animated className="size-14 shrink-0" />
           <div>
@@ -124,6 +149,11 @@ export function GuestWall({ area, quota, backHref, exam }: { area: GuestArea; qu
         <LoginLink href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary btn-lg btn-block">
           <LogIn className="size-4" /> Đăng nhập / Đăng ký
         </LoginLink>
+        {!exam && onBack && (
+          <button type="button" onClick={onBack} className="btn btn-block -mt-1">
+            <RotateCcw className="size-4" /> Xem lại câu đã mở
+          </button>
+        )}
         <Link href={backHref} className="btn btn-ghost -mt-2 text-muted">
           <ArrowLeft className="size-4" /> Quay lại
         </Link>

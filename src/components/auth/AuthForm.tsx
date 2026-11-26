@@ -136,7 +136,7 @@ function LoginForm({
         required
       />
       <Link
-        href="/forgot-password"
+        href={next && next !== "/" ? `/forgot-password?next=${encodeURIComponent(next)}` : "/forgot-password"}
         onClick={close}
         className="-my-1.5 inline-flex min-h-11 items-center self-end rounded-lg px-1 text-sm font-semibold text-link hover:underline"
       >
@@ -301,6 +301,10 @@ const HEADINGS = {
     "Chào bạn!",
     "Nhập email để đăng nhập — chưa có tài khoản thì tạo luôn, miễn phí.",
   ],
+  emailRegister: [
+    "Tạo tài khoản miễn phí",
+    "Nhập email của bạn để đăng ký — nếu đã có tài khoản, bạn có thể đăng nhập ngay.",
+  ],
   login: ["Chào mừng trở lại", "Nhập mật khẩu để học tiếp từ chỗ bạn đã dừng."],
   register: [
     "Tạo tài khoản mới",
@@ -309,22 +313,22 @@ const HEADINGS = {
 } as const;
 
 /**
- * Đăng nhập / đăng ký chung 1 form — hộp 2 nửa: form bên trái, bìa vở có nhãn + linh vật bên phải
- * (điện thoại: dải bìa ở trên, form bên dưới).
- * Nhập email trước: đã có tài khoản → hỏi mật khẩu; chưa có → chuyển sang đăng ký.
+ * Đăng nhập / đăng ký chung 1 form — nhập email trước: đã có tài khoản → hỏi mật khẩu; chưa có → chuyển sang đăng ký.
  */
 export default function AuthForm({
   next,
   social,
+  mode = "login",
   onClose,
 }: {
   next: string;
   social: { google: string | null; apple: string | null }; // client ID nút Google / Apple (null = ẩn)
+  mode?: "login" | "register";
   onClose?: () => void; // có = popup đè lên trang đang xem: đăng nhập xong ở lại trang đó (không chuyển tới `next`)
 }) {
   const [step, setStep] = useState<"email" | "login" | "register">("email");
   const [email, setEmail] = useState("");
-  const [title, subtitle] = HEADINGS[step];
+  const [title, subtitle] = step === "email" && mode === "register" ? HEADINGS.emailRegister : HEADINGS[step];
   const back = () => setStep("email");
 
   return (
@@ -387,7 +391,7 @@ export default function AuthForm({
           <p className="border-t border-line pt-4 text-xs leading-relaxed text-muted">
             Khi tiếp tục (kể cả bằng Google / Apple), bạn đồng ý với{" "}
             <Link
-              href="/deutsch-shadowing/terms"
+              href="/terms?lang=vi"
               target="_blank"
               className="font-medium text-link underline underline-offset-2"
             >
@@ -395,7 +399,7 @@ export default function AuthForm({
             </Link>{" "}
             và{" "}
             <Link
-              href="/deutsch-shadowing/privacy"
+              href="/privacy?lang=vi"
               target="_blank"
               className="font-medium text-link underline underline-offset-2"
             >

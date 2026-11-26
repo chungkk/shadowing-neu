@@ -43,8 +43,8 @@ export default function GlobalNotFound() {
             <Link href="/" className="btn btn-primary">
               Về trang chủ
             </Link>
-            <Link href="/about" className="btn">
-              Über HalloVN
+            <Link href="/about?lang=vi" className="btn">
+              Giới thiệu HalloVN
             </Link>
           </div>
         </main>
