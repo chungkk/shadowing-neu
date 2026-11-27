@@ -393,12 +393,12 @@
 
   function prefetchAfter(startIdx, vId, spd) {
     const isPiper = String(vId).startsWith("piper:");
-    const count = isPiper ? 2 : 3;
+    const count = 3;
     const endIdx = Math.min(state.cues.length - 1, startIdx + count - 1);
     if (startIdx > endIdx) return;
 
     if (isPiper) {
-      // Piper chạy đơn luồng trên server → prefetch tuần tự từng câu để không làm nghẽn hàng đợi
+      // Piper chạy tuần tự prefetch để câu đang đọc (urgent) luôn được ưu tiên tuyệt đối
       void (async () => {
         for (let k = startIdx; k <= endIdx; k++) {
           if (!state.enabled || state.settings.voiceId !== vId) break;
@@ -1272,7 +1272,7 @@
         if (state.port === port) state.port = null;
       });
 
-      port.postMessage({ type: reqType, payload });
+      port.postMessage({ type: reqType, payload: { ...payload, voiceId: state.settings.voiceId } });
     };
 
     connectAttempt();

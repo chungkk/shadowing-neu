@@ -218,13 +218,15 @@ export default function KokoroLivePlayer({
 
   const localEngineKey = getPiperVoiceKey(voiceId);
   const usingLocalWasm = localEngineKey !== null;
-  const voiceReady = localEngineKey ? Boolean(readyEngines[localEngineKey]) : true;
+  const localWasmReady = localEngineKey ? Boolean(readyEngines[localEngineKey]) : false;
+  // Server hỗ trợ tổng hợp nhanh Adam/Eva ngay từ giây đầu (C++ native), không cần đợi tải 79 MB về trình duyệt
+  const voiceReady = true;
   const hasOrig = cues.some((c) => Boolean(c.orig));
   const activeCue = activeCueIdx >= 0 ? cues[activeCueIdx] : null;
 
-  const stateRef = useRef({ voiceId, speed, origVol, dubVol, dubMuted, voiceReady, cues, activeCueIdx });
+  const stateRef = useRef({ voiceId, speed, origVol, dubVol, dubMuted, voiceReady, localWasmReady, cues, activeCueIdx });
   useEffect(() => {
-    stateRef.current = { voiceId, speed, origVol, dubVol, dubMuted, voiceReady, cues, activeCueIdx };
+    stateRef.current = { voiceId, speed, origVol, dubVol, dubMuted, voiceReady, localWasmReady, cues, activeCueIdx };
   });
 
   // Chỉ xoá cache audio khi đổi sang video khác (KHÔNG xoá khi nhận thêm chunk dịch ngầm)
@@ -394,7 +396,6 @@ export default function KokoroLivePlayer({
       const cue = stateRef.current.cues[cueIndex];
       if (!cue || cue.pending || !cue.text.trim()) return null;
       const engKey = getPiperVoiceKey(vId);
-      if (engKey && !stateRef.current.voiceReady) return null;
 
       const normSpd = Math.round(spd * 20) / 20;
       const ytRate = Math.round((ytRef.current?.getPlaybackRate?.() || 1) * 20) / 20;
@@ -409,9 +410,9 @@ export default function KokoroLivePlayer({
       const existing = inflightRef.current.get(key);
       if (existing) return existing;
 
-      /** Tổng hợp 1 câu ở tốc độ `speed` (Edge: rate trong SSML; Piper/WASM: tham số speed) */
+      /** Tổng hợp 1 câu ở tốc độ `speed` (WASM cục bộ nếu đã tải xong, còn lại dùng server native C++ / Edge TTS) */
       const synthAt = async (speed: number): Promise<AudioBuffer | null> => {
-        if (engKey) {
+        if (engKey && stateRef.current.localWasmReady) {
           const synth = await synthesizePiper(cue.text, engKey, speed);
           setLastSynthMs(synth.synthMs);
           if (!synth.pcm.length) return null;
@@ -420,7 +421,7 @@ export default function KokoroLivePlayer({
           buf.getChannelData(0).set(synth.pcm);
           return buf;
         }
-        // Edge Neural TTS: fetch MP3 cue-by-cue & decode into AudioBuffer
+        // Server TTS: Edge Neural (MP3) hoặc Piper C++ native (WAV)
         const t0 = performance.now();
         const qs = new URLSearchParams({
           v: vId,
@@ -443,7 +444,7 @@ export default function KokoroLivePlayer({
         if (!res) throw lastErr instanceof Error ? lastErr : new Error("Không tải được âm thanh.");
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
-          throw new Error((errJson as { error?: string }).error || `Edge TTS HTTP ${res.status}`);
+          throw new Error((errJson as { error?: string }).error || `TTS HTTP ${res.status}`);
         }
         const arr = await res.arrayBuffer();
         setLastSynthMs(Math.round(performance.now() - t0));
@@ -492,23 +493,21 @@ export default function KokoroLivePlayer({
     [getAudioCtx, putBufCache],
   );
 
-  // Warm up Edge TTS (ưu tiên câu hiện tại trước, xong mới prefetch 2 câu sau) OR lazily load local WASM engine
+  // Phát câu hiện tại & prefetch ngay lập tức qua server C++; nếu chọn giọng trình duyệt thì tải ngầm WASM để đọc offline về sau
   useEffect(() => {
     let active = true;
-    const prefetchAround = () => {
-      const start = Math.max(0, stateRef.current.activeCueIdx);
-      const spd = stateRef.current.speed;
-      if (start >= cues.length) return;
+    const start = Math.max(0, stateRef.current.activeCueIdx);
+    const spd = stateRef.current.speed;
+    if (start < cues.length) {
       void getCueBuffer(start, voiceId, spd, true).then(() => {
         if (!active) return;
         for (let k = start + 1; k < Math.min(start + 3, cues.length); k++) {
           void getCueBuffer(k, voiceId, spd, false);
         }
       });
-    };
-    if (!localEngineKey) {
-      // Edge TTS sẵn sàng ngay lập tức — tải câu hiện tại trước rồi prefetch 2 câu kế tiếp
-      prefetchAround();
+    }
+
+    if (!localEngineKey || readyEngines[localEngineKey]) {
       return () => {
         active = false;
       };
@@ -520,17 +519,16 @@ export default function KokoroLivePlayer({
       .then(() => {
         if (active) {
           setReadyEngines((prev) => (prev[localEngineKey] ? prev : { ...prev, [localEngineKey]: true }));
-          stateRef.current.voiceReady = true;
-          prefetchAround();
+          stateRef.current.localWasmReady = true;
         }
       })
-      .catch((e) => {
-        if (active) setEngineErr((e as Error).message);
+      .catch(() => {
+        // Không chặn hay báo lỗi nếu tải WASM nền thất bại vì server Piper C++ vẫn đang phát bình thường
       });
     return () => {
       active = false;
     };
-  }, [localEngineKey, voiceId, cues, getCueBuffer]);
+  }, [localEngineKey, voiceId, cues, readyEngines, getCueBuffer]);
 
   // Apply volume updates
   useEffect(() => {
@@ -1111,8 +1109,8 @@ export default function KokoroLivePlayer({
         </div>
       </div>
 
-      {/* Model download / init progress (chỉ hiện khi chọn giọng trình duyệt lần đầu) */}
-      {usingLocalWasm && !voiceReady && !engineErr && (
+      {/* Nạp ngầm giọng trình duyệt để đọc offline lần sau (khi đang tải vẫn phát ngay qua máy chủ) */}
+      {usingLocalWasm && !localWasmReady && !engineErr && progress.pct > 0 && progress.pct < 100 && (
         <div className="space-y-1.5 rounded-xl border border-line bg-card-2/60 p-3">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="inline-flex min-w-0 items-center gap-1.5 text-foreground">

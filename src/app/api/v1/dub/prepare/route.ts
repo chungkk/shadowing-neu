@@ -1,12 +1,15 @@
 import { body, fail, str } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { getCachedLiveDub, isLiveDubInflight, prepareLiveDub, streamPrepareResponse } from "@/lib/dub-live";
+import { isServerPiperVoice, warmPiperVoice } from "@/lib/piper-tts";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { extractVideoId } from "@/lib/youtube-id";
 
 type PublicPrepareBody = {
   url?: unknown;
   videoId?: unknown;
+  voiceId?: unknown;
+  voice?: unknown;
 };
 
 /**
@@ -21,6 +24,8 @@ export async function POST(req: Request) {
     (req.headers.get("accept") ?? "").includes("application/x-ndjson");
 
   const b = await body<PublicPrepareBody>(req);
+  const reqVoice = str(b.voiceId).trim() || str(b.voice).trim();
+  if (isServerPiperVoice(reqVoice)) warmPiperVoice(reqVoice);
   const raw = str(b.url).trim() || str(b.videoId).trim();
   const videoId = extractVideoId(raw);
   if (!videoId) return fail("Link YouTube không hợp lệ. Vui lòng dán link video YouTube đầy đủ hoặc mã video.");

@@ -3,11 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Build gọn cho Docker (Coolify): .next/standalone/server.js
   output: "standalone",
-  serverExternalPackages: ["ws", "onnxruntime-web"],
+  serverExternalPackages: ["ws", "onnxruntime-web", "onnxruntime-node"],
   outputFileTracingExcludes: { "/*": ["data/**/*"] },
-  // API câu hỏi lái xe (app iOS/Android) đọc catalog JSON lúc chạy
+  // API câu hỏi lái xe (app iOS/Android) đọc catalog JSON lúc chạy; API thuyết minh cần binary C++ của onnxruntime-node
   outputFileTracingIncludes: {
     "/api/fuehrerschein/**": ["./content/laixe/catalog/*.json", "./content/laixe/catalog_all/*.json"],
+    "/api/v1/dub/**": ["./node_modules/onnxruntime-node/bin/**/*"],
   },
   // Ảnh trên các trang giới thiệu của hallovn.de
   images: {

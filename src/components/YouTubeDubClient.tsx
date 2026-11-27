@@ -311,7 +311,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
           try {
             data = await fetchPrepareStream(
               "/api/v1/dub/prepare",
-              { videoId },
+              { videoId, voiceId: voice },
               {
                 onProgress: (p) => {
                   if (isActive() && !becameReady) setPrep(p);

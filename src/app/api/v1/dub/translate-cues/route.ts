@@ -21,6 +21,7 @@ import {
   type PrepareProgress,
   type PrepareStreamEvent,
 } from "@/lib/dub-live";
+import { isServerPiperVoice, warmPiperVoice } from "@/lib/piper-tts";
 import { allow, clientIp } from "@/lib/rate-limit";
 import type { Word } from "@/lib/subtitles";
 import { isDubSkip, translateForDubbingSmart, translationEnabled } from "@/lib/translate";
@@ -31,6 +32,8 @@ type TranslateCuesBody = {
   title?: unknown;
   sourceLang?: unknown;
   cues?: unknown;
+  voiceId?: unknown;
+  voice?: unknown;
 };
 
 const CACHE_PREFIX = "dub:ext:v1:";
@@ -91,6 +94,8 @@ export async function POST(req: Request) {
     (req.headers.get("accept") ?? "").includes("application/x-ndjson");
 
   const b = await body<TranslateCuesBody>(req);
+  const reqVoice = str(b.voiceId).trim() || str(b.voice).trim();
+  if (isServerPiperVoice(reqVoice)) warmPiperVoice(reqVoice);
   const ytVideoId = extractVideoId(str(b.videoId).trim());
   const title = str(b.title).trim().slice(0, 200) || ytVideoId || "Video";
   const rawLang = (str(b.sourceLang).trim() || "auto").toLowerCase().slice(0, 16);

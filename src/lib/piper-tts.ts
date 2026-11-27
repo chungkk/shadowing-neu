@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { TTS_DIR } from "./db";
 import { DUB_TTS_DIR, noteDubTtsCacheWrite, touchDubTtsFile } from "./dub-tts-cache";
@@ -51,18 +52,39 @@ type QueuedPiperJob = {
   reject: (e: unknown) => void;
 };
 
-type OrtModule = typeof import("onnxruntime-web");
-type OrtSession = import("onnxruntime-web").InferenceSession;
+type OrtTensorLike = {
+  data: unknown;
+};
+
+type OrtTensorCtor = new (
+  type: "int64" | "float32",
+  data: BigInt64Array | Float32Array,
+  dims: number[],
+) => OrtTensorLike;
+
+type OrtSessionLike = {
+  run(feeds: Record<string, OrtTensorLike>): Promise<Record<string, OrtTensorLike>>;
+};
+
+type OrtRuntimeLike = {
+  Tensor: OrtTensorCtor;
+  InferenceSession: {
+    create(pathOrBuf: string | Buffer | Uint8Array, options?: Record<string, unknown>): Promise<OrtSessionLike>;
+  };
+};
+
+type PiperBackend = "node" | "wasm";
 
 type ServerPiperState = {
-  ort: OrtModule | null;
+  ort: OrtRuntimeLike | null;
+  backend: PiperBackend | null;
   dict: SeaDictionary | null;
-  sessions: Map<ServerPiperVoiceId, OrtSession>;
-  loading: Map<ServerPiperVoiceId, Promise<OrtSession>>;
+  sessions: Map<ServerPiperVoiceId, OrtSessionLike>;
+  loading: Map<ServerPiperVoiceId, Promise<OrtSessionLike>>;
   pending: Map<string, Promise<Buffer>>;
   urgentQueue: QueuedPiperJob[];
   normalQueue: QueuedPiperJob[];
-  running: boolean;
+  activeCount: number;
 };
 
 const gd = globalThis as unknown as {
@@ -71,18 +93,32 @@ const gd = globalThis as unknown as {
 
 const state: ServerPiperState = (gd.__serverPiper ??= {
   ort: null,
+  backend: null,
   dict: null,
   sessions: new Map(),
   loading: new Map(),
   pending: new Map(),
   urgentQueue: [],
   normalQueue: [],
-  running: false,
+  activeCount: 0,
 });
 // Bảo đảm giữ tương thích nếu singleton đã khởi tạo trước hot-reload
 if (!Array.isArray(state.urgentQueue)) state.urgentQueue = [];
 if (!Array.isArray(state.normalQueue)) state.normalQueue = [];
-if (typeof state.running !== "boolean") state.running = false;
+if (typeof state.activeCount !== "number") state.activeCount = 0;
+
+function getPiperConcurrency(): number {
+  if (state.backend !== "node") return 1;
+  const envVal = Number(process.env.PIPER_CONCURRENCY);
+  if (Number.isFinite(envVal) && envVal >= 1) return Math.min(4, Math.floor(envVal));
+  const cpus = os.cpus().length;
+  return cpus >= 4 ? 2 : 1;
+}
+
+function getIntraOpThreads(concurrency: number): number {
+  const cpus = Math.max(1, os.cpus().length);
+  return Math.max(1, Math.min(4, Math.floor(cpus / Math.max(1, concurrency))));
+}
 
 function cacheFileFor(voiceId: ServerPiperVoiceId, speed: number, text: string): string {
   const ver = SERVER_PIPER_VOICES[voiceId].cacheVer;
@@ -94,10 +130,8 @@ export function hasPiperDubSpeech(voiceId: ServerPiperVoiceId, speed: number, te
   return fs.existsSync(cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim()));
 }
 
-async function ensureAssetFile(localPath: string, remoteUrl: string): Promise<Buffer> {
-  try {
-    return await fs.promises.readFile(localPath);
-  } catch {}
+async function ensureAssetOnDisk(localPath: string, remoteUrl: string): Promise<string> {
+  if (fs.existsSync(localPath)) return localPath;
   await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
   const res = await fetch(remoteUrl, { signal: AbortSignal.timeout(60_000) });
   if (!res.ok) throw new Error(`Không tải được tài nguyên giọng đọc (HTTP ${res.status}).`);
@@ -110,7 +144,15 @@ async function ensureAssetFile(localPath: string, remoteUrl: string): Promise<Bu
     await fs.promises.rm(tmp, { force: true }).catch(() => {});
     throw e;
   }
-  return data;
+  return localPath;
+}
+
+async function ensureAssetFile(localPath: string, remoteUrl: string): Promise<Buffer> {
+  try {
+    return await fs.promises.readFile(localPath);
+  } catch {}
+  await ensureAssetOnDisk(localPath, remoteUrl);
+  return fs.promises.readFile(localPath);
 }
 
 async function resolveOrtWasmPath(): Promise<string> {
@@ -127,7 +169,32 @@ async function resolveOrtWasmPath(): Promise<string> {
   return fallbackDir + path.sep;
 }
 
-async function ensureSession(voiceId: ServerPiperVoiceId): Promise<OrtSession> {
+async function ensureOrtRuntime(): Promise<{ ort: OrtRuntimeLike; backend: PiperBackend }> {
+  if (state.ort && state.backend) return { ort: state.ort, backend: state.backend };
+
+  // Ưu tiên onnxruntime-node (C++ native đa luồng, nhanh gấp ~4–6× WASM trên Node.js)
+  try {
+    const ortNode = await import("onnxruntime-node");
+    const runtime = ((ortNode as unknown as { default?: OrtRuntimeLike }).default ?? ortNode) as unknown as OrtRuntimeLike;
+    if (typeof runtime?.InferenceSession?.create === "function" && typeof runtime?.Tensor === "function") {
+      state.ort = runtime;
+      state.backend = "node";
+      return { ort: runtime, backend: "node" };
+    }
+  } catch (e) {
+    console.warn("[piper-tts] onnxruntime-node không khả dụng, chuyển sang WASM:", (e as Error)?.message ?? e);
+  }
+
+  const ortWeb = await import("onnxruntime-web");
+  ortWeb.env.wasm.numThreads = 1;
+  ortWeb.env.wasm.wasmPaths = await resolveOrtWasmPath();
+  const runtime = ortWeb as unknown as OrtRuntimeLike;
+  state.ort = runtime;
+  state.backend = "wasm";
+  return { ort: runtime, backend: "wasm" };
+}
+
+async function ensureSession(voiceId: ServerPiperVoiceId): Promise<OrtSessionLike> {
   const ready = state.sessions.get(voiceId);
   if (ready && state.dict && state.ort) return ready;
 
@@ -137,15 +204,9 @@ async function ensureSession(voiceId: ServerPiperVoiceId): Promise<OrtSession> {
   const spec = SERVER_PIPER_VOICES[voiceId];
   const job = (async () => {
     try {
-      if (!state.ort) {
-        const ort = await import("onnxruntime-web");
-        ort.env.wasm.numThreads = 1;
-        ort.env.wasm.wasmPaths = await resolveOrtWasmPath();
-        state.ort = ort;
-      }
-
-      const [modelBuf, dictBuf] = await Promise.all([
-        ensureAssetFile(path.join(KOKORO_DIR, spec.file), spec.url),
+      const [{ ort, backend }, modelPath, dictBuf] = await Promise.all([
+        ensureOrtRuntime(),
+        ensureAssetOnDisk(path.join(KOKORO_DIR, spec.file), spec.url),
         state.dict ? Promise.resolve(null) : ensureAssetFile(path.join(KOKORO_DIR, "sea_g2p.bin"), DICT_URL),
       ]);
 
@@ -155,10 +216,18 @@ async function ensureSession(voiceId: ServerPiperVoiceId): Promise<OrtSession> {
         state.dict = new SeaDictionary(new Uint8Array(ab));
       }
 
-      const sess = await state.ort.InferenceSession.create(modelBuf, {
-        executionProviders: ["wasm"],
-        graphOptimizationLevel: "all",
-      });
+      const sess =
+        backend === "node"
+          ? await ort.InferenceSession.create(modelPath, {
+              executionProviders: ["cpu"],
+              graphOptimizationLevel: "all",
+              intraOpNumThreads: getIntraOpThreads(getPiperConcurrency()),
+              interOpNumThreads: 1,
+            })
+          : await ort.InferenceSession.create(await fs.promises.readFile(modelPath), {
+              executionProviders: ["wasm"],
+              graphOptimizationLevel: "all",
+            });
       state.sessions.set(voiceId, sess);
       return sess;
     } finally {
@@ -168,6 +237,11 @@ async function ensureSession(voiceId: ServerPiperVoiceId): Promise<OrtSession> {
 
   state.loading.set(voiceId, job);
   return job;
+}
+
+/** Nạp sẵn model Piper + từ điển SEA-G2P vào RAM ngay khi bắt đầu dịch phụ đề (không đợi tới câu đọc đầu). */
+export function warmPiperVoice(voiceId: ServerPiperVoiceId): void {
+  void ensureSession(voiceId).catch(() => {});
 }
 
 function trimSilenceAndFade(pcm: Float32Array, sr: number): Float32Array {
@@ -223,22 +297,21 @@ function pcmToWav(pcm: Float32Array, sampleRate: number): Buffer {
 }
 
 function drainPiperQueue() {
-  if (state.running) return;
-  while (state.urgentQueue.length || state.normalQueue.length) {
+  const limit = getPiperConcurrency();
+  while (state.activeCount < limit && (state.urgentQueue.length || state.normalQueue.length)) {
     const job = state.urgentQueue.shift() ?? state.normalQueue.shift()!;
     if (job.signal?.aborted) {
       job.reject(new Error("Đã huỷ yêu cầu giọng đọc."));
       continue;
     }
-    state.running = true;
+    state.activeCount++;
     job
       .run()
       .then(job.resolve, job.reject)
       .finally(() => {
-        state.running = false;
+        state.activeCount = Math.max(0, state.activeCount - 1);
         drainPiperQueue();
       });
-    return;
   }
 }
 
