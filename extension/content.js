@@ -26,6 +26,8 @@
     loadingPct: 0,
     loadingTarget: 34,
     loadingStartedAt: 0,
+    loadingStage: "",
+    pausedForLoad: false,
     bgProgress: null,
     error: "",
     sourceMode: null, // "youtube" | "web" | "custom"
@@ -535,7 +537,7 @@
     if (state.gain) {
       state.gain.gain.value = state.enabled ? Math.min(1.8, Math.max(0, state.settings.dubVol / 100)) : 0;
     }
-    if (state.video && state.enabled) {
+    if (state.video && state.enabled && !state.loading) {
       const targetVol = Math.min(1, Math.max(0, state.settings.origVol / 100));
       if (targetVol <= 0) {
         state.video.muted = true;
@@ -555,6 +557,10 @@
 
     const onPlay = () => {
       state.lastPollWall = 0;
+      if (state.loading) {
+        state.pausedForLoad = false;
+        return;
+      }
       applyVolumes();
       resumeSpeech();
     };
@@ -1066,6 +1072,7 @@
     state.loadingPct = 8;
     state.loadingTarget = 34;
     state.loadingStartedAt = Date.now();
+    state.loadingStage = "";
     state.bgProgress = null;
     state.error = "";
     state.sourceMode = sourceMode;
@@ -1078,7 +1085,55 @@
     renderHud();
 
     let becameReady = false;
+    let audioActivated = false;
+    let activatingAudio = false;
     let bgAttempt = 0;
+
+    const activateWhenAudioReady = (isDone) => {
+      if (audioActivated || activatingAudio || state.streamRunId !== runId || !state.enabled) return;
+      const curMs = state.video ? state.video.currentTime * 1000 : 0;
+      const curMatch = state.cues.findIndex((c) => curMs <= c.end_ms + 800);
+      const start = Math.max(0, curMatch >= 0 ? curMatch : 0);
+      const targetCue = state.cues[start];
+
+      // Nếu câu ở vị trí đang xem vẫn đang chờ dịch lô sau → giữ nguyên màn loading, đợi chunk về rồi mới mở tiếng
+      if (!isDone && targetCue && targetCue.pending) {
+        state.loadingTarget = Math.max(state.loadingTarget, 82);
+        state.loadingStage = "Đang dịch đoạn bạn đang xem…";
+        renderHud();
+        return;
+      }
+
+      activatingAudio = true;
+      state.loadingTarget = 96;
+      state.loadingPct = Math.max(state.loadingPct, 88);
+      state.loadingStage = "Đang chuẩn bị giọng tiếng Việt…";
+      renderHud();
+
+      void (async () => {
+        if (targetCue && !targetCue.pending && targetCue.text?.trim()) {
+          await getCueBuffer(start, state.settings.voiceId, state.settings.speed, { urgent: true });
+        }
+        if (state.streamRunId !== runId || !state.enabled) return;
+        audioActivated = true;
+        activatingAudio = false;
+        state.loading = false;
+        state.loadingStage = "";
+        applyVolumes();
+        if (state.video) {
+          state.lastVideoTime = state.video.currentTime;
+          state.lastSpokenIdx = -1;
+          syncActiveCueFromVideo();
+        }
+        updateYtButton();
+        renderHud();
+        prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
+        if (state.pausedForLoad && state.video) {
+          state.pausedForLoad = false;
+          state.video.play().catch(() => {});
+        }
+      })();
+    };
 
     const connectAttempt = () => {
       if (state.streamRunId !== runId || !state.enabled) return;
@@ -1099,32 +1154,12 @@
         }
 
         if (msg.type === "ready" && msg.data) {
-          const firstReady = !becameReady;
           becameReady = true;
-          state.loading = false;
           state.title = msg.data.title || document.title;
           state.cues = msg.data.cues || [];
           state.bgProgress = { pct: msg.pct || 20, done: msg.done || 0, total: msg.total || state.cues.length };
           state.error = "";
-          applyVolumes();
-          if (firstReady && state.video) {
-            state.lastVideoTime = state.video.currentTime;
-            state.lastSpokenIdx = -1;
-            syncActiveCueFromVideo();
-          }
-          updateYtButton();
-          renderHud();
-          if (firstReady) {
-            // Tải câu đang đứng trước (`urgent`), xong mới prefetch các câu kế tiếp
-            const curSec = state.video ? state.video.currentTime * 1000 : 0;
-            const curMatch = state.cues.findIndex((c) => curSec <= c.end_ms + 800);
-            const start = Math.max(0, curMatch >= 0 ? curMatch : 0);
-            void getCueBuffer(start, state.settings.voiceId, state.settings.speed, { urgent: true }).then(() => {
-              if (state.streamRunId === runId && state.enabled) {
-                prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
-              }
-            });
-          }
+          activateWhenAudioReady(false);
           return;
         }
 
@@ -1144,6 +1179,10 @@
             }
           });
           state.cues = next;
+          if (!audioActivated) {
+            activateWhenAudioReady(false);
+            return;
+          }
           syncActiveCueFromVideo();
           renderHud();
           const active = Math.max(0, state.activeCueIdx);
@@ -1155,32 +1194,22 @@
         }
 
         if (msg.type === "done" && msg.data) {
-          const firstReady = !becameReady;
           becameReady = true;
-          state.loading = false;
           state.title = msg.data.title || document.title;
           state.cues = msg.data.cues || [];
           state.bgProgress = null;
           state.error = "";
-          applyVolumes();
-          if (firstReady && state.video) {
-            state.lastVideoTime = state.video.currentTime;
-            state.lastSpokenIdx = -1;
-          }
-          syncActiveCueFromVideo();
           closePort();
+          if (!audioActivated) {
+            activateWhenAudioReady(true);
+            return;
+          }
+          state.loading = false;
+          state.loadingStage = "";
+          applyVolumes();
+          syncActiveCueFromVideo();
           updateYtButton();
           renderHud();
-          if (firstReady) {
-            const curSec = state.video ? state.video.currentTime * 1000 : 0;
-            const curMatch = state.cues.findIndex((c) => curSec <= c.end_ms + 800);
-            const start = Math.max(0, curMatch >= 0 ? curMatch : 0);
-            void getCueBuffer(start, state.settings.voiceId, state.settings.speed, { urgent: true }).then(() => {
-              if (state.streamRunId === runId && state.enabled) {
-                prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
-              }
-            });
-          }
           return;
         }
 
@@ -1199,6 +1228,8 @@
             return;
           }
           state.loading = false;
+          state.loadingStage = "";
+          state.pausedForLoad = false;
           state.bgProgress = null;
           state.error = msg.error || "Mất kết nối tới máy chủ thuyết minh.";
           if (!becameReady) state.enabled = false;
@@ -1227,10 +1258,19 @@
 
     getAudioCtx();
     attachVideo(video);
+    if (!video.paused && !video.ended) {
+      state.pausedForLoad = true;
+      try {
+        video.pause();
+      } catch {}
+    } else {
+      state.pausedForLoad = false;
+    }
 
     if (customSubText) {
       const cues = parseSubtitleText(customSubText);
       if (!cues.length) {
+        state.pausedForLoad = false;
         state.error = "File phụ đề không hợp lệ (.srt / .vtt).";
         renderHud();
         return { ok: false, error: state.error };
@@ -1252,6 +1292,7 @@
       state.loadingPct = 10;
       state.loadingTarget = 32;
       state.loadingStartedAt = Date.now();
+      state.loadingStage = "";
       state.error = "";
       updateYtButton();
       renderHud();
@@ -1286,6 +1327,7 @@
     state.loadingPct = 10;
     state.loadingTarget = 30;
     state.loadingStartedAt = Date.now();
+    state.loadingStage = "";
     state.error = "";
     renderHud();
 
@@ -1293,6 +1335,7 @@
     if (!extracted || !extracted.cues.length) {
       state.enabled = false;
       state.loading = false;
+      state.pausedForLoad = false;
       detachVideo();
       state.error = "Video trên trang này không có phụ đề sẵn. Bạn có thể dán hoặc nạp file .SRT/.VTT trong biểu tượng tiện ích.";
       renderHud();
@@ -1314,6 +1357,8 @@
     stopSpeech();
     state.enabled = false;
     state.loading = false;
+    state.loadingStage = "";
+    state.pausedForLoad = false;
     state.bgProgress = null;
     state.error = "";
     state.cues = [];
@@ -1351,7 +1396,7 @@
     // Đồng bộ câu thoại theo <video>
     const video = state.video;
     const list = state.cues;
-    if (!state.enabled || !video || !list.length) return;
+    if (!state.enabled || state.loading || !video || !list.length) return;
     if (video.paused || video.ended || video.readyState < 2) {
       state.lastPollWall = 0;
       return;
@@ -1461,7 +1506,7 @@
       const dot = document.createElement("span");
       dot.className = "hvn-dub-dot";
       const label = document.createElement("span");
-      label.textContent = smartLoadingLabel(state.loadingPct, elapsed);
+      label.textContent = state.loadingStage || smartLoadingLabel(state.loadingPct, elapsed);
       const pct = document.createElement("span");
       pct.className = "hvn-dub-pct";
       pct.textContent = `${state.loadingPct}%`;
