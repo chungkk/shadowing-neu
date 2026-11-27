@@ -191,6 +191,7 @@ export default function KokoroLivePlayer({
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
   const warmingRef = useRef(false);
   const gatedCueRef = useRef(-1);
+  const prevCuesRef = useRef<LiveCue[]>(cues);
 
   const [ytReady, setYtReady] = useState(false);
   const [ytErr, setYtErr] = useState("");
@@ -234,11 +235,42 @@ export default function KokoroLivePlayer({
     lastYtTimeRef.current = 0;
     lastPollWallRef.current = 0;
     gatedCueRef.current = -1;
+    prevCuesRef.current = [];
     return () => {
       cache.clear();
       inflight.clear();
     };
   }, [videoId]);
+
+  // Nếu sự kiện done loại bỏ các câu [SKIP] làm thay đổi độ dài mảng cues, ánh xạ lại chỉ số câu đang đọc theo start_ms
+  useEffect(() => {
+    const prev = prevCuesRef.current;
+    prevCuesRef.current = cues;
+    if (!prev.length || !cues.length || prev.length === cues.length) return;
+    const remapIdx = (oldIdx: number): number => {
+      if (oldIdx < 0) return oldIdx;
+      const targetMs = prev[oldIdx]?.start_ms;
+      if (typeof targetMs !== "number") return -1;
+      const exact = cues.findIndex((c) => c.start_ms === targetMs);
+      if (exact >= 0) return exact;
+      let floor = -1;
+      for (let i = 0; i < cues.length; i++) {
+        if (cues[i].start_ms <= targetMs) floor = i;
+        else break;
+      }
+      return floor;
+    };
+    lastSpokenIdxRef.current = remapIdx(lastSpokenIdxRef.current);
+    gatedCueRef.current = remapIdx(gatedCueRef.current);
+    if (playbackRef.current) {
+      const mapped = remapIdx(playbackRef.current.cueIndex);
+      if (mapped >= 0) playbackRef.current.cueIndex = mapped;
+    }
+    for (const pb of scheduledRef.current) {
+      const mapped = remapIdx(pb.cueIndex);
+      if (mapped >= 0) pb.cueIndex = mapped;
+    }
+  }, [cues]);
 
   useEffect(() => {
     gatedCueRef.current = -1;
@@ -366,7 +398,8 @@ export default function KokoroLivePlayer({
 
       const normSpd = Math.round(spd * 20) / 20;
       const ytRate = Math.round((ytRef.current?.getPlaybackRate?.() || 1) * 20) / 20;
-      const key = `${vId}:${normSpd.toFixed(2)}:${ytRate.toFixed(2)}:${cueIndex}`;
+      // Key theo start_ms + text thay vì cueIndex để không bị lệch audio khi sự kiện done xoá các câu [SKIP]
+      const key = `${vId}:${normSpd.toFixed(2)}:${ytRate.toFixed(2)}:${cue.start_ms}:${cue.text}`;
       const hit = bufCacheRef.current.get(key);
       if (hit) {
         putBufCache(key, hit);
@@ -618,9 +651,11 @@ export default function KokoroLivePlayer({
   }, []);
 
   const isCueCached = useCallback((cueIndex: number, vId: LiveVoiceId, spd: number): boolean => {
+    const cue = stateRef.current.cues[cueIndex];
+    if (!cue || cue.pending || !cue.text.trim()) return false;
     const normSpd = Math.round(spd * 20) / 20;
     const ytRate = Math.round((ytRef.current?.getPlaybackRate?.() || 1) * 20) / 20;
-    return bufCacheRef.current.has(`${vId}:${normSpd.toFixed(2)}:${ytRate.toFixed(2)}:${cueIndex}`);
+    return bufCacheRef.current.has(`${vId}:${normSpd.toFixed(2)}:${ytRate.toFixed(2)}:${cue.start_ms}:${cue.text}`);
   }, []);
 
   // Mount YouTube IFrame Player

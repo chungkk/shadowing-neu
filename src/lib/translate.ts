@@ -67,14 +67,6 @@ const PROMPT =
   "Một câu có thể bị ngắt sang nhiều dòng: khi đó mỗi dòng chỉ dịch phần chữ của chính nó (bản dịch cũng dở dang theo), TUYỆT ĐỐI không gộp nội dung dòng sau vào dòng trước. " +
   'Trả về đúng JSON {"t": {"1": bản dịch dòng 1, "2": bản dịch dòng 2, …}}: đủ mọi khóa có trong đầu vào, khóa nào dịch đúng dòng có khóa đó, không giải thích.';
 
-const DUB_PROMPT = (lang: string) =>
-  `Bạn là biên dịch viên thuyết minh video chuyên nghiệp, dịch phụ đề từ ngôn ngữ "${lang}" sang tiếng Việt tự nhiên để đọc thuyết minh (voice-over). ` +
-  'Nhận JSON {"s": {"1": dòng 1, "2": dòng 2, …}} là các dòng phụ đề liên tiếp trong video. ' +
-  "Dịch từng dòng sang tiếng Việt ngắn gọn, tự nhiên như lời nói, dễ đọc bằng giọng AI (viết số và đơn vị tự nhiên như 'euro', 'phần trăm', 'giờ'). " +
-  'TUYỆT ĐỐI không dịch hay đọc mô tả âm thanh, nhạc nền, tiếng động, tên người đọc hoặc chú thích phụ đề (vd: "[Musik]", "(sanfte Musik)", "(lacht)", "(Off-Stimme)", "Sprecher:", "♪…♪"); nếu cả dòng chỉ là mô tả không phải lời thoại thì trả về đúng "[SKIP]". ' +
-  "Giữ nguyên số lượng và thứ tự khóa: mỗi khóa dịch đúng dòng tương ứng, không gộp hay bỏ sót dòng. " +
-  'Trả về đúng JSON {"t": {"1": bản dịch dòng 1, "2": bản dịch dòng 2, …}}, không giải thích.';
-
 const BATCH = 25; // số câu mỗi lần gọi AI
 
 export const DUB_SKIP = "[SKIP]";
@@ -92,11 +84,36 @@ const VI_PLAIN_WORDS = new Set([
   "nghin", "trieu", "phan", "euro", "dola", "xe", "ga", "ca", "ra", "con", "hay", "sai", "tay", "nay", "kia",
 ]);
 
+// Từ/thán từ/đơn vị quốc tế dùng trực tiếp trong tiếng Việt ngay cả khi giữ nguyên
+const UNIVERSAL_SHORT_WORDS = new Set([
+  "ok", "okay", "oh", "ah", "aha", "wow", "hey", "hi", "hmm", "hm", "mhm", "uh", "um",
+  "haha", "hahaha", "hehe", "oops", "yay", "woah", "whoa", "bravo", "bingo",
+  "euro", "cent", "km", "kg", "cm", "mm", "ml", "gb", "mb", "tb",
+  "pro", "max", "mini", "plus", "ultra", "live", "online", "app", "pdf",
+  "ai", "tv", "dj", "mc", "vip", "ceo", "usa", "eu", "uk", "un", "nato",
+]);
+
+// Từ phổ biến 1–2 từ tiếng Đức / Anh bắt buộc phải dịch sang tiếng Việt (không được chép nguyên văn)
+const UNTRANSLATED_SHORT_WORDS = new Set([
+  "hallo", "danke", "bitte", "ja", "nein", "genau", "gut", "klar", "warum", "was", "wie", "wer", "wo", "wann",
+  "tschüss", "tschüß", "servus", "moin", "super", "toll", "richtig", "falsch", "warte", "stopp", "los", "weiter",
+  "fertig", "echt", "wirklich", "natürlich", "vielleicht", "sicher", "stimmt", "krass", "schade", "leider", "moment",
+  "achtung", "vorsicht", "hilfe", "entschuldigung", "verzeihung", "willkommen", "vielen", "guten", "gute", "alles",
+  "kein", "keine", "nicht", "nichts", "mehr", "schon", "noch", "jetzt", "hier", "dort", "heute", "morgen", "gestern",
+  "immer", "nie", "sehr", "viel", "wenig", "leute", "freunde", "bis", "bald", "dank", "tag", "abend", "nacht", "problem",
+  "hello", "thanks", "thank", "please", "sorry", "excuse", "yes", "no", "yeah", "yep", "nope", "sure", "right", "wrong",
+  "true", "false", "really", "actually", "maybe", "wait", "stop", "go", "come", "look", "listen", "watch", "ready",
+  "done", "good", "great", "nice", "awesome", "amazing", "perfect", "cool", "fine", "well", "what", "why", "how", "who",
+  "where", "when", "welcome", "goodbye", "bye", "morning", "evening", "night", "course", "way", "people", "guys",
+  "friends", "everyone", "everybody", "see", "you", "me", "him", "her", "them", "this", "that", "here", "there", "now",
+  "today", "tomorrow", "never", "always", "again", "more", "less", "enough", "help", "careful", "attention",
+]);
+
 /**
- * Bản dịch có thật là tiếng Việt không? Mô hình nhỏ đôi khi chép lại nguyên câu gốc.
- * - Với chữ CJK / không phải Latin (Nhật, Trung, Hàn, Nga…): không dùng mẹo đếm khoảng trắng <= 2,
- *   mà kiểm tra xem bản dịch còn giữ chữ gốc không.
- * - Với câu Latin ngắn (≤ 2 từ: "Okay.", "Berlin!"): giữ nguyên cũng được.
+ * Bản dịch có thật là tiếng Việt không? Mô hình nhỏ đôi khi chép lại nguyên câu gốc hoặc dịch sang tiếng Anh.
+ * - Với chữ CJK / không phải Latin (Nhật, Trung, Hàn, Nga…): kiểm tra tỷ lệ chữ gốc và sự thay đổi.
+ * - Với câu Latin ngắn (≤ 2 từ): chỉ giữ nguyên thán từ quốc tế ("Okay.", "Wow!") hoặc tên riêng/thương hiệu ("Berlin.", "Elon Musk.");
+ *   từ chào hỏi/câu ngắn phổ thông ("Good morning.", "Vielen Dank.", "Warum nicht?") bị chép lại sẽ bị loại để dịch lại.
  * - Với câu tiếng Việt hợp lệ nhưng không có dấu thanh ("Anh tin em.", "25 euro."): vẫn chấp nhận.
  */
 export function looksTranslated(source: string, translation: string): boolean {
@@ -120,8 +137,25 @@ export function looksTranslated(source: string, translation: string): boolean {
     // Cụm CJK rất ngắn (tên riêng 1–4 chữ, vd "東京" → "Tokyo") sau khi bỏ hết ký tự CJK là hợp lệ
     if (srcNonLatin <= 4 && outNonLatin === 0) return true;
   } else {
+    const tTokens = t
+      .toLowerCase()
+      .split(/[^\p{L}]+/u)
+      .filter(Boolean);
+    if (tTokens.length > 0 && tTokens.length <= 2 && tTokens.every((w) => UNIVERSAL_SHORT_WORDS.has(w))) {
+      return true;
+    }
+
     const srcTokens = source.trim().split(/\s+/).filter(Boolean);
-    if (srcTokens.length <= 2) return true;
+    if (srcTokens.length <= 2 && norm(t) === norm(source)) {
+      const rawTokens = srcTokens
+        .map((w) => w.replace(/^["'([–-]+|["')\].,!?:;…–-]+$/g, ""))
+        .filter(Boolean);
+      if (!rawTokens.length) return true;
+      if (rawTokens.some((w) => UNTRANSLATED_SHORT_WORDS.has(w.toLowerCase()))) return false;
+      // Chỉ chấp nhận giữ nguyên nếu mọi từ là tên riêng / thương hiệu / số (vd "Berlin.", "Elon Musk.", "iPhone 16.")
+      return rawTokens.every((w) => /^[\p{Lu}\d]/u.test(w) || /[a-z][A-Z]/.test(w));
+    }
+
     // Danh sách tên riêng / thương hiệu quốc tế cách nhau bởi dấu phẩy ("Instagram, TikTok, YouTube.")
     if (
       srcTokens.length <= 6 &&
@@ -266,31 +300,6 @@ async function translateBatch(
   return result;
 }
 
-/** Dịch phụ đề ngôn ngữ bất kỳ → tiếng Việt tự nhiên để thuyết minh (dùng chung kho cache SQLite). */
-export async function translateForDubbing(sentences: string[], sourceLang = "auto"): Promise<string[]> {
-  const lang = (sourceLang || "auto").toLowerCase();
-  if (lang === "vi" || lang.startsWith("vi-")) return sentences;
-  const prompt = DUB_PROMPT(sourceLang || "auto");
-  const keyFn = (text: string) => `dub:vi:${lang}:` + createHash("sha1").update(text.trim()).digest("hex");
-  const keys = sentences.map(keyFn);
-  const cached = getTranslations(keys);
-  const missing = [...new Set(sentences.filter((_, i) => !cached.has(keys[i])).map((s) => s.trim()))].filter(Boolean);
-
-  for (let i = 0; i < missing.length; i += BATCH) {
-    const chunk = missing.slice(i, i + BATCH);
-    const res = await translateBatch(chunk, prompt);
-    const rows = chunk
-      .map((text, k) => ({ key: keyFn(text), text, translation: res[k].out, provider: res[k].provider }))
-      .filter((r) => r.translation);
-    saveTranslations(rows);
-    for (const r of rows) cached.set(r.key, r.translation);
-  }
-  return keys.map((k, i) => {
-    const v = cached.get(k) || sentences[i];
-    return isDubSkip(v) ? "" : v;
-  });
-}
-
 export type DubTranslateItem = {
   text: string;
   /** Thời lượng gốc của câu (giây) */
@@ -396,10 +405,19 @@ async function buildDubStyleCard(
   title: string,
   sourceLang: string,
   openingExamples: StyleExample[] = [],
+  signal?: AbortSignal,
 ): Promise<DubStyleCard | null> {
   if (items.length <= 3) return null;
   const { transcript, truncated } = buildTranscriptForStyle(items);
-  const prefer = process.env.DUB_TRANSLATE_PREFER === "openai" ? "openai" : "large";
+  // Dùng đúng danh sách model thuyết minh (Groq 120b / DUB_TRANSLATE_MODEL → OpenAI) để không rơi xuống 20b
+  // và đặt timeout mỗi provider 9s để kịp failover trong hạn STYLE_CARD_DEADLINE_MS.
+  const styleProviders = dubProviders().map((p) => ({
+    ...p,
+    extra:
+      p.extra && "temperature" in p.extra
+        ? { ...(p.extra as Record<string, unknown>), temperature: 0.25 }
+        : p.extra,
+  }));
   try {
     const card = await chatJson<DubStyleCard>(
       STYLE_CARD_SYSTEM,
@@ -412,7 +430,7 @@ async function buildDubStyleCard(
         transcript,
       },
       isStyleCard,
-      { prefer, timeoutMs: 18_000 },
+      { providersList: styleProviders, timeoutMs: 9_000, signal },
     );
     const cleanList = (arr: unknown, max: number) =>
       Array.isArray(arr)
@@ -668,8 +686,8 @@ async function translateSmartDubChunkRetry(
 }
 
 const CHUNK_RETRY_DELAY_MS = 2_500;
-/** Thời hạn chờ đọc toàn bộ phụ đề sinh Style Bible trước khi bỏ qua để không treo lô đầu. */
-const STYLE_CARD_DEADLINE_MS = 14_000;
+/** Thời hạn chờ đọc toàn bộ phụ đề sinh Style Bible (đủ thời gian failover Groq → OpenAI) trước khi bỏ qua. */
+const STYLE_CARD_DEADLINE_MS = 16_000;
 
 const FIRST_DUB_BATCH = 10; // Lô đầu 10 câu (~45–60s đầu) dịch siêu nhanh (~1.5–2.5s) để mở video gần như tức thì
 const NEXT_DUB_BATCH = 25; // Các lô sau 25 câu — cân bằng giữa tốc độ và tránh chạm trần TPM / cắt cụt JSON
@@ -692,16 +710,35 @@ function buildQuickOverview(items: DubTranslateItem[], fromIndex: number): strin
   return picked;
 }
 
-/** Chọn 4–5 cặp câu tiêu biểu đã dịch ở lô đầu làm mẫu giọng văn & xưng hô cho các lô song song phía sau. */
-function pickStyleExamples(items: DubTranslateItem[], translations: string[], count: number): StyleExample[] {
+/** Chọn tối đa 5 cặp câu đã dịch làm mẫu giọng văn & xưng hô (ưu tiên câu dài ≥20 ký tự, thiếu thì bổ sung câu ngắn ≥6 ký tự). */
+export function pickStyleExamples(
+  items: Pick<DubTranslateItem, "text">[],
+  translations: string[],
+  limit = items.length,
+): StyleExample[] {
+  const end = Math.min(limit, items.length, translations.length);
   const candidates: StyleExample[] = [];
-  for (let i = 0; i < count; i++) {
+  const used = new Set<number>();
+
+  for (let i = 0; i < end; i++) {
     const orig = items[i]?.text.trim() ?? "";
     const vi = translations[i]?.trim() ?? "";
-    if (orig.length >= 20 && vi.length >= 15) {
+    if (orig.length >= 20 && vi.length >= 15 && !isDubSkip(vi)) {
       candidates.push({ orig: orig.slice(0, 180), vi: vi.slice(0, 200) });
+      used.add(i);
     }
   }
+  if (candidates.length < 3) {
+    for (let i = 0; i < end && candidates.length < 5; i++) {
+      if (used.has(i)) continue;
+      const orig = items[i]?.text.trim() ?? "";
+      const vi = translations[i]?.trim() ?? "";
+      if (orig.length >= 6 && vi.length >= 6 && !isDubSkip(vi)) {
+        candidates.push({ orig: orig.slice(0, 180), vi: vi.slice(0, 200) });
+      }
+    }
+  }
+
   const target = Math.min(5, candidates.length);
   if (target === 0) return [];
   if (candidates.length <= target) return candidates;
@@ -714,10 +751,9 @@ function pickStyleExamples(items: DubTranslateItem[], translations: string[], co
 
 /**
  * Dịch thuyết minh thông minh:
- * - Bước 1: Đọc toàn bộ phụ đề để sinh Cẩm nang văn phong (Style Bible: chủ đề, thể loại, mạch truyện, người nói, xưng hô, quy tắc văn nói, thuật ngữ).
- * - Bước 2: Dịch ngay lô đầu 20 câu bằng mô hình lớn (Groq 120b → OpenAI) → gọi `onChunk` để phát video liền.
- * - Bước 3: Lấy 4–5 cặp câu tiêu biểu của lô đầu làm mẫu neo văn phong, chạy song song các lô còn lại
- *   (kèm 2 câu trước + 2 câu sau + ngân sách từ theo thời lượng), cập nhật từng lô qua `onChunk` và `onProgress`.
+ * - Bước 1: Dịch ngay lô đầu 10 câu (kèm overview toàn bài) bằng mô hình lớn (Groq 120b → OpenAI) → gọi `onChunk` để phát video liền.
+ * - Bước 2: Sau khi mở phát, sinh Style Bible từ toàn bộ phụ đề (kèm `openingExamples` từ lô đầu) theo đúng model thuyết minh.
+ * - Bước 3: Chạy song song 3 luồng cho các lô 25 câu còn lại (kèm `prev`, `prevVi`, `next`, ngân sách từ theo thời lượng), cập nhật từng lô qua `onChunk` và `onProgress`.
  */
 export async function translateForDubbingSmart(
   items: DubTranslateItem[],
@@ -796,11 +832,13 @@ export async function translateForDubbingSmart(
   const rest = ranges.slice(1);
   let style: DubStyleCard | null = null;
   if (rest.length > 0) {
+    onProgress?.({ phase: "style", done: doneCount, total: items.length });
     const examples = pickStyleExamples(items, out, ranges[0].end);
-    style = await Promise.race([
-      buildDubStyleCard(items, title, sourceLang || "auto", examples),
-      new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
-    ]);
+    const styleAc = new AbortController();
+    const styleTimer = setTimeout(() => styleAc.abort(), STYLE_CARD_DEADLINE_MS);
+    style = await buildDubStyleCard(items, title, sourceLang || "auto", examples, styleAc.signal).finally(() =>
+      clearTimeout(styleTimer),
+    );
     const restPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style, examples);
     let cursor = 0;
     await Promise.all(
@@ -818,7 +856,7 @@ export async function translateForDubbingSmart(
 
 /**
  * Dịch bù các câu còn thiếu của một video đã dịch (theo chỉ số trong `items`).
- * Gom các chỉ số liền nhau thành lô ≤ 25 câu, kèm 2 câu trước/sau và mẫu văn phong từ các câu đã dịch sẵn.
+ * Gom các chỉ số liền nhau thành lô ≤ 25 câu, kèm 2 câu trước/sau (cả tiếng gốc lẫn tiếng Việt đã dịch) và mẫu văn phong.
  * Trả về Map chỉ số → bản dịch (chỉ những câu dịch được).
  */
 export async function translateDubRepair(
@@ -829,12 +867,14 @@ export async function translateDubRepair(
     sourceLang = "auto",
     style = null,
     styleExamples = [],
+    existingTranslations,
     onChunk,
   }: {
     title?: string;
     sourceLang?: string;
     style?: DubStyleCard | null;
     styleExamples?: StyleExample[];
+    existingTranslations?: string[];
     onChunk?: (info: { start: number; translations: string[]; done: number; total: number }) => void;
   } = {},
 ): Promise<Map<number, string>> {
@@ -842,6 +882,7 @@ export async function translateDubRepair(
   const sorted = [...new Set(indices)].filter((i) => i >= 0 && i < items.length).sort((a, b) => a - b);
   if (!sorted.length) return fixed;
 
+  const knownVi = existingTranslations ? existingTranslations.slice() : new Array<string>(items.length).fill("");
   const groups: number[][] = [];
   for (const i of sorted) {
     const g = groups[groups.length - 1];
@@ -860,15 +901,25 @@ export async function translateDubRepair(
         const last = g[g.length - 1];
         const prevCtx = items.slice(Math.max(0, first - 2), first).map((x) => x.text);
         const nextCtx = items.slice(last + 1, last + 3).map((x) => x.text);
+        const prevViCtx =
+          first > 0
+            ? knownVi.slice(Math.max(0, first - 2), first).filter((x): x is string => Boolean(x) && !isDubSkip(x))
+            : [];
         const out = await translateSmartDubChunkRetry(
           g.map((i) => items[i]),
           prevCtx,
           nextCtx,
           systemPrompt,
+          [],
+          false,
+          prevViCtx,
         ).catch(() => null);
         const groupTranslations = g.map((idx, k) => {
           const tr = out?.[k] || "";
-          if (tr) fixed.set(idx, tr);
+          if (tr) {
+            fixed.set(idx, tr);
+            knownVi[idx] = tr;
+          }
           return tr;
         });
         repairedDone += g.length;
@@ -934,17 +985,25 @@ export async function chatJson<T>(
   system: string,
   user: unknown,
   valid: (x: unknown) => x is T,
-  opts: { prefer?: "openai" | "large"; timeoutMs?: number } = {},
+  opts: { prefer?: "openai" | "large"; timeoutMs?: number; providersList?: Provider[]; signal?: AbortSignal } = {},
 ): Promise<T & { provider: string }> {
-  const all = providers();
-  // prefer "openai": ChatGPT trước (chậm hơn nhưng tiếng Việt tự nhiên nhất) → Groq lớn → Groq nhỏ
-  // prefer "large":  Groq lớn trước (nhanh, đủ chính xác cho nội dung dài) → ChatGPT → Groq nhỏ
-  const small = process.env.TRANSLATE_MODEL ?? "openai/gpt-oss-20b";
-  const rank = (p: Provider) =>
-    p.model === small ? 2 : opts.prefer === "openai" ? (p.name === "openai" ? 0 : 1) : p.name === "openai" ? 1 : 0;
-  const list = opts.prefer ? [...all].sort((a, b) => rank(a) - rank(b)) : all;
+  let list: Provider[];
+  if (opts.providersList) {
+    list = opts.providersList;
+  } else {
+    const all = providers();
+    // prefer "openai": ChatGPT trước (chậm hơn nhưng tiếng Việt tự nhiên nhất) → Groq lớn → Groq nhỏ
+    // prefer "large":  Groq lớn trước (nhanh, đủ chính xác cho nội dung dài) → ChatGPT → Groq nhỏ
+    const small = process.env.TRANSLATE_MODEL ?? "openai/gpt-oss-20b";
+    const rank = (p: Provider) =>
+      p.model === small ? 2 : opts.prefer === "openai" ? (p.name === "openai" ? 0 : 1) : p.name === "openai" ? 1 : 0;
+    list = opts.prefer ? [...all].sort((a, b) => rank(a) - rank(b)) : all;
+  }
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
   for (const p of list) {
+    if (opts.signal?.aborted) break;
+    const timeoutSig = AbortSignal.timeout(opts.timeoutMs ?? 30_000);
+    const sig = opts.signal ? AbortSignal.any([timeoutSig, opts.signal]) : timeoutSig;
     try {
       const res = await fetch(p.url, {
         method: "POST",
@@ -958,7 +1017,7 @@ export async function chatJson<T>(
           ],
           ...p.extra,
         }),
-        signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
+        signal: sig,
       });
       if (!res.ok) throw new Error(`${p.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const data: { choices?: { message?: { content?: string } }[] } = await res.json();
@@ -967,6 +1026,7 @@ export async function chatJson<T>(
       throw new Error(`${p.name}: trả về sai định dạng`);
     } catch (e) {
       console.error("[chatJson]", (e as Error).message);
+      if (opts.signal?.aborted) break;
     }
   }
   throw new Error("Không dịch được lúc này.");

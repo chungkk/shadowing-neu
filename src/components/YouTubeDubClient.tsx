@@ -115,7 +115,7 @@ async function fetchPrepareStream(
   callbacks: {
     onProgress: (p: PrepProgress) => void;
     onReady: (data: PrepareResult, bg: BgProgress) => void;
-    onChunk: (start: number, translations: string[], bg: BgProgress) => void;
+    onChunk: (start: number, translations: string[], bg: BgProgress, skipped?: number[]) => void;
   },
   signal?: AbortSignal,
 ): Promise<PrepareResult> {
@@ -150,7 +150,7 @@ async function fetchPrepareStream(
     let msg:
       | { type: "progress"; pct: number; stage: string; done?: number; total?: number }
       | { type: "ready"; data: PrepareResult; pct: number; done: number; total: number }
-      | { type: "chunk"; start: number; translations: string[]; pct: number; done: number; total: number }
+      | { type: "chunk"; start: number; translations: string[]; skipped?: number[]; pct: number; done: number; total: number }
       | { type: "done"; data: PrepareResult }
       | { type: "error"; error: string }
       | { type: "ping" };
@@ -164,7 +164,7 @@ async function fetchPrepareStream(
     } else if (msg.type === "ready") {
       callbacks.onReady(msg.data, { pct: msg.pct, done: msg.done, total: msg.total });
     } else if (msg.type === "chunk") {
-      callbacks.onChunk(msg.start, msg.translations, { pct: msg.pct, done: msg.done, total: msg.total });
+      callbacks.onChunk(msg.start, msg.translations, { pct: msg.pct, done: msg.done, total: msg.total }, msg.skipped);
     } else if (msg.type === "error") {
       throw new Error(msg.error);
     } else if (msg.type === "done") {
@@ -336,22 +336,24 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                     recordOpen(partial.videoId, title);
                   }
                 },
-                onChunk: (start, translations, bg) => {
+                onChunk: (start, translations, bg, skipped) => {
                   if (!isActive()) return;
                   setBgProgress(bg);
+                  const skipSet = new Set(skipped ?? []);
                   setSession((prev) => {
                     if (!prev || prev.videoId !== videoId) return prev;
                     const nextCues = prev.cues.slice();
                     translations.forEach((tr, k) => {
                       const idx = start + k;
                       if (nextCues[idx]) {
+                        const isSkip = skipSet.has(k);
                         nextCues[idx] = {
                           start_ms: nextCues[idx].start_ms,
                           end_ms: nextCues[idx].end_ms,
                           // "" = AI chưa dịch được → không đọc (đừng thay bằng câu gốc)
                           text: tr,
                           orig: nextCues[idx].orig,
-                          ...(tr ? {} : { untranslated: true }),
+                          ...(tr || isSkip ? {} : { untranslated: true }),
                         };
                       }
                     });

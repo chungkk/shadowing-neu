@@ -323,7 +323,8 @@
 
     const normSpd = Math.round(spd * 20) / 20;
     const rate = Math.round(((state.video && state.video.playbackRate) || 1) * 20) / 20;
-    const key = `${vId}:${normSpd.toFixed(2)}:${rate.toFixed(2)}:${cueIndex}`;
+    // Key theo start_ms + text thay vì cueIndex để không bị đọc nhầm audio khi sự kiện done xoá các câu [SKIP]
+    const key = `${vId}:${normSpd.toFixed(2)}:${rate.toFixed(2)}:${cue.start_ms}:${cue.text}`;
     const hit = state.bufCache.get(key);
     if (hit) {
       putBufCache(key, hit);
@@ -1165,16 +1166,18 @@
 
         if (msg.type === "chunk" && Array.isArray(msg.translations)) {
           state.bgProgress = { pct: msg.pct || 50, done: msg.done || 0, total: msg.total || state.cues.length };
+          const skipSet = new Set(Array.isArray(msg.skipped) ? msg.skipped : []);
           const next = state.cues.slice();
           msg.translations.forEach((tr, k) => {
             const idx = msg.start + k;
             if (next[idx]) {
+              const isSkip = skipSet.has(k);
               next[idx] = {
                 start_ms: next[idx].start_ms,
                 end_ms: next[idx].end_ms,
                 text: tr,
                 orig: next[idx].orig,
-                ...(tr ? {} : { untranslated: true }),
+                ...(tr || isSkip ? {} : { untranslated: true }),
               };
             }
           });
@@ -1196,7 +1199,34 @@
         if (msg.type === "done" && msg.data) {
           becameReady = true;
           state.title = msg.data.title || document.title;
-          state.cues = msg.data.cues || [];
+          const prevCues = state.cues;
+          const nextCues = msg.data.cues || [];
+          // Nếu gói done đã loại bỏ các câu [SKIP], ánh xạ lại chỉ số câu đang đọc theo start_ms
+          if (prevCues.length > 0 && nextCues.length > 0 && prevCues.length !== nextCues.length) {
+            const remapIdx = (oldIdx) => {
+              if (oldIdx < 0) return oldIdx;
+              const targetMs = prevCues[oldIdx]?.start_ms;
+              if (typeof targetMs !== "number") return -1;
+              const exact = nextCues.findIndex((c) => c.start_ms === targetMs);
+              if (exact >= 0) return exact;
+              let floor = -1;
+              for (let i = 0; i < nextCues.length; i++) {
+                if (nextCues[i].start_ms <= targetMs) floor = i;
+                else break;
+              }
+              return floor;
+            };
+            state.lastSpokenIdx = remapIdx(state.lastSpokenIdx);
+            if (state.playback) {
+              const mapped = remapIdx(state.playback.cueIndex);
+              if (mapped >= 0) state.playback.cueIndex = mapped;
+            }
+            for (const pb of state.scheduled) {
+              const mapped = remapIdx(pb.cueIndex);
+              if (mapped >= 0) pb.cueIndex = mapped;
+            }
+          }
+          state.cues = nextCues;
           state.bgProgress = null;
           state.error = "";
           closePort();

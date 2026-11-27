@@ -6,12 +6,19 @@ import { cleanDubCues, mergeDubCues, type DubCue, type DubCueInput } from "@/lib
 import {
   buildTranslateItems,
   ensurePunctuatedCues,
+  finalizeLiveDubResult,
   getCachedLiveDub,
+  isLiveDubInflight,
+  needsLiveDubRepair,
+  prepareLiveDub,
+  repairLiveDubCues,
   sanitizeCachedLiveDub,
   saveCachedLiveDub,
   streamPrepareResponse,
+  type FlightEntry,
   type LiveDubCue,
   type LiveDubResult,
+  type PrepareProgress,
   type PrepareStreamEvent,
 } from "@/lib/dub-live";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -28,7 +35,7 @@ type TranslateCuesBody = {
 
 const CACHE_PREFIX = "dub:ext:v1:";
 const VI_UNIQUE = /[ăâđêôơưảãạằắẳẵặầấẩẫậẻẽẹềếểễệỉĩịỏõọồốổỗộờớởỡợủũụừứửữựỳỷỹỵ]/gi;
-const gd = globalThis as unknown as { __dubExtFlights?: Map<string, Promise<LiveDubResult>> };
+const gd = globalThis as unknown as { __dubExtFlights?: Map<string, FlightEntry> };
 const inflight = (gd.__dubExtFlights ??= new Map());
 
 function looksVi(cues: DubCue[]): boolean {
@@ -100,6 +107,19 @@ export async function POST(req: Request) {
       }
       return Response.json({ ...ytHit, cached: true });
     }
+    // Nếu video YouTube này đang được luồng chính prepareLiveDub xử lý → nghe chung luôn để tránh dịch trùng 2 lần
+    if (isLiveDubInflight(ytVideoId)) {
+      if (wantStream) {
+        return streamPrepareResponse((emit, emitEvent) =>
+          prepareLiveDub(ytVideoId, { onProgress: emit, onEvent: emitEvent }),
+        );
+      }
+      try {
+        return Response.json(await prepareLiveDub(ytVideoId));
+      } catch (e) {
+        return fail((e as Error).message, 502);
+      }
+    }
   }
 
   const rawCues = cleanDubCues(parseRawCues(b.cues));
@@ -115,7 +135,8 @@ export async function POST(req: Request) {
   const cacheKey = `${CACHE_PREFIX}${hash}`;
 
   const cached = sanitizeCachedLiveDub(getCached<LiveDubResult>(cacheKey));
-  if (cached) {
+  const staleForRepair = cached && needsLiveDubRepair(cached) ? cached : null;
+  if (cached && !staleForRepair) {
     if (wantStream) {
       return streamPrepareResponse(async (emit) => {
         emit({ pct: 100, stage: "Sẵn sàng" });
@@ -125,7 +146,7 @@ export async function POST(req: Request) {
     return Response.json({ ...cached, title: title || cached.title, cached: true });
   }
 
-  if (!isAdmin && !inflight.has(cacheKey)) {
+  if (!isAdmin && !inflight.has(cacheKey) && !staleForRepair) {
     const key = user ? `u:${user.id}` : `ip:${await clientIp()}`;
     const ok10m = allow(`dub:10m:${key}`, user ? 15 : 5, 10 * 60_000);
     const okDay = allow(`dub:day:${key}`, user ? 60 : 15, 24 * 3600_000);
@@ -143,15 +164,65 @@ export async function POST(req: Request) {
     emit?: (p: { pct: number; stage: string; done?: number; total?: number }) => void,
     emitEvent?: (ev: PrepareStreamEvent) => void,
   ): Promise<LiveDubResult & { cached: boolean }> => {
+    const forward = (ev: PrepareStreamEvent) => {
+      if (ev.type === "progress") emit?.({ pct: ev.pct, stage: ev.stage, done: ev.done, total: ev.total });
+      emitEvent?.(ev);
+    };
+
     const existing = inflight.get(cacheKey);
     if (existing) {
-      emit?.({ pct: 50, stage: "Đang hoàn thiện…" });
-      return { ...(await existing), cached: false };
+      if (existing.partial) {
+        forward({
+          type: "ready",
+          data: existing.partial.data,
+          pct: existing.partial.pct,
+          done: existing.partial.done,
+          total: existing.partial.total,
+        });
+      } else if (existing.lastProgress) {
+        forward({ type: "progress", ...existing.lastProgress });
+      }
+      existing.listeners.add(forward);
+      try {
+        const res = await existing.promise;
+        return { ...res, title: title || res.title, cached: false };
+      } finally {
+        existing.listeners.delete(forward);
+      }
     }
 
+    const entry: FlightEntry = {
+      promise: Promise.resolve() as unknown as Promise<LiveDubResult>,
+      listeners: new Set([forward]),
+    };
+
+    const broadcast = (ev: PrepareStreamEvent) => {
+      if (ev.type === "progress") {
+        entry.lastProgress = { pct: ev.pct, stage: ev.stage, done: ev.done, total: ev.total };
+      }
+      for (const fn of entry.listeners) {
+        try {
+          fn(ev);
+        } catch {}
+      }
+    };
+
+    const emitProgress = (p: PrepareProgress) => broadcast({ type: "progress", ...p });
+
     const job = (async (): Promise<LiveDubResult> => {
-      emit?.({ pct: 18, stage: "Đang chuẩn bị nội dung…" });
-      const punctuated = await ensurePunctuatedCues(rawCues, rawLang, emit);
+      if (staleForRepair) {
+        const repaired = await repairLiveDubCues(
+          { ...staleForRepair, title: title || staleForRepair.title },
+          { emitProgress, broadcast, entry },
+        );
+        setCached(cacheKey, repaired, null);
+        if (ytVideoId) saveCachedLiveDub(ytVideoId, repaired);
+        emitProgress({ pct: 100, stage: "Hoàn tất!" });
+        return repaired;
+      }
+
+      emitProgress({ pct: 18, stage: "Đang chuẩn bị nội dung…" });
+      const punctuated = await ensurePunctuatedCues(rawCues, rawLang, emitProgress);
       const merged = mergeDubCues(punctuated);
       if (!merged.length) throw new Error("Không có lời thoại hợp lệ trong phụ đề.");
       if (merged.length > maxCues) {
@@ -174,15 +245,21 @@ export async function POST(req: Request) {
         }));
         let sentReady = false;
 
-        emit?.({ pct: 32, stage: "Đang tạo thuyết minh…" });
+        emitProgress({ pct: 32, stage: "Đang tạo thuyết minh…" });
         const res = await translateForDubbingSmart(buildTranslateItems(merged), {
           title,
           sourceLang,
-          onProgress: ({ done, total }) => {
-            const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 90;
-            emit?.({ pct, stage: "Đang tạo thuyết minh…", done, total });
+          onProgress: ({ phase, done, total }) => {
+            if (phase === "style") {
+              const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 40;
+              emitProgress({ pct, stage: "Đang phân tích văn phong & xưng hô toàn bài…", done, total });
+            } else {
+              const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 90;
+              emitProgress({ pct, stage: "Đang tạo thuyết minh…", done, total });
+            }
           },
           onChunk: ({ start, translations, done, total }) => {
+            const skipped = translations.flatMap((tr, k) => (isDubSkip(tr) ? [k] : []));
             const cleanChunk = translations.map((tr) => (isDubSkip(tr) ? "" : tr));
             cleanChunk.forEach((tr, k) => {
               const idx = start + k;
@@ -198,20 +275,32 @@ export async function POST(req: Request) {
             const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 98;
             if (!sentReady && start === 0 && done < total) {
               sentReady = true;
-              emitEvent?.({
-                type: "ready",
-                data: {
-                  videoId: resultId,
-                  title,
-                  sourceLang,
-                  cues: workingCues.map((c) => ({ ...c })),
-                },
+              const snapshot: LiveDubResult = {
+                videoId: resultId,
+                title,
+                sourceLang,
+                cues: workingCues.map((c) => ({ ...c })),
+              };
+              entry.partial = { data: snapshot, pct, done, total };
+              broadcast({ type: "ready", data: snapshot, pct, done, total });
+            } else if (sentReady) {
+              if (entry.partial) {
+                entry.partial.pct = pct;
+                entry.partial.done = done;
+                cleanChunk.forEach((_, k) => {
+                  const idx = start + k;
+                  entry.partial!.data.cues[idx] = { ...workingCues[idx] };
+                });
+              }
+              broadcast({
+                type: "chunk",
+                start,
+                translations: cleanChunk,
+                ...(skipped.length ? { skipped } : {}),
                 pct,
                 done,
                 total,
               });
-            } else if (sentReady) {
-              emitEvent?.({ type: "chunk", start, translations: cleanChunk, pct, done, total });
             }
           },
         });
@@ -231,23 +320,24 @@ export async function POST(req: Request) {
         });
       }
 
-      const result: LiveDubResult = {
+      const result = finalizeLiveDubResult({
         videoId: resultId,
         title,
         sourceLang,
         style,
         cues,
-      };
+      });
       setCached(cacheKey, result, null);
       // Nếu là video YouTube → lưu luôn vào kho cache chung của /thuyet-minh để mở lại tức thì (kể cả video ARD/WDR/ZDF!)
       if (ytVideoId) saveCachedLiveDub(ytVideoId, result);
-      emit?.({ pct: 100, stage: "Hoàn tất!" });
+      emitProgress({ pct: 100, stage: "Hoàn tất!" });
       return result;
     })().finally(() => {
       inflight.delete(cacheKey);
     });
 
-    inflight.set(cacheKey, job);
+    entry.promise = job;
+    inflight.set(cacheKey, entry);
     return { ...(await job), cached: false };
   };
 
