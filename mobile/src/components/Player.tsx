@@ -40,7 +40,7 @@ import { addPoints, setPointsTotal, usePoints } from "@/lib/points";
 import { noteProgress, progressSaved } from "@/lib/progress";
 import { prefetchGerman } from "@/lib/speak";
 import { C, alpha, stageBg } from "@/lib/theme";
-import { comboGain, hasWords, POINTS_HINT, type DictationLevel } from "@shared/dictation";
+import { comboGain, hasWords, normalizeDictLevel, POINTS_HINT, type DictationLevel } from "@shared/dictation";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 
@@ -193,7 +193,7 @@ export default function Player({
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
   const [practice, setPractice] = useState<"shadow" | "dictation">("shadow");
-  const [dictLevel, setDictLevel] = useState<DictationLevel>("normal");
+  const [dictLevel, setDictLevel] = useState<DictationLevel>("easy");
   const [dictDone, setDictDone] = useState<Record<number, DictResult>>({}); // câu chính tả đã làm: idx → 7/8 từ đúng
   const [dictEpoch, setDictEpoch] = useState(0); // "Học lại từ đầu" → dựng lại ô chính tả kể cả khi đang ở câu 1
   const [dictDrafts, setDictDrafts] = useState<Record<number, DictDraft>>({}); // chữ đã gõ / từ đã hiện của từng câu (sang câu khác rồi quay lại vẫn còn)
@@ -557,7 +557,7 @@ export default function Player({
         setIdx(i);
         setDictPick(round);
         if (allowDictation) setPractice(p.mode);
-        if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") setDictLevel(p.dictLevel);
+        if (p.dictLevel) setDictLevel(normalizeDictLevel(p.dictLevel));
         setDictDone(done);
         setEarned(p.dictRoundPts ?? {});
         setSpent(p.dictRoundSpent ?? {});
@@ -615,7 +615,7 @@ export default function Player({
     addPoints(user.id, gain);
     setPointsGain(gain);
     setPointsEarned((n) => n + 1);
-    api<Points & { streak?: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, revealed, streak: nextStreak, tz: new Date().getTimezoneOffset() } })
+    api<Points & { streak?: number }>("/points", { method: "POST", body: { source: sourceUrl, idx: i, input, revealed, level: dictLevel, streak: nextStreak, tz: new Date().getTimezoneOffset() } })
       .then((r) => {
         setPointsTotal(user.id, r.total);
         if (typeof r.streak === "number" && streakRef.current === nextStreak) {
@@ -840,14 +840,14 @@ export default function Player({
             }}
           />
         )}
-        {/* Chính tả: mức gợi ý trong các ô từ (Dễ: chữ đầu · Vừa: số chữ · Khó: không gợi ý) */}
+        {/* Chính tả: mức gợi ý trong các ô từ (Điền từ: ẩn 60% · Dễ: chữ đầu · Khó: không gợi ý) */}
         {dictation && (
           <ChipGroup
             icon="lightbulb"
             hint={t("player.hintLevel")}
             options={[
+              ["cloze", t("player.cloze")],
               ["easy", t("player.easy")],
-              ["normal", t("player.normal")],
               ["hard", t("player.hard")],
             ]}
             value={dictLevel}

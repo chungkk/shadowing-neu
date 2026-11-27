@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { awardDictWords, chargeDictHints, getDictStreak, getOpenPoints, getOpenWords, getPointIdx, getPoints, resetDictStreak } from "@/lib/db";
-import { checkSlots, slotsFromInput } from "@/lib/dictation";
+import { checkSlots, normalizeDictLevel, slotsFromInput } from "@/lib/dictation";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { dictationSentenceFor, lockedSource, sourceEarnsPoints } from "@/lib/access";
 import { allow } from "@/lib/rate-limit";
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
     idx?: number;
     input?: string;
     revealed?: number[];
+    level?: string;
     hints?: number;
     streak?: number;
     resetStreak?: boolean;
@@ -75,7 +76,10 @@ export async function POST(req: Request) {
   const input = str(b.input);
   // Dài quá câu gốc (ä → ae dài gấp đôi + khoảng trắng giữ chỗ các ô trống) → khỏi chấm, tránh tốn CPU
   const revealed = Array.isArray(b.revealed) ? b.revealed.filter(Number.isInteger).slice(0, 200) : [];
-  const check = input.length <= sentence.length * 2 + 200 ? checkSlots(sentence, slotsFromInput(sentence, input), new Set(revealed)) : null;
+  const check =
+    input.length <= sentence.length * 2 + 200
+      ? checkSlots(sentence, slotsFromInput(sentence, input), new Set(revealed), normalizeDictLevel(b.level))
+      : null;
   if (!check?.correct) return fail("Câu chép chưa đúng");
   return Response.json(awardDictWords(user.id, source, b.idx, check.correct, check.total, b.streak, tzOf(b.tz)));
 }

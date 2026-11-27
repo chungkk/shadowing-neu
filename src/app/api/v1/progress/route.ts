@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getProgress, getRoundPoints, listProgress, resetProgress, saveProgress, type DictDraft, type DictResult } from "@/lib/db";
+import { normalizeDictLevel } from "@/lib/dictation";
 import { apiUser, body, fail, str } from "@/lib/api";
 import { lockedSource } from "@/lib/access";
 import { percent } from "@/lib/progress";
@@ -12,7 +13,6 @@ import { percent } from "@/lib/progress";
 const NOT_SAVED = "Video tự dán không lưu tiến độ — lưu thành bài học riêng để học tiếp lần sau.";
 
 const SOURCE_RE = /^\/(lesson|watch)\/[\w-]{1,64}$/;
-const LEVELS = ["easy", "normal", "hard"];
 const int = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null);
 
 /** GET ?source=… → { progress } (null nếu chưa học), kèm điểm của lượt chính tả đang làm · không có source → { progress: [...] } mọi bài, mới nhất trước */
@@ -84,7 +84,7 @@ export async function PUT(req: Request) {
     idx: at,
     total,
     mode,
-    dictLevel: LEVELS.includes(str(b.dictLevel)) ? str(b.dictLevel) : "normal",
+    dictLevel: normalizeDictLevel(b.dictLevel),
     dictDone: { ...prev?.dictDone, ...incoming },
     seen: [...seen].sort((x, y) => x - y),
     dictPick,

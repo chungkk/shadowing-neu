@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { formatTime, mergeIntoSentences, type Segment } from "@/lib/subtitles";
-import { comboGain, hasWords, hasWrongSlot, pickDictation, POINTS_HINT, slotsFromInput, type DictationLevel } from "@/lib/dictation";
+import { comboGain, hasWords, hasWrongSlot, normalizeDictLevel, pickDictation, POINTS_HINT, slotsFromInput, type DictationLevel } from "@/lib/dictation";
 import { tokenize, type Phrase } from "@/lib/phrase-match";
 import type { PlayerHandle } from "@/lib/player";
 import { clientApi } from "@/lib/client-api";
@@ -71,7 +71,7 @@ const DEFAULTS: Settings = {
   hideMedia: false,
   dictHideMedia: false,
   practice: "shadow",
-  dictLevel: "normal",
+  dictLevel: "easy",
   showTranslation: false,
 };
 
@@ -134,7 +134,7 @@ function Toggle({
   );
 }
 
-/** Nhóm nút chọn 1 trong nhiều (Shadowing/Chính tả, Dễ/Vừa/Khó…) */
+/** Nhóm nút chọn 1 trong nhiều (Shadowing/Chính tả, Điền từ/Dễ/Khó…) */
 function Segmented<T extends string>({
   options,
   value,
@@ -164,9 +164,9 @@ const PRACTICES = [
   ["dictation", "Chính tả"],
 ] as const;
 const DICT_LEVELS = [
-  ["easy", "Dễ", "Gợi ý chữ cái đầu"],
-  ["normal", "Vừa", "Gợi ý số chữ cái"],
-  ["hard", "Khó", "Không gợi ý"],
+  ["cloze", "Điền từ", "Ẩn 60% từ của câu, không gợi ý"],
+  ["easy", "Dễ", "Ẩn cả câu, gợi ý chữ cái đầu"],
+  ["hard", "Khó", "Ẩn cả câu, không gợi ý"],
 ] as const;
 
 /** "Kamera," → "Kamera" (bỏ dấu câu quanh từ) */
@@ -249,7 +249,12 @@ export default function ShadowPlayer({
   // Đọc cài đặt qua useSyncExternalStore: server và lần hydrate đầu dùng DEFAULTS, không lệch HTML
   const [stored, setStored] = useLocalStorage(SETTINGS_KEY, NO_SETTINGS);
   const settings = useMemo<Settings>(
-    () => ({ ...DEFAULTS, ...stored, ...(allowDictation ? {} : { practice: "shadow" as const }) }),
+    () => ({
+      ...DEFAULTS,
+      ...stored,
+      dictLevel: normalizeDictLevel(stored.dictLevel, DEFAULTS.dictLevel),
+      ...(allowDictation ? {} : { practice: "shadow" as const }),
+    }),
     [stored, allowDictation],
   );
   const segments = useMemo(
@@ -333,7 +338,7 @@ export default function ShadowPlayer({
     (fromIdx: number) => {
       const d = draftsRef.current[fromIdx];
       const text = live.current.segments[fromIdx]?.text;
-      if (d && text && hasWrongSlot(text, slotsFromInput(text, d.input), new Set(d.revealed))) dictBreakStreak();
+      if (d && text && hasWrongSlot(text, slotsFromInput(text, d.input), new Set(d.revealed), live.current.settings.dictLevel)) dictBreakStreak();
     },
     [dictBreakStreak],
   );
@@ -825,7 +830,7 @@ export default function ShadowPlayer({
         // Chế độ + mức chính tả học lần trước (trên web hay app) — 1 lần ghi để không đè nhau
         const patch: Partial<Settings> = {};
         if (allowDictation) patch.practice = p.mode;
-        if (p.dictLevel === "easy" || p.dictLevel === "normal" || p.dictLevel === "hard") patch.dictLevel = p.dictLevel;
+        if (p.dictLevel) patch.dictLevel = normalizeDictLevel(p.dictLevel, DEFAULTS.dictLevel);
         update(patch);
         setDictDone(done);
         setEarned(p.dictRoundPts ?? {});
@@ -887,7 +892,7 @@ export default function ShadowPlayer({
     setEarned((e) => ({ ...e, [i]: (e[i] ?? 0) + gain }));
     clientApi<{ total: number; streak?: number }>("/points", {
       method: "POST",
-      body: { source: sourceUrl, idx: i, input, revealed, streak: nextStreak, tz: new Date().getTimezoneOffset() },
+      body: { source: sourceUrl, idx: i, input, revealed, level: settings.dictLevel, streak: nextStreak, tz: new Date().getTimezoneOffset() },
     })
       .then((r) => {
         emitPoints({ total: r.total });

@@ -88,11 +88,18 @@ export function DictationPanel({
   const { tablet } = useLayout();
   const refWords = useMemo(() => splitWords(text), [text]);
   // Có nháp → dựng lại đúng như lúc rời đi; chỉ có kết quả đã lưu → hiện đủ câu (các ô điền sẵn câu gốc)
-  const [slots, setSlots] = useState(() => (draft ? slotsFromInput(text, draft.input) : saved ? refWords : refWords.map(() => "")));
+  const [slots, setSlots] = useState(() => {
+    if (draft) {
+      const s = slotsFromInput(text, draft.input);
+      return saved ? s.map((v, k) => v || refWords[k]) : s;
+    }
+    return saved ? refWords : refWords.map(() => "");
+  });
   const [revealed, setRevealed] = useState<Set<number>>(() => new Set(draft?.revealed ?? []));
-  const result = useMemo(() => checkSlots(text, slots, revealed), [text, slots, revealed]);
+  const result = useMemo(() => checkSlots(text, slots, revealed, level), [text, slots, revealed, level]);
   const [checked, setChecked] = useState(() => !!saved || (!!draft && result.done));
   const [active, setActive] = useState(() => nextOpenSlot(result.words, result.words.length - 1)); // ô đang gõ
+  const activeSlot = !result.done && result.words[active] && !isOpenWord(result.words[active]) ? nextOpenSlot(result.words, active) : active;
   const [reported, setReported] = useState(!!saved);
   // Điểm hiển thị: lần làm này (nếu vừa làm xong) hoặc điểm đã lưu
   const [score, setScore] = useState(saved);
@@ -123,41 +130,54 @@ export function DictationPanel({
   // Vừa nhảy ô: JS xoá ô nhập nhưng gõ nhanh thì bản gốc có thể chưa kịp xoá ("also" + "n" → "alson") → cắt phần từ trước đi
   const justDone = useRef("");
   const moveTo = (k: number) => {
-    if (k !== active && slots[active] && isOpenWord(result.words[active])) onBreakStreak?.();
+    if (k !== activeSlot && slots[activeSlot] && isOpenWord(result.words[activeSlot])) onBreakStreak?.();
     justDone.current = "";
     setActive(k);
   };
+
+  const finish = (r = result, baseSlots = slots) => {
+    if (!reported) {
+      setReported(true);
+      setChecked(true);
+      setScore({ correct: r.correct, total: r.total });
+      setSlots(r.words.map((w, k) => (w.state === "given" ? w.text : baseSlots[k] ?? "")));
+      hop(18);
+      onDone(r.correct, r.total);
+    }
+  };
+  const finishRef = useRef(finish);
+  useEffect(() => {
+    finishRef.current = finish;
+  });
+  useEffect(() => {
+    if (result.done && !reported) finishRef.current();
+  }, [result.done, reported]);
 
   const change = (nextSlots: string[], nextRevealed: Set<number>) => {
     const nextInput = nextSlots.join(" ");
     setSlots(nextSlots);
     setRevealed(nextRevealed);
     onDraft({ input: nextInput, revealed: [...nextRevealed] });
-    const r = checkSlots(text, nextSlots, nextRevealed);
+    const r = checkSlots(text, nextSlots, nextRevealed, level);
     const gain = onEarn?.(r.correct, r.total, nextInput, r.words.flatMap((w, k) => (w.state === "revealed" ? [k] : []))) ?? 0;
     if (gain > 0) setGained((g) => g + gain);
     setChecked(r.done);
-    if (r.done && !reported) {
-      setReported(true);
-      setScore({ correct: r.correct, total: r.total });
-      hop(18);
-      onDone(r.correct, r.total);
-    }
+    if (r.done) finish(r, nextSlots);
     return r;
   };
   /** Gõ vào ô đang chọn; từ gõ đúng → nhảy sang ô chưa xong kế tiếp */
   const type = (raw: string) => {
     if (result.done || !refWords.length) return;
-    if (raw === `${slots[active]} `) return onTogglePlay();
+    if (raw === `${slots[activeSlot]} `) return onTogglePlay();
     let fresh = raw;
     if (justDone.current && raw.startsWith(justDone.current)) fresh = raw.slice(justDone.current.length);
     else justDone.current = "";
     const value = fresh.replace(/\s/g, "").replace(/^[^\p{L}\p{N}]+/u, ""); // dấu câu gõ theo thói quen ngay sau khi nhảy ô thì bỏ
-    const at = slotForTyped(result.words, active, value);
+    const at = slotForTyped(result.words, activeSlot, value);
     const next = [...slots];
-    if (at !== active) {
-      if (slots[active] && isOpenWord(result.words[active])) onBreakStreak?.();
-      next[active] = "";
+    if (at !== activeSlot) {
+      if (slots[activeSlot] && isOpenWord(result.words[activeSlot])) onBreakStreak?.();
+      next[activeSlot] = "";
     }
     next[at] = value;
     const r = change(next, revealed);
@@ -170,8 +190,9 @@ export function DictationPanel({
   };
   /** Làm lại câu này từ đầu (kết quả mới sẽ ghi đè khi làm xong) */
   const retry = () => {
-    setSlots(refWords.map(() => ""));
-    moveTo(refWords.length > 1 ? 1 : 0); // từ đầu câu hiện sẵn
+    const empty = refWords.map(() => "");
+    setSlots(empty);
+    moveTo(nextOpenSlot(checkSlots(text, empty, new Set(), level).words, refWords.length - 1));
     setRevealed(new Set());
     setChecked(false);
     setReported(false);
@@ -187,7 +208,7 @@ export function DictationPanel({
     if (!fresh.length) return;
     onBreakStreak?.();
     const r = change(slots, new Set([...revealed, ...fresh]));
-    if (!isOpenWord(r.words[active])) setActive(nextOpenSlot(r.words, active));
+    if (!isOpenWord(r.words[activeSlot])) setActive(nextOpenSlot(r.words, activeSlot));
     onHint?.(fresh.length);
   };
   const check = () => {
@@ -280,14 +301,14 @@ export function DictationPanel({
           <TextInput
             ref={inputRef}
             accessibilityLabel={t("dict.typeWhat")}
-            value={slots[active] ?? ""}
+            value={slots[activeSlot] ?? ""}
             onChangeText={type}
             onSubmitEditing={submit}
             onKeyPress={({ nativeEvent: { key } }) => {
-              // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen")
-              if (key !== "Backspace" || slots[active] || result.done) return;
-              for (let k = active - 1; k >= 1; k--) {
-                if (!revealed.has(k)) return moveTo(k);
+              // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen"); bỏ qua từ hiện sẵn & từ đã xem
+              if (key !== "Backspace" || slots[activeSlot] || result.done) return;
+              for (let k = activeSlot - 1; k >= 1; k--) {
+                if (!revealed.has(k) && result.words[k]?.state !== "given") return moveTo(k);
               }
             }}
             autoFocus={autoFocus}
@@ -304,7 +325,7 @@ export function DictationPanel({
           {result.words.map((w, k) => {
             const shown = w.state === "correct" || w.state === "revealed" || w.state === "given";
             const b = BOX[shown || checked ? w.state : "hint"];
-            const isActive = k === active && focused && !result.done;
+            const isActive = k === activeSlot && focused && !result.done;
             const typed = slots[k];
             const label = shown ? w.text : typed || (isActive ? "" : hintFor(w.text, level));
             const fg = typed && !shown && !checked ? C.text : b.fg;
@@ -337,7 +358,7 @@ export function DictationPanel({
                   {!!label && <Text style={{ flexShrink: 1, color: fg, fontFamily: "Menlo", fontWeight: "700", fontSize: 15 }}>{label}</Text>}
                   {isActive && <View style={{ width: 2, height: 16, marginLeft: 1, backgroundColor: C.link }} />}
                 </Pressable>
-                {k === active && isOpenWord(w) && !result.done && (
+                {k === activeSlot && isOpenWord(w) && !result.done && (
                   <Pressable
                     onPress={() => reveal([k])}
                     hitSlop={5}
@@ -372,7 +393,7 @@ export function DictationPanel({
                 key={ch}
                 onPress={() => {
                   justDone.current = "";
-                  type((slots[active] ?? "") + ch);
+                  type((slots[activeSlot] ?? "") + ch);
                 }}
                 accessibilityLabel={ch}
                 style={({ pressed }) => ({

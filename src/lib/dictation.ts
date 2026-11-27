@@ -3,7 +3,12 @@
  * dùng chung cho web và app di động.
  */
 
-export type DictationLevel = "easy" | "normal" | "hard";
+export type DictationLevel = "cloze" | "easy" | "hard";
+
+/** Chuẩn hoá mức chính tả (giá trị cũ "normal" hoặc lạ → fallback "easy") */
+export function normalizeDictLevel(v: unknown, fallback: DictationLevel = "easy"): DictationLevel {
+  return v === "cloze" || v === "easy" || v === "hard" ? v : fallback;
+}
 
 /**
  * Điểm chính tả: gõ đúng 1 từ → +1 cơ bản, đúng liên tiếp được thưởng chuỗi (3–4: +2/từ, 5–9: +3/từ, 10+: +4/từ),
@@ -33,7 +38,7 @@ export type WordState =
   | "wrong" // gõ từ khác
   | "missing" // chưa gõ / bỏ sót
   | "revealed" // người học bấm xem (tính là lỗi)
-  | "given"; // từ đầu câu hiện sẵn: không phải chép, không tính điểm, không tính lỗi
+  | "given"; // từ hiện sẵn (từ đầu câu, hoặc ~40% từ giữ lại ở chế độ Điền từ): không phải chép, không tính điểm, không tính lỗi
 
 export type CheckedWord = { text: string; state: WordState; typed?: string };
 
@@ -72,10 +77,48 @@ export function splitWords(text: string): string[] {
   return splitTokens(text).map((t) => t.text);
 }
 
-/** Số từ phải chép của 1 câu: từ đầu câu hiện sẵn khi câu ≥ 2 từ nên không tính; câu chỉ 1 từ vẫn phải chép */
-export function dictationWordCount(text: string): number {
+/**
+ * Các vị trí từ hiện sẵn (không phải chép, không tính điểm):
+ * - Câu ≤ 1 từ: không hiện sẵn từ nào (vẫn phải chép).
+ * - Dễ / Khó: chỉ hiện từ đầu câu (index 0).
+ * - Điền từ ("cloze"): hiện từ đầu câu + giữ lại ~40% từ (ẩn ~60% còn lại), chia đều theo từng đoạn của câu,
+ *   tất định theo nội dung câu để web / app / server chấm điểm khớp nhau 100%.
+ */
+export function givenWordIndices(reference: string, level: DictationLevel = "easy"): Set<number> {
+  const n = splitWords(reference).length;
+  if (n <= 1) return new Set();
+  const given = new Set<number>([0]);
+  if (level !== "cloze") return given;
+
+  const hiddenCount = Math.min(n - 1, Math.max(1, Math.round(n * 0.6)));
+  const extraGiven = n - 1 - hiddenCount;
+  if (extraGiven <= 0) return given;
+
+  // FNV-1a 32-bit hash từ nội dung câu
+  let h = 2166136261;
+  for (let i = 0; i < reference.length; i++) {
+    h ^= reference.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+
+  const pool = n - 1; // các vị trí 1..n-1
+  for (let b = 0; b < extraGiven; b++) {
+    let lo = 1 + Math.floor((b * pool) / extraGiven);
+    const hi = 1 + Math.floor(((b + 1) * pool) / extraGiven) - 1;
+    // Tránh để 2 từ đầu câu (0 và 1) hiện liền nhau khi bucket đầu có thể chọn từ vị trí 2
+    if (b === 0 && lo === 1 && hi > lo) lo = 2;
+    h ^= h << 13;
+    h ^= h >>> 17;
+    h ^= h << 5;
+    given.add(lo + ((h >>> 0) % (hi - lo + 1)));
+  }
+  return given;
+}
+
+/** Số từ phải chép của 1 câu (bỏ qua các từ hiện sẵn theo mức độ) */
+export function dictationWordCount(text: string, level: DictationLevel = "easy"): number {
   const n = splitWords(text).length;
-  return n > 1 ? n - 1 : n;
+  return n - givenWordIndices(text, level).size;
 }
 
 /** Câu có chữ / số để chép — câu chỉ gồm ký hiệu ("♪ ♪", "…") không chép được, không bao giờ "xong" */
@@ -192,11 +235,17 @@ export function slotsFromInput(reference: string, input: string): string[] {
 
 /**
  * Chấm theo từng ô: mỗi ô chỉ so với đúng từ ở vị trí đó. Ô nằm sẵn theo từ nên không có từ thừa.
- * Từ đầu câu hiện sẵn (video có khi lệch phụ đề, cần biết câu bắt đầu từ đâu) và không nằm trong `total`; câu chỉ 1 từ thì vẫn phải chép.
+ * Các từ hiện sẵn theo mức độ (`givenWordIndices`) không phải chép và không nằm trong `total`.
  */
-export function checkSlots(reference: string, slots: readonly string[], revealed: ReadonlySet<number> = new Set()): CheckResult {
-  const words = splitWords(reference).map((text, k, all): CheckedWord => {
-    if (k === 0 && all.length > 1) return { text, state: "given" };
+export function checkSlots(
+  reference: string,
+  slots: readonly string[],
+  revealed: ReadonlySet<number> = new Set(),
+  level: DictationLevel = "easy",
+): CheckResult {
+  const given = givenWordIndices(reference, level);
+  const words = splitWords(reference).map((text, k): CheckedWord => {
+    if (given.has(k)) return { text, state: "given" };
     if (revealed.has(k)) return { text, state: "revealed" };
     const typed = slots[k] ?? "";
     const a = normalizeWord(text);
@@ -216,8 +265,13 @@ export function checkSlots(reference: string, slots: readonly string[], revealed
 export const isOpenWord = (w: CheckedWord) => w.state !== "correct" && w.state !== "revealed" && w.state !== "given";
 
 /** Bản nháp hiện tại có ô nào đã gõ chữ nhưng chưa đúng không (rời câu lúc này tính là bỏ dở từ sai → đứt chuỗi) */
-export function hasWrongSlot(reference: string, slots: readonly string[], revealed: ReadonlySet<number> = new Set()): boolean {
-  const r = checkSlots(reference, slots, revealed);
+export function hasWrongSlot(
+  reference: string,
+  slots: readonly string[],
+  revealed: ReadonlySet<number> = new Set(),
+  level: DictationLevel = "easy",
+): boolean {
+  const r = checkSlots(reference, slots, revealed, level);
   return r.words.some((w, k) => !!slots[k] && isOpenWord(w));
 }
 
@@ -244,12 +298,11 @@ export function slotForTyped(words: CheckedWord[], active: number, value: string
   return active;
 }
 
-/** Gợi ý cho 1 từ chưa đoán được: Dễ "G____", Vừa "*****", Khó "" */
+/** Gợi ý cho 1 từ chưa đoán được: Dễ "G____", Điền từ & Khó "" */
 export function hintFor(word: string, level: DictationLevel): string {
+  if (level !== "easy") return "";
   const core = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
-  if (level === "hard") return "";
-  if (level === "normal") return "*".repeat(core.length);
-  return core[0] + "_".repeat(Math.max(core.length - 1, 0));
+  return core ? core[0] + "_".repeat(Math.max(core.length - 1, 0)) : "";
 }
 
 // ---- Lượt chính tả: lần lượt từ đầu đến cuối bài ----
