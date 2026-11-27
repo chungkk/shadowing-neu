@@ -1,6 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
-import { normalize, parseYouTubeXml, type Segment } from "./subtitles";
+import { cleanSegmentWords, cleanSubtitleText, normalize, parseYouTubeXml, type Segment } from "./subtitles";
 import { getCached, setCached } from "./db";
 import { transcribeAudio, whisperEnabled, whisperVersion, WHISPER_MAX_BYTES, type WhisperVersion } from "./whisper";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
@@ -569,10 +569,23 @@ export async function saveUploadedTranscript(
       typeof r.text === "string" &&
       r.text.length <= 500;
     if (!ok) return "Dữ liệu phụ đề không hợp lệ";
-    const words = Array.isArray(r.words)
+    const rawWords = Array.isArray(r.words)
       ? r.words.filter((w): w is [number, string] => Number.isFinite(w?.[0]) && typeof w?.[1] === "string")
       : undefined;
-    segments.push({ start: r.start, end: r.end, text: r.text.trim(), ...(words?.length ? { words } : {}) });
+    if (rawWords?.length) {
+      const cleaned = cleanSegmentWords(rawWords, r.text);
+      if (!cleaned.text) continue;
+      segments.push({
+        start: cleaned.words?.[0]?.[0] ?? r.start,
+        end: r.end,
+        text: cleaned.text,
+        ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+      });
+    } else {
+      const text = cleanSubtitleText(r.text);
+      if (!text) continue;
+      segments.push({ start: r.start, end: r.end, text });
+    }
   }
 
   if (segments.reduce((n, s) => n + s.text.length, 0) > UPLOAD_MAX_CHARS) return "Phụ đề quá dài";

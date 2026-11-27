@@ -261,10 +261,15 @@ const EDGE_MP3_BYTES_PER_SEC = 6000;
 /** Trần tốc độ của /api/v1/dub/tts */
 const MAX_FIT_SPEED = 1.45;
 
+function estimateViDurSec(text: string, speed: number): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const pauses = (text.match(/[,;:.!?…]/g) ?? []).length;
+  return (words * 0.27 + pauses * 0.14 + 0.18) / Math.max(0.75, speed);
+}
+
 /**
  * Lấy MP3 cho câu `list[index]`, khớp thời lượng với khoảng trống trước câu sau:
- * câu đọc dài quá thì xin Edge đọc nhanh hơn (giữ cao độ, không méo giọng)
- * thay vì để câu sau cắt ngang.
+ * ước lượng tốc độ ngay từ lần gọi đầu để giảm gấp đôi số request TTS.
  */
 export async function fetchFittedDubCue(
   list: DubCue[],
@@ -274,16 +279,26 @@ export async function fetchFittedDubCue(
 ): Promise<File | null> {
   const cue = list[index];
   if (!cue || cue.pending || !cue.text.trim()) return null;
-  const base = await fetchDubCueFile(cue.text, voiceId, speed);
   const next = list[index + 1];
+  const slot = next ? (next.start_ms - cue.start_ms) / 1000 - 0.1 : 0;
+  const norm = Math.round(Math.min(MAX_FIT_SPEED, Math.max(0.85, speed)) * 20) / 20;
+
+  let firstSpd = norm;
+  if (slot > 0.4 && norm < MAX_FIT_SPEED) {
+    const estDur = estimateViDurSec(cue.text, norm);
+    if (estDur > slot + 0.15) {
+      firstSpd = Math.min(MAX_FIT_SPEED, Math.ceil(((norm * estDur) / slot) * 20) / 20);
+    }
+  }
+
+  const base = await fetchDubCueFile(cue.text, voiceId, firstSpd);
   if (!base || !next) return base;
 
-  const slot = (next.start_ms - cue.start_ms) / 1000 - 0.1;
   const dur = base.size / EDGE_MP3_BYTES_PER_SEC;
-  const norm = Math.round(Math.min(MAX_FIT_SPEED, Math.max(0.85, speed)) * 20) / 20;
-  if (slot <= 0.4 || dur <= slot + 0.1 || norm >= MAX_FIT_SPEED) return base;
+  if (slot <= 0.4 || dur <= slot + 0.4 || firstSpd >= MAX_FIT_SPEED) return base;
 
-  const need = Math.min(MAX_FIT_SPEED, Math.ceil(((norm * dur) / slot) * 20) / 20);
+  const need = Math.min(MAX_FIT_SPEED, Math.ceil(((firstSpd * dur) / slot) * 20) / 20);
+  if (need <= firstSpd) return base;
   return (await fetchDubCueFile(cue.text, voiceId, need)) ?? base;
 }
 

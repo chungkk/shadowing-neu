@@ -18,11 +18,77 @@ const decodeEntities = (s: string) =>
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
 
-const cleanText = (s: string) =>
-  decodeEntities(s.replace(/<[^>]+>/g, ""))
-    .replace(/\[[^\]]*\]/g, "") // [Musik], [Applaus]
+const SDH_DESC_RE =
+  /musik|klänge|klang|melodie|gesang|singt|singen|gesungen|summt|summen|lied|song|jingle|intro|outro|abspann|vorspann|titelmelodie|gitarre|klavier|piano|trommel|geige|bass|beat|takt|chor|orchester|streicher|synthesizer|rhythmus|rhythmisch|elektronisch|instrument|musikstück|soundtrack|music|singing|sings|humming|hums|choral|choir|guitar|violin|drums|melody|tune|theme|bgm|nhạc|âm\s+nhạc|ca\s+hát|ngân\s+nga|musique|música|音楽|歌|音乐|음악|applaus|beifall|klatsch\w*|jubel\w*|gelächter|lach\w*|kicher\w*|schmunzel\w*|seufz\w*|stöhn\w*|keuch\w*|hust\w*|nies\w*|räusper\w*|schnauf\w*|schnaub\w*|schnarch\w*|gähn\w*|pfeif\w*|weint|weinen|schluchz\w*|schreit|schreien|brüllt|brüllen|flüster\w*|murmel\w*|nuschel\w*|stotter\w*|kreisch\w*|zisch\w*|knurr\w*|bellt|bellen|miaut|zwitscher\w*|piep\w*|klingel\w*|läute\w*|klopf\w*|hämmert|knall\w*|krach\w*|donner\w*|raschel\w*|rauschen|rauscht|brumm\w*|surr\w*|klick\w*|ticken|tickt|quiet\w*|hupt|hupen|sirene|motor|schritte|tür|fenster|wind|regen|explosion|schuss|schüsse|stille|pause|ruhe|geräusch\w*|lärm|krächz\w*|knarr\w*|polter\w*|klirr\w*|plätsch\w*|schmatz\w*|atmet|atmen|unverständlich|undeutlich|durcheinander|stimmengewirr|gemurmel|hintergrund\w*|applause|clapping|claps|cheering|cheers|laughter|laughing|laughs|chuckles|chuckling|giggles|giggling|sighs|sighing|groans|groaning|gasps|gasping|coughs|coughing|sneezes|sneezing|clears\s+throat|snorts|snores|yawns|whistles|whistling|crying|cries|sobbing|sobs|weeping|screaming|screams|shouting|shouts|yelling|yells|whispering|whispers|mumbling|mumbles|murmuring|murmurs|stuttering|shrieks|hisses|growls|barking|barks|meows|chirping|beeping|beeps|ringing|rings|knocking|knocks|banging|bangs|slamming|slams|crashing|thunder|rustling|buzzing|clicking|clicks|ticking|honking|siren|engine|footsteps|explosion|gunshot|silence|silent|pause|noise|sound|sfx|inaudible|indistinct|unintelligible|crosstalk|chatter|overlapping|vỗ\s+tay|reo\s+hò|hoan\s+hô|tiếng\s+cười|\bcười\b|khúc\s+khích|thở\s+dài|rên|thở\s+hổn\s+hển|\bho\b|hắt\s+hơi|hắng\s+giọng|ngáy|ngáp|huýt\s+sáo|khóc|nức\s+nở|\bhét\b|la\s+hét|thì\s+thầm|lẩm\s+bẩm|tiếng\s+động|tiếng\s+ồn|âm\s+thanh|tiếng\s+\p{L}+|im\s+lặng|tĩnh\s+lặng|không\s+nghe\s+rõ|nghe\s+không\s+rõ|拍手|笑い|歓声|ため息|効果音|無音|掌声|笑声|박수|웃음|sprecher\w*|erzähler\w*|moderator\w*|reporter\w*|ansager\w*|kommentator\w*|stimme\w*|off[\s-]?stimme|aus\s+dem\s+off|^off$|voice[\s-]?over|narrator|announcer|commentator|speaker|interviewer|anchor|male\s+voice|female\s+voice|child'?s\s+voice|robotic\s+voice|computer\s+voice|automated\s+voice|on\s+(?:phone|radio|tv)|over\s+(?:speaker|radio|pa)|through\s+phone|im\s+(?:radio|fernsehen)|am\s+telefon|übers\s+telefon|durch\s+lautsprecher|archiv\w*|o-?ton|einspieler|untertitel|amara\.org|fremdsprach\w*|spricht\s+(?:englisch|französisch|spanisch|italienisch|türkisch|arabisch|russisch|chinesisch|japanisch|polnisch|deutsch|leise|laut|schnell|langsam|hektisch|aufgeregt|traurig|wütend|fröhlich|ernst|ironisch|sarkastisch)|speaking\s+(?:foreign|in\s+\p{L}+|softly|loudly|quietly|quickly|slowly|angrily|sadly|happily|sarcastically|german|english|french|spanish|arabic|russian|chinese|japanese|vietnamese)|giọng\s+(?:đọc|nói|nam|nữ|trẻ\s+em|người\s+dẫn|thuyết\s+minh|máy|nhỏ|lớn|trầm|cao|run|khàn|tức\s+giận|buồn|vui)|người\s+dẫn\s+chuyện|thuyết\s+minh|lồng\s+tiếng|bình\s+luận\s+viên|phát\s+thanh\s+viên|ngoại\s+ngữ|tiếng\s+nước\s+ngoài|nói\s+(?:nhỏ|to|nhanh|chậm)|qua\s+(?:điện\s+thoại|loa)|phụ\s+đề|^(?:leise|laut|ironisch|sarkastisch|ernst|traurig|wütend|fröhlich|erstaunt|überrascht|verwirrt|genervt|aufgeregt|entsetzt|skeptisch|nachdenklich|zögernd|spöttisch|energisch|sanft|ruhig|dynamisch|dramatisch|bedrohlich|düster|heiter|beschwingt|rockig|melancholisch|spannend|spannungsvoll|softly|quietly|loudly|sarcastically|angrily|sadly|happily|excitedly|nervously|hesitantly|mockingly|dramatically|whispered|muffled)$/iu;
+
+const SPEAKER_PREFIX_RE =
+  /^(?:[-–—]\s*)?(?:off[\s-]?stimme|stimme\s+aus\s+dem\s+off|stimme|off|sprecher(?:in)?|erzähler(?:in)?|moderator(?:in)?|reporter(?:in)?|ansager(?:in)?|kommentator(?:in)?|frauenstimme|männerstimme|kinderstimme|computerstimme|roboterstimme|narrator|voice[\s-]?over|voiceover|announcer|commentator|host|speaker(?:\s*\d+)?|interviewer|male\s+voice|female\s+voice|giọng\s+đọc|giọng\s+nói|giọng\s+nam|giọng\s+nữ|giọng\s+thuyết\s+minh|người\s+dẫn\s+chuyện|người\s+dẫn|thuyết\s+minh|lồng\s+tiếng|bình\s+luận\s+viên|phát\s+thanh\s+viên|mc)\s*:\s*/iu;
+
+const CREDIT_LINE_RE =
+  /^(?:untertitel\s+(?:von|im\s+auftrag|der|des|:)|subtitles?\s+(?:by|:)|captions?\s+(?:by|:)|closed\s+captions?\b|phụ\s+đề\s+(?:bởi|:)|việt\s*sub\b|amara\.org)/iu;
+
+/**
+ * Làm sạch 1 dòng phụ đề YouTube: giải mã HTML, bỏ tag, bỏ mô tả nhạc/tiếng động/giọng đọc/người dẫn
+ * (`[Musik]`, `♪ ... ♪`, `(Sanfte Musik)`, `(Off-Stimme)`, `Sprecher:`, `Untertitel ...`) nhưng giữ nguyên lời thoại thật.
+ */
+export function cleanSubtitleText(s: string): string {
+  let out = decodeEntities(s.replace(/<[^>]+>/g, "").replace(/\{[^}]*\}/g, ""))
+    .replace(/\[[^\]]*\]|［[^］]*］|【[^】]*】/g, " ")
+    .replace(/[♪♫♬🎵🎶][^♪♫♬🎵🎶]*[♪♫♬🎵🎶]/g, " ");
+
+  if (/^[\s–—-]*[♪♫♬🎵🎶]/.test(out)) return "";
+  out = out.replace(/[♪♫♬🎵🎶]+/g, " ");
+
+  if (/^[\s–—-]*([（(][^()（）]{1,140}[）)][\s–—.,!?;:]*)+$/.test(out)) return "";
+
+  out = out
+    .replace(/[（(]([^()（）]{1,120})[）)]/g, (full, inner: string) => (SDH_DESC_RE.test(inner.trim()) ? " " : full))
+    .replace(/(^|\s)\*([^*]{1,60})\*(?=\s|$|[.,!?;:])/g, (full, sp: string, inner: string) =>
+      SDH_DESC_RE.test(inner.trim()) ? sp : full,
+    )
+    .replace(/(?:^|\s)>>+\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(SPEAKER_PREFIX_RE, "")
     .replace(/\s+/g, " ")
     .trim();
+
+  if (!out || CREDIT_LINE_RE.test(out) || !/[\p{L}\p{N}]/u.test(out)) return "";
+  return out;
+}
+
+/**
+ * Làm sạch phụ đề có thời gian từng từ (srv3 / json3 / Whisper): lọc theo cả câu trước để bắt được mô tả nhiều từ
+ * như `(Sanfte Musik)` hoặc `[Ruhige Musik spielt]`, rồi khớp lại các từ còn giữ với mốc thời gian gốc.
+ */
+export function cleanSegmentWords(words: Word[], rawJoined?: string): { text: string; words?: Word[] } {
+  const rawTokens: Word[] = [];
+  for (const w of words) {
+    const t = decodeEntities(w[1].replace(/<[^>]+>/g, "").replace(/\{[^}]*\}/g, "")).trim();
+    if (t) rawTokens.push(w[2] === undefined ? [w[0], t] : [w[0], t, w[2]]);
+  }
+  const joined = rawJoined !== undefined ? rawJoined : rawTokens.map((w) => w[1]).join(" ");
+  const cleaned = cleanSubtitleText(joined);
+  if (!cleaned) return { text: "" };
+  if (rawTokens.length && rawTokens.map((w) => w[1]).join(" ") === cleaned) {
+    return { text: cleaned, words: rawTokens };
+  }
+  if (!rawTokens.length) return { text: cleaned };
+
+  const cleanTokens = cleaned.split(/\s+/);
+  const aligned: Word[] = [];
+  let ri = 0;
+  for (const tok of cleanTokens) {
+    while (ri < rawTokens.length && rawTokens[ri][1] !== tok && !rawTokens[ri][1].includes(tok)) {
+      ri++;
+    }
+    if (ri >= rawTokens.length) return { text: cleaned };
+    const src = rawTokens[ri];
+    aligned.push(src[2] === undefined ? [src[0], tok] : [src[0], tok, src[2]]);
+    ri++;
+  }
+  return { text: cleaned, words: aligned };
+}
 
 /** "00:01:02,500" | "01:02.5" -> giây */
 function parseTimestamp(ts: string): number {
@@ -49,7 +115,7 @@ export function parseSubtitleFile(content: string): Segment[] {
     const idx = lines.findIndex((l) => l.includes("-->"));
     if (idx === -1) continue;
     const [a, b] = lines[idx].split("-->");
-    const text = cleanText(lines.slice(idx + 1).join(" "));
+    const text = cleanSubtitleText(lines.slice(idx + 1).join(" "));
     if (!text) continue;
     segs.push({
       start: parseTimestamp(a),
@@ -66,7 +132,8 @@ export function parseYouTubeXml(xml: string): Segment[] {
   // format cũ: <text start="1.2" dur="3.4">...</text>
   for (const m of xml.matchAll(/<text start="([\d.]+)"(?: dur="([\d.]+)")?[^>]*>([\s\S]*?)<\/text>/g)) {
     const start = parseFloat(m[1]);
-    segs.push({ start, end: start + parseFloat(m[2] ?? "3"), text: cleanText(m[3]) });
+    const text = cleanSubtitleText(m[3]);
+    if (text) segs.push({ start, end: start + parseFloat(m[2] ?? "3"), text });
   }
   // format srv3: <p t="1200" d="3400">...</p> (mili giây).
   // Phụ đề tự động có thêm từng từ: <s t="160">kann</s> (t = mili giây tính từ đầu dòng)
@@ -74,11 +141,25 @@ export function parseYouTubeXml(xml: string): Segment[] {
     for (const m of xml.matchAll(/<p t="(\d+)"(?: d="(\d+)")?[^>]*>([\s\S]*?)<\/p>/g)) {
       const start = Number(m[1]) / 1000;
       const end = start + Number(m[2] ?? 3000) / 1000;
-      const words = [...m[3].matchAll(/<s(?: t="(\d+)")?[^>]*>([\s\S]*?)<\/s>/g)]
-        .map(([, t, w]): Word => [start + Number(t ?? 0) / 1000, cleanText(w)])
-        .filter(([, w]) => w);
-      if (words.length) segs.push({ start: words[0][0], end, text: words.map(([, w]) => w).join(" "), words });
-      else segs.push({ start, end, text: cleanText(m[3]) });
+      const rawMatches = [...m[3].matchAll(/<s(?: t="(\d+)")?[^>]*>([\s\S]*?)<\/s>/g)];
+      if (rawMatches.length) {
+        const rawJoined = rawMatches.map(([, , w]) => w).join("");
+        const rawWords: Word[] = rawMatches
+          .map(([, t, w]): Word => [start + Number(t ?? 0) / 1000, w])
+          .filter(([, w]) => w.trim());
+        const cleaned = cleanSegmentWords(rawWords, rawJoined);
+        if (cleaned.text) {
+          segs.push({
+            start: cleaned.words?.[0]?.[0] ?? start,
+            end,
+            text: cleaned.text,
+            ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+          });
+        }
+      } else {
+        const text = cleanSubtitleText(m[3]);
+        if (text) segs.push({ start, end, text });
+      }
     }
   }
   return normalize(segs);
@@ -199,7 +280,7 @@ export function mergeIntoSentences(segs: Segment[]): Segment[] {
  * thì lấy lại bản gốc (có `words`) để gộp câu cho người học vẫn như cũ. Dòng đã sửa thì dùng bản mới.
  */
 export function keepWordTimings(edited: Segment[], ...originals: Segment[][]): Segment[] {
-  const key = (s: Segment) => `${Math.round(s.start * 1000)}|${Math.round(s.end * 1000)}|${cleanText(s.text)}`;
+  const key = (s: Segment) => `${Math.round(s.start * 1000)}|${Math.round(s.end * 1000)}|${cleanSubtitleText(s.text)}`;
   const byKey = new Map<string, Segment>();
   for (const list of originals) {
     for (const s of normalize(list)) {

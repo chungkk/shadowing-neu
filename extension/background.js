@@ -156,9 +156,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           s: Number(msg.speed || settings.speed).toFixed(2),
           t: String(msg.text || "").slice(0, 600),
         });
-        const res = await fetch(`${settings.apiBase}/api/v1/dub/tts?${qs.toString()}`, {
-          headers: authHeaders(authToken),
-        });
+        if (msg.urgent) qs.set("p", "1");
+        const url = `${settings.apiBase}/api/v1/dub/tts?${qs.toString()}`;
+        const opts = { headers: authHeaders(authToken) };
+
+        let res = null;
+        let lastErr = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            res = await fetch(url, opts);
+            if (res.ok || (res.status !== 502 && res.status !== 503 && res.status !== 504)) break;
+          } catch (e) {
+            lastErr = e;
+          }
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+        }
+
+        if (!res) {
+          throw lastErr || new Error("Không tải được âm thanh thuyết minh.");
+        }
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
           sendResponse({ ok: false, error: errJson.error || `TTS HTTP ${res.status}` });

@@ -2,7 +2,7 @@ import { apiAdmin, body, fail, str } from "@/lib/api";
 import { dubEnabled, dubJson, mergeDubCues, parseSubtitleText, type DubCue, type DubCueInput, type DubJob } from "@/lib/dub";
 import { buildTranslateItems } from "@/lib/dub-live";
 import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
-import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
+import { isDubSkip, translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 import { whisperEnabled } from "@/lib/whisper";
 
 type CreateBody = {
@@ -109,7 +109,11 @@ export async function POST(req: Request) {
         title,
         sourceLang: needTranslateLang,
       });
-      cues = cues.map((c, i) => ({ ...c, text: translations[i] || c.text }));
+      cues = cues.flatMap((c, i) => {
+        const tr = translations[i];
+        if (tr && isDubSkip(tr)) return [];
+        return [{ ...c, text: tr || c.text }];
+      });
     }
 
     const created = await dubJson<{ job: DubJob }>("/jobs", {

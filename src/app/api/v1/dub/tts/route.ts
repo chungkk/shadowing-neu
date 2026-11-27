@@ -21,6 +21,7 @@ export async function GET(req: Request) {
   const voice = (searchParams.get("v") ?? "").trim();
   const text = (searchParams.get("t") ?? "").replace(/\s+/g, " ").trim();
   const speed = normalizeEdgeSpeed(Number(searchParams.get("s") ?? "1.15"));
+  const priority = searchParams.get("p") === "1" ? "urgent" : "normal";
 
   const edgeVoice = isEdgeVoice(voice) ? voice : null;
   const piperVoice = !edgeVoice && isServerPiperVoice(voice) ? voice : null;
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
 
     const audio = edgeVoice
       ? await synthesizeEdgeDub(text, edgeVoice, speed)
-      : await synthesizePiperDub(text, piperVoice!, speed);
+      : await synthesizePiperDub(text, piperVoice!, speed, { priority, signal: req.signal });
     return new Response(new Uint8Array(audio), {
       headers: {
         "Content-Type": edgeVoice ? "audio/mpeg" : "audio/wav",

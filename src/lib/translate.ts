@@ -71,10 +71,14 @@ const DUB_PROMPT = (lang: string) =>
   `Bạn là biên dịch viên thuyết minh video chuyên nghiệp, dịch phụ đề từ ngôn ngữ "${lang}" sang tiếng Việt tự nhiên để đọc thuyết minh (voice-over). ` +
   'Nhận JSON {"s": {"1": dòng 1, "2": dòng 2, …}} là các dòng phụ đề liên tiếp trong video. ' +
   "Dịch từng dòng sang tiếng Việt ngắn gọn, tự nhiên như lời nói, dễ đọc bằng giọng AI (viết số và đơn vị tự nhiên như 'euro', 'phần trăm', 'giờ'). " +
+  'TUYỆT ĐỐI không dịch hay đọc mô tả âm thanh, nhạc nền, tiếng động, tên người đọc hoặc chú thích phụ đề (vd: "[Musik]", "(sanfte Musik)", "(lacht)", "(Off-Stimme)", "Sprecher:", "♪…♪"); nếu cả dòng chỉ là mô tả không phải lời thoại thì trả về đúng "[SKIP]". ' +
   "Giữ nguyên số lượng và thứ tự khóa: mỗi khóa dịch đúng dòng tương ứng, không gộp hay bỏ sót dòng. " +
   'Trả về đúng JSON {"t": {"1": bản dịch dòng 1, "2": bản dịch dòng 2, …}}, không giải thích.';
 
 const BATCH = 25; // số câu mỗi lần gọi AI
+
+export const DUB_SKIP = "[SKIP]";
+export const isDubSkip = (s: string) => /^\[skip\]$/i.test(s.trim());
 
 const VI_CHARS = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
 const NON_LATIN_SCRIPT =
@@ -98,6 +102,7 @@ const VI_PLAIN_WORDS = new Set([
 export function looksTranslated(source: string, translation: string): boolean {
   const t = translation.trim();
   if (!t) return false;
+  if (isDubSkip(t)) return true;
   // Câu chỉ có số / ký hiệu ("10, 9, 8", "2024, 2025, 2026") giữ nguyên vẫn hợp lệ
   if (!/\p{L}/u.test(source)) return true;
 
@@ -280,7 +285,10 @@ export async function translateForDubbing(sentences: string[], sourceLang = "aut
     saveTranslations(rows);
     for (const r of rows) cached.set(r.key, r.translation);
   }
-  return keys.map((k, i) => cached.get(k) || sentences[i]);
+  return keys.map((k, i) => {
+    const v = cached.get(k) || sentences[i];
+    return isDubSkip(v) ? "" : v;
+  });
 }
 
 export type DubTranslateItem = {
@@ -467,7 +475,7 @@ const SMART_DUB_SYSTEM = (
     "1. Đọc hiểu cả cụm `prev` + `items` + `next` (và `overview` nếu có) để nắm đúng ý định và văn phong chung của cả video, rồi DIỄN ĐẠT LẠI bằng văn nói tiếng Việt trôi chảy (TUYỆT ĐỐI không dịch bám sát từng từ hay cấu trúc ngữ pháp câu gốc).\n" +
     "2. Tránh bệnh dịch khô kiểu Tây: KHÔNG dịch cứng 'Es ist / It is' thành 'Nó là…'; chuyển câu bị động Tây ('được làm bởi…') sang câu chủ động tự nhiên; tách hoặc đảo lại mệnh đề quan hệ/cụm danh từ dài cho thuận tai. Chuyển thành ngữ và từ đệm (halt, quasi, eben, basically, you know…) sang từ nối hoặc tiểu từ tiếng Việt phù hợp với văn phong video.\n" +
     "3. Giữ đúng xưng hô và mạch nối dựa vào mẫu phần mở đầu, cẩm nang, `overview` và `prev`/`next`; nếu hai câu liên tiếp là hai vế của cùng một ý bị tách dòng, hãy dịch sao cho đọc nối tiếp nghe liền mạch tự nhiên, không lặp chủ ngữ thừa.\n" +
-    "4. Tối ưu cho giọng đọc AI (TTS) và độ tự nhiên: dùng dấu phẩy, chấm, hỏi, than đúng nhịp thở để giọng đọc có cảm xúc. Coi `max` chỉ là mốc tham khảo mềm — ưu tiên câu trọn ý, trôi chảy, đủ chủ-vị và từ nối (KHÔNG cắt cụt câu hay bỏ từ làm câu bị cộc/khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc.\n" +
+    "4. Tối ưu cho giọng đọc AI (TTS) và độ tự nhiên: dùng dấu phẩy, chấm, hỏi, than đúng nhịp thở để giọng đọc có cảm xúc. Coi `max` chỉ là mốc tham khảo mềm — ưu tiên câu trọn ý, trôi chảy, đủ chủ-vị và từ nối (KHÔNG cắt cụt câu hay bỏ từ làm câu bị cộc/khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc. TUYỆT ĐỐI KHÔNG dịch hay đọc mô tả âm thanh, nhạc nền, tiếng động, tên người đọc hoặc chú thích phụ đề (vd: '[Musik]', '(sanfte Musik)', '(lacht)', '(Off-Stimme)', 'Sprecher:', '♪…♪'); nếu cả câu chỉ là mô tả không phải lời thoại thì trả về đúng \"[SKIP]\".\n" +
     "5. Giữ ĐÚNG số lượng và thứ tự khóa trong `items` (1..N), tuyệt đối không gộp hay bỏ sót câu.\n" +
     'Trả về đúng JSON {"t": {"1": "...", "2": "...", …}}, không giải thích.'
   );

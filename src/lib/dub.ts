@@ -1,5 +1,5 @@
 import "server-only";
-import type { Word } from "./subtitles";
+import { cleanSegmentWords, cleanSubtitleText, type Word } from "./subtitles";
 
 export type DubCue = {
   start_ms: number;
@@ -157,11 +157,7 @@ export function parseSubtitleText(raw: string): DubCue[] {
       const end = parseAssTimeMs(parts[idx.end ?? 2]);
       if (start === null || end === null) continue;
       const style = (parts[idx.style ?? 3] ?? "").trim();
-      const cleaned = (parts[idx.text ?? numFields - 1] ?? "")
-        .replace(/\{[^}]*\}/g, "")
-        .replace(/\\[Nnh]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+      const cleaned = cleanSubtitleText((parts[idx.text ?? numFields - 1] ?? "").replace(/\\[Nnh]/g, " "));
       if (!cleaned) continue;
       all.push({ start_ms: start, end_ms: Math.max(end, start + 100), text: cleaned, style });
     }
@@ -182,13 +178,8 @@ export function parseSubtitleText(raw: string): DubCue[] {
     const start = parseSrtTimeMs(left ?? "");
     const end = parseSrtTimeMs(right ?? "");
     if (start === null || end === null) continue;
-    const cleaned = lines
-      .slice(ti + 1)
-      .join(" ")
-      .replace(/<[^>]+>|\{[^}]*\}/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!cleaned || /^[.\-–—♪♫\s]+$/.test(cleaned)) continue;
+    const cleaned = cleanSubtitleText(lines.slice(ti + 1).join(" "));
+    if (!cleaned) continue;
     cues.push({ start_ms: start, end_ms: Math.max(end, start + 100), text: cleaned });
   }
   return cues.sort((a, b) => a.start_ms - b.start_ms);
@@ -431,6 +422,32 @@ function mergeTinySentences(groups: DubTok[][], isCjk: boolean): DubTok[][] {
   return out;
 }
 
+/** Làm sạch các cue phụ đề đầu vào: bỏ mô tả nhạc, tiếng động, giọng đọc, chú thích phụ đề; khớp lại `words` nếu có. */
+export function cleanDubCues(raw: DubCueInput[]): DubCueInput[] {
+  const out: DubCueInput[] = [];
+  for (const c of raw) {
+    const baseStart = Math.max(0, Math.round(c.start_ms));
+    const end_ms = Math.max(Math.round(c.end_ms), baseStart + 150);
+    if (c.words?.length) {
+      const cleaned = cleanSegmentWords(c.words, c.text);
+      if (!cleaned.text) continue;
+      const firstWordMs = cleaned.words?.[0] ? Math.round(cleaned.words[0][0] * 1000) : baseStart;
+      const start_ms = firstWordMs >= baseStart && firstWordMs < end_ms ? firstWordMs : baseStart;
+      out.push({
+        start_ms,
+        end_ms: Math.max(end_ms, start_ms + 150),
+        text: cleaned.text,
+        ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+      });
+    } else {
+      const text = cleanSubtitleText(c.text);
+      if (!text) continue;
+      out.push({ start_ms: baseStart, end_ms, text });
+    }
+  }
+  return out;
+}
+
 /**
  * Sắp xếp lại phụ đề thành từng CÂU TRỌN VẸN ở mức từng từ:
  * - Tách đúng ngay sau dấu kết thúc câu (. ! ? … 。！？), kể cả khi dấu chấm nằm giữa 1 dòng phụ đề thô
@@ -438,15 +455,7 @@ function mergeTinySentences(groups: DubTok[][], isCjk: boolean): DubTok[][] {
  * - Giữ nguyên cả câu dài trong 1 lần đọc (chỉ tách khẩn cấp khi vượt trần TTS ~350 ký tự / 65 từ / 28 giây).
  */
 export function mergeDubCues(raw: DubCueInput[]): DubCue[] {
-  const cleaned: DubCueInput[] = raw
-    .map((c) => ({
-      start_ms: Math.max(0, Math.round(c.start_ms)),
-      end_ms: Math.max(Math.round(c.end_ms), Math.round(c.start_ms) + 150),
-      text: c.text.replace(/\s+/g, " ").trim(),
-      ...(c.words?.length ? { words: c.words } : {}),
-    }))
-    .filter((c) => c.text && !/^[.\-–—♪♫\s]+$/.test(c.text))
-    .sort((a, b) => a.start_ms - b.start_ms);
+  const cleaned: DubCueInput[] = cleanDubCues(raw).sort((a, b) => a.start_ms - b.start_ms);
 
   if (cleaned.length === 0) return [];
 

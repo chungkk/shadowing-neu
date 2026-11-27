@@ -2,7 +2,7 @@ import { apiAdmin, body, fail, str } from "@/lib/api";
 import { mergeDubCues, parseSubtitleText, type DubCue, type DubCueInput } from "@/lib/dub";
 import { buildTranslateItems, prepareLiveDub, streamPrepareResponse, type PrepareProgress } from "@/lib/dub-live";
 import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
-import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
+import { isDubSkip, translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 
 type PrepareBody = {
   url: unknown;
@@ -90,13 +90,19 @@ export async function POST(req: Request) {
         },
       });
       style = res.style;
-      cues = merged.map((c, i) => ({
-        start_ms: c.start_ms,
-        end_ms: c.end_ms,
-        text: res.translations[i] || "",
-        orig: c.text,
-        ...(res.translations[i] ? {} : { untranslated: true }),
-      }));
+      cues = merged.flatMap((c, i) => {
+        const tr = res.translations[i] || "";
+        if (isDubSkip(tr)) return [];
+        return [
+          {
+            start_ms: c.start_ms,
+            end_ms: c.end_ms,
+            text: tr,
+            orig: c.text,
+            ...(tr ? {} : { untranslated: true }),
+          },
+        ];
+      });
     }
 
     emit?.({ pct: 100, stage: "Hoàn tất!" });

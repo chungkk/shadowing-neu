@@ -133,7 +133,7 @@
   function estimateViDurSec(text, speed) {
     const words = text.trim().split(/\s+/).filter(Boolean).length;
     const pauses = (text.match(/[,;:.!?…]/g) || []).length;
-    return (words * 0.24 + pauses * 0.12 + 0.15) / Math.max(0.75, speed);
+    return (words * 0.27 + pauses * 0.14 + 0.18) / Math.max(0.75, speed);
   }
 
   function truncateTtsText(text, maxChars) {
@@ -175,14 +175,8 @@
       const start = parseTimestampMs(left || "");
       const end = parseTimestampMs(right || "");
       if (start === null || end === null) continue;
-      const cleaned = lines
-        .slice(ti + 1)
-        .join(" ")
-        .replace(/<[^>]+>|\{[^}]*\}/g, "")
-        .replace(/\[[^\]]*\]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (!cleaned || /^[.\-–—♪♫\s]+$/.test(cleaned)) continue;
+      const cleaned = cleanCaptionText(lines.slice(ti + 1).join(" "));
+      if (!cleaned) continue;
       cues.push({ start_ms: start, end_ms: Math.max(end, start + 150), text: cleaned });
     }
     return cues.sort((a, b) => a.start_ms - b.start_ms);
@@ -269,10 +263,11 @@
       let target = null;
       let savedOffset = 0;
       for (const item of queue) {
-        const endAt = item.startedAtCtx + (item.buf.duration - item.baseOffset);
-        if (now >= item.startedAtCtx && now < endAt - 0.15) {
+        const pbRate = item.playbackRate || 1;
+        const endAt = item.startedAtCtx + (item.buf.duration - item.baseOffset) / pbRate;
+        if (now >= item.startedAtCtx && now < endAt - 0.15 / pbRate) {
           target = item;
-          savedOffset = item.baseOffset + (now - item.startedAtCtx);
+          savedOffset = item.baseOffset + (now - item.startedAtCtx) * pbRate;
           break;
         }
       }
@@ -304,12 +299,13 @@
     }
   }
 
-  async function fetchTtsBuffer(text, voiceId, speed) {
+  async function fetchTtsBuffer(text, voiceId, speed, urgent = false) {
     const res = await chrome.runtime.sendMessage({
       type: "hvn:tts",
       text: truncateTtsText(text, EDGE_MAX_CHARS),
       voiceId,
       speed,
+      urgent: Boolean(urgent),
     });
     if (!res?.ok || !res.base64) {
       throw new Error(res?.error || "Không tạo được giọng đọc.");
@@ -318,7 +314,8 @@
     return getAudioCtx().decodeAudioData(ab);
   }
 
-  async function getCueBuffer(cueIndex, vId, spd) {
+  async function getCueBuffer(cueIndex, vId, spd, opts = {}) {
+    const urgent = Boolean(opts && opts.urgent);
     const cue = state.cues[cueIndex];
     if (!cue || cue.pending || !cue.text?.trim()) return null;
 
@@ -331,7 +328,21 @@
       return hit;
     }
     const existing = state.inflightTts.get(key);
-    if (existing) return existing;
+    if (existing) {
+      // Nếu câu đang chờ từ prefetch nay thành câu cần đọc ngay → báo server ưu tiên
+      if (urgent && String(vId).startsWith("piper:")) {
+        void chrome.runtime
+          .sendMessage({
+            type: "hvn:tts",
+            text: truncateTtsText(cue.text, EDGE_MAX_CHARS),
+            voiceId: vId,
+            speed: normSpd,
+            urgent: true,
+          })
+          .catch(() => {});
+      }
+      return existing;
+    }
 
     const p = (async () => {
       try {
@@ -346,11 +357,13 @@
           }
         }
 
-        let buf = await fetchTtsBuffer(cue.text, vId, firstSpd);
-        if (buf && slot > 0.4 && buf.duration > slot + 0.25 && firstSpd < MAX_FIT_SPEED) {
+        let buf = await fetchTtsBuffer(cue.text, vId, firstSpd, urgent);
+        // Câu đang cần phát ngay (`urgent`) KHÔNG chặn thêm 1 vòng TTS nữa; chỉ tinh chỉnh khi đang prefetch ngầm với giọng Edge
+        const isEdge = String(vId).startsWith("edge:");
+        if (!urgent && isEdge && buf && slot > 0.4 && buf.duration > slot + 0.45 && firstSpd < MAX_FIT_SPEED) {
           const need = Math.min(MAX_FIT_SPEED, Math.ceil(((firstSpd * buf.duration) / slot) * 20) / 20);
           if (need > firstSpd) {
-            const fitted = await fetchTtsBuffer(cue.text, vId, need).catch(() => null);
+            const fitted = await fetchTtsBuffer(cue.text, vId, need, false).catch(() => null);
             if (fitted) buf = fitted;
           }
         }
@@ -375,6 +388,27 @@
     return p;
   }
 
+  function prefetchAfter(startIdx, vId, spd) {
+    const isPiper = String(vId).startsWith("piper:");
+    const count = isPiper ? 2 : 3;
+    const endIdx = Math.min(state.cues.length - 1, startIdx + count - 1);
+    if (startIdx > endIdx) return;
+
+    if (isPiper) {
+      // Piper chạy đơn luồng trên server → prefetch tuần tự từng câu để không làm nghẽn hàng đợi
+      void (async () => {
+        for (let k = startIdx; k <= endIdx; k++) {
+          if (!state.enabled || state.settings.voiceId !== vId) break;
+          await getCueBuffer(k, vId, spd, { urgent: false });
+        }
+      })();
+    } else {
+      for (let k = startIdx; k <= endIdx; k++) {
+        void getCueBuffer(k, vId, spd, { urgent: false });
+      }
+    }
+  }
+
   function resumeSpeech() {
     const ctx = getAudioCtx();
     const gain = state.gain;
@@ -393,8 +427,9 @@
       return;
     }
 
+    const pbRate = pb.playbackRate || 1;
     const offset = pb.pausedOffset;
-    const remaining = pb.buf.duration - offset;
+    const remaining = (pb.buf.duration - offset) / pbRate;
     if (remaining <= 0.12) {
       state.playback = null;
       return;
@@ -403,6 +438,7 @@
     const now = ctx.currentTime;
     const src = ctx.createBufferSource();
     src.buffer = pb.buf;
+    src.playbackRate.value = pbRate;
     src.connect(gain);
     src.start(now, offset);
     state.activeSrcs.add(src);
@@ -419,9 +455,7 @@
       }
     };
 
-    for (let k = pb.cueIndex + 1; k <= Math.min(state.cues.length - 1, pb.cueIndex + 4); k++) {
-      void getCueBuffer(k, vId, spd);
-    }
+    prefetchAfter(pb.cueIndex + 1, vId, spd);
   }
 
   async function speakCue(cueIndex, isSeek) {
@@ -430,11 +464,8 @@
     const { voiceId: vId, speed: spd } = state.settings;
     const myStopGen = state.stopGen;
 
-    for (let k = cueIndex + 1; k <= Math.min(state.cues.length - 1, cueIndex + 4); k++) {
-      void getCueBuffer(k, vId, spd);
-    }
-
-    const buf = await getCueBuffer(cueIndex, vId, spd);
+    // Luôn ưu tiên tải xong câu đang cần đọc TRƯỚC rồi mới prefetch các câu tiếp theo
+    const buf = await getCueBuffer(cueIndex, vId, spd, { urgent: true });
     if (!buf) return;
 
     if (myStopGen !== state.stopGen || !state.enabled || !state.video || state.video.paused || state.video.ended) {
@@ -444,6 +475,8 @@
       return;
     }
     if (state.lastSpokenIdx !== cueIndex || state.settings.voiceId !== vId) return;
+
+    prefetchAfter(cueIndex + 1, vId, spd);
 
     const ctx = getAudioCtx();
     const gain = state.gain;
@@ -461,10 +494,17 @@
       stopActiveSources();
     }
 
+    const next = state.cues[cueIndex + 1];
+    const rate = Math.round(((state.video && state.video.playbackRate) || 1) * 20) / 20;
+    const slot = next ? (next.start_ms - state.cues[cueIndex].start_ms) / 1000 / rate - 0.1 : 0;
+    const pbRate = slot > 0.4 && buf.duration > slot + 0.3 ? Math.min(1.12, buf.duration / slot) : 1;
+    const effectiveDur = buf.duration / pbRate;
+
     const now = ctx.currentTime;
     const startAt = Math.max(now, state.audioEndAt + 0.02);
     const src = ctx.createBufferSource();
     src.buffer = buf;
+    src.playbackRate.value = pbRate;
     src.connect(gain);
     src.start(startAt);
     state.activeSrcs.add(src);
@@ -474,12 +514,13 @@
       buf,
       startedAtCtx: startAt,
       baseOffset: 0,
+      playbackRate: pbRate,
       voiceId: vId,
       pausedOffset: null,
     };
     state.scheduled.push(pb);
     if (state.scheduled.length === 1) state.playback = pb;
-    state.audioEndAt = startAt + buf.duration;
+    state.audioEndAt = startAt + effectiveDur;
 
     src.onended = () => {
       state.activeSrcs.delete(src);
@@ -585,11 +626,66 @@
       .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
   }
 
+  const SDH_DESC_RE =
+    /musik|klänge|klang|melodie|gesang|singt|singen|gesungen|summt|summen|lied|song|jingle|intro|outro|abspann|vorspann|titelmelodie|gitarre|klavier|piano|trommel|geige|bass|beat|takt|chor|orchester|streicher|synthesizer|rhythmus|rhythmisch|elektronisch|instrument|musikstück|soundtrack|music|singing|sings|humming|hums|choral|choir|guitar|violin|drums|melody|tune|theme|bgm|nhạc|âm\s+nhạc|ca\s+hát|ngân\s+nga|musique|música|音楽|歌|音乐|음악|applaus|beifall|klatsch\w*|jubel\w*|gelächter|lach\w*|kicher\w*|schmunzel\w*|seufz\w*|stöhn\w*|keuch\w*|hust\w*|nies\w*|räusper\w*|schnauf\w*|schnaub\w*|schnarch\w*|gähn\w*|pfeif\w*|weint|weinen|schluchz\w*|schreit|schreien|brüllt|brüllen|flüster\w*|murmel\w*|nuschel\w*|stotter\w*|kreisch\w*|zisch\w*|knurr\w*|bellt|bellen|miaut|zwitscher\w*|piep\w*|klingel\w*|läute\w*|klopf\w*|hämmert|knall\w*|krach\w*|donner\w*|raschel\w*|rauschen|rauscht|brumm\w*|surr\w*|klick\w*|ticken|tickt|quiet\w*|hupt|hupen|sirene|motor|schritte|tür|fenster|wind|regen|explosion|schuss|schüsse|stille|pause|ruhe|geräusch\w*|lärm|krächz\w*|knarr\w*|polter\w*|klirr\w*|plätsch\w*|schmatz\w*|atmet|atmen|unverständlich|undeutlich|durcheinander|stimmengewirr|gemurmel|hintergrund\w*|applause|clapping|claps|cheering|cheers|laughter|laughing|laughs|chuckles|chuckling|giggles|giggling|sighs|sighing|groans|groaning|gasps|gasping|coughs|coughing|sneezes|sneezing|clears\s+throat|snorts|snores|yawns|whistles|whistling|crying|cries|sobbing|sobs|weeping|screaming|screams|shouting|shouts|yelling|yells|whispering|whispers|mumbling|mumbles|murmuring|murmurs|stuttering|shrieks|hisses|growls|barking|barks|meows|chirping|beeping|beeps|ringing|rings|knocking|knocks|banging|bangs|slamming|slams|crashing|thunder|rustling|buzzing|clicking|clicks|ticking|honking|siren|engine|footsteps|explosion|gunshot|silence|silent|pause|noise|sound|sfx|inaudible|indistinct|unintelligible|crosstalk|chatter|overlapping|vỗ\s+tay|reo\s+hò|hoan\s+hô|tiếng\s+cười|\bcười\b|khúc\s+khích|thở\s+dài|rên|thở\s+hổn\s+hển|\bho\b|hắt\s+hơi|hắng\s+giọng|ngáy|ngáp|huýt\s+sáo|khóc|nức\s+nở|\bhét\b|la\s+hét|thì\s+thầm|lẩm\s+bẩm|tiếng\s+động|tiếng\s+ồn|âm\s+thanh|tiếng\s+\p{L}+|im\s+lặng|tĩnh\s+lặng|không\s+nghe\s+rõ|nghe\s+không\s+rõ|拍手|笑い|歓声|ため息|効果音|無音|掌声|笑声|박수|웃음|sprecher\w*|erzähler\w*|moderator\w*|reporter\w*|ansager\w*|kommentator\w*|stimme\w*|off[\s-]?stimme|aus\s+dem\s+off|^off$|voice[\s-]?over|narrator|announcer|commentator|speaker|interviewer|anchor|male\s+voice|female\s+voice|child'?s\s+voice|robotic\s+voice|computer\s+voice|automated\s+voice|on\s+(?:phone|radio|tv)|over\s+(?:speaker|radio|pa)|through\s+phone|im\s+(?:radio|fernsehen)|am\s+telefon|übers\s+telefon|durch\s+lautsprecher|archiv\w*|o-?ton|einspieler|untertitel|amara\.org|fremdsprach\w*|spricht\s+(?:englisch|französisch|spanisch|italienisch|türkisch|arabisch|russisch|chinesisch|japanisch|polnisch|deutsch|leise|laut|schnell|langsam|hektisch|aufgeregt|traurig|wütend|fröhlich|ernst|ironisch|sarkastisch)|speaking\s+(?:foreign|in\s+\p{L}+|softly|loudly|quietly|quickly|slowly|angrily|sadly|happily|sarcastically|german|english|french|spanish|arabic|russian|chinese|japanese|vietnamese)|giọng\s+(?:đọc|nói|nam|nữ|trẻ\s+em|người\s+dẫn|thuyết\s+minh|máy|nhỏ|lớn|trầm|cao|run|khàn|tức\s+giận|buồn|vui)|người\s+dẫn\s+chuyện|thuyết\s+minh|lồng\s+tiếng|bình\s+luận\s+viên|phát\s+thanh\s+viên|ngoại\s+ngữ|tiếng\s+nước\s+ngoài|nói\s+(?:nhỏ|to|nhanh|chậm)|qua\s+(?:điện\s+thoại|loa)|phụ\s+đề|^(?:leise|laut|ironisch|sarkastisch|ernst|traurig|wütend|fröhlich|erstaunt|überrascht|verwirrt|genervt|aufgeregt|entsetzt|skeptisch|nachdenklich|zögernd|spöttisch|energisch|sanft|ruhig|dynamisch|dramatisch|bedrohlich|düster|heiter|beschwingt|rockig|melancholisch|spannend|spannungsvoll|softly|quietly|loudly|sarcastically|angrily|sadly|happily|excitedly|nervously|hesitantly|mockingly|dramatically|whispered|muffled)$/iu;
+
+  const SPEAKER_PREFIX_RE =
+    /^(?:[-–—]\s*)?(?:off[\s-]?stimme|stimme\s+aus\s+dem\s+off|stimme|off|sprecher(?:in)?|erzähler(?:in)?|moderator(?:in)?|reporter(?:in)?|ansager(?:in)?|kommentator(?:in)?|frauenstimme|männerstimme|kinderstimme|computerstimme|roboterstimme|narrator|voice[\s-]?over|voiceover|announcer|commentator|host|speaker(?:\s*\d+)?|interviewer|male\s+voice|female\s+voice|giọng\s+đọc|giọng\s+nói|giọng\s+nam|giọng\s+nữ|giọng\s+thuyết\s+minh|người\s+dẫn\s+chuyện|người\s+dẫn|thuyết\s+minh|lồng\s+tiếng|bình\s+luận\s+viên|phát\s+thanh\s+viên|mc)\s*:\s*/iu;
+
+  const CREDIT_LINE_RE =
+    /^(?:untertitel\s+(?:von|im\s+auftrag|der|des|:)|subtitles?\s+(?:by|:)|captions?\s+(?:by|:)|closed\s+captions?\b|phụ\s+đề\s+(?:bởi|:)|việt\s*sub\b|amara\.org)/iu;
+
   function cleanCaptionText(s) {
-    return decodeHtmlEntities(String(s || "").replace(/<[^>]+>/g, ""))
-      .replace(/\[[^\]]*\]/g, "")
+    let out = decodeHtmlEntities(String(s || "").replace(/<[^>]+>|\{[^}]*\}/g, ""))
+      .replace(/\[[^\]]*\]|［[^］]*］|【[^】]*】/g, " ")
+      .replace(/[♪♫♬🎵🎶][^♪♫♬🎵🎶]*[♪♫♬🎵🎶]/g, " ");
+
+    if (/^[\s–—-]*[♪♫♬🎵🎶]/.test(out)) return "";
+    out = out.replace(/[♪♫♬🎵🎶]+/g, " ");
+    if (/^[\s–—-]*([（(][^()（）]{1,140}[）)][\s–—.,!?;:]*)+$/.test(out)) return "";
+
+    out = out
+      .replace(/[（(]([^()（）]{1,120})[）)]/g, (full, inner) => (SDH_DESC_RE.test(inner.trim()) ? " " : full))
+      .replace(/(^|\s)\*([^*]{1,60})\*(?=\s|$|[.,!?;:])/g, (full, sp, inner) =>
+        SDH_DESC_RE.test(inner.trim()) ? sp : full,
+      )
+      .replace(/(?:^|\s)>>+\s*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(SPEAKER_PREFIX_RE, "")
       .replace(/\s+/g, " ")
       .trim();
+
+    if (!out || CREDIT_LINE_RE.test(out) || !/[\p{L}\p{N}]/u.test(out)) return "";
+    return out;
+  }
+
+  function cleanWordTimings(rawWords, rawJoined) {
+    const rawTokens = [];
+    for (const w of rawWords) {
+      const t = decodeHtmlEntities(String(w[1] || "").replace(/<[^>]+>|\{[^}]*\}/g, "")).trim();
+      if (t) rawTokens.push([w[0], t]);
+    }
+    const joined = rawJoined !== undefined ? rawJoined : rawTokens.map((w) => w[1]).join(" ");
+    const cleaned = cleanCaptionText(joined);
+    if (!cleaned) return { text: "" };
+    if (rawTokens.length && rawTokens.map((w) => w[1]).join(" ") === cleaned) {
+      return { text: cleaned, words: rawTokens };
+    }
+    if (!rawTokens.length) return { text: cleaned };
+
+    const cleanTokens = cleaned.split(/\s+/);
+    const aligned = [];
+    let ri = 0;
+    for (const tok of cleanTokens) {
+      while (ri < rawTokens.length && rawTokens[ri][1] !== tok && !rawTokens[ri][1].includes(tok)) {
+        ri++;
+      }
+      if (ri >= rawTokens.length) return { text: cleaned };
+      aligned.push([rawTokens[ri][0], tok]);
+      ri++;
+    }
+    return { text: cleaned, words: aligned };
   }
 
   function extractJsonObjectAfter(html, markerRe) {
@@ -631,25 +727,25 @@
       if (!Array.isArray(ev?.segs) || typeof ev.tStartMs !== "number") continue;
       const startMs = Math.max(0, Math.round(ev.tStartMs));
       const endMs = startMs + Math.max(200, Math.round(ev.dDurationMs || 3000));
-      const words = [];
+      const rawWords = [];
       let combined = "";
       for (const seg of ev.segs) {
         const raw = typeof seg?.utf8 === "string" ? seg.utf8 : "";
         if (!raw || raw === "\n") continue;
         combined += raw;
-        const w = cleanCaptionText(raw);
+        const w = decodeHtmlEntities(raw.replace(/<[^>]+>|\{[^}]*\}/g, "")).trim();
         if (w) {
           const wStartSec = (startMs + (Number(seg.tOffsetMs) || 0)) / 1000;
-          words.push([wStartSec, w]);
+          rawWords.push([wStartSec, w]);
         }
       }
-      const text = cleanCaptionText(combined);
-      if (!text) continue;
+      const cleaned = cleanWordTimings(rawWords, combined);
+      if (!cleaned.text) continue;
       cues.push({
-        start_ms: words.length ? Math.round(words[0][0] * 1000) : startMs,
+        start_ms: cleaned.words?.length ? Math.round(cleaned.words[0][0] * 1000) : startMs,
         end_ms: endMs,
-        text,
-        ...(words.length > 1 ? { words } : {}),
+        text: cleaned.text,
+        ...(cleaned.words?.length > 1 ? { words: cleaned.words } : {}),
       });
     }
     return cues;
@@ -660,19 +756,25 @@
     for (const m of xml.matchAll(/<p t="(\d+)"(?: d="(\d+)")?[^>]*>([\s\S]*?)<\/p>/g)) {
       const startMs = Number(m[1]);
       const endMs = startMs + Number(m[2] || 3000);
-      const words = [];
-      for (const s of m[3].matchAll(/<s(?: t="(\d+)")?[^>]*>([\s\S]*?)<\/s>/g)) {
-        const w = cleanCaptionText(s[2]);
-        if (w) words.push([(startMs + Number(s[1] || 0)) / 1000, w]);
+      const rawMatches = [...m[3].matchAll(/<s(?: t="(\d+)")?[^>]*>([\s\S]*?)<\/s>/g)];
+      if (rawMatches.length) {
+        const rawJoined = rawMatches.map((s) => s[2]).join("");
+        const rawWords = rawMatches
+          .map((s) => [(startMs + Number(s[1] || 0)) / 1000, s[2]])
+          .filter((w) => String(w[1] || "").trim());
+        const cleaned = cleanWordTimings(rawWords, rawJoined);
+        if (!cleaned.text) continue;
+        cues.push({
+          start_ms: cleaned.words?.length ? Math.round(cleaned.words[0][0] * 1000) : startMs,
+          end_ms: endMs,
+          text: cleaned.text,
+          ...(cleaned.words?.length > 1 ? { words: cleaned.words } : {}),
+        });
+      } else {
+        const text = cleanCaptionText(m[3]);
+        if (!text) continue;
+        cues.push({ start_ms: startMs, end_ms: endMs, text });
       }
-      const text = words.length ? words.map((w) => w[1]).join(" ") : cleanCaptionText(m[3]);
-      if (!text) continue;
-      cues.push({
-        start_ms: words.length ? Math.round(words[0][0] * 1000) : startMs,
-        end_ms: endMs,
-        text,
-        ...(words.length > 1 ? { words } : {}),
-      });
     }
     if (!cues.length) {
       for (const m of xml.matchAll(/<text start="([\d.]+)"(?: dur="([\d.]+)")?[^>]*>([\s\S]*?)<\/text>/g)) {
@@ -989,13 +1091,15 @@
           updateYtButton();
           renderHud();
           if (firstReady) {
-            // Prefetch 3 câu quanh vị trí hiện tại ngay lập tức
+            // Tải câu đang đứng trước (`urgent`), xong mới prefetch các câu kế tiếp
             const curSec = state.video ? state.video.currentTime * 1000 : 0;
             const curMatch = state.cues.findIndex((c) => curSec <= c.end_ms + 800);
             const start = Math.max(0, curMatch >= 0 ? curMatch : 0);
-            for (let k = start; k < Math.min(start + 3, state.cues.length); k++) {
-              void getCueBuffer(k, state.settings.voiceId, state.settings.speed);
-            }
+            void getCueBuffer(start, state.settings.voiceId, state.settings.speed, { urgent: true }).then(() => {
+              if (state.streamRunId === runId && state.enabled) {
+                prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
+              }
+            });
           }
           return;
         }
@@ -1018,6 +1122,11 @@
           state.cues = next;
           syncActiveCueFromVideo();
           renderHud();
+          const active = Math.max(0, state.activeCueIdx);
+          const chunkEnd = msg.start + msg.translations.length - 1;
+          if (chunkEnd >= active && msg.start <= active + 3) {
+            prefetchAfter(active + 1, state.settings.voiceId, state.settings.speed);
+          }
           return;
         }
 
@@ -1042,9 +1151,11 @@
             const curSec = state.video ? state.video.currentTime * 1000 : 0;
             const curMatch = state.cues.findIndex((c) => curSec <= c.end_ms + 800);
             const start = Math.max(0, curMatch >= 0 ? curMatch : 0);
-            for (let k = start; k < Math.min(start + 3, state.cues.length); k++) {
-              void getCueBuffer(k, state.settings.voiceId, state.settings.speed);
-            }
+            void getCueBuffer(start, state.settings.voiceId, state.settings.speed, { urgent: true }).then(() => {
+              if (state.streamRunId === runId && state.enabled) {
+                prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
+              }
+            });
           }
           return;
         }

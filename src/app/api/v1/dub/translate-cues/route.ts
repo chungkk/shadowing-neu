@@ -2,11 +2,12 @@ import { createHash } from "node:crypto";
 import { body, fail, str } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { getCached, setCached } from "@/lib/db";
-import { mergeDubCues, type DubCue, type DubCueInput } from "@/lib/dub";
+import { cleanDubCues, mergeDubCues, type DubCue, type DubCueInput } from "@/lib/dub";
 import {
   buildTranslateItems,
   ensurePunctuatedCues,
   getCachedLiveDub,
+  sanitizeCachedLiveDub,
   saveCachedLiveDub,
   streamPrepareResponse,
   type LiveDubCue,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/dub-live";
 import { allow, clientIp } from "@/lib/rate-limit";
 import type { Word } from "@/lib/subtitles";
-import { translateForDubbingSmart, translationEnabled } from "@/lib/translate";
+import { isDubSkip, translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 import { extractVideoId } from "@/lib/youtube-id";
 
 type TranslateCuesBody = {
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const rawCues = parseRawCues(b.cues);
+  const rawCues = cleanDubCues(parseRawCues(b.cues));
   if (!rawCues.length) return fail("Không tìm thấy phụ đề hợp lệ để thuyết minh.");
 
   const user = await getCurrentUser();
@@ -113,8 +114,8 @@ export async function POST(req: Request) {
     .digest("hex");
   const cacheKey = `${CACHE_PREFIX}${hash}`;
 
-  const cached = getCached<LiveDubResult>(cacheKey);
-  if (cached && cached.cues?.length) {
+  const cached = sanitizeCachedLiveDub(getCached<LiveDubResult>(cacheKey));
+  if (cached) {
     if (wantStream) {
       return streamPrepareResponse(async (emit) => {
         emit({ pct: 100, stage: "Sẵn sàng" });
@@ -182,14 +183,16 @@ export async function POST(req: Request) {
             emit?.({ pct, stage: "Đang tạo thuyết minh…", done, total });
           },
           onChunk: ({ start, translations, done, total }) => {
-            translations.forEach((tr, k) => {
+            const cleanChunk = translations.map((tr) => (isDubSkip(tr) ? "" : tr));
+            cleanChunk.forEach((tr, k) => {
               const idx = start + k;
+              const rawTr = translations[k];
               workingCues[idx] = {
                 start_ms: merged[idx].start_ms,
                 end_ms: merged[idx].end_ms,
                 text: tr,
                 orig: merged[idx].text,
-                ...(tr ? {} : { untranslated: true }),
+                ...(!rawTr ? { untranslated: true } : {}),
               };
             });
             const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 98;
@@ -208,18 +211,24 @@ export async function POST(req: Request) {
                 total,
               });
             } else if (sentReady) {
-              emitEvent?.({ type: "chunk", start, translations, pct, done, total });
+              emitEvent?.({ type: "chunk", start, translations: cleanChunk, pct, done, total });
             }
           },
         });
         style = res.style;
-        cues = merged.map((c, i) => ({
-          start_ms: c.start_ms,
-          end_ms: c.end_ms,
-          text: res.translations[i] || "",
-          orig: c.text,
-          ...(res.translations[i] ? {} : { untranslated: true }),
-        }));
+        cues = merged.flatMap((c, i) => {
+          const tr = res.translations[i] || "";
+          if (isDubSkip(tr)) return [];
+          return [
+            {
+              start_ms: c.start_ms,
+              end_ms: c.end_ms,
+              text: tr,
+              orig: c.text,
+              ...(tr ? {} : { untranslated: true }),
+            },
+          ];
+        });
       }
 
       const result: LiveDubResult = {

@@ -40,6 +40,17 @@ const DICT_URL = "https://hallovn.de/download/media/kokoro/sea_g2p.bin";
 const ORT_REMOTE_BASE = "https://hallovn.de/download/media/kokoro/ort/";
 const KOKORO_DIR = path.join(TTS_DIR, "kokoro");
 
+export type PiperPriority = "urgent" | "normal";
+
+type QueuedPiperJob = {
+  key: string;
+  priority: PiperPriority;
+  signal?: AbortSignal;
+  run: () => Promise<Buffer>;
+  resolve: (b: Buffer) => void;
+  reject: (e: unknown) => void;
+};
+
 type OrtModule = typeof import("onnxruntime-web");
 type OrtSession = import("onnxruntime-web").InferenceSession;
 
@@ -50,7 +61,9 @@ const gd = globalThis as unknown as {
     sessions: Map<ServerPiperVoiceId, OrtSession>;
     loading: Map<ServerPiperVoiceId, Promise<OrtSession>>;
     pending: Map<string, Promise<Buffer>>;
-    chain: Promise<unknown>;
+    urgentQueue: QueuedPiperJob[];
+    normalQueue: QueuedPiperJob[];
+    running: boolean;
   };
 };
 
@@ -60,8 +73,14 @@ const state = (gd.__serverPiper ??= {
   sessions: new Map(),
   loading: new Map(),
   pending: new Map(),
-  chain: Promise.resolve(),
+  urgentQueue: [],
+  normalQueue: [],
+  running: false,
 });
+// Bảo đảm giữ tương thích nếu singleton đã khởi tạo trước hot-reload
+state.urgentQueue ??= [];
+state.normalQueue ??= [];
+state.running ??= false;
 
 function cacheFileFor(voiceId: ServerPiperVoiceId, speed: number, text: string): string {
   const ver = SERVER_PIPER_VOICES[voiceId].cacheVer;
@@ -201,67 +220,111 @@ function pcmToWav(pcm: Float32Array, sampleRate: number): Buffer {
   return buf;
 }
 
-function runInference(voiceId: ServerPiperVoiceId, text: string, speed: number): Promise<Buffer> {
-  const job = state.chain.then(async () => {
-    const sess = await ensureSession(voiceId);
-    const ort = state.ort!;
-    const dict = state.dict!;
-
-    const { chunks } = phonemizeChunks(text, dict, config.vocab, {
-      enableGerman: SERVER_PIPER_VOICES[voiceId].enableGerman,
-    });
-    const parts: Float32Array[] = [];
-    let totalLen = 0;
-    const clampedSpeed = Math.min(1.5, Math.max(0.75, speed));
-    const lengthScale = 1.0 / clampedSpeed;
-
-    for (const chunk of chunks) {
-      const inner = chunk.tokens.filter((tok) => tok > 0);
-      if (!inner.length) continue;
-
-      const ids = new BigInt64Array(inner.length * 2 + 3);
-      const pad = BigInt(0);
-      ids[0] = BigInt(178);
-      ids[1] = pad;
-      for (let i = 0; i < inner.length; i++) {
-        ids[2 + i * 2] = BigInt(inner[i]);
-        ids[3 + i * 2] = pad;
-      }
-      ids[ids.length - 1] = BigInt(179);
-
-      const out = await sess.run({
-        input: new ort.Tensor("int64", ids, [1, ids.length]),
-        input_lengths: new ort.Tensor("int64", BigInt64Array.of(BigInt(ids.length)), [1]),
-        scales: new ort.Tensor("float32", new Float32Array([0.667, lengthScale, 0.8]), [3]),
+function drainPiperQueue() {
+  if (state.running) return;
+  while (state.urgentQueue.length || state.normalQueue.length) {
+    const job = state.urgentQueue.shift() ?? state.normalQueue.shift()!;
+    if (job.signal?.aborted) {
+      job.reject(new Error("Đã huỷ yêu cầu giọng đọc."));
+      continue;
+    }
+    state.running = true;
+    job
+      .run()
+      .then(job.resolve, job.reject)
+      .finally(() => {
+        state.running = false;
+        drainPiperQueue();
       });
-      const raw = out.output?.data as Float32Array | undefined;
-      if (raw && raw.length) {
-        const trimmed = trimSilenceAndFade(raw, PIPER_SAMPLE_RATE);
-        if (trimmed.length) {
-          parts.push(trimmed);
-          totalLen += trimmed.length;
-        }
+    return;
+  }
+}
+
+async function runInferenceOnce(voiceId: ServerPiperVoiceId, text: string, speed: number): Promise<Buffer> {
+  const sess = await ensureSession(voiceId);
+  const ort = state.ort!;
+  const dict = state.dict!;
+
+  const { chunks } = phonemizeChunks(text, dict, config.vocab, {
+    enableGerman: SERVER_PIPER_VOICES[voiceId].enableGerman,
+  });
+  const parts: Float32Array[] = [];
+  let totalLen = 0;
+  const clampedSpeed = Math.min(1.5, Math.max(0.75, speed));
+  const lengthScale = 1.0 / clampedSpeed;
+
+  for (const chunk of chunks) {
+    const inner = chunk.tokens.filter((tok) => tok > 0);
+    if (!inner.length) continue;
+
+    const ids = new BigInt64Array(inner.length * 2 + 3);
+    const pad = BigInt(0);
+    ids[0] = BigInt(178);
+    ids[1] = pad;
+    for (let i = 0; i < inner.length; i++) {
+      ids[2 + i * 2] = BigInt(inner[i]);
+      ids[3 + i * 2] = pad;
+    }
+    ids[ids.length - 1] = BigInt(179);
+
+    const out = await sess.run({
+      input: new ort.Tensor("int64", ids, [1, ids.length]),
+      input_lengths: new ort.Tensor("int64", BigInt64Array.of(BigInt(ids.length)), [1]),
+      scales: new ort.Tensor("float32", new Float32Array([0.667, lengthScale, 0.8]), [3]),
+    });
+    const raw = out.output?.data as Float32Array | undefined;
+    if (raw && raw.length) {
+      const trimmed = trimSilenceAndFade(raw, PIPER_SAMPLE_RATE);
+      if (trimmed.length) {
+        parts.push(trimmed);
+        totalLen += trimmed.length;
       }
     }
+  }
 
-    const merged = new Float32Array(totalLen);
-    let pos = 0;
-    for (const p of parts) {
-      merged.set(p, pos);
-      pos += p.length;
-    }
-    return pcmToWav(merged, PIPER_SAMPLE_RATE);
+  const merged = new Float32Array(totalLen);
+  let pos = 0;
+  for (const p of parts) {
+    merged.set(p, pos);
+    pos += p.length;
+  }
+  return pcmToWav(merged, PIPER_SAMPLE_RATE);
+}
+
+function enqueueInference(
+  key: string,
+  priority: PiperPriority,
+  signal: AbortSignal | undefined,
+  run: () => Promise<Buffer>,
+): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
+    const item: QueuedPiperJob = { key, priority, signal, run, resolve, reject };
+    if (priority === "urgent") state.urgentQueue.push(item);
+    else state.normalQueue.push(item);
+    drainPiperQueue();
   });
+}
 
-  state.chain = job.catch(() => {});
-  return job;
+function promoteQueuedPiperJob(key: string, signal?: AbortSignal) {
+  const idx = state.normalQueue.findIndex((j) => j.key === key);
+  if (idx === -1) return;
+  const [job] = state.normalQueue.splice(idx, 1);
+  job.priority = "urgent";
+  job.signal = signal;
+  state.urgentQueue.push(job);
 }
 
 /** Tạo (hoặc lấy từ cache đĩa) WAV tiếng Việt bằng model Piper ONNX (Adam bựa / Lạc Phi) ngay trên server. */
-export async function synthesizePiperDub(text: string, voiceId: ServerPiperVoiceId, speed = 1.15): Promise<Buffer> {
+export async function synthesizePiperDub(
+  text: string,
+  voiceId: ServerPiperVoiceId,
+  speed = 1.15,
+  opts?: { priority?: PiperPriority; signal?: AbortSignal },
+): Promise<Buffer> {
   const clean = text.replace(/\s+/g, " ").trim();
   const spd = normalizeEdgeSpeed(speed);
   const file = cacheFileFor(voiceId, spd, clean);
+  const priority: PiperPriority = opts?.priority ?? "normal";
 
   try {
     const data = await fs.promises.readFile(file);
@@ -270,22 +333,25 @@ export async function synthesizePiperDub(text: string, voiceId: ServerPiperVoice
   } catch {}
 
   let job = state.pending.get(file);
-  if (!job) {
-    job = (async () => {
-      const wav = await runInference(voiceId, clean, spd);
-      await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
-      const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
-      try {
-        await fs.promises.writeFile(tmp, wav);
-        await fs.promises.rename(tmp, file);
-      } catch (e) {
-        await fs.promises.rm(tmp, { force: true }).catch(() => {});
-        throw e;
-      }
-      noteDubTtsCacheWrite(wav.byteLength);
-      return wav;
-    })().finally(() => state.pending.delete(file));
-    state.pending.set(file, job);
+  if (job) {
+    if (priority === "urgent") promoteQueuedPiperJob(file, opts?.signal);
+    return job;
   }
+
+  job = (async () => {
+    const wav = await enqueueInference(file, priority, opts?.signal, () => runInferenceOnce(voiceId, clean, spd));
+    await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
+    const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+    try {
+      await fs.promises.writeFile(tmp, wav);
+      await fs.promises.rename(tmp, file);
+    } catch (e) {
+      await fs.promises.rm(tmp, { force: true }).catch(() => {});
+      throw e;
+    }
+    noteDubTtsCacheWrite(wav.byteLength);
+    return wav;
+  })().finally(() => state.pending.delete(file));
+  state.pending.set(file, job);
   return job;
 }

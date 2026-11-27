@@ -1,10 +1,10 @@
 import "server-only";
 import { connection } from "next/server";
 import { getCached, setCached } from "./db";
-import { dubEnabled, dubJson, mergeDubCues, type DubCue, type DubCueInput } from "./dub";
+import { cleanDubCues, dubEnabled, dubJson, mergeDubCues, type DubCue, type DubCueInput } from "./dub";
 import { addPunctuation, lacksPunctuation, punctuationEnabled } from "./punctuate";
-import type { Segment } from "./subtitles";
-import { translateDubRepair, translateForDubbingSmart, translationEnabled, type DubStyleCard } from "./translate";
+import { cleanSubtitleText, type Segment } from "./subtitles";
+import { isDubSkip, translateDubRepair, translateForDubbingSmart, translationEnabled, type DubStyleCard } from "./translate";
 import { whisperEnabled } from "./whisper";
 import { fetchAnyYouTubeSubtitles, transcribeAnyYouTubeAudio, VideoTooLongError } from "./youtube";
 
@@ -65,9 +65,26 @@ const REPAIR_AFTER_MS = 10 * 60_000;
 
 const hasUntranslated = (r: LiveDubResult) => r.cues.some((c) => c.untranslated);
 
+/** Lọc bỏ các câu mô tả âm thanh / nhạc / giọng đọc còn sót trong bản cache cũ trước khi phát. */
+export function sanitizeCachedLiveDub(r: LiveDubResult | null): LiveDubResult | null {
+  if (!r || !Array.isArray(r.cues) || !r.cues.length) return null;
+  const cues: LiveDubCue[] = [];
+  for (const c of r.cues) {
+    if (c.orig !== undefined && !cleanSubtitleText(c.orig)) continue;
+    if (c.pending || c.untranslated) {
+      cues.push(c);
+      continue;
+    }
+    if (isDubSkip(c.text)) continue;
+    const text = cleanSubtitleText(c.text);
+    if (!text) continue;
+    cues.push({ ...c, text });
+  }
+  return cues.length ? { ...r, cues } : null;
+}
+
 function readCachedLiveDub(videoId: string): LiveDubResult | null {
-  const hit = getCached<LiveDubResult>(`${CACHE_PREFIX}${videoId}`);
-  return hit && Array.isArray(hit.cues) && hit.cues.length > 0 ? hit : null;
+  return sanitizeCachedLiveDub(getCached<LiveDubResult>(`${CACHE_PREFIX}${videoId}`));
 }
 
 /** Bản cache dùng được ngay; null nếu chưa có hoặc còn câu lỗi đã đến hạn dịch bù. */
@@ -263,24 +280,27 @@ export async function prepareLiveDub(
               const idx = start + k;
               const origCue = entry.partial!.data.cues[idx];
               if (origCue) {
+                const skip = isDubSkip(tr);
                 entry.partial!.data.cues[idx] = {
                   start_ms: origCue.start_ms,
                   end_ms: origCue.end_ms,
-                  text: tr,
+                  text: skip ? "" : tr,
                   orig: origCue.orig,
-                  ...(tr ? {} : { untranslated: true }),
+                  ...(!tr ? { untranslated: true } : {}),
                 };
               }
             });
           }
-          broadcast({ type: "chunk", start, translations, pct, done: doneNow, total });
+          const cleanChunk = translations.map((tr) => (isDubSkip(tr) ? "" : tr));
+          broadcast({ type: "chunk", start, translations: cleanChunk, pct, done: doneNow, total });
         },
       });
       const repaired = finalizeResult({
         ...stale,
-        cues: stale.cues.map((c, i) => {
+        cues: stale.cues.flatMap((c, i) => {
           const tr = fixed.get(i);
-          return tr ? { start_ms: c.start_ms, end_ms: c.end_ms, text: tr, orig: c.orig } : c;
+          if (tr && isDubSkip(tr)) return [];
+          return [tr ? { start_ms: c.start_ms, end_ms: c.end_ms, text: tr, orig: c.orig } : c];
         }),
       });
       setCached(`${CACHE_PREFIX}${videoId}`, repaired, null);
@@ -312,7 +332,7 @@ export async function prepareLiveDub(
             body: { url, lang: chosen.lang, auto: chosen.auto },
             timeoutMs: 20_000,
           });
-          rawCues = subRes.cues;
+          rawCues = cleanDubCues(subRes.cues);
           sourceLang = (subRes.lang || chosen.lang || "auto").toLowerCase();
         }
       } catch (e) {
@@ -333,7 +353,7 @@ export async function prepareLiveDub(
       if (anySub && anySub.segments.length) {
         title = title || anySub.title;
         sourceLang = anySub.lang.toLowerCase();
-        rawCues = segmentsToCues(anySub.segments);
+        rawCues = cleanDubCues(segmentsToCues(anySub.segments));
       }
     }
 
@@ -346,7 +366,7 @@ export async function prepareLiveDub(
         skipPunctuate: true,
       });
       title = title || tr.title;
-      rawCues = segmentsToCues(tr.segments);
+      rawCues = cleanDubCues(segmentsToCues(tr.segments));
       sourceLang = looksVietnameseCues(rawCues) ? "vi" : "auto";
     }
 
@@ -400,14 +420,16 @@ export async function prepareLiveDub(
           }
         },
         onChunk: ({ start, translations, done, total }) => {
-          translations.forEach((tr, k) => {
+          const cleanChunk = translations.map((tr) => (isDubSkip(tr) ? "" : tr));
+          cleanChunk.forEach((tr, k) => {
             const idx = start + k;
+            const rawTr = translations[k];
             workingCues[idx] = {
               start_ms: merged[idx].start_ms,
               end_ms: merged[idx].end_ms,
               text: tr,
               orig: merged[idx].text,
-              ...(tr ? {} : { untranslated: true }),
+              ...(!rawTr ? { untranslated: true } : {}),
             };
           });
           const pct = total > 0 ? Math.min(98, 40 + Math.round((done / total) * 58)) : 98;
@@ -425,23 +447,29 @@ export async function prepareLiveDub(
             if (entry.partial) {
               entry.partial.pct = pct;
               entry.partial.done = done;
-              translations.forEach((tr, k) => {
+              cleanChunk.forEach((tr, k) => {
                 const idx = start + k;
                 entry.partial!.data.cues[idx] = { ...workingCues[idx] };
               });
             }
-            broadcast({ type: "chunk", start, translations, pct, done, total });
+            broadcast({ type: "chunk", start, translations: cleanChunk, pct, done, total });
           }
         },
       });
       style = res.style;
-      cues = merged.map((c, i) => ({
-        start_ms: c.start_ms,
-        end_ms: c.end_ms,
-        text: res.translations[i] || "",
-        orig: c.text,
-        ...(res.translations[i] ? {} : { untranslated: true }),
-      }));
+      cues = merged.flatMap((c, i) => {
+        const tr = res.translations[i] || "";
+        if (isDubSkip(tr)) return [];
+        return [
+          {
+            start_ms: c.start_ms,
+            end_ms: c.end_ms,
+            text: tr,
+            orig: c.text,
+            ...(tr ? {} : { untranslated: true }),
+          },
+        ];
+      });
     }
 
     const result = finalizeResult({

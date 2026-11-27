@@ -111,7 +111,7 @@ const EDGE_MAX_CHARS = 600;
 function estimateViDurSec(text: string, speed: number): number {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   const pauses = (text.match(/[,;:.!?…]/g) ?? []).length;
-  return (words * 0.24 + pauses * 0.12 + 0.15) / Math.max(0.75, speed);
+  return (words * 0.27 + pauses * 0.14 + 0.18) / Math.max(0.75, speed);
 }
 
 /** Cắt câu vượt quá giới hạn ký tự Edge TTS tại ranh giới từ/dấu câu gần nhất (tránh cắt cụt giữa từ). */
@@ -128,6 +128,7 @@ type ScheduledPlayback = {
   buf: AudioBuffer;
   startedAtCtx: number;
   baseOffset: number;
+  playbackRate: number;
   voiceId: LiveVoiceId;
   pausedOffset: number | null;
 };
@@ -310,10 +311,11 @@ export default function KokoroLivePlayer({
       let target: ScheduledPlayback | null = null;
       let savedOffset = 0;
       for (const item of queue) {
-        const endAt = item.startedAtCtx + (item.buf.duration - item.baseOffset);
-        if (now >= item.startedAtCtx && now < endAt - 0.15) {
+        const pbRate = item.playbackRate || 1;
+        const endAt = item.startedAtCtx + (item.buf.duration - item.baseOffset) / pbRate;
+        if (now >= item.startedAtCtx && now < endAt - 0.15 / pbRate) {
           target = item;
-          savedOffset = item.baseOffset + (now - item.startedAtCtx);
+          savedOffset = item.baseOffset + (now - item.startedAtCtx) * pbRate;
           break;
         }
       }
@@ -348,7 +350,7 @@ export default function KokoroLivePlayer({
   }, []);
 
   const getCueBuffer = useCallback(
-    async (cueIndex: number, vId: LiveVoiceId, spd: number): Promise<AudioBuffer | null> => {
+    async (cueIndex: number, vId: LiveVoiceId, spd: number, urgent = false): Promise<AudioBuffer | null> => {
       const cue = stateRef.current.cues[cueIndex];
       if (!cue || cue.pending || !cue.text.trim()) return null;
       const engKey = getPiperVoiceKey(vId);
@@ -384,7 +386,20 @@ export default function KokoroLivePlayer({
           s: speed.toFixed(2),
           t: truncateTtsText(cue.text, EDGE_MAX_CHARS),
         });
-        const res = await fetch(`/api/v1/dub/tts?${qs.toString()}`);
+        if (urgent) qs.set("p", "1");
+        const url = `/api/v1/dub/tts?${qs.toString()}`;
+        let res: Response | null = null;
+        let lastErr: unknown = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            res = await fetch(url);
+            if (res.ok || (res.status !== 502 && res.status !== 503 && res.status !== 504)) break;
+          } catch (e) {
+            lastErr = e;
+          }
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+        }
+        if (!res) throw lastErr instanceof Error ? lastErr : new Error("Không tải được âm thanh.");
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
           throw new Error((errJson as { error?: string }).error || `Edge TTS HTTP ${res.status}`);
@@ -409,9 +424,8 @@ export default function KokoroLivePlayer({
           }
 
           let buf = await synthAt(firstSpd);
-          // Nếu thực tế vẫn dài hơn khung giờ đáng kể (> 0.25s) và chưa chạm trần tốc độ → xin bản nhanh hơn
-          // (giữ nguyên cao độ, không tăng playbackRate để tránh méo giọng "chipmunk").
-          if (buf && slot > 0.4 && buf.duration > slot + 0.25 && firstSpd < MAX_FIT_SPEED) {
+          // Câu đang cần phát ngay (`urgent`) không chặn chờ gọi TTS lần 2; chỉ tinh chỉnh khi prefetch ngầm bằng Edge
+          if (!urgent && !engKey && buf && slot > 0.4 && buf.duration > slot + 0.45 && firstSpd < MAX_FIT_SPEED) {
             const need = Math.min(MAX_FIT_SPEED, Math.ceil(((firstSpd * buf.duration) / slot) * 20) / 20);
             if (need > firstSpd) {
               const fitted = await synthAt(need).catch(() => null);
@@ -437,19 +451,26 @@ export default function KokoroLivePlayer({
     [getAudioCtx, putBufCache],
   );
 
-  // Warm up Edge TTS (3 cues from current position) OR lazily load local WASM engine when selected
+  // Warm up Edge TTS (ưu tiên câu hiện tại trước, xong mới prefetch 2 câu sau) OR lazily load local WASM engine
   useEffect(() => {
     let active = true;
     const prefetchAround = () => {
       const start = Math.max(0, stateRef.current.activeCueIdx);
-      for (let k = start; k < Math.min(start + 3, cues.length); k++) {
-        void getCueBuffer(k, voiceId, stateRef.current.speed);
-      }
+      const spd = stateRef.current.speed;
+      if (start >= cues.length) return;
+      void getCueBuffer(start, voiceId, spd, true).then(() => {
+        if (!active) return;
+        for (let k = start + 1; k < Math.min(start + 3, cues.length); k++) {
+          void getCueBuffer(k, voiceId, spd, false);
+        }
+      });
     };
     if (!localEngineKey) {
-      // Edge TTS sẵn sàng ngay lập tức — prefetch 3 câu quanh vị trí hiện tại
+      // Edge TTS sẵn sàng ngay lập tức — tải câu hiện tại trước rồi prefetch 2 câu kế tiếp
       prefetchAround();
-      return;
+      return () => {
+        active = false;
+      };
     }
 
     ensurePiperLoaded(localEngineKey, (p) => {
@@ -468,7 +489,7 @@ export default function KokoroLivePlayer({
     return () => {
       active = false;
     };
-  }, [localEngineKey, voiceId, cues.length, getCueBuffer]);
+  }, [localEngineKey, voiceId, cues, getCueBuffer]);
 
   // Apply volume updates
   useEffect(() => {
@@ -516,8 +537,9 @@ export default function KokoroLivePlayer({
       return;
     }
 
+    const pbRate = pb.playbackRate || 1;
     const offset = pb.pausedOffset;
-    const remaining = pb.buf.duration - offset;
+    const remaining = (pb.buf.duration - offset) / pbRate;
     if (remaining <= 0.12) {
       playbackRef.current = null;
       return;
@@ -527,6 +549,7 @@ export default function KokoroLivePlayer({
     const now = ctx.currentTime;
     const src = ctx.createBufferSource();
     src.buffer = pb.buf;
+    src.playbackRate.value = pbRate;
     src.connect(gain);
     src.start(now, offset);
     activeSrcsRef.current.add(src);
@@ -543,9 +566,10 @@ export default function KokoroLivePlayer({
       }
     };
 
-    // Prefetch lại 4 câu kế tiếp để sẵn sàng ngay sau câu đang đọc tiếp
-    for (let k = pb.cueIndex + 1; k <= Math.min(list.length - 1, pb.cueIndex + 4); k++) {
-      void getCueBuffer(k, vId, spd);
+    // Prefetch lại 2–3 câu kế tiếp để sẵn sàng ngay sau câu đang đọc tiếp
+    const count = getPiperVoiceKey(vId) ? 2 : 3;
+    for (let k = pb.cueIndex + 1; k <= Math.min(list.length - 1, pb.cueIndex + count); k++) {
+      void getCueBuffer(k, vId, spd, false);
     }
   }, [getAudioCtx, getCueBuffer]);
 
@@ -657,11 +681,8 @@ export default function KokoroLivePlayer({
       const myStopGen = stopGenRef.current;
 
       // Prefetch next 4 cues ahead in background
-      for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + 4); k++) {
-        void getCueBuffer(k, vId, spd);
-      }
-
-      const buf = await getCueBuffer(cueIndex, vId, spd);
+      // Luôn tải xong câu đang cần đọc TRƯỚC rồi mới prefetch các câu tiếp theo
+      const buf = await getCueBuffer(cueIndex, vId, spd, true);
       if (!buf) {
         // Không reset lastSpokenIdxRef khi TTS lỗi/rỗng để tránh vòng lặp 100ms gọi lại vô hạn
         return;
@@ -675,6 +696,11 @@ export default function KokoroLivePlayer({
       }
       if (lastSpokenIdxRef.current !== cueIndex) return;
       if (stateRef.current.voiceId !== vId) return;
+
+      const prefetchCount = getPiperVoiceKey(vId) ? 2 : 3;
+      for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + prefetchCount); k++) {
+        void getCueBuffer(k, vId, spd, false);
+      }
 
       const ctx = getAudioCtx();
       const gain = gainRef.current;
@@ -693,13 +719,18 @@ export default function KokoroLivePlayer({
         stopActiveSources();
       }
 
+      const next = list[cueIndex + 1];
+      const ytRate = Math.round((ytRef.current?.getPlaybackRate?.() || 1) * 20) / 20;
+      const slot = next ? (next.start_ms - list[cueIndex].start_ms) / 1000 / ytRate - 0.1 : 0;
+      const pbRate = slot > 0.4 && buf.duration > slot + 0.3 ? Math.min(1.12, buf.duration / slot) : 1;
+      const effectiveDur = buf.duration / pbRate;
+
       const now = ctx.currentTime;
       const startAt = Math.max(now, audioEndAtRef.current + 0.02);
 
-      // Phát đúng tốc độ gốc của bản tổng hợp: đổi playbackRate ở đây làm méo cao độ giọng.
-      // Việc khớp thời lượng đã làm trong getCueBuffer (xin Edge/Piper đọc nhanh hơn).
       const src = ctx.createBufferSource();
       src.buffer = buf;
+      src.playbackRate.value = pbRate;
       src.connect(gain);
       src.start(startAt);
       activeSrcsRef.current.add(src);
@@ -708,6 +739,7 @@ export default function KokoroLivePlayer({
         buf,
         startedAtCtx: startAt,
         baseOffset: 0,
+        playbackRate: pbRate,
         voiceId: vId,
         pausedOffset: null,
       };
@@ -715,7 +747,7 @@ export default function KokoroLivePlayer({
       if (scheduledRef.current.length === 1) {
         playbackRef.current = pb;
       }
-      audioEndAtRef.current = startAt + buf.duration;
+      audioEndAtRef.current = startAt + effectiveDur;
       src.onended = () => {
         activeSrcsRef.current.delete(src);
         scheduledRef.current = scheduledRef.current.filter((item) => item !== pb);

@@ -123,36 +123,71 @@ export function hasEdgeDubSpeech(voiceId: EdgeVoiceId, speed: number, text: stri
   return fs.existsSync(cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim()));
 }
 
-function runEdgeOnce(voiceName: string, rate: string, text: string, allowClockRetry = true): Promise<Buffer> {
+type PooledConn = {
+  ws: WebSocket;
+  turns: number;
+  idleTimer: ReturnType<typeof setTimeout> | null;
+};
+
+const MAX_POOL = 3;
+const IDLE_TTL_MS = 25_000;
+const MAX_TURNS = 16;
+const HANDSHAKE_TIMEOUT_MS = 5_500;
+const TURN_TIMEOUT_MS = 6_500;
+
+const ge = globalThis as unknown as { __edgeTtsPool?: PooledConn[] };
+const idlePool = (ge.__edgeTtsPool ??= []);
+
+function closeConn(conn: PooledConn) {
+  if (conn.idleTimer) {
+    clearTimeout(conn.idleTimer);
+    conn.idleTimer = null;
+  }
+  try {
+    if (conn.ws.readyState === WebSocket.OPEN) conn.ws.close();
+    else conn.ws.terminate();
+  } catch {}
+}
+
+function removeFromPool(conn: PooledConn) {
+  const i = idlePool.indexOf(conn);
+  if (i !== -1) idlePool.splice(i, 1);
+  if (conn.idleTimer) {
+    clearTimeout(conn.idleTimer);
+    conn.idleTimer = null;
+  }
+}
+
+function openEdgeSocket(allowClockRetry = true): Promise<PooledConn> {
   const connId = randomBytes(16).toString("hex");
-  const reqId = randomBytes(16).toString("hex");
   const url = `${WSS_URL}?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGec()}&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}&ConnectionId=${connId}`;
 
-  return new Promise<Buffer>((resolve, reject) => {
+  return new Promise<PooledConn>((resolve, reject) => {
     let settled = false;
-    const chunks: Buffer[] = [];
     const ws = new WebSocket(url, {
       headers: {
         "User-Agent": EDGE_UA,
         Origin: EDGE_ORIGIN,
       },
-      handshakeTimeout: 10_000,
+      handshakeTimeout: HANDSHAKE_TIMEOUT_MS,
     });
 
     const timer = setTimeout(() => {
-      finish(new Error("Edge TTS hết thời gian chờ."));
-    }, 12_000);
+      done(new Error("Edge TTS kết nối quá lâu."));
+    }, HANDSHAKE_TIMEOUT_MS + 500);
 
-    const finish = (err: Error | null, data?: Buffer) => {
+    const done = (err: Error | null, conn?: PooledConn) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      try {
-        if (ws.readyState === WebSocket.OPEN) ws.close();
-        else ws.terminate();
-      } catch {}
-      if (err) reject(err);
-      else resolve(data!);
+      if (err) {
+        try {
+          ws.terminate();
+        } catch {}
+        reject(err);
+      } else {
+        resolve(conn!);
+      }
     };
 
     ws.once("unexpected-response", (req, res) => {
@@ -164,13 +199,13 @@ function runEdgeOnce(voiceName: string, rate: string, text: string, allowClockRe
         clockOffsetMs = serverDate - Date.now();
         settled = true;
         clearTimeout(timer);
-        runEdgeOnce(voiceName, rate, text, false).then(resolve, reject);
+        openEdgeSocket(false).then(resolve, reject);
         return;
       }
-      finish(new Error(`Edge TTS từ chối kết nối (HTTP ${status}).`));
+      done(new Error(`Edge TTS từ chối kết nối (HTTP ${status}).`));
     });
 
-    ws.on("open", () => {
+    ws.once("open", () => {
       const configMsg =
         `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n` +
         JSON.stringify({
@@ -183,16 +218,94 @@ function runEdgeOnce(voiceName: string, rate: string, text: string, allowClockRe
             },
           },
         });
-      const ssml =
-        `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="vi-VN">` +
-        `<voice name="${voiceName}"><prosody pitch="+0Hz" rate="${rate}" volume="+0%">${escapeXml(text)}</prosody></voice>` +
-        `</speak>`;
-      const ssmlMsg = `X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`;
-      ws.send(configMsg);
-      ws.send(ssmlMsg);
+      try {
+        ws.send(configMsg);
+        done(null, { ws, turns: 0, idleTimer: null });
+      } catch (e) {
+        done(e instanceof Error ? e : new Error("Edge TTS lỗi gửi cấu hình."));
+      }
     });
 
-    ws.on("message", (raw, isBinary) => {
+    ws.once("error", (err) => {
+      done(new Error(`Edge TTS lỗi kết nối: ${err.message}`));
+    });
+
+    ws.once("close", () => {
+      done(new Error("Edge TTS đóng kết nối trước khi sẵn sàng."));
+    });
+  });
+}
+
+async function acquireEdgeSocket(): Promise<{ conn: PooledConn; reused: boolean }> {
+  while (idlePool.length) {
+    const conn = idlePool.pop()!;
+    if (conn.idleTimer) {
+      clearTimeout(conn.idleTimer);
+      conn.idleTimer = null;
+    }
+    conn.ws.removeAllListeners("close");
+    conn.ws.removeAllListeners("error");
+    if (conn.ws.readyState === WebSocket.OPEN && conn.turns < MAX_TURNS) {
+      return { conn, reused: true };
+    }
+    closeConn(conn);
+  }
+  return { conn: await openEdgeSocket(), reused: false };
+}
+
+function releaseEdgeSocket(conn: PooledConn) {
+  conn.ws.removeAllListeners("message");
+  conn.ws.removeAllListeners("close");
+  conn.ws.removeAllListeners("error");
+  if (conn.ws.readyState !== WebSocket.OPEN || conn.turns >= MAX_TURNS || idlePool.length >= MAX_POOL) {
+    closeConn(conn);
+    return;
+  }
+  conn.idleTimer = setTimeout(() => {
+    removeFromPool(conn);
+    closeConn(conn);
+  }, IDLE_TTL_MS);
+  conn.ws.once("close", () => removeFromPool(conn));
+  conn.ws.once("error", () => {
+    removeFromPool(conn);
+    closeConn(conn);
+  });
+  idlePool.push(conn);
+}
+
+function synthesizeOnSocket(conn: PooledConn, voiceName: string, rate: string, text: string): Promise<Buffer> {
+  const reqId = randomBytes(16).toString("hex");
+  const { ws } = conn;
+  return new Promise<Buffer>((resolve, reject) => {
+    let settled = false;
+    const chunks: Buffer[] = [];
+
+    const cleanup = () => {
+      ws.removeListener("message", onMessage);
+      ws.removeListener("error", onError);
+      ws.removeListener("close", onClose);
+      clearTimeout(timer);
+    };
+
+    const finish = (err: Error | null, data?: Buffer) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (err) {
+        closeConn(conn);
+        reject(err);
+      } else {
+        conn.turns += 1;
+        releaseEdgeSocket(conn);
+        resolve(data!);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      finish(new Error("Edge TTS hết thời gian chờ."));
+    }, TURN_TIMEOUT_MS);
+
+    const onMessage = (raw: WebSocket.RawData, isBinary: boolean) => {
       if (isBinary) {
         const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
         const idx = buf.indexOf(AUDIO_DELIM);
@@ -208,20 +321,52 @@ function runEdgeOnce(voiceName: string, rate: string, text: string, allowClockRe
           else finish(null, out);
         }
       }
-    });
+    };
 
-    ws.on("error", (err) => {
+    const onError = (err: Error) => {
       finish(new Error(`Edge TTS lỗi kết nối: ${err.message}`));
-    });
+    };
 
-    ws.on("close", () => {
-      if (!settled) {
-        const out = Buffer.concat(chunks);
-        if (out.length) finish(null, out);
-        else finish(new Error("Edge TTS đóng kết nối trước khi hoàn tất."));
+    const onClose = () => {
+      const out = Buffer.concat(chunks);
+      if (out.length) {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          closeConn(conn);
+          resolve(out);
+        }
+      } else {
+        finish(new Error("Edge TTS đóng kết nối trước khi hoàn tất."));
       }
-    });
+    };
+
+    ws.on("message", onMessage);
+    ws.on("error", onError);
+    ws.on("close", onClose);
+
+    const ssml =
+      `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="vi-VN">` +
+      `<voice name="${voiceName}"><prosody pitch="+0Hz" rate="${rate}" volume="+0%">${escapeXml(text)}</prosody></voice>` +
+      `</speak>`;
+    const ssmlMsg = `X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`;
+    try {
+      ws.send(ssmlMsg);
+    } catch (e) {
+      finish(e instanceof Error ? e : new Error("Edge TTS lỗi gửi yêu cầu."));
+    }
   });
+}
+
+async function runEdgeOnce(voiceName: string, rate: string, text: string): Promise<Buffer> {
+  const { conn, reused } = await acquireEdgeSocket();
+  try {
+    return await synthesizeOnSocket(conn, voiceName, rate, text);
+  } catch (e) {
+    if (!reused) throw e;
+    const fresh = await openEdgeSocket();
+    return synthesizeOnSocket(fresh, voiceName, rate, text);
+  }
 }
 
 /** Tạo (hoặc lấy từ cache đĩa) MP3 tiếng Việt bằng Microsoft Edge Neural TTS (miễn phí, 0đ). */
