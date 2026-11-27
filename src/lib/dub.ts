@@ -1,5 +1,5 @@
 import "server-only";
-import { cleanSegmentWords, cleanSubtitleText, type Word } from "./subtitles";
+import { cleanSegmentWords, cleanSubtitleText, hasSpeakerTurnMarker, type Word } from "./subtitles";
 
 export type DubCue = {
   start_ms: number;
@@ -10,6 +10,8 @@ export type DubCue = {
 export type DubCueInput = DubCue & {
   /** Thời gian từng từ (giây) từ YouTube srv3 / Whisper — giúp tách câu chính xác tới từng từ */
   words?: Word[];
+  /** Câu này mở đầu lượt người nói mới (`>>`, `- `, `Sprecher:`…) — không ghép dính với câu trước */
+  turnBreak?: boolean;
 };
 
 export type DubVoice = {
@@ -215,7 +217,7 @@ function endsClause(text: string): boolean {
   return /[,;:—–、，]["»“”'’)\]]*$/.test(text.trim());
 }
 
-type DubTok = { start: number; end: number; text: string };
+type DubTok = { start: number; end: number; text: string; turnBreak?: boolean };
 
 const normWord = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
@@ -302,6 +304,16 @@ function dedupRollingCues(sorted: DubCueInput[], isCjk: boolean): DubCueInput[] 
 function tokenizeDubCues(cues: DubCueInput[], isCjk: boolean): DubTok[] {
   const toks: DubTok[] = [];
   for (const cue of cues) {
+    let cueFirst = true;
+    const pushTok = (t: DubTok) => {
+      if (cueFirst && cue.turnBreak) {
+        toks.push({ ...t, turnBreak: true });
+      } else {
+        toks.push(t);
+      }
+      cueFirst = false;
+    };
+
     if (isCjk) {
       // Tách ngay sau dấu kết thúc câu / dấu phẩy CJK để không dính 2 câu vào nhau
       const parts = cue.text
@@ -313,7 +325,7 @@ function tokenizeDubCues(cues: DubCueInput[], isCjk: boolean): DubTok[] {
       const span = Math.max(150, cue.end_ms - cue.start_ms);
       for (const part of parts) {
         const dt = (span * part.length) / total;
-        toks.push({ start: Math.round(t), end: Math.round(t + dt), text: part });
+        pushTok({ start: Math.round(t), end: Math.round(t + dt), text: part });
         t += dt;
       }
       continue;
@@ -331,7 +343,7 @@ function tokenizeDubCues(cues: DubCueInput[], isCjk: boolean): DubTok[] {
           endSec === undefined
             ? Math.max(start + 30, nextStart)
             : Math.max(start + 30, Math.min(Math.round((endSec + 0.12) * 1000), Math.max(start + 30, nextStart)));
-        toks.push({ start, end, text: clean });
+        pushTok({ start, end, text: clean });
       }
       continue;
     }
@@ -343,7 +355,7 @@ function tokenizeDubCues(cues: DubCueInput[], isCjk: boolean): DubTok[] {
     let t = cue.start_ms;
     for (const w of words) {
       const dt = (span * (w.length + 1)) / total;
-      toks.push({ start: Math.round(t), end: Math.round(t + dt), text: w });
+      pushTok({ start: Math.round(t), end: Math.round(t + dt), text: w });
       t += dt;
     }
   }
@@ -403,6 +415,7 @@ function mergeTinySentences(groups: DubTok[][], isCjk: boolean): DubTok[][] {
     return isCjk ? joinTokens(g, true).length <= 10 && dur < 2_200 : g.length <= 4 && dur < 2_200;
   };
   const fits = (a: DubTok[], b: DubTok[]) => {
+    if (b[0]?.turnBreak) return false;
     const gap = b[0].start - a[a.length - 1].end;
     if (gap > 750) return false;
     const dur = b[b.length - 1].end - a[0].start;
@@ -428,6 +441,7 @@ export function cleanDubCues(raw: DubCueInput[]): DubCueInput[] {
   for (const c of raw) {
     const baseStart = Math.max(0, Math.round(c.start_ms));
     const end_ms = Math.max(Math.round(c.end_ms), baseStart + 150);
+    const turnBreak = Boolean(c.turnBreak) || hasSpeakerTurnMarker(c.text);
     if (c.words?.length) {
       const cleaned = cleanSegmentWords(c.words, c.text);
       if (!cleaned.text) continue;
@@ -438,11 +452,12 @@ export function cleanDubCues(raw: DubCueInput[]): DubCueInput[] {
         end_ms: Math.max(end_ms, start_ms + 150),
         text: cleaned.text,
         ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+        ...(turnBreak ? { turnBreak: true } : {}),
       });
     } else {
       const text = cleanSubtitleText(c.text);
       if (!text) continue;
-      out.push({ start_ms: baseStart, end_ms, text });
+      out.push({ start_ms: baseStart, end_ms, text, ...(turnBreak ? { turnBreak: true } : {}) });
     }
   }
   return out;
@@ -481,7 +496,7 @@ export function mergeDubCues(raw: DubCueInput[]): DubCue[] {
 
   for (let i = 0; i < toks.length; i++) {
     const tok = toks[i];
-    if (cur.length && tok.start - cur[cur.length - 1].end > SILENCE_BREAK_MS) {
+    if (cur.length && (tok.turnBreak || tok.start - cur[cur.length - 1].end > SILENCE_BREAK_MS)) {
       sentences.push(cur);
       cur = [];
     }

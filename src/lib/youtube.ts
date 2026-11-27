@@ -622,12 +622,24 @@ export async function fetchAnyYouTubeSubtitles(
   if (maxSeconds && duration && duration > maxSeconds) throw new VideoTooLongError(duration, maxSeconds);
   if (!tracks.length) return null;
 
-  const isVi = (t: Track) => t.languageCode.toLowerCase().startsWith("vi");
+  const baseLang = (code?: string) => (code || "").toLowerCase().split(/[-_]/)[0];
+  const origBase = baseLang(tracks.find((x) => x.track.auto)?.track.languageCode);
+  const isVi = (t: Track) => baseLang(t.languageCode) === "vi";
+  const isOrig = (t: Track) => Boolean(origBase) && baseLang(t.languageCode) === origBase;
+  const isEnOrDe = (t: Track) => {
+    const b = baseLang(t.languageCode);
+    return b === "en" || b === "de";
+  };
   const ordered = [
-    ...tracks.filter((x) => !x.track.auto && isVi(x.track)),
-    ...tracks.filter((x) => !x.track.auto && !isVi(x.track)),
-    ...tracks.filter((x) => x.track.auto && isVi(x.track)),
-    ...tracks.filter((x) => x.track.auto && !isVi(x.track)),
+    ...new Set([
+      ...tracks.filter((x) => !x.track.auto && isVi(x.track)),
+      ...tracks.filter((x) => !x.track.auto && isOrig(x.track)),
+      ...tracks.filter((x) => x.track.auto && isVi(x.track)),
+      ...tracks.filter((x) => x.track.auto && isOrig(x.track)),
+      ...tracks.filter((x) => !x.track.auto && isEnOrDe(x.track)),
+      ...tracks.filter((x) => !x.track.auto),
+      ...tracks.filter((x) => x.track.auto),
+    ]),
   ];
 
   for (const cand of ordered) {

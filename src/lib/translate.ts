@@ -323,7 +323,8 @@ const STYLE_CARD_SYSTEM =
   '  "pronouns": "quy ước xưng hô thống nhất cho từng vai (vd: mình – các bạn, tôi – mọi người, anh – em, ông ấy/cô ấy…)",\n' +
   '  "voiceRules": ["3–4 quy tắc văn nói tiếng Việt riêng cho video này (vd: có dùng từ nối/tiểu từ khẩu ngữ như thật ra, đấy, nha không; nhịp nhanh hay điềm đạm…)"],\n' +
   '  "glossary": ["tối đa 12 thuật ngữ, tên riêng hoặc cụm từ lặp lại quan trọng cần giữ nguyên/dịch thống nhất dạng \'gốc -> cách dịch\'"]\n' +
-  "}";
+  "}\n" +
+  'Nếu đầu vào có `openingExamples` (các câu mở đầu đã dịch sẵn cho người nghe), hãy đặt `pronouns` và `tone` đồng nhất với cách xưng hô & sắc thái đã dùng ở phần mở đầu để toàn bộ video không bị lệch giọng hay đổi xưng hô giữa chừng.';
 
 function isStyleCard(x: unknown): x is DubStyleCard {
   if (!x || typeof x !== "object") return false;
@@ -394,6 +395,7 @@ async function buildDubStyleCard(
   items: DubTranslateItem[],
   title: string,
   sourceLang: string,
+  openingExamples: StyleExample[] = [],
 ): Promise<DubStyleCard | null> {
   if (items.length <= 3) return null;
   const { transcript, truncated } = buildTranscriptForStyle(items);
@@ -406,6 +408,7 @@ async function buildDubStyleCard(
         sourceLang,
         totalLines: items.length,
         ...(truncated ? { note: "Video dài nên đã trích rải đều từ đầu đến cuối; [...] là đoạn lược bớt." } : {}),
+        ...(openingExamples.length ? { openingExamples } : {}),
         transcript,
       },
       isStyleCard,
@@ -462,20 +465,27 @@ const SMART_DUB_SYSTEM = (
       "\n"
     : "";
 
+  const firstBatchGuide =
+    !style && !styleExamples.length
+      ? "Chưa có cẩm nang tóm tắt toàn bài: hãy suy luận ngay thể loại, số người nói và cách xưng hô phù hợp nhất từ `Tiêu đề video` + `overview` để phần mở đầu khớp mạch cả video.\n"
+      : "";
+
   return (
     `Bạn là biên dịch viên thuyết minh video (voice-over) tiếng Việt chuyên nghiệp, Việt hóa phụ đề từ ngôn ngữ "${lang}" sang tiếng Việt tự nhiên như người bản xứ nói.\n` +
     (ctxLines ? `Cẩm nang toàn video (đã đọc hết kịch bản):\n${ctxLines}\n` : "") +
+    firstBatchGuide +
     exampleBlock +
     "Đầu vào JSON gồm:\n" +
     '- "overview" (tuỳ chọn): vài câu trích rải đều phần giữa & cuối video — chỉ để nắm đúng thể loại, cảm xúc, người nói và cách xưng hô tổng quan của cả bài, KHÔNG dịch lại.\n' +
     '- "prev" (tuỳ chọn): vài câu ngay trước đó — chỉ để nối mạch và giữ đúng xưng hô, KHÔNG dịch lại.\n' +
+    '- "prevVi" (tuỳ chọn): bản tiếng Việt đã dịch của 1–2 câu ngay trước đó — nối tiếp thật tự nhiên, giữ đúng xưng hô và tránh lặp lại chủ ngữ vừa nói, KHÔNG dịch lại.\n' +
     '- "items": danh sách câu cần dịch dạng {"1": {"s": số giây, "max": số từ tiếng Việt tham khảo, "text": câu gốc}, …}.\n' +
     '- "next" (tuỳ chọn): vài câu tiếp theo — chỉ để biết mạch câu sắp nói, KHÔNG dịch lại.\n' +
     "Quy tắc bắt buộc:\n" +
     "1. Đọc hiểu cả cụm `prev` + `items` + `next` (và `overview` nếu có) để nắm đúng ý định và văn phong chung của cả video, rồi DIỄN ĐẠT LẠI bằng văn nói tiếng Việt trôi chảy (TUYỆT ĐỐI không dịch bám sát từng từ hay cấu trúc ngữ pháp câu gốc).\n" +
     "2. Tránh bệnh dịch khô kiểu Tây: KHÔNG dịch cứng 'Es ist / It is' thành 'Nó là…'; chuyển câu bị động Tây ('được làm bởi…') sang câu chủ động tự nhiên; tách hoặc đảo lại mệnh đề quan hệ/cụm danh từ dài cho thuận tai. Chuyển thành ngữ và từ đệm (halt, quasi, eben, basically, you know…) sang từ nối hoặc tiểu từ tiếng Việt phù hợp với văn phong video.\n" +
-    "3. Giữ đúng xưng hô và mạch nối dựa vào mẫu phần mở đầu, cẩm nang, `overview` và `prev`/`next`; nếu hai câu liên tiếp là hai vế của cùng một ý bị tách dòng, hãy dịch sao cho đọc nối tiếp nghe liền mạch tự nhiên, không lặp chủ ngữ thừa.\n" +
-    "4. Tối ưu cho giọng đọc AI (TTS) và độ tự nhiên: dùng dấu phẩy, chấm, hỏi, than đúng nhịp thở để giọng đọc có cảm xúc. Coi `max` chỉ là mốc tham khảo mềm — ưu tiên câu trọn ý, trôi chảy, đủ chủ-vị và từ nối (KHÔNG cắt cụt câu hay bỏ từ làm câu bị cộc/khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc. TUYỆT ĐỐI KHÔNG dịch hay đọc mô tả âm thanh, nhạc nền, tiếng động, tên người đọc hoặc chú thích phụ đề (vd: '[Musik]', '(sanfte Musik)', '(lacht)', '(Off-Stimme)', 'Sprecher:', '♪…♪'); nếu cả câu chỉ là mô tả không phải lời thoại thì trả về đúng \"[SKIP]\".\n" +
+    "3. Giữ đúng xưng hô và mạch nối dựa vào mẫu phần mở đầu, cẩm nang, `overview`, `prevVi` và `prev`/`next`; nếu hai câu liên tiếp là hai vế của cùng một ý bị tách dòng, hãy dịch sao cho đọc nối tiếp nghe liền mạch tự nhiên, không lặp chủ ngữ thừa. Nếu là hội thoại/phỏng vấn nhiều người nói, thể hiện đúng ngữ khí và đại từ đổi vai giữa người hỏi và người trả lời.\n" +
+    "4. Tối ưu cho giọng đọc AI (TTS) và ngữ điệu tự nhiên theo thể loại (tin tức sắc gọn, vlog thân mật, tài liệu điềm đạm, hài hước linh hoạt): đặt dấu phẩy (,), chấm (.), hỏi (?), than (!), ba chấm (…) đúng nhịp thở và điểm nhấn cảm xúc. Coi `max` chỉ là mốc tham khảo mềm — ưu tiên câu trọn ý, trôi chảy, đủ chủ-vị và từ nối (KHÔNG cắt cụt câu hay bỏ từ làm câu bị cộc/khô). Viết số, đơn vị, ký hiệu theo cách đọc tự nhiên (vd: '25%' → '25 phần trăm', '€50' → '50 euro', 'km/h' → 'ki-lô-mét trên giờ'), không để chú thích trong ngoặc. TUYỆT ĐỐI KHÔNG dịch hay đọc mô tả âm thanh, nhạc nền, tiếng động, tên người đọc hoặc chú thích phụ đề (vd: '[Musik]', '(sanfte Musik)', '(lacht)', '(Off-Stimme)', 'Sprecher:', '♪…♪'); nếu cả câu chỉ là mô tả không phải lời thoại thì trả về đúng \"[SKIP]\".\n" +
     "5. Giữ ĐÚNG số lượng và thứ tự khóa trong `items` (1..N), tuyệt đối không gộp hay bỏ sót câu.\n" +
     'Trả về đúng JSON {"t": {"1": "...", "2": "...", …}}, không giải thích.'
   );
@@ -566,6 +576,7 @@ async function translateSmartDubChunk(
   systemPrompt: string,
   overviewCtx: string[] = [],
   fastFailover = false,
+  prevViCtx: string[] = [],
 ): Promise<string[]> {
   const list = dubProviders();
   if (!list.length) throw new Error("Server chưa cấu hình AI để dịch.");
@@ -577,6 +588,7 @@ async function translateSmartDubChunk(
   const makePayload = (indices: number[]) => ({
     ...(overviewCtx.length ? { overview: overviewCtx } : {}),
     ...(prevCtx.length ? { prev: prevCtx } : {}),
+    ...(prevViCtx.length ? { prevVi: prevViCtx } : {}),
     items: Object.fromEntries(
       indices.map((idx, pos) => {
         const it = chunk[idx];
@@ -611,6 +623,10 @@ async function translateSmartDubChunk(
       const last = part[part.length - 1];
       const partPrev = first > 0 ? chunk.slice(Math.max(0, first - 2), first).map((x) => x.text) : prevCtx;
       const partNext = last < chunk.length - 1 ? chunk.slice(last + 1, last + 3).map((x) => x.text) : nextCtx;
+      const partPrevVi =
+        first > 0
+          ? result.slice(Math.max(0, first - 2), first).filter((x) => Boolean(x) && !isDubSkip(x))
+          : prevViCtx;
       const sub = await translateSmartDubChunk(
         part.map((i) => chunk[i]),
         partPrev,
@@ -618,6 +634,7 @@ async function translateSmartDubChunk(
         systemPrompt,
         overviewCtx,
         fastFailover,
+        partPrevVi,
       ).catch(() => null);
       part.forEach((idx, k) => {
         if (sub?.[k]) result[idx] = sub[k];
@@ -639,13 +656,14 @@ async function translateSmartDubChunkRetry(
   systemPrompt: string,
   overviewCtx: string[] = [],
   fastFailover = false,
+  prevViCtx: string[] = [],
 ): Promise<string[]> {
   try {
-    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx, fastFailover);
+    return await translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx, fastFailover, prevViCtx);
   } catch (e) {
     console.error("[dub-smart] lô lỗi, thử lại:", (e as Error).message);
     await new Promise((r) => setTimeout(r, fastFailover ? 800 : CHUNK_RETRY_DELAY_MS));
-    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx, fastFailover);
+    return translateSmartDubChunk(chunk, prevCtx, nextCtx, systemPrompt, overviewCtx, fastFailover, prevViCtx);
   }
 }
 
@@ -745,9 +763,13 @@ export async function translateForDubbingSmart(
     const chunk = items.slice(r.start, r.end);
     const prevCtx = items.slice(Math.max(0, r.start - 2), r.start).map((x) => x.text);
     const nextCtx = items.slice(r.end, r.end + 2).map((x) => x.text);
+    const prevViCtx =
+      r.start > 0
+        ? out.slice(Math.max(0, r.start - 2), r.start).filter((x): x is string => Boolean(x) && !isDubSkip(x))
+        : [];
     let translated: string[];
     try {
-      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, prompt, overviewCtx, mustSucceed);
+      translated = await translateSmartDubChunkRetry(chunk, prevCtx, nextCtx, prompt, overviewCtx, mustSucceed, prevViCtx);
     } catch (e) {
       // Lô đầu hỏng thì chưa có gì để phát → báo lỗi. Lô sau hỏng thì để trống, các lô khác dịch tiếp.
       if (mustSucceed) throw e;
@@ -769,15 +791,16 @@ export async function translateForDubbingSmart(
     await runRange(ranges[0], initialPrompt, true, overview);
   }
 
-  // Chỉ sau khi người dùng đã bắt đầu nghe lô đầu mới chạy Style Bible gọn (8.000 ký tự) cho các lô phía sau
+  // Chỉ sau khi người dùng đã bắt đầu nghe lô đầu mới chạy Style Bible gọn (8.000 ký tự) cho các lô phía sau,
+  // truyền kèm các câu mẫu lô 0 để Style Bible khoá đúng xưng hô & sắc thái thống nhất từ đầu tới cuối.
   const rest = ranges.slice(1);
   let style: DubStyleCard | null = null;
   if (rest.length > 0) {
+    const examples = pickStyleExamples(items, out, ranges[0].end);
     style = await Promise.race([
-      buildDubStyleCard(items, title, sourceLang || "auto"),
+      buildDubStyleCard(items, title, sourceLang || "auto", examples),
       new Promise<null>((r) => setTimeout(() => r(null), STYLE_CARD_DEADLINE_MS)),
     ]);
-    const examples = pickStyleExamples(items, out, ranges[0].end);
     const restPrompt = SMART_DUB_SYSTEM(sourceLang || "auto", title, style, examples);
     let cursor = 0;
     await Promise.all(

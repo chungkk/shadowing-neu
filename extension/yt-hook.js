@@ -8,10 +8,12 @@
     try {
       const u = new URL(rawUrl, location.origin);
       if (!u.pathname.includes("/api/timedtext")) return null;
+      // Bỏ qua bản dịch máy YouTube (?tlang=…) để luôn bắt phụ đề ngôn ngữ gốc cho AI dịch tự nhiên hơn
+      if (u.searchParams.get("tlang")) return null;
       const videoId = u.searchParams.get("v") || "";
-      const lang = (u.searchParams.get("lang") || u.searchParams.get("tlang") || "auto").toLowerCase();
+      const lang = (u.searchParams.get("lang") || "auto").toLowerCase();
       if (!videoId) return null;
-      return { videoId, lang, url: u.toString() };
+      return { videoId, lang, auto: u.searchParams.get("kind") === "asr", url: u.toString() };
     } catch {
       return null;
     }
@@ -74,14 +76,26 @@
     return origSend.apply(this, args);
   };
 
-  function pickBestTrack(tracks) {
+  function pickBestTrack(tracks, playerResp) {
     if (!Array.isArray(tracks) || !tracks.length) return null;
     const isAuto = (t) => t.kind === "asr" || String(t.vssId || "").startsWith("a.");
-    const isVi = (t) => String(t.languageCode || "").toLowerCase().startsWith("vi");
+    const baseLang = (code) => String(code || "").toLowerCase().split(/[-_]/)[0];
+    const origBase =
+      baseLang(playerResp?.videoDetails?.defaultAudioLanguage) ||
+      baseLang(tracks.find(isAuto)?.languageCode);
+    const isVi = (t) => baseLang(t.languageCode) === "vi";
+    const isOrig = (t) => Boolean(origBase) && baseLang(t.languageCode) === origBase;
+    const isEnOrDe = (t) => {
+      const b = baseLang(t.languageCode);
+      return b === "en" || b === "de";
+    };
     return (
       tracks.find((t) => !isAuto(t) && isVi(t)) ||
-      tracks.find((t) => !isAuto(t)) ||
+      tracks.find((t) => !isAuto(t) && isOrig(t)) ||
       tracks.find((t) => isAuto(t) && isVi(t)) ||
+      tracks.find((t) => isAuto(t) && isOrig(t)) ||
+      tracks.find((t) => !isAuto(t) && isEnOrDe(t)) ||
+      tracks.find((t) => !isAuto(t)) ||
       tracks[0]
     );
   }
@@ -99,7 +113,13 @@
       playerResp = player?.getPlayerResponse?.() || window.ytInitialPlayerResponse || null;
     } catch {}
 
-    const title = playerResp?.videoDetails?.title || document.title.replace(/\s*-\s*YouTube$/, "").trim() || videoId;
+    const title =
+      playerResp?.videoDetails?.title ||
+      document.title
+        .replace(/^\(\d+\)\s*/, "")
+        .replace(/\s*-\s*YouTube$/, "")
+        .trim() ||
+      videoId;
     try {
       window.postMessage({ source: "hvn-yt-hook", type: "player-meta", videoId, title }, "*");
     } catch {}
@@ -122,7 +142,7 @@
         player.getOption?.("captions", "tracklist") ||
         playerResp?.captions?.playerCaptionsTracklistRenderer?.captionTracks ||
         [];
-      const best = pickBestTrack(tracklist);
+      const best = pickBestTrack(tracklist, playerResp);
       if (best) {
         const trackArg = best.vssId
           ? { languageCode: best.languageCode, vssId: best.vssId }

@@ -27,6 +27,12 @@ const SPEAKER_PREFIX_RE =
 const CREDIT_LINE_RE =
   /^(?:untertitel\s+(?:von|im\s+auftrag|der|des|:)|subtitles?\s+(?:by|:)|captions?\s+(?:by|:)|closed\s+captions?\b|phụ\s+đề\s+(?:bởi|:)|việt\s*sub\b|amara\.org)/iu;
 
+/** Kiểm tra dòng phụ đề thô có dấu hiệu đổi người nói (`>>`, `- ...`, hoặc tiền tố vai đọc) trước khi bị lọc sạch. */
+export function hasSpeakerTurnMarker(s: string): boolean {
+  const plain = decodeEntities(s.replace(/<[^>]+>/g, "").replace(/\{[^}]*\}/g, "")).trimStart();
+  return /^>>+/.test(plain) || /^[-–—]\s+\S/.test(plain) || SPEAKER_PREFIX_RE.test(plain);
+}
+
 /**
  * Làm sạch 1 dòng phụ đề YouTube: giải mã HTML, bỏ tag, bỏ mô tả nhạc/tiếng động/giọng đọc/người dẫn
  * (`[Musik]`, `♪ ... ♪`, `(Sanfte Musik)`, `(Off-Stimme)`, `Sprecher:`, `Untertitel ...`) nhưng giữ nguyên lời thoại thật.

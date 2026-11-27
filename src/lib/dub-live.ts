@@ -109,11 +109,21 @@ function finalizeResult(r: LiveDubResult): LiveDubResult {
 }
 
 function pickProbeSub(subs: ProbeRes["subtitles"]) {
-  const isVi = (s: { lang: string }) => s.lang.toLowerCase().startsWith("vi");
+  const baseLang = (code?: string) => (code || "").toLowerCase().split(/[-_]/)[0];
+  const origBase = baseLang(subs.find((s) => s.auto)?.lang);
+  const isVi = (s: { lang: string }) => baseLang(s.lang) === "vi";
+  const isOrig = (s: { lang: string }) => Boolean(origBase) && baseLang(s.lang) === origBase;
+  const isEnOrDe = (s: { lang: string }) => {
+    const b = baseLang(s.lang);
+    return b === "en" || b === "de";
+  };
   return (
     subs.find((s) => !s.auto && isVi(s)) ??
+    subs.find((s) => !s.auto && isOrig(s)) ??
+    subs.find((s) => s.auto && isVi(s)) ??
+    subs.find((s) => s.auto && isOrig(s)) ??
+    subs.find((s) => !s.auto && isEnOrDe(s)) ??
     subs.find((s) => !s.auto) ??
-    subs.find((s) => isVi(s)) ??
     subs[0]
   );
 }

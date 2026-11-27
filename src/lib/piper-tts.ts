@@ -54,20 +54,22 @@ type QueuedPiperJob = {
 type OrtModule = typeof import("onnxruntime-web");
 type OrtSession = import("onnxruntime-web").InferenceSession;
 
-const gd = globalThis as unknown as {
-  __serverPiper?: {
-    ort: OrtModule | null;
-    dict: SeaDictionary | null;
-    sessions: Map<ServerPiperVoiceId, OrtSession>;
-    loading: Map<ServerPiperVoiceId, Promise<OrtSession>>;
-    pending: Map<string, Promise<Buffer>>;
-    urgentQueue: QueuedPiperJob[];
-    normalQueue: QueuedPiperJob[];
-    running: boolean;
-  };
+type ServerPiperState = {
+  ort: OrtModule | null;
+  dict: SeaDictionary | null;
+  sessions: Map<ServerPiperVoiceId, OrtSession>;
+  loading: Map<ServerPiperVoiceId, Promise<OrtSession>>;
+  pending: Map<string, Promise<Buffer>>;
+  urgentQueue: QueuedPiperJob[];
+  normalQueue: QueuedPiperJob[];
+  running: boolean;
 };
 
-const state = (gd.__serverPiper ??= {
+const gd = globalThis as unknown as {
+  __serverPiper?: ServerPiperState;
+};
+
+const state: ServerPiperState = (gd.__serverPiper ??= {
   ort: null,
   dict: null,
   sessions: new Map(),
@@ -78,9 +80,9 @@ const state = (gd.__serverPiper ??= {
   running: false,
 });
 // Bảo đảm giữ tương thích nếu singleton đã khởi tạo trước hot-reload
-state.urgentQueue ??= [];
-state.normalQueue ??= [];
-state.running ??= false;
+if (!Array.isArray(state.urgentQueue)) state.urgentQueue = [];
+if (!Array.isArray(state.normalQueue)) state.normalQueue = [];
+if (typeof state.running !== "boolean") state.running = false;
 
 function cacheFileFor(voiceId: ServerPiperVoiceId, speed: number, text: string): string {
   const ver = SERVER_PIPER_VOICES[voiceId].cacheVer;

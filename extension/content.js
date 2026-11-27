@@ -828,6 +828,13 @@
     });
   }
 
+  function cleanYtTitle(raw) {
+    return String(raw || "")
+      .replace(/^\(\d+\)\s*/, "")
+      .replace(/\s*-\s*YouTube$/, "")
+      .trim();
+  }
+
   async function extractFromPerformanceTimedtext(ytId) {
     try {
       const entries = performance.getEntriesByType("resource") || [];
@@ -840,15 +847,15 @@
         } catch {
           continue;
         }
-        if (u.searchParams.get("v") !== ytId) continue;
-        const lang = (u.searchParams.get("lang") || u.searchParams.get("tlang") || "auto").toLowerCase();
+        if (u.searchParams.get("v") !== ytId || u.searchParams.get("tlang")) continue;
+        const lang = (u.searchParams.get("lang") || "auto").toLowerCase();
         const res = await fetch(name, { credentials: "include" });
         if (!res.ok) continue;
         const txt = await res.text();
         const cues = parseCapturedYouTubeText(txt);
         if (cues.length) {
           return {
-            title: state.ytTitles.get(ytId) || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId,
+            title: state.ytTitles.get(ytId) || cleanYtTitle(document.title) || ytId,
             lang,
             cues,
           };
@@ -869,7 +876,7 @@
       const cues = parseCapturedYouTubeText(cached.text);
       if (cues.length) {
         return {
-          title: cached.title || state.ytTitles.get(ytId) || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId,
+          title: cached.title || state.ytTitles.get(ytId) || cleanYtTitle(document.title) || ytId,
           lang: cached.lang,
           cues,
         };
@@ -886,7 +893,7 @@
       const cues = parseCapturedYouTubeText(hooked.text);
       if (cues.length) {
         return {
-          title: hooked.title || state.ytTitles.get(ytId) || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId,
+          title: hooked.title || state.ytTitles.get(ytId) || cleanYtTitle(document.title) || ytId,
           lang: hooked.lang,
           cues,
         };
@@ -902,15 +909,32 @@
       const tracks = playerResp?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
       if (!Array.isArray(tracks) || !tracks.length) return null;
 
-      const title = playerResp?.videoDetails?.title || document.title.replace(/\s*-\s*YouTube$/, "").trim() || ytId;
-      const isAuto = (t) => t.kind === "asr";
-      const isVi = (t) => String(t.languageCode || "").toLowerCase().startsWith("vi");
+      const title = playerResp?.videoDetails?.title || cleanYtTitle(document.title) || ytId;
+      const isAuto = (t) => t.kind === "asr" || String(t.vssId || "").startsWith("a.");
+      const baseLang = (code) => String(code || "").toLowerCase().split(/[-_]/)[0];
+      const origBase =
+        baseLang(playerResp?.videoDetails?.defaultAudioLanguage) ||
+        baseLang(tracks.find(isAuto)?.languageCode);
+      const isVi = (t) => baseLang(t.languageCode) === "vi";
+      const isOrig = (t) => Boolean(origBase) && baseLang(t.languageCode) === origBase;
+      const isEnOrDe = (t) => {
+        const b = baseLang(t.languageCode);
+        return b === "en" || b === "de";
+      };
+      const seenTracks = new Set();
       const ordered = [
         ...tracks.filter((t) => !isAuto(t) && isVi(t)),
-        ...tracks.filter((t) => !isAuto(t) && !isVi(t)),
+        ...tracks.filter((t) => !isAuto(t) && isOrig(t)),
         ...tracks.filter((t) => isAuto(t) && isVi(t)),
-        ...tracks.filter((t) => isAuto(t) && !isVi(t)),
-      ];
+        ...tracks.filter((t) => isAuto(t) && isOrig(t)),
+        ...tracks.filter((t) => !isAuto(t) && isEnOrDe(t)),
+        ...tracks.filter((t) => !isAuto(t)),
+        ...tracks.filter((t) => isAuto(t)),
+      ].filter((t) => {
+        if (seenTracks.has(t)) return false;
+        seenTracks.add(t);
+        return true;
+      });
 
       for (const track of ordered) {
         if (!track.baseUrl) continue;
