@@ -8,7 +8,7 @@ import {
 } from './german-g2p';
 import { normalizeVietnameseSpeech } from './normalize-text';
 
-export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v7';
+export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v8';
 export interface FrontendChunk {
   readonly text: string;
   readonly phonemes: string;
@@ -259,15 +259,26 @@ const SOUND_TAG = /\[[^\]\d]{1,30}\]/gu;
 const VERSION =
   /(?<=(?:(?<![\p{L}\p{M}\d])[A-Za-z0-9+#]*[A-Z][A-Za-z0-9+#]*|phiên bản|version|bản|(?<![\p{L}\p{M}])v)[\s-]?)(\d+)\.(\d{1,3})(?!\d|[.,]\d)/gu;
 
-function loosen(text: string): string {
+function normalizeThousandsSeparators(text: string): string {
   return text
-    .replace(/(\p{L})\+\+/gu, '$1 plus plus')
-    .replace(/(\p{L})#/gu, '$1 sharp')
+    .replace(/(?<![\p{L}\p{N}.,])([1-9]\d{0,2}(?:\.\d{3})+)(?=(?:,\d+)?(?![\p{L}\p{N}]|\.\d))/gu, (m) =>
+      m.replaceAll('.', ''),
+    )
+    .replace(/(?<![\p{L}\p{N}.,])([1-9]\d{0,2}(?:,\d{3})+)(?=(?:\.\d+)?(?![\p{L}\p{N}]|,\d))/gu, (m) =>
+      m.replaceAll(',', ''),
+    );
+}
+
+function loosen(text: string): string {
+  return normalizeThousandsSeparators(
+    text
+      .replace(/(\p{L})\+\+/gu, '$1 plus plus')
+      .replace(/(\p{L})#/gu, '$1 sharp')
+      .replace(/(\p{L})(?=\d)|(\d)(?=\p{L})/gu, '$1$2 '),
+  )
     .replace(/\d+(?:\.\d+){2,}/gu, (version) => version.split('.').join(' chấm '))
-    .replace(/(\d),(?=\d{3}(?!\d))/gu, '$1')
     .replace(/(\d)\s*\/\s*(?=\d)/gu, '$1 trên ')
     .replace(/(\d)\s*[-–]\s*(?=\d)/gu, '$1 đến ')
-    .replace(/(\p{L})(?=\d)|(\d)(?=\p{L})/gu, '$1$2 ')
     .replace(/(?<!\d):|:(?!\d)/gu, ' ')
     .replace(/[-_/\\@#~`*<>[\]{}|^$=+]/gu, ' ');
 }
@@ -298,6 +309,7 @@ export function normalizeKokoroText(text: string): string {
   // Versions after a product name or "phiên bản" are read with "chấm" (Python 3.12, GLM-5.3, Qwen2.5); a plain
   // decimal after a Vietnamese word keeps "phẩy" (tăng 2.5 lần).
   text = text.replace(VERSION, '$1 chấm $2');
+  text = normalizeThousandsSeparators(text);
   try {
     return protectedReading(text);
   } catch {

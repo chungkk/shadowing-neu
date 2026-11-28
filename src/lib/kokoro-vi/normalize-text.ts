@@ -1,5 +1,5 @@
 /** Independent, deliberately bounded Vietnamese speech text rules. */
-export const MMS_NORMALIZER_REVISION = 'vi-numbers-latin-v4';
+export const MMS_NORMALIZER_REVISION = 'vi-numbers-latin-v5';
 const MAX_TEXT_CHARACTERS = 10_000;
 const DIGITS = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'] as const;
 // Authored Vietnamese letter names, not a foreign-word pronunciation dictionary.
@@ -64,15 +64,16 @@ function group(value: number, full: boolean): string {
 }
 
 function integer(value: string): string {
-  if (value.length > 9)
+  if (value.length > 12)
     throw new Error(
-      'Speech numbers support at most nine digits. Write longer numbers or codes in words.',
+      'Speech numbers support at most twelve digits. Write longer numbers or codes in words.',
     );
   if (value.length > 1 && value.startsWith('0')) return digitSequence(value);
   let remaining = Number(value);
   if (remaining === 0) return DIGITS[0];
   const words: string[] = [];
   for (const [scale, name] of [
+    [1_000_000_000, 'tỷ'],
     [1_000_000, 'triệu'],
     [1_000, 'nghìn'],
     [1, ''],
@@ -158,7 +159,7 @@ export function normalizeVietnameseSpeech(text: string): string {
       const unsigned = value.replace(/^[+-]/u, '');
       const [whole = '', fraction] = unsigned.split(/[.,]/u);
       if (fraction === undefined) return sign + integer(whole);
-      if (fraction.length === 3)
+      if (fraction.length === 3 && whole !== '0')
         throw new Error('Ambiguous decimal or thousands separator. Write this number in words.');
       if (fraction.length > 6)
         throw new Error(

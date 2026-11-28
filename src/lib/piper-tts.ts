@@ -13,19 +13,19 @@ export const SERVER_PIPER_VOICES = {
   "piper:adam_bua": {
     file: "adam_bua_v3_int8.onnx",
     url: "https://hallovn.de/download/media/kokoro/adam_bua_v3_int8.onnx",
-    cacheVer: "v3b",
+    cacheVer: "v3c",
     enableGerman: true,
   },
   "piper:lac_phi": {
     file: "lac_phi_int8.onnx",
     url: "https://hallovn.de/download/media/kokoro/lac_phi_int8.onnx?v=1",
-    cacheVer: "v2",
+    cacheVer: "v2b",
     enableGerman: false,
   },
   "piper:vtv2_thuyetminh": {
     file: "vtv2_thuyetminh_v3_int8.onnx",
     url: "https://hallovn.de/download/media/kokoro/vtv2_thuyetminh_v3_int8.onnx",
-    cacheVer: "v3b",
+    cacheVer: "v3c",
     enableGerman: true,
   },
 } as const;
