@@ -27,3 +27,23 @@ export function extractVideoId(input: string): string | null {
   }
   return null;
 }
+
+/**
+ * Nhận diện link hoặc mã kênh YouTube (@handle, UC…, youtube.com/@…, youtube.com/channel/UC…).
+ * Trả về dạng chuẩn để gửi lên API kênh, hoặc null nếu là link video / không hợp lệ.
+ */
+export function extractChannelInput(input: string): string | null {
+  const s = input.trim();
+  if (!s || extractVideoId(s)) return null;
+  if (/^@[\w.-]{2,}$/.test(s)) return s;
+  if (/^UC[\w-]{22}$/.test(s)) return s;
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
+  } catch {
+    return null;
+  }
+  if (!isDomain(url.hostname.toLowerCase(), "youtube.com")) return null;
+  const m = url.pathname.match(/^\/(@[^/?#]+|channel\/UC[\w-]{22}|c\/[^/?#]+|user\/[^/?#]+)/);
+  return m ? `https://www.youtube.com/${m[1]}` : null;
+}

@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  ExternalLink,
   Globe,
   Headphones,
   Link2,
   Loader2,
   Play,
+  RefreshCw,
   Sparkles,
   TriangleAlert,
+  Tv,
   X,
 } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ensurePiperLoaded } from "@/lib/kokoro-vi/engine";
-import { extractVideoId } from "@/lib/youtube-id";
+import { extractChannelInput, extractVideoId } from "@/lib/youtube-id";
 import KokoroLivePlayer, { preloadYouTubeIframeApi, type LiveCue, type LiveVoiceId } from "./KokoroLivePlayer";
 
 export type DubSuggestion = {
@@ -22,6 +26,35 @@ export type DubSuggestion = {
   title: string;
   meta?: string;
 };
+
+export type DubChannelItem = {
+  key: string;
+  dbId?: number;
+  channelId?: string;
+  title: string;
+  handle: string;
+  avatar: string;
+  url: string;
+};
+
+export type DubChannelVideo = {
+  id: string;
+  title: string;
+  duration: number | null;
+};
+
+function fmtDuration(s: number | null): string {
+  if (s == null || !Number.isFinite(s) || s < 0) return "";
+  const total = Math.floor(s);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  return h
+    ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+    : `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+const CHANNEL_VIDEO_LIMIT = 16;
 
 type RecentDub = {
   videoId: string;
@@ -34,6 +67,7 @@ type LiveSession = {
   sourceLang?: string;
   cues: LiveCue[];
   voiceId: LiveVoiceId;
+  autoPlay?: boolean;
 };
 
 type PrepProgress = {
@@ -190,7 +224,17 @@ async function fetchPrepareStream(
   return result;
 }
 
-export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: DubSuggestion[] }) {
+export default function YouTubeDubClient({
+  suggestions = [],
+  channels = [],
+  initialChannelVideos = null,
+  isAdmin = false,
+}: {
+  suggestions?: DubSuggestion[];
+  channels?: DubChannelItem[];
+  initialChannelVideos?: { key: string; videos: DubChannelVideo[] } | null;
+  isAdmin?: boolean;
+}) {
   const searchParams = useSearchParams();
   const initialV = searchParams.get("v") ?? "";
 
@@ -212,12 +256,36 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   const [err, setErr] = useState("");
   const [session, setSession] = useState<LiveSession | null>(null);
   const [recent, setRecent] = useLocalStorage<RecentDub[]>(RECENT_KEY, EMPTY_RECENT);
+
+  // Duyệt kênh YouTube & video mới nhất của kênh
+  const [channelList, setChannelList] = useState<DubChannelItem[]>(channels);
+  const [customChannel, setCustomChannel] = useState<DubChannelItem | null>(null);
+  const [activeChannelKey, setActiveChannelKey] = useState<string | null>(() => channels[0]?.key ?? null);
+  const [videosByChannel, setVideosByChannel] = useState<Record<string, DubChannelVideo[]>>(() =>
+    initialChannelVideos ? { [initialChannelVideos.key]: initialChannelVideos.videos } : {},
+  );
+  const [loadingChannelKey, setLoadingChannelKey] = useState<string | null>(null);
+  const [channelErr, setChannelErr] = useState("");
+
   const abortRef = useRef<AbortController | null>(null);
+  const chAbortRef = useRef<AbortController | null>(null);
+  const chSectionRef = useRef<HTMLElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const autoLoadedRef = useRef("");
   const voiceIdRef = useRef<LiveVoiceId>(voiceId);
   const prepPctRef = useRef(0);
   const loadStartRef = useRef(0);
+  const videosByChannelRef = useRef(videosByChannel);
+  useEffect(() => {
+    videosByChannelRef.current = videosByChannel;
+  }, [videosByChannel]);
+
+  const displayedChannels: DubChannelItem[] = customChannel
+    ? [customChannel, ...channelList.filter((c) => c.key !== customChannel.key && c.channelId !== customChannel.channelId)]
+    : channelList;
+  const activeChannel = displayedChannels.find((c) => c.key === activeChannelKey) ?? null;
+  const activeVideos = activeChannel ? videosByChannel[activeChannel.key] : undefined;
+  const isLoadingCh = activeChannel ? loadingChannelKey === activeChannel.key : false;
 
   const recentRef = useRef(recent);
   useEffect(() => {
@@ -254,8 +322,112 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   }, [loading]);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      chAbortRef.current?.abort();
+    };
   }, []);
+
+  const fetchChannelVideos = useCallback(async (ch: DubChannelItem, forceRefresh = false) => {
+    chAbortRef.current?.abort();
+    const ac = new AbortController();
+    chAbortRef.current = ac;
+
+    setLoadingChannelKey(ch.key);
+    setChannelErr("");
+
+    try {
+      const qs = new URLSearchParams({ limit: String(CHANNEL_VIDEO_LIMIT) });
+      if (ch.dbId) qs.set("id", String(ch.dbId));
+      else qs.set("channel", ch.channelId || ch.handle || ch.url);
+      if (forceRefresh) qs.set("refresh", "1");
+
+      const res = await fetch(`/api/v1/dub/channels?${qs.toString()}`, { signal: ac.signal });
+      const data = (await res.json().catch(() => ({}))) as {
+        channel?: DubChannelItem;
+        videos?: DubChannelVideo[];
+        error?: string;
+      };
+      if (!res.ok || !data.videos) {
+        throw new Error(data.error || `Không tải được danh sách video (HTTP ${res.status})`);
+      }
+      if (chAbortRef.current !== ac || ac.signal.aborted) return;
+
+      const updatedCh = data.channel ? { ...ch, ...data.channel, key: data.channel.key || ch.key } : ch;
+      const targetKey = updatedCh.key;
+
+      setChannelList((prev) =>
+        prev.map((item) => (item.key === ch.key || (item.dbId && item.dbId === ch.dbId) ? updatedCh : item)),
+      );
+      setCustomChannel((prev) =>
+        prev && (prev.key === ch.key || prev.url === ch.url) ? updatedCh : prev,
+      );
+      if (targetKey !== ch.key) {
+        setActiveChannelKey((cur) => (cur === ch.key ? targetKey : cur));
+      }
+      setVideosByChannel((prev) => ({
+        ...prev,
+        [targetKey]: data.videos!,
+      }));
+    } catch (e) {
+      if ((e as Error).name === "AbortError" || chAbortRef.current !== ac) return;
+      setChannelErr((e as Error).message || "Không tải được video của kênh.");
+    } finally {
+      if (chAbortRef.current === ac) {
+        setLoadingChannelKey(null);
+      }
+    }
+  }, []);
+
+  const displayedChannelsRef = useRef(displayedChannels);
+  useEffect(() => {
+    displayedChannelsRef.current = displayedChannels;
+  });
+
+  useEffect(() => {
+    if (!activeChannelKey) return;
+    if (videosByChannelRef.current[activeChannelKey]) {
+      setChannelErr("");
+      return;
+    }
+    const target = displayedChannelsRef.current.find((c) => c.key === activeChannelKey);
+    if (target) void fetchChannelVideos(target, false);
+  }, [activeChannelKey, fetchChannelVideos]);
+
+  const loadCustomChannel = useCallback(
+    (channelInput: string) => {
+      const existing = channelList.find(
+        (c) =>
+          c.url.toLowerCase() === channelInput.toLowerCase() ||
+          (c.handle && c.handle.toLowerCase() === channelInput.toLowerCase()) ||
+          (c.channelId && c.channelId.toLowerCase() === channelInput.toLowerCase()),
+      );
+      if (existing) {
+        setCustomChannel(null);
+        setActiveChannelKey(existing.key);
+        setChannelErr("");
+        chSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      const temp: DubChannelItem = {
+        key: `custom:${channelInput.toLowerCase()}`,
+        title: channelInput.replace(/^https?:\/\/(www\.)?youtube\.com\//i, ""),
+        handle: channelInput.startsWith("@") ? channelInput : "",
+        avatar: "",
+        url: channelInput.startsWith("http")
+          ? channelInput
+          : channelInput.startsWith("@")
+            ? `https://www.youtube.com/${channelInput}`
+            : `https://www.youtube.com/channel/${channelInput}`,
+      };
+      setCustomChannel(temp);
+      setActiveChannelKey(temp.key);
+      setChannelErr("");
+      void fetchChannelVideos(temp, false);
+      chSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [channelList, fetchChannelVideos],
+  );
 
   const recordOpen = useCallback(
     (vid: string, title: string) => {
@@ -271,7 +443,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   );
 
   const loadVideo = useCallback(
-    async (rawInput: string, voice: LiveVoiceId, opts?: { force?: boolean; repair?: boolean }) => {
+    async (rawInput: string, voice: LiveVoiceId, opts?: { force?: boolean; repair?: boolean; autoPlay?: boolean }) => {
       const videoId = extractVideoId(rawInput.trim());
       if (!videoId) {
         setErr("Link YouTube không hợp lệ. Vui lòng dán link YouTube đầy đủ (ví dụ: https://youtu.be/…)");
@@ -283,9 +455,9 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
 
       // Nạp song song YouTube IFrame API & giọng trình duyệt (nếu đang chọn) trong lúc server chuẩn bị video
       preloadYouTubeIframeApi();
-      if (voice === "piper:adam_bua") void ensurePiperLoaded("adam_bua").catch(() => {});
-      else if (voice === "piper:lac_phi") void ensurePiperLoaded("lac_phi").catch(() => {});
-      else if (voice === "piper:vtv2_thuyetminh") void ensurePiperLoaded("vtv2_thuyetminh").catch(() => {});
+      if (voice === "piper:adam_bua") void ensurePiperLoaded("adam_bua").catch(() => { });
+      else if (voice === "piper:lac_phi") void ensurePiperLoaded("lac_phi").catch(() => { });
+      else if (voice === "piper:vtv2_thuyetminh") void ensurePiperLoaded("vtv2_thuyetminh").catch(() => { });
 
       abortRef.current?.abort();
       const ac = new AbortController();
@@ -332,6 +504,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                     sourceLang: partial.sourceLang,
                     cues: partial.cues,
                     voiceId: voice,
+                    autoPlay: opts?.autoPlay,
                   });
                   setBgProgress(bg);
                   if (firstReady) {
@@ -394,6 +567,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
           sourceLang: data.sourceLang,
           cues: data.cues,
           voiceId: voice,
+          autoPlay: opts?.autoPlay,
         });
         setBgProgress(null);
         if (!becameReady) recordOpen(data.videoId, title);
@@ -428,8 +602,20 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim() || isLoadingCurrent) return;
-    void loadVideo(url, voiceId);
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (extractVideoId(trimmed)) {
+      if (isLoadingCurrent) return;
+      void loadVideo(trimmed, voiceId, { autoPlay: true });
+      return;
+    }
+    const ch = extractChannelInput(trimmed);
+    if (ch) {
+      setErr("");
+      loadCustomChannel(ch);
+      return;
+    }
+    setErr("Link YouTube không hợp lệ. Vui lòng dán link video hoặc link kênh YouTube (ví dụ: https://www.youtube.com/@EasyGerman)");
   };
 
   const cancelLoad = (clearAndFocus = true) => {
@@ -458,7 +644,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
 
   const openQuick = (videoId: string) => {
     setUrl(`https://youtu.be/${videoId}`);
-    void loadVideo(videoId, voiceId);
+    void loadVideo(videoId, voiceId, { autoPlay: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -484,8 +670,8 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="Dán link YouTube bất kỳ — tự động mở thuyết minh ngay"
-              aria-label="Link video YouTube"
+              placeholder="Dán link video hoặc kênh YouTube (@ten-kenh) — tự động mở ngay"
+              aria-label="Link video hoặc kênh YouTube"
               value={url}
               onChange={(e) => {
                 setUrl(e.target.value);
@@ -498,7 +684,15 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                   e.preventDefault();
                   setUrl(pasted);
                   setErr("");
-                  void loadVideo(pasted, voiceId);
+                  void loadVideo(pasted, voiceId, { autoPlay: true });
+                  return;
+                }
+                const ch = !vid ? extractChannelInput(pasted) : null;
+                if (ch) {
+                  e.preventDefault();
+                  setUrl(pasted);
+                  setErr("");
+                  loadCustomChannel(ch);
                 }
               }}
               required
@@ -581,11 +775,10 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                     role="radio"
                     aria-checked={active}
                     onClick={() => setVoiceId(v.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                      active
-                        ? "border-sec bg-sec-soft text-sec-text"
-                        : "border-line bg-card-2/50 text-muted hover:border-line-strong hover:text-foreground"
-                    }`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${active
+                      ? "border-sec bg-sec-soft text-sec-text"
+                      : "border-line bg-card-2/50 text-muted hover:border-line-strong hover:text-foreground"
+                      }`}
                   >
                     <span>{v.name}</span>
                     <span className={`text-[10px] font-normal ${active ? "text-sec-text/80" : "text-muted/80"}`}>
@@ -673,14 +866,242 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             onVoiceChange={setVoiceId}
             shareUrl={`/thuyet-minh?v=${session.videoId}`}
             bgProgress={bgProgress}
+            autoPlay={session.autoPlay}
             onRetranslate={(mode) => void loadVideo(session.videoId, voiceId, { force: mode === "force", repair: mode === "repair" })}
             retranslating={loading && loadingVideoId === session.videoId}
           />
         </section>
       )}
 
-      {/* Giới thiệu ngắn khi chưa mở video nào */}
-      {!session && !loading && (
+      {/* Kênh YouTube & danh sách video mới nhất */}
+      {displayedChannels.length > 0 && (
+        <section ref={chSectionRef} id="dub-channels" className="flex flex-col gap-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-foreground sm:text-base">Kênh YouTube</h2>
+              <p className="text-xs text-muted">
+                Chọn kênh để xem {CHANNEL_VIDEO_LIMIT} video mới nhất · Bấm vào video là phát thuyết minh
+              </p>
+            </div>
+            {isAdmin && (
+              <Link href="/admin/channels" className="btn btn-sm">
+                <Tv className="size-3.5" />
+                <span>Quản lý kênh</span>
+              </Link>
+            )}
+          </div>
+
+          {/* Thanh chọn kênh */}
+          <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Chọn kênh YouTube">
+            {displayedChannels.map((ch) => {
+              const active = ch.key === activeChannel?.key;
+              const isCustom = customChannel?.key === ch.key;
+              return (
+                <div key={ch.key} className="inline-flex items-center">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setActiveChannelKey(ch.key)}
+                    className={`inline-flex items-center gap-2 border px-3 py-1.5 text-left transition ${isCustom ? "rounded-l-full" : "rounded-full"
+                      } ${active
+                        ? "border-sec bg-sec-soft text-sec-text ring-1 ring-sec/30"
+                        : "border-line bg-card text-foreground hover:border-line-strong hover:bg-card-2/60"
+                      }`}
+                  >
+                    {ch.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={ch.avatar}
+                        alt=""
+                        className="size-6 shrink-0 rounded-full border border-line bg-card-2 object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-card-2 text-muted">
+                        <Tv className="size-3.5" aria-hidden />
+                      </span>
+                    )}
+                    <span className="max-w-[180px] truncate text-xs font-semibold sm:text-sm">{ch.title}</span>
+                    {ch.handle && (
+                      <span className={`hidden text-[11px] sm:inline ${active ? "text-sec-text/80" : "text-muted"}`}>
+                        {ch.handle}
+                      </span>
+                    )}
+                  </button>
+                  {isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomChannel(null);
+                        setActiveChannelKey(channelList[0]?.key ?? null);
+                      }}
+                      title="Đóng kênh vừa dán"
+                      aria-label="Đóng kênh vừa dán"
+                      className={`inline-flex h-[38px] items-center justify-center rounded-r-full border border-l-0 px-2 transition ${active
+                        ? "border-sec bg-sec-soft text-sec-text hover:brightness-95"
+                        : "border-line bg-card text-muted hover:bg-card-2 hover:text-foreground"
+                        }`}
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Thông tin kênh đang chọn + nút làm mới */}
+          {activeChannel && (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/70 bg-card-2/40 px-3.5 py-2.5">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {activeChannel.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activeChannel.avatar}
+                      alt=""
+                      className="size-8 shrink-0 rounded-full border border-line bg-card object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-card text-muted">
+                      <Tv className="size-4" aria-hidden />
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-foreground sm:text-sm">{activeChannel.title}</p>
+                    <p className="text-[11px] text-muted">
+                      {isLoadingCh && !activeVideos
+                        ? "Đang tải danh sách video mới nhất…"
+                        : activeVideos
+                          ? `${activeVideos.length} video mới nhất`
+                          : "Chưa tải danh sách video"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isLoadingCh}
+                    onClick={() => void fetchChannelVideos(activeChannel, true)}
+                    className="btn btn-sm"
+                    title="Lấy lại video mới nhất từ YouTube"
+                  >
+                    <RefreshCw className={`size-3.5 ${isLoadingCh ? "animate-spin" : ""}`} />
+                    <span>Làm mới</span>
+                  </button>
+                  {activeChannel.url && (
+                    <a
+                      href={activeChannel.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-sm"
+                      title="Mở kênh trên YouTube"
+                    >
+                      <ExternalLink className="size-3.5" />
+                      <span className="max-sm:hidden">YouTube</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {channelErr && !activeVideos && (
+                <div role="alert" className="alert alert-err flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+                  <span className="inline-flex items-center gap-2">
+                    <TriangleAlert className="size-4 shrink-0" />
+                    <span>{channelErr}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void fetchChannelVideos(activeChannel, false)}
+                    className="btn btn-sm shrink-0"
+                  >
+                    Thử lại
+                  </button>
+                </div>
+              )}
+
+              {isLoadingCh && !activeVideos ? (
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4" aria-hidden>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="card overflow-hidden p-0">
+                      <div className="aspect-video w-full animate-pulse bg-card-2" />
+                      <div className="space-y-2 p-2.5 sm:p-3">
+                        <div className="h-3.5 w-full animate-pulse rounded bg-card-2" />
+                        <div className="h-3.5 w-2/3 animate-pulse rounded bg-card-2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : activeVideos && activeVideos.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+                  {activeVideos.map((v) => {
+                    const isPlayingThis = session?.videoId === v.id;
+                    const isLoadingThis = loadingVideoId === v.id;
+                    const dur = fmtDuration(v.duration);
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => openQuick(v.id)}
+                        className={`group card card-link flex flex-col overflow-hidden p-0 text-left ${isPlayingThis || isLoadingThis ? "ring-2 ring-sec" : ""
+                          }`}
+                      >
+                        <div className="relative aspect-video w-full overflow-hidden bg-card-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`}
+                            alt=""
+                            loading="lazy"
+                            className="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                          />
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/25">
+                            <span className="flex size-9 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition group-hover:opacity-100">
+                              <Play className="size-4 translate-x-0.5" />
+                            </span>
+                          </div>
+                          {dur && (
+                            <span className="absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white tabular-nums">
+                              {dur}
+                            </span>
+                          )}
+                          {(isLoadingThis || isPlayingThis) && (
+                            <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-md bg-sec px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-xs">
+                              {isLoadingThis ? (
+                                <>
+                                  <Loader2 className="size-3 animate-spin" />
+                                  Đang tải
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="size-2.5 fill-current" />
+                                  Đang phát
+                                </>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className="line-clamp-2 p-2.5 text-xs leading-snug font-semibold text-foreground group-hover:text-sec-text sm:p-3 sm:text-sm"
+                          title={v.title}
+                        >
+                          {v.title}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : activeVideos ? (
+                <div className="card empty py-8 text-xs text-muted">
+                  Kênh này chưa có video công khai nào.
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Giới thiệu ngắn khi chưa mở video nào và chưa có kênh */}
+      {!session && !loading && displayedChannels.length === 0 && (
         <section aria-label="Điểm nổi bật" className="grid gap-3 sm:grid-cols-3">
           <div className="card flex items-start gap-3 p-4">
             <span className="icon-bubble tint-sec size-9 shrink-0">
@@ -731,9 +1152,8 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
               return (
                 <div
                   key={r.videoId}
-                  className={`group card relative flex flex-col overflow-hidden p-0 ${
-                    isCurrent ? "ring-1 ring-sec" : ""
-                  }`}
+                  className={`group card relative flex flex-col overflow-hidden p-0 ${isCurrent ? "ring-1 ring-sec" : ""
+                    }`}
                 >
                   <button
                     type="button"

@@ -6,7 +6,14 @@ import PageHeader from "@/components/PageHeader";
 import { ListSkeleton } from "@/components/Skeleton";
 import YouTubeDubClient, { type DubSuggestion } from "@/components/YouTubeDubClient";
 import { accessOf } from "@/lib/access";
+import { getCurrentUser } from "@/lib/auth";
 import { listLessons } from "@/lib/db";
+import {
+  DEFAULT_DUB_CHANNEL_LIMIT,
+  getCachedDubChannelVideos,
+  listDubChannels,
+  resolveChannelVideosUrl,
+} from "@/lib/dub-channels";
 import { pageMeta } from "@/lib/page-meta";
 
 export const metadata: Metadata = pageMeta({
@@ -18,6 +25,8 @@ export const metadata: Metadata = pageMeta({
 
 async function DubPageContent() {
   await connection();
+  const user = await getCurrentUser();
+  const isAdmin = user?.role === "admin";
   // Gợi ý vài bài miễn phí từ thư viện HalloVN để người mới bấm nghe thử ngay
   const access = accessOf(null);
   const seen = new Set<string>();
@@ -34,7 +43,20 @@ async function DubPageContent() {
     if (suggestions.length >= 4) break;
   }
 
-  return <YouTubeDubClient suggestions={suggestions} />;
+  const channels = listDubChannels();
+  const firstChannel = channels[0];
+  const firstUrl = firstChannel ? resolveChannelVideosUrl(firstChannel) : null;
+  const cachedFirst = firstUrl ? getCachedDubChannelVideos(firstUrl, DEFAULT_DUB_CHANNEL_LIMIT) : null;
+  const initialChannelVideos = firstChannel && cachedFirst ? { key: firstChannel.key, videos: cachedFirst.videos } : null;
+
+  return (
+    <YouTubeDubClient
+      suggestions={suggestions}
+      channels={channels}
+      initialChannelVideos={initialChannelVideos}
+      isAdmin={isAdmin}
+    />
+  );
 }
 
 export default function ThuyetMinhPage() {

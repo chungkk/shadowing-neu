@@ -165,6 +165,7 @@ export default function KokoroLivePlayer({
   bgProgress = null,
   onRetranslate,
   retranslating = false,
+  autoPlay = false,
 }: {
   videoId: string;
   title: string;
@@ -179,6 +180,7 @@ export default function KokoroLivePlayer({
   bgProgress?: { pct: number; done: number; total: number; reconnecting?: boolean } | null;
   onRetranslate?: (mode: "repair" | "force") => void;
   retranslating?: boolean;
+  autoPlay?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const ytRef = useRef<YTPlayerEx | null>(null);
@@ -198,6 +200,10 @@ export default function KokoroLivePlayer({
   const warmingRef = useRef(false);
   const gatedCueRef = useRef(-1);
   const prevCuesRef = useRef<LiveCue[]>(cues);
+  const autoPlayRef = useRef(autoPlay);
+  useEffect(() => {
+    autoPlayRef.current = autoPlay;
+  }, [autoPlay]);
 
   const [ytReady, setYtReady] = useState(false);
   const [ytErr, setYtErr] = useState("");
@@ -691,6 +697,10 @@ export default function KokoroLivePlayer({
               player.setVolume(stateRef.current.origVol);
             }
             setYtReady(true);
+            if (autoPlayRef.current) {
+              getAudioCtx();
+              player.playVideo();
+            }
           },
           onError: (ev: { data: number }) => {
             if (cancelled) return;
@@ -761,7 +771,7 @@ export default function KokoroLivePlayer({
       player?.destroy();
       el.remove();
     };
-  }, [videoId, findTargetCueIndex, getCueBuffer, isCueCached, pauseSpeech, resumeSpeech, stopSpeech]);
+  }, [videoId, findTargetCueIndex, getAudioCtx, getCueBuffer, isCueCached, pauseSpeech, resumeSpeech, stopSpeech]);
 
   // Real-time scheduler & lookahead prefetch loop (every 100ms)
   useEffect(() => {
