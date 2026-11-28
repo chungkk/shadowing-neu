@@ -152,6 +152,10 @@ type SubFormat = { ext: string; url?: string; name?: string };
 type Info = {
   title?: string;
   duration?: number;
+  channel?: string;
+  uploader?: string;
+  description?: string;
+  language?: string;
   subtitles?: Record<string, SubFormat[]>;
   automatic_captions?: Record<string, SubFormat[]>;
 };
@@ -213,10 +217,28 @@ function listTracks(info: Info): YtdlpTrack[] {
   return [...manual, ...auto];
 }
 
-/** Tiêu đề + danh sách phụ đề của video, lấy bằng yt-dlp */
-export async function ytdlpVideo(videoId: string): Promise<{ title: string; duration?: number; tracks: YtdlpTrack[] }> {
+/** Tiêu đề + thông tin kênh/mô tả + danh sách phụ đề của video, lấy bằng yt-dlp */
+export async function ytdlpVideo(videoId: string): Promise<{
+  title: string;
+  duration?: number;
+  channel?: string;
+  description?: string;
+  defaultAudioLang?: string;
+  tracks: YtdlpTrack[];
+}> {
   const { info } = await withUpdate(() => getInfo(videoId));
-  return { title: info.title ?? videoId, duration: info.duration, tracks: listTracks(info) };
+  const channel = (info.channel || info.uploader || "").trim() || undefined;
+  const description =
+    typeof info.description === "string" && info.description.trim() ? info.description.slice(0, 1500) : undefined;
+  const defaultAudioLang = typeof info.language === "string" && info.language.trim() ? info.language.trim() : undefined;
+  return {
+    title: info.title ?? videoId,
+    duration: info.duration,
+    channel,
+    description,
+    defaultAudioLang,
+    tracks: listTracks(info),
+  };
 }
 
 /** Tải 1 track phụ đề bằng yt-dlp */

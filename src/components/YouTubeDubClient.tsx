@@ -271,7 +271,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
   );
 
   const loadVideo = useCallback(
-    async (rawInput: string, voice: LiveVoiceId) => {
+    async (rawInput: string, voice: LiveVoiceId, opts?: { force?: boolean; repair?: boolean }) => {
       const videoId = extractVideoId(rawInput.trim());
       if (!videoId) {
         setErr("Link YouTube không hợp lệ. Vui lòng dán link YouTube đầy đủ (ví dụ: https://youtu.be/…)");
@@ -311,7 +311,12 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
           try {
             data = await fetchPrepareStream(
               "/api/v1/dub/prepare",
-              { videoId, voiceId: voice },
+              {
+                videoId,
+                voiceId: voice,
+                ...(opts?.force && bgAttempt === 0 ? { force: true } : {}),
+                ...(opts?.repair && bgAttempt === 0 ? { repair: true } : {}),
+              },
               {
                 onProgress: (p) => {
                   if (isActive() && !becameReady) setPrep(p);
@@ -353,6 +358,7 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
                           // "" = AI chưa dịch được → không đọc (đừng thay bằng câu gốc)
                           text: tr,
                           orig: nextCues[idx].orig,
+                          ...(nextCues[idx].spk ? { spk: nextCues[idx].spk } : {}),
                           ...(tr || isSkip ? {} : { untranslated: true }),
                         };
                       }
@@ -667,6 +673,8 @@ export default function YouTubeDubClient({ suggestions = [] }: { suggestions?: D
             onVoiceChange={setVoiceId}
             shareUrl={`/thuyet-minh?v=${session.videoId}`}
             bgProgress={bgProgress}
+            onRetranslate={(mode) => void loadVideo(session.videoId, voiceId, { force: mode === "force", repair: mode === "repair" })}
+            retranslating={loading && loadingVideoId === session.videoId}
           />
         </section>
       )}

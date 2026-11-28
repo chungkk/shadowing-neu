@@ -8,6 +8,7 @@ import {
   Loader2,
   Pause,
   Play,
+  RefreshCw,
   RotateCcw,
   Share2,
   Volume2,
@@ -26,6 +27,7 @@ export type LiveCue = {
   end_ms: number;
   text: string;
   orig?: string;
+  spk?: string;
   /** true = đang dịch ngầm, chưa có bản tiếng Việt */
   pending?: boolean;
   /** true = AI chưa dịch được câu này (text rỗng, không đọc) */
@@ -161,6 +163,8 @@ export default function KokoroLivePlayer({
   shareUrl,
   showDebugMeta = false,
   bgProgress = null,
+  onRetranslate,
+  retranslating = false,
 }: {
   videoId: string;
   title: string;
@@ -173,6 +177,8 @@ export default function KokoroLivePlayer({
   shareUrl?: string;
   showDebugMeta?: boolean;
   bgProgress?: { pct: number; done: number; total: number; reconnecting?: boolean } | null;
+  onRetranslate?: (mode: "repair" | "force") => void;
+  retranslating?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const ytRef = useRef<YTPlayerEx | null>(null);
@@ -222,6 +228,7 @@ export default function KokoroLivePlayer({
   // Server hỗ trợ tổng hợp nhanh Adam/Eva ngay từ giây đầu (C++ native), không cần đợi tải 79 MB về trình duyệt
   const voiceReady = true;
   const hasOrig = cues.some((c) => Boolean(c.orig));
+  const untranslatedCount = cues.filter((c) => c.untranslated).length;
   const activeCue = activeCueIdx >= 0 ? cues[activeCueIdx] : null;
 
   const stateRef = useRef({ voiceId, speed, origVol, dubVol, dubMuted, voiceReady, localWasmReady, cues, activeCueIdx });
@@ -1100,6 +1107,22 @@ export default function KokoroLivePlayer({
             <span>Lời thoại</span>
           </button>
 
+          {onRetranslate && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={retranslating || Boolean(bgProgress)}
+              onClick={() => {
+                stopSpeech();
+                onRetranslate("force");
+              }}
+              title="Dịch lại toàn bộ video từ ngôn ngữ gốc"
+            >
+              <RefreshCw className={`size-3.5 ${retranslating ? "animate-spin" : ""}`} />
+              <span className="max-sm:hidden">Dịch lại</span>
+            </button>
+          )}
+
           {shareUrl && (
             <button type="button" className="btn btn-sm" onClick={() => void copyShare()} title="Chép link xem thuyết minh">
               {copied ? <Check className="size-3.5 text-ok-text" /> : <Share2 className="size-3.5" />}
@@ -1181,6 +1204,20 @@ export default function KokoroLivePlayer({
             >
               <Volume2 className="size-4 shrink-0" />
               <span>Trình duyệt đang tắt tiếng thuyết minh — Bấm vào đây để bật âm thanh tiếng Việt</span>
+            </button>
+          )}
+
+          {untranslatedCount > 0 && onRetranslate && !bgProgress && !retranslating && (
+            <button
+              type="button"
+              onClick={() => {
+                stopSpeech();
+                onRetranslate("repair");
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3.5 py-2 text-xs font-medium text-amber-700 transition hover:bg-amber-500/15 dark:text-amber-300"
+            >
+              <RefreshCw className="size-3.5 shrink-0" />
+              <span>Có {untranslatedCount} câu chưa dịch được — Bấm để dịch bù ngay</span>
             </button>
           )}
 

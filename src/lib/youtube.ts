@@ -57,7 +57,13 @@ const MIX_TRACK: Track = { languageCode: ORIGINAL_WHISPER, name: "🤖 Original 
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
-  videoDetails?: { title?: string; lengthSeconds?: string };
+  videoDetails?: {
+    title?: string;
+    lengthSeconds?: string;
+    author?: string;
+    shortDescription?: string;
+    defaultAudioLanguage?: string;
+  };
   captions?: {
     playerCaptionsTracklistRenderer?: {
       captionTracks?: {
@@ -81,8 +87,23 @@ type AudioFormat = {
   bitrate?: number;
   isDrc?: boolean;
   // Video có nhiều track audio (YouTube tự lồng tiếng AI sang ngôn ngữ khác): mỗi itag có 1 bản / track
-  audioTrack?: { displayName?: string; isAutoDubbed?: boolean };
+  audioTrack?: { displayName?: string; isAutoDubbed?: boolean; id?: string; audioIsDefault?: boolean };
 };
+
+function inferDefaultAudioLang(player: PlayerResponse): string | undefined {
+  const direct = player.videoDetails?.defaultAudioLanguage?.trim();
+  if (direct) return direct;
+  const formats = player.streamingData?.adaptiveFormats ?? [];
+  const orig = formats.find(
+    (f) =>
+      f.mimeType.startsWith("audio/") &&
+      !f.audioTrack?.isAutoDubbed &&
+      (f.audioTrack?.audioIsDefault || /acont(%3D|=)original/.test(f.url ?? "")) &&
+      f.audioTrack?.id,
+  );
+  const idPart = orig?.audioTrack?.id?.split(".")[0]?.trim();
+  return idPart || undefined;
+}
 
 // Client VISIONOS (giống yt-dlp 2026.08): khi gửi kèm visitorData, link audio tải được trọn file
 // mà không cần PO token. Client ANDROID chỉ cho tải ~1MB đầu (≈3 phút audio).
@@ -301,15 +322,24 @@ async function orYtdlp<T>(primary: () => Promise<T>, fallback: () => Promise<T>)
 type Source = {
   title: string;
   duration?: number; // giây (YouTube có thể không trả về)
+  channel?: string;
+  description?: string;
+  defaultAudioLang?: string;
   tracks: { track: Track; load: () => Promise<Segment[]> }[];
   audio: () => Promise<{ blob: Blob; filename: string }>;
 };
 
 async function fromInnertube(videoId: string): Promise<Source> {
   const player = await fetchPlayer(videoId);
+  const channel = player.videoDetails?.author?.trim() || undefined;
+  const rawDesc = player.videoDetails?.shortDescription;
+  const description = typeof rawDesc === "string" && rawDesc.trim() ? rawDesc.slice(0, 1500) : undefined;
   return {
     title: player.videoDetails?.title ?? videoId,
     duration: Number(player.videoDetails?.lengthSeconds) || undefined,
+    channel,
+    description,
+    defaultAudioLang: inferDefaultAudioLang(player),
     tracks: (player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []).map((t) => {
       const track: Track = {
         languageCode: t.languageCode,
@@ -334,10 +364,13 @@ async function fromInnertube(videoId: string): Promise<Source> {
 }
 
 async function fromYtdlp(videoId: string): Promise<Source> {
-  const { title, duration, tracks } = await ytdlpVideo(videoId);
+  const { title, duration, channel, description, defaultAudioLang, tracks } = await ytdlpVideo(videoId);
   return {
     title,
     duration,
+    channel,
+    description,
+    defaultAudioLang,
     tracks: tracks.map(({ languageCode, name, auto }) => {
       const track: Track = { languageCode, name, auto };
       return { track, load: () => ytdlpCaptions(videoId, track) };
@@ -608,14 +641,27 @@ export async function saveUploadedTranscript(
 
 /**
  * Lấy phụ đề của video YouTube ở BẤT KỲ ngôn ngữ nào (dùng cho thuyết minh tiếng Việt).
- * Ưu tiên: phụ đề thủ công tiếng Việt → phụ đề thủ công ngôn ngữ khác → phụ đề tự động tiếng Việt → phụ đề tự động khác.
+ * Ưu tiên: phụ đề thủ công tiếng Việt → phụ đề thủ công ngôn ngữ gốc → phụ đề tự động tiếng Việt → phụ đề tự động ngôn ngữ gốc.
+ * Nếu `preferOriginal = true` và video không phải tiếng Việt gốc: bỏ qua track tiếng Việt có sẵn để dịch chuẩn từ ngôn ngữ gốc.
  */
 export async function fetchAnyYouTubeSubtitles(
   videoId: string,
-  { maxSeconds, skipPunctuate = false }: { maxSeconds?: number; skipPunctuate?: boolean } = {},
-): Promise<{ title: string; duration?: number; lang: string; auto: boolean; segments: Segment[] } | null> {
+  {
+    maxSeconds,
+    skipPunctuate = false,
+    preferOriginal = false,
+  }: { maxSeconds?: number; skipPunctuate?: boolean; preferOriginal?: boolean } = {},
+): Promise<{
+  title: string;
+  duration?: number;
+  channel?: string;
+  description?: string;
+  lang: string;
+  auto: boolean;
+  segments: Segment[];
+} | null> {
   await connection();
-  const { title, duration, tracks } = await orYtdlp(
+  const { title, duration, channel, description, defaultAudioLang, tracks } = await orYtdlp(
     () => fromInnertube(videoId),
     () => fromYtdlp(videoId),
   );
@@ -623,18 +669,19 @@ export async function fetchAnyYouTubeSubtitles(
   if (!tracks.length) return null;
 
   const baseLang = (code?: string) => (code || "").toLowerCase().split(/[-_]/)[0];
-  const origBase = baseLang(tracks.find((x) => x.track.auto)?.track.languageCode);
+  const origBase = baseLang(defaultAudioLang) || baseLang(tracks.find((x) => x.track.auto)?.track.languageCode);
   const isVi = (t: Track) => baseLang(t.languageCode) === "vi";
   const isOrig = (t: Track) => Boolean(origBase) && baseLang(t.languageCode) === origBase;
   const isEnOrDe = (t: Track) => {
     const b = baseLang(t.languageCode);
     return b === "en" || b === "de";
   };
+  const useViPriority = !preferOriginal || origBase === "vi";
   const ordered = [
     ...new Set([
-      ...tracks.filter((x) => !x.track.auto && isVi(x.track)),
+      ...(useViPriority ? tracks.filter((x) => !x.track.auto && isVi(x.track)) : []),
       ...tracks.filter((x) => !x.track.auto && isOrig(x.track)),
-      ...tracks.filter((x) => x.track.auto && isVi(x.track)),
+      ...(useViPriority ? tracks.filter((x) => x.track.auto && isVi(x.track)) : []),
       ...tracks.filter((x) => x.track.auto && isOrig(x.track)),
       ...tracks.filter((x) => !x.track.auto && isEnOrDe(x.track)),
       ...tracks.filter((x) => !x.track.auto),
@@ -652,6 +699,8 @@ export async function fetchAnyYouTubeSubtitles(
         return {
           title,
           duration,
+          channel,
+          description,
           lang: cand.track.languageCode,
           auto: cand.track.auto,
           segments,
@@ -671,13 +720,13 @@ export async function fetchAnyYouTubeSubtitles(
 export async function transcribeAnyYouTubeAudio(
   videoId: string,
   { quotaKey, maxSeconds, skipPunctuate = false }: { quotaKey?: string; maxSeconds?: number; skipPunctuate?: boolean } = {},
-): Promise<{ title: string; segments: Segment[] }> {
+): Promise<{ title: string; channel?: string; description?: string; segments: Segment[] }> {
   await connection();
   if (!whisperEnabled()) throw new Error("Whisper chưa được bật trên server.");
   if (quotaKey && !allow(`whisper:${quotaKey}`, WHISPER_PER_DAY, 24 * 3600_000)) {
     throw new Error(`Mỗi ngày chỉ tạo được ${WHISPER_PER_DAY} phụ đề bằng Whisper. Mai thử lại nhé.`);
   }
-  const { title, duration, audio } = await orYtdlp(
+  const { title, duration, channel, description, audio } = await orYtdlp(
     () => fromInnertube(videoId),
     () => fromYtdlp(videoId),
   );
@@ -689,5 +738,5 @@ export async function transcribeAnyYouTubeAudio(
     segments = await addPunctuation(segments, "auto");
   }
   if (!segments.length) throw new Error("Whisper không nhận dạng được lời thoại nào.");
-  return { title, segments };
+  return { title, channel, description, segments };
 }

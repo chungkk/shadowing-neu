@@ -120,15 +120,20 @@
         .replace(/\s*-\s*YouTube$/, "")
         .trim() ||
       videoId;
+    const channel = String(playerResp?.videoDetails?.author || "").trim();
+    const description = String(playerResp?.videoDetails?.shortDescription || "").slice(0, 1500);
     try {
-      window.postMessage({ source: "hvn-yt-hook", type: "player-meta", videoId, title }, "*");
+      window.postMessage({ source: "hvn-yt-hook", type: "player-meta", videoId, title, channel, description }, "*");
     } catch {}
 
     // Nếu đã bắt sẵn trong bộ nhớ → trả ngay lập tức
     const hit = captured.get(videoId);
     if (hit) {
       try {
-        window.postMessage({ source: "hvn-yt-hook", type: "timedtext", ...hit, title }, "*");
+        window.postMessage(
+          { source: "hvn-yt-hook", type: "timedtext", ...hit, title, channel, description },
+          "*",
+        );
       } catch {}
       return;
     }

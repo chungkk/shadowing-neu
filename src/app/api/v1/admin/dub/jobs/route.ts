@@ -1,6 +1,6 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
 import { dubEnabled, dubJson, mergeDubCues, parseSubtitleText, type DubCue, type DubCueInput, type DubJob } from "@/lib/dub";
-import { buildTranslateItems } from "@/lib/dub-live";
+import { buildTranslateItems, ensurePunctuatedCues, pickProbeSub } from "@/lib/dub-live";
 import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
 import { isDubSkip, translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 import { whisperEnabled } from "@/lib/whisper";
@@ -24,6 +24,9 @@ type CreateBody = {
 type ProbeRes = {
   video_id: string;
   title: string;
+  channel?: string;
+  description?: string;
+  language?: string;
   subtitles: { lang: string; name: string; auto: boolean }[];
 };
 
@@ -47,6 +50,8 @@ export async function POST(req: Request) {
   const dubVol = Math.min(2.0, Math.max(0.2, Number(b.dubVol ?? 1.4)));
   const maxHeight = Number(b.maxHeight) === 1080 ? 1080 : 720;
   let title = str(b.title).trim();
+  let channel = "";
+  let description = "";
 
   let cues: DubCueInput[] = [];
   let needTranslateLang: string | null = null;
@@ -60,8 +65,10 @@ export async function POST(req: Request) {
         timeoutMs: 30_000,
       });
       if (!title && info.title) title = info.title;
+      channel = info.channel || "";
+      description = info.description || "";
       if (info.subtitles?.length) {
-        const best = info.subtitles[0];
+        const best = pickProbeSub(info.subtitles, info.language);
         subSource = "youtube";
         subLang = best.lang;
         subAuto = best.auto;
@@ -81,11 +88,14 @@ export async function POST(req: Request) {
         quotaKey: `admin:${admin.id}`,
       });
       if (!title) title = tr.title;
+      channel = channel || tr.channel || "";
+      description = description || tr.description || "";
       cues = tr.segments.map((s) => ({
         start_ms: Math.max(0, Math.round(s.start * 1000)),
         end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
         text: s.text,
         ...(s.words?.length ? { words: s.words } : {}),
+        ...(s.turn ? { turnBreak: true } : {}),
       }));
       needTranslateLang = "auto";
     } else {
@@ -99,6 +109,7 @@ export async function POST(req: Request) {
       if (!actualLang.startsWith("vi")) needTranslateLang = actualLang || "auto";
     }
 
+    cues = await ensurePunctuatedCues(cues, needTranslateLang || subLang || "auto");
     cues = mergeDubCues(cues);
     if (!cues.length) return fail("Video không có câu thoại nào để thuyết minh.");
     if (cues.length > 2500) return fail(`Phụ đề quá dài (${cues.length} câu, tối đa 2500 câu).`, 413);
@@ -107,13 +118,16 @@ export async function POST(req: Request) {
       if (!translationEnabled()) return fail("Server chưa cấu hình AI dịch phụ đề.", 503);
       const { translations } = await translateForDubbingSmart(buildTranslateItems(cues), {
         title,
+        channel,
+        description,
         sourceLang: needTranslateLang,
       });
       cues = cues.flatMap((c, i) => {
         const tr = translations[i];
-        if (tr && isDubSkip(tr)) return [];
-        return [{ ...c, text: tr || c.text }];
+        if (!tr || isDubSkip(tr)) return [];
+        return [{ ...c, text: tr }];
       });
+      if (!cues.length) return fail("Không dịch được câu thoại nào để thuyết minh.");
     }
 
     const created = await dubJson<{ job: DubJob }>("/jobs", {

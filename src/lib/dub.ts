@@ -1,10 +1,15 @@
 import "server-only";
-import { cleanSegmentWords, cleanSubtitleText, hasSpeakerTurnMarker, type Word } from "./subtitles";
+import { cleanSubtitleLine, type Word } from "./subtitles";
 
 export type DubCue = {
   start_ms: number;
   end_ms: number;
   text: string;
+  /**
+   * Nhãn người nói ("A" | "B"), đổi luân phiên mỗi khi phụ đề báo đổi lượt (`>>`, `- `, `Sprecher:`).
+   * Chỉ có khi video có ≥ 2 lần đổi người nói. Là phỏng đoán: video ≥ 3 người thì AI dịch tự hiệu chỉnh theo nội dung.
+   */
+  spk?: string;
 };
 
 export type DubCueInput = DubCue & {
@@ -115,8 +120,8 @@ function parseSrtTimeMs(ts: string): number | null {
   return ((Number(m[1] ?? 0) * 60 + Number(m[2])) * 60 + Number(m[3])) * 1000 + frac;
 }
 
-/** Phân tích file phụ đề .ass / .srt / .vtt thành danh sách cue sạch để đọc thuyết minh. */
-export function parseSubtitleText(raw: string): DubCue[] {
+/** Phân tích file phụ đề .ass / .srt / .vtt thành danh sách cue sạch để đọc thuyết minh (giữ nguyên dấu đổi lượt người nói). */
+export function parseSubtitleText(raw: string): DubCueInput[] {
   const text = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/^\ufeff/, "");
 
   if (text.includes("[Events]") && text.includes("Dialogue:")) {
@@ -124,7 +129,7 @@ export function parseSubtitleText(raw: string): DubCue[] {
     let inEvents = false;
     let numFields = 10;
     const idx: Record<string, number> = { start: 1, end: 2, style: 3, text: 9 };
-    const all: Array<DubCue & { style: string }> = [];
+    const all: Array<DubCueInput & { style: string }> = [];
 
     for (const line of lines) {
       const s = line.trim();
@@ -159,19 +164,28 @@ export function parseSubtitleText(raw: string): DubCue[] {
       const end = parseAssTimeMs(parts[idx.end ?? 2]);
       if (start === null || end === null) continue;
       const style = (parts[idx.style ?? 3] ?? "").trim();
-      const cleaned = cleanSubtitleText((parts[idx.text ?? numFields - 1] ?? "").replace(/\\[Nnh]/g, " "));
-      if (!cleaned) continue;
-      all.push({ start_ms: start, end_ms: Math.max(end, start + 100), text: cleaned, style });
+      const rawBody = (parts[idx.text ?? numFields - 1] ?? "").replace(/\{[^}]*\}/g, " ").replace(/\\[Nnh]/g, " ");
+      const segs = cleanSubtitleLine(start / 1000, Math.max(end, start + 100) / 1000, rawBody);
+      for (const seg of segs) {
+        const sMs = Math.round(seg.start * 1000);
+        const eMs = Math.max(Math.round(seg.end * 1000), sMs + 150);
+        all.push({ start_ms: sMs, end_ms: eMs, text: seg.text, ...(seg.turn ? { turnBreak: true } : {}), style });
+      }
     }
 
     const hasDefault = all.some((c) => c.style === "Default");
     const filtered = hasDefault ? all.filter((c) => c.style === "Default") : all;
     return filtered
       .sort((a, b) => a.start_ms - b.start_ms)
-      .map(({ start_ms, end_ms, text: t }) => ({ start_ms, end_ms, text: t }));
+      .map(({ start_ms, end_ms, text: t, turnBreak }) => ({
+        start_ms,
+        end_ms,
+        text: t,
+        ...(turnBreak ? { turnBreak: true } : {}),
+      }));
   }
 
-  const cues: DubCue[] = [];
+  const cues: DubCueInput[] = [];
   for (const block of text.split(/\n\s*\n/)) {
     const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
     const ti = lines.findIndex((l) => l.includes("-->"));
@@ -180,9 +194,12 @@ export function parseSubtitleText(raw: string): DubCue[] {
     const start = parseSrtTimeMs(left ?? "");
     const end = parseSrtTimeMs(right ?? "");
     if (start === null || end === null) continue;
-    const cleaned = cleanSubtitleText(lines.slice(ti + 1).join(" "));
-    if (!cleaned) continue;
-    cues.push({ start_ms: start, end_ms: Math.max(end, start + 100), text: cleaned });
+    const segs = cleanSubtitleLine(start / 1000, Math.max(end, start + 100) / 1000, lines.slice(ti + 1).join(" "));
+    for (const seg of segs) {
+      const sMs = Math.round(seg.start * 1000);
+      const eMs = Math.max(Math.round(seg.end * 1000), sMs + 150);
+      cues.push({ start_ms: sMs, end_ms: eMs, text: seg.text, ...(seg.turn ? { turnBreak: true } : {}) });
+    }
   }
   return cues.sort((a, b) => a.start_ms - b.start_ms);
 }
@@ -247,6 +264,7 @@ function dedupRollingCues(sorted: DubCueInput[], isCjk: boolean): DubCueInput[] 
         const rest = n.slice(overlap).trim();
         if (!rest) continue;
         const shift = Math.round(((cue.end_ms - cue.start_ms) * overlap) / Math.max(1, n.length));
+        // Phần đầu dòng là lặp lại dòng trước (phụ đề cuộn) → dấu đổi người nói (nếu có) đã tính ở dòng trước
         out.push({
           start_ms: Math.min(cue.end_ms - 100, cue.start_ms + shift),
           end_ms: cue.end_ms,
@@ -441,24 +459,23 @@ export function cleanDubCues(raw: DubCueInput[]): DubCueInput[] {
   for (const c of raw) {
     const baseStart = Math.max(0, Math.round(c.start_ms));
     const end_ms = Math.max(Math.round(c.end_ms), baseStart + 150);
-    const turnBreak = Boolean(c.turnBreak) || hasSpeakerTurnMarker(c.text);
-    if (c.words?.length) {
-      const cleaned = cleanSegmentWords(c.words, c.text);
-      if (!cleaned.text) continue;
-      const firstWordMs = cleaned.words?.[0] ? Math.round(cleaned.words[0][0] * 1000) : baseStart;
-      const start_ms = firstWordMs >= baseStart && firstWordMs < end_ms ? firstWordMs : baseStart;
+    // Tách theo lượt người nói TRƯỚC khi lọc (`>>` giữa dòng, `- A. - B.`), giữ cờ `turnBreak` client đã gửi
+    const pieces = c.words?.length
+      ? cleanSubtitleLine(baseStart / 1000, end_ms / 1000, c.text, c.words, c.text)
+      : cleanSubtitleLine(baseStart / 1000, end_ms / 1000, c.text);
+    pieces.forEach((p, k) => {
+      const turnBreak = Boolean(p.turn) || (k === 0 && Boolean(c.turnBreak));
+      const pStart = Math.round(p.start * 1000);
+      const start_ms = pStart >= baseStart && pStart < end_ms ? pStart : baseStart;
+      const pEnd = k === pieces.length - 1 ? end_ms : Math.round(p.end * 1000);
       out.push({
         start_ms,
-        end_ms: Math.max(end_ms, start_ms + 150),
-        text: cleaned.text,
-        ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+        end_ms: Math.max(Math.min(pEnd, end_ms), start_ms + 150),
+        text: p.text,
+        ...(p.words?.length ? { words: p.words } : {}),
         ...(turnBreak ? { turnBreak: true } : {}),
       });
-    } else {
-      const text = cleanSubtitleText(c.text);
-      if (!text) continue;
-      out.push({ start_ms: baseStart, end_ms, text, ...(turnBreak ? { turnBreak: true } : {}) });
-    }
+    });
   }
   return out;
 }
@@ -513,11 +530,18 @@ export function mergeDubCues(raw: DubCueInput[]): DubCue[] {
     isCjk,
   );
 
-  const merged: DubCue[] = balanced.map((g) => ({
-    start_ms: g[0].start,
-    end_ms: Math.max(g[0].start + 300, g[g.length - 1].end),
-    text: joinTokens(g, isCjk),
-  }));
+  // Gán nhãn người nói A/B luân phiên theo các lần đổi lượt (chỉ khi phụ đề có ≥ 2 lần đổi — tránh 1 dấu gạch lẻ)
+  const turnCount = balanced.reduce((n, g, i) => n + (i > 0 && g[0].turnBreak ? 1 : 0), 0);
+  let speaker = 0;
+  const merged: DubCue[] = balanced.map((g, i) => {
+    if (i > 0 && g[0].turnBreak) speaker = 1 - speaker;
+    return {
+      start_ms: g[0].start,
+      end_ms: Math.max(g[0].start + 300, g[g.length - 1].end),
+      text: joinTokens(g, isCjk),
+      ...(turnCount >= 2 ? { spk: speaker ? "B" : "A" } : {}),
+    };
+  });
 
   // Bảo đảm các câu không chồng thời gian lên nhau
   return merged.map((c, i) => {

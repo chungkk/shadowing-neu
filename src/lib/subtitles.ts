@@ -3,6 +3,7 @@ export type Segment = {
   end: number; // giây
   text: string;
   words?: Word[]; // phụ đề tự động YouTube (srv3) có thời gian từng từ → cắt câu chính xác
+  turn?: true; // dòng này mở đầu lượt người nói mới (`>>`, `- `, `Sprecher:`…) — dấu đã bị lọc khỏi `text`
 };
 
 // end: thời điểm hết từ (chỉ Whisper v2 có). Không có → coi như kéo tới lúc bắt đầu từ kế tiếp
@@ -96,6 +97,89 @@ export function cleanSegmentWords(words: Word[], rawJoined?: string): { text: st
   return { text: cleaned, words: aligned };
 }
 
+// Dấu đổi lượt nói nằm GIỮA dòng: `>>` (phụ đề tự động YouTube) hoặc ` - ` sau dấu hết câu (phụ đề hội thoại "- A. - B.")
+const MID_TURN_ARROW_RE = /\s*(?:>|&gt;){2,}\s*/i;
+const MID_TURN_DASH_RE = /(?<=[.!?…]["»“”'’)]*)\s+[-–—]\s+(?=\S)/;
+const ARROW_TOKEN_RE = /^(?:>|&gt;){2,}/i;
+
+/**
+ * Làm sạch 1 dòng phụ đề THÔ và tách theo lượt người nói.
+ * Phải chạy trước khi làm sạch vì `cleanSubtitleText` xoá luôn `>>` / `- ` / `Sprecher:` → mất dấu đổi người.
+ * Mỗi mảnh trả về có `turn: true` nếu mở đầu lượt nói mới. Đơn vị thời gian giữ nguyên như đầu vào (`words` luôn là giây).
+ */
+export function cleanSubtitleLine(
+  start: number,
+  end: number,
+  raw: string,
+  rawWords?: Word[],
+  rawJoined?: string,
+): Segment[] {
+  const firstTurn = hasSpeakerTurnMarker(rawJoined ?? raw);
+  const out: Segment[] = [];
+  let carry = false;
+  const emit = (seg: Segment, turn: boolean) => {
+    carry = carry || turn;
+    if (!seg.text) return;
+    out.push(carry ? { ...seg, turn: true } : seg);
+    carry = false;
+  };
+
+  if (rawWords?.length) {
+    // Tách nhóm từ tại token `>>` nằm giữa dòng (token đầu dòng đã tính trong firstTurn)
+    const groups: Word[][] = [[]];
+    for (const w of rawWords) {
+      const tok = w[1].replace(/<[^>]+>/g, "").trim();
+      if (ARROW_TOKEN_RE.test(tok) && groups[groups.length - 1].length) groups.push([]);
+      groups[groups.length - 1].push(w);
+    }
+    if (groups.length === 1) {
+      const cleaned = cleanSegmentWords(rawWords, rawJoined);
+      emit(
+        {
+          start: cleaned.words?.[0]?.[0] ?? start,
+          end,
+          text: cleaned.text,
+          ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+        },
+        firstTurn,
+      );
+      return out;
+    }
+    groups.forEach((g, i) => {
+      // srv3 giữ khoảng trắng đầu từ (" word") → nối liền; token đã cắt khoảng trắng → nối bằng dấu cách
+      const joined = g.some((w) => /^\s/.test(w[1])) ? g.map((w) => w[1]).join("") : undefined;
+      const cleaned = cleanSegmentWords(g, joined);
+      const gEnd = groups[i + 1]?.[0]?.[0] ?? end;
+      emit(
+        {
+          start: cleaned.words?.[0]?.[0] ?? g[0][0],
+          end: Math.max(gEnd, g[0][0]),
+          text: cleaned.text,
+          ...(cleaned.words?.length ? { words: cleaned.words } : {}),
+        },
+        i === 0 ? firstTurn : true,
+      );
+    });
+    return out;
+  }
+
+  const plain = raw.replace(/<[^>]+>/g, " ");
+  let parts = plain.split(MID_TURN_ARROW_RE);
+  // Gạch hội thoại giữa dòng chỉ tính khi dòng mở đầu bằng gạch (tránh tách nhầm dấu gạch nối trong câu)
+  if (/^\s*[-–—]\s+\S/.test(plain)) {
+    parts = parts.flatMap((p) => p.split(MID_TURN_DASH_RE)).map((p) => p.replace(/^\s*[-–—]\s+/, ""));
+  }
+  const total = parts.reduce((n, p) => n + p.length, 0) || 1;
+  let t = start;
+  parts.forEach((p, i) => {
+    const dt = ((end - start) * p.length) / total;
+    emit({ start: t, end: t + dt, text: cleanSubtitleText(p) }, i === 0 ? firstTurn : true);
+    t += dt;
+  });
+  if (out.length) out[out.length - 1].end = end;
+  return out;
+}
+
 /** "00:01:02,500" | "01:02.5" -> giây */
 function parseTimestamp(ts: string): number {
   const parts = ts.trim().replace(",", ".").split(":");
@@ -121,13 +205,9 @@ export function parseSubtitleFile(content: string): Segment[] {
     const idx = lines.findIndex((l) => l.includes("-->"));
     if (idx === -1) continue;
     const [a, b] = lines[idx].split("-->");
-    const text = cleanSubtitleText(lines.slice(idx + 1).join(" "));
-    if (!text) continue;
-    segs.push({
-      start: parseTimestamp(a),
-      end: parseTimestamp(b.trim().split(/\s+/)[0]),
-      text,
-    });
+    segs.push(
+      ...cleanSubtitleLine(parseTimestamp(a), parseTimestamp(b.trim().split(/\s+/)[0]), lines.slice(idx + 1).join(" ")),
+    );
   }
   return normalize(segs);
 }
@@ -138,8 +218,7 @@ export function parseYouTubeXml(xml: string): Segment[] {
   // format cũ: <text start="1.2" dur="3.4">...</text>
   for (const m of xml.matchAll(/<text start="([\d.]+)"(?: dur="([\d.]+)")?[^>]*>([\s\S]*?)<\/text>/g)) {
     const start = parseFloat(m[1]);
-    const text = cleanSubtitleText(m[3]);
-    if (text) segs.push({ start, end: start + parseFloat(m[2] ?? "3"), text });
+    segs.push(...cleanSubtitleLine(start, start + parseFloat(m[2] ?? "3"), m[3]));
   }
   // format srv3: <p t="1200" d="3400">...</p> (mili giây).
   // Phụ đề tự động có thêm từng từ: <s t="160">kann</s> (t = mili giây tính từ đầu dòng)
@@ -153,18 +232,9 @@ export function parseYouTubeXml(xml: string): Segment[] {
         const rawWords: Word[] = rawMatches
           .map(([, t, w]): Word => [start + Number(t ?? 0) / 1000, w])
           .filter(([, w]) => w.trim());
-        const cleaned = cleanSegmentWords(rawWords, rawJoined);
-        if (cleaned.text) {
-          segs.push({
-            start: cleaned.words?.[0]?.[0] ?? start,
-            end,
-            text: cleaned.text,
-            ...(cleaned.words?.length ? { words: cleaned.words } : {}),
-          });
-        }
+        segs.push(...cleanSubtitleLine(start, end, rawJoined, rawWords, rawJoined));
       } else {
-        const text = cleanSubtitleText(m[3]);
-        if (text) segs.push({ start, end, text });
+        segs.push(...cleanSubtitleLine(start, end, m[3]));
       }
     }
   }

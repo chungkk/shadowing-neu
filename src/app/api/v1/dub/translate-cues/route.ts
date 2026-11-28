@@ -30,13 +30,15 @@ import { extractVideoId } from "@/lib/youtube-id";
 type TranslateCuesBody = {
   videoId?: unknown;
   title?: unknown;
+  channel?: unknown;
+  description?: unknown;
   sourceLang?: unknown;
   cues?: unknown;
   voiceId?: unknown;
   voice?: unknown;
 };
 
-const CACHE_PREFIX = "dub:ext:v1:";
+const CACHE_PREFIX = "dub:ext:v2:";
 const VI_UNIQUE = /[ăâđêôơưảãạằắẳẵặầấẩẫậẻẽẹềếểễệỉĩịỏõọồốổỗộờớởỡợủũụừứửữựỳỷỹỵ]/gi;
 const gd = globalThis as unknown as { __dubExtFlights?: Map<string, FlightEntry> };
 const inflight = (gd.__dubExtFlights ??= new Map());
@@ -77,14 +79,20 @@ function parseRawCues(raw: unknown): DubCueInput[] {
     if (!Number.isFinite(start) || start < 0 || !text) continue;
     const endMs = Number.isFinite(end) && end > start ? end : start + 2500;
     const words = parseWords(o.words);
-    out.push({ start_ms: Math.round(start), end_ms: Math.round(endMs), text, ...(words ? { words } : {}) });
+    out.push({
+      start_ms: Math.round(start),
+      end_ms: Math.round(endMs),
+      text,
+      ...(words ? { words } : {}),
+      ...(o.turnBreak === true ? { turnBreak: true } : {}),
+    });
     if (out.length >= 5000) break;
   }
   return out;
 }
 
 /**
- * POST /api/v1/dub/translate-cues { videoId?, title?, sourceLang?, cues: [{ start_ms, end_ms, text, words? }] }
+ * POST /api/v1/dub/translate-cues { videoId?, title?, sourceLang?, cues: [{ start_ms, end_ms, text, words?, turnBreak? }] }
  * Nhận phụ đề lấy trực tiếp từ trình duyệt người dùng (Chrome Extension: YouTube bị chặn vùng ARD/WDR/ZDF
  * hoặc mọi trang web có <video> + phụ đề) → khôi phục dấu câu nếu thiếu → gộp câu trọn vẹn → dịch cuốn chiếu (~2s).
  */
@@ -98,6 +106,8 @@ export async function POST(req: Request) {
   if (isServerPiperVoice(reqVoice)) warmPiperVoice(reqVoice);
   const ytVideoId = extractVideoId(str(b.videoId).trim());
   const title = str(b.title).trim().slice(0, 200) || ytVideoId || "Video";
+  const channel = str(b.channel).trim().slice(0, 120);
+  const description = str(b.description).trim().slice(0, 1500);
   const rawLang = (str(b.sourceLang).trim() || "auto").toLowerCase().slice(0, 16);
 
   // Nếu là video YouTube đã có sẵn trong kho cache chung → trả về ngay tức thì (0ms, không trừ hạn mức)
@@ -135,7 +145,8 @@ export async function POST(req: Request) {
   const maxCues = isAdmin ? 2500 : 1800;
 
   const hash = createHash("sha1")
-    .update(rawLang + "\n" + rawCues.map((c) => `${c.start_ms}:${c.text}`).join("\n"))
+    // Có dấu đổi người nói thì đưa vào khoá → video hội thoại dịch lại có nhãn người nói, video thường giữ cache cũ
+    .update(rawLang + "\n" + rawCues.map((c) => `${c.start_ms}:${c.turnBreak ? ">>" : ""}${c.text}`).join("\n"))
     .digest("hex");
   const cacheKey = `${CACHE_PREFIX}${hash}`;
 
@@ -217,7 +228,12 @@ export async function POST(req: Request) {
     const job = (async (): Promise<LiveDubResult> => {
       if (staleForRepair) {
         const repaired = await repairLiveDubCues(
-          { ...staleForRepair, title: title || staleForRepair.title },
+          {
+            ...staleForRepair,
+            title: title || staleForRepair.title,
+            ...(channel ? { channel } : {}),
+            ...(description ? { description } : {}),
+          },
           { emitProgress, broadcast, entry },
         );
         setCached(cacheKey, repaired, null);
@@ -246,6 +262,7 @@ export async function POST(req: Request) {
           end_ms: c.end_ms,
           text: "",
           orig: c.text,
+          ...(c.spk ? { spk: c.spk } : {}),
           pending: true,
         }));
         let sentReady = false;
@@ -253,6 +270,8 @@ export async function POST(req: Request) {
         emitProgress({ pct: 32, stage: "Đang tạo thuyết minh…" });
         const res = await translateForDubbingSmart(buildTranslateItems(merged), {
           title,
+          channel,
+          description,
           sourceLang,
           onProgress: ({ phase, done, total }) => {
             if (phase === "style") {
@@ -274,6 +293,7 @@ export async function POST(req: Request) {
                 end_ms: merged[idx].end_ms,
                 text: tr,
                 orig: merged[idx].text,
+                ...(merged[idx].spk ? { spk: merged[idx].spk } : {}),
                 ...(!rawTr ? { untranslated: true } : {}),
               };
             });
@@ -319,6 +339,7 @@ export async function POST(req: Request) {
               end_ms: c.end_ms,
               text: tr,
               orig: c.text,
+              ...(c.spk ? { spk: c.spk } : {}),
               ...(tr ? {} : { untranslated: true }),
             },
           ];
@@ -328,6 +349,8 @@ export async function POST(req: Request) {
       const result = finalizeLiveDubResult({
         videoId: resultId,
         title,
+        ...(channel ? { channel } : {}),
+        ...(description ? { description } : {}),
         sourceLang,
         style,
         cues,

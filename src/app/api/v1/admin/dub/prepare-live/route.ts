@@ -1,6 +1,12 @@
 import { apiAdmin, body, fail, str } from "@/lib/api";
 import { mergeDubCues, parseSubtitleText, type DubCue, type DubCueInput } from "@/lib/dub";
-import { buildTranslateItems, prepareLiveDub, streamPrepareResponse, type PrepareProgress } from "@/lib/dub-live";
+import {
+  buildTranslateItems,
+  ensurePunctuatedCues,
+  prepareLiveDub,
+  streamPrepareResponse,
+  type PrepareProgress,
+} from "@/lib/dub-live";
 import { extractVideoId, transcribeAnyYouTubeAudio } from "@/lib/youtube";
 import { isDubSkip, translateForDubbingSmart, translationEnabled } from "@/lib/translate";
 
@@ -40,6 +46,8 @@ export async function POST(req: Request) {
     }
 
     let title = "";
+    let channel = "";
+    let description = "";
     let rawCues: DubCueInput[] = [];
     let needTranslateLang: string | null = null;
 
@@ -54,17 +62,21 @@ export async function POST(req: Request) {
         quotaKey: `admin:${admin.id}`,
       });
       title = tr.title;
+      channel = tr.channel || "";
+      description = tr.description || "";
       rawCues = tr.segments.map((s) => ({
         start_ms: Math.max(0, Math.round(s.start * 1000)),
         end_ms: Math.max(Math.round(s.end * 1000), Math.round(s.start * 1000) + 150),
         text: s.text,
         ...(s.words?.length ? { words: s.words } : {}),
+        ...(s.turn ? { turnBreak: true } : {}),
       }));
       needTranslateLang = "auto";
     }
 
+    const punctuated = await ensurePunctuatedCues(rawCues, needTranslateLang || "auto", emit);
     emit?.({ pct: 32, stage: "Đang gộp thành câu hoàn chỉnh…" });
-    const merged = mergeDubCues(rawCues);
+    const merged = mergeDubCues(punctuated);
     if (!merged.length) throw new Error("Không tìm thấy phụ đề cho video này.");
     if (merged.length > 2500) throw new Error(`Phụ đề quá dài (${merged.length} câu).`);
 
@@ -74,6 +86,8 @@ export async function POST(req: Request) {
       if (!translationEnabled()) throw new Error("Server chưa cấu hình AI dịch phụ đề.");
       const res = await translateForDubbingSmart(buildTranslateItems(merged), {
         title,
+        channel,
+        description,
         sourceLang: needTranslateLang,
         onProgress: ({ phase, done, total }) => {
           if (phase === "style") {
@@ -100,6 +114,7 @@ export async function POST(req: Request) {
             end_ms: c.end_ms,
             text: tr,
             orig: c.text,
+            ...(c.spk ? { spk: c.spk } : {}),
             ...(tr ? {} : { untranslated: true }),
           },
         ];

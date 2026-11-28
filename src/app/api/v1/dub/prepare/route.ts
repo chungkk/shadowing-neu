@@ -10,10 +10,12 @@ type PublicPrepareBody = {
   videoId?: unknown;
   voiceId?: unknown;
   voice?: unknown;
+  force?: unknown;
+  repair?: unknown;
 };
 
 /**
- * POST /api/v1/dub/prepare { url | videoId }
+ * POST /api/v1/dub/prepare { url | videoId, force?, repair? }
  * Chuẩn bị phụ đề tiếng Việt cho người xem YouTube thuyết minh trực tiếp trên trình duyệt (Kokoro Lite WASM).
  * - Hỗ trợ ?stream=1 (NDJSON) để phát tiến trình 0% → 100% theo thời gian thực.
  * - Video đã từng chuẩn bị → trả ngay từ cache SQLite, không tốn hạn mức.
@@ -30,16 +32,21 @@ export async function POST(req: Request) {
   const videoId = extractVideoId(raw);
   if (!videoId) return fail("Link YouTube không hợp lệ. Vui lòng dán link video YouTube đầy đủ hoặc mã video.");
 
-  // Cache hit → trả ngay lập tức, không tính hạn mức
-  const cached = getCachedLiveDub(videoId);
-  if (cached) {
-    if (wantStream) {
-      return streamPrepareResponse(async (emit) => {
-        emit({ pct: 100, stage: "Đã sẵn sàng từ bộ nhớ đệm" });
-        return { ...cached, cached: true };
-      });
+  const force = b.force === true;
+  const repair = b.repair === true;
+
+  // Cache hit → trả ngay lập tức, không tính hạn mức (trừ khi force hoặc repair khi còn câu chưa dịch)
+  if (!force) {
+    const cached = getCachedLiveDub(videoId);
+    if (cached && (!repair || !cached.cues.some((c) => c.untranslated))) {
+      if (wantStream) {
+        return streamPrepareResponse(async (emit) => {
+          emit({ pct: 100, stage: "Đã sẵn sàng từ bộ nhớ đệm" });
+          return { ...cached, cached: true };
+        });
+      }
+      return Response.json({ ...cached, cached: true });
     }
-    return Response.json({ ...cached, cached: true });
   }
 
   const user = await getCurrentUser();
@@ -47,7 +54,7 @@ export async function POST(req: Request) {
   const ip = isAdmin || user ? "" : await clientIp();
 
   // Nếu video đã có luồng đang dịch dở trên server thì gắn chung listener, không trừ thêm hạn mức
-  if (!isAdmin && !isLiveDubInflight(videoId)) {
+  if (!isAdmin && (force || !isLiveDubInflight(videoId))) {
     const key = user ? `u:${user.id}` : `ip:${ip}`;
     const ok10m = allow(`dub:10m:${key}`, user ? 15 : 5, 10 * 60_000);
     const okDay = allow(`dub:day:${key}`, user ? 60 : 15, 24 * 3600_000);
@@ -66,6 +73,9 @@ export async function POST(req: Request) {
     quotaKey: isAdmin ? undefined : user ? `u:${user.id}` : `ip:${ip}`,
     maxSeconds: isAdmin ? undefined : user ? 45 * 60 : 30 * 60,
     maxCues: isAdmin ? 2500 : 1800,
+    forceRetranslate: force,
+    repairNow: repair,
+    preferOriginal: force,
   };
 
   if (wantStream) {

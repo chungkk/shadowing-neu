@@ -62,22 +62,31 @@
     videoListenersCleanup: null,
     lastUrl: location.href,
     // Phụ đề YouTube bắt trực tiếp từ trình phát (có sẵn PO token + IP người dùng)
-    ytCapturedSubs: new Map(), // videoId -> { lang, text, title? }
+    ytCapturedSubs: new Map(), // videoId -> { lang, text, title?, channel?, description? }
     ytTitles: new Map(), // videoId -> title
+    ytMeta: new Map(), // videoId -> { title?, channel?, description? }
     ytSubWaiters: new Map(), // videoId -> Set<resolve>
   };
 
   window.addEventListener("message", (ev) => {
     if (ev.source !== window || !ev.data || ev.data.source !== "hvn-yt-hook") return;
-    if (ev.data.type === "player-meta" && ev.data.videoId && ev.data.title) {
-      state.ytTitles.set(ev.data.videoId, ev.data.title);
+    if (ev.data.type === "player-meta" && ev.data.videoId) {
+      if (ev.data.title) state.ytTitles.set(ev.data.videoId, ev.data.title);
+      state.ytMeta.set(ev.data.videoId, {
+        title: ev.data.title || "",
+        channel: ev.data.channel || "",
+        description: ev.data.description || "",
+      });
       return;
     }
     if (ev.data.type === "timedtext" && ev.data.videoId && ev.data.text) {
+      const meta = state.ytMeta.get(ev.data.videoId);
       const entry = {
         lang: String(ev.data.lang || "auto").toLowerCase(),
         text: String(ev.data.text),
-        title: ev.data.title || state.ytTitles.get(ev.data.videoId) || "",
+        title: ev.data.title || state.ytTitles.get(ev.data.videoId) || meta?.title || "",
+        channel: ev.data.channel || meta?.channel || "",
+        description: ev.data.description || meta?.description || "",
       };
       state.ytCapturedSubs.set(ev.data.videoId, entry);
       const waiters = state.ytSubWaiters.get(ev.data.videoId);
@@ -177,9 +186,7 @@
       const start = parseTimestampMs(left || "");
       const end = parseTimestampMs(right || "");
       if (start === null || end === null) continue;
-      const cleaned = cleanCaptionText(lines.slice(ti + 1).join(" "));
-      if (!cleaned) continue;
-      cues.push({ start_ms: start, end_ms: Math.max(end, start + 150), text: cleaned });
+      cues.push(...cleanCaptionLine(start, Math.max(end, start + 150), lines.slice(ti + 1).join(" ")));
     }
     return cues.sort((a, b) => a.start_ms - b.start_ms);
   }
@@ -667,6 +674,72 @@
     return out;
   }
 
+  // Dấu đổi lượt người nói: `>>` (phụ đề tự động YouTube), `- ` đầu dòng, `Sprecher:`… — phải bắt TRƯỚC khi lọc
+  const MID_TURN_ARROW_RE = /\s*(?:>|&gt;){2,}\s*/i;
+  const MID_TURN_DASH_RE = /(?<=[.!?…]["»“”'’)]*)\s+[-–—]\s+(?=\S)/;
+  const ARROW_TOKEN_RE = /^(?:>|&gt;){2,}/i;
+
+  function hasSpeakerTurnMarker(s) {
+    const plain = decodeHtmlEntities(String(s || "").replace(/<[^>]+>|\{[^}]*\}/g, "")).trimStart();
+    return /^>>+/.test(plain) || /^[-–—]\s+\S/.test(plain) || SPEAKER_PREFIX_RE.test(plain);
+  }
+
+  /**
+   * Làm sạch 1 dòng phụ đề thô + tách theo lượt người nói (kể cả `>>` giữa dòng).
+   * Trả về mảng cue { start_ms, end_ms, text, words?, turnBreak? } để server gộp câu & gán nhãn người nói A/B.
+   */
+  function cleanCaptionLine(startMs, endMs, raw, rawWords, rawJoined) {
+    const firstTurn = hasSpeakerTurnMarker(rawJoined !== undefined ? rawJoined : raw);
+    const out = [];
+    let carry = false;
+    const emit = (cue, turn) => {
+      carry = carry || turn;
+      if (!cue.text) return;
+      out.push(carry ? { ...cue, turnBreak: true } : cue);
+      carry = false;
+    };
+    const fromWords = (cleaned, fallbackStart, end) => ({
+      start_ms: cleaned.words?.length ? Math.round(cleaned.words[0][0] * 1000) : fallbackStart,
+      end_ms: end,
+      text: cleaned.text,
+      ...(cleaned.words?.length > 1 ? { words: cleaned.words } : {}),
+    });
+
+    if (rawWords && rawWords.length) {
+      const groups = [[]];
+      for (const w of rawWords) {
+        const tok = String(w[1] || "").replace(/<[^>]+>/g, "").trim();
+        if (ARROW_TOKEN_RE.test(tok) && groups[groups.length - 1].length) groups.push([]);
+        groups[groups.length - 1].push(w);
+      }
+      if (groups.length === 1) {
+        emit(fromWords(cleanWordTimings(rawWords, rawJoined), startMs, endMs), firstTurn);
+        return out;
+      }
+      groups.forEach((g, i) => {
+        const gStart = Math.round(g[0][0] * 1000);
+        const gEnd = groups[i + 1] ? Math.round(groups[i + 1][0][0] * 1000) : endMs;
+        emit(fromWords(cleanWordTimings(g), gStart, Math.max(gEnd, gStart + 150)), i === 0 ? firstTurn : true);
+      });
+      return out;
+    }
+
+    const plain = String(raw || "").replace(/<[^>]+>/g, " ");
+    let parts = plain.split(MID_TURN_ARROW_RE);
+    if (/^\s*[-–—]\s+\S/.test(plain)) {
+      parts = parts.flatMap((p) => p.split(MID_TURN_DASH_RE)).map((p) => p.replace(/^\s*[-–—]\s+/, ""));
+    }
+    const total = parts.reduce((n, p) => n + p.length, 0) || 1;
+    let t = startMs;
+    parts.forEach((p, i) => {
+      const dt = ((endMs - startMs) * p.length) / total;
+      emit({ start_ms: Math.round(t), end_ms: Math.round(t + dt), text: cleanCaptionText(p) }, i === 0 ? firstTurn : true);
+      t += dt;
+    });
+    if (out.length) out[out.length - 1].end_ms = endMs;
+    return out.map((c) => ({ ...c, end_ms: Math.max(c.end_ms, c.start_ms + 150) }));
+  }
+
   function cleanWordTimings(rawWords, rawJoined) {
     const rawTokens = [];
     for (const w of rawWords) {
@@ -746,14 +819,7 @@
           rawWords.push([wStartSec, w]);
         }
       }
-      const cleaned = cleanWordTimings(rawWords, combined);
-      if (!cleaned.text) continue;
-      cues.push({
-        start_ms: cleaned.words?.length ? Math.round(cleaned.words[0][0] * 1000) : startMs,
-        end_ms: endMs,
-        text: cleaned.text,
-        ...(cleaned.words?.length > 1 ? { words: cleaned.words } : {}),
-      });
+      cues.push(...cleanCaptionLine(startMs, endMs, combined, rawWords, combined));
     }
     return cues;
   }
@@ -769,27 +835,16 @@
         const rawWords = rawMatches
           .map((s) => [(startMs + Number(s[1] || 0)) / 1000, s[2]])
           .filter((w) => String(w[1] || "").trim());
-        const cleaned = cleanWordTimings(rawWords, rawJoined);
-        if (!cleaned.text) continue;
-        cues.push({
-          start_ms: cleaned.words?.length ? Math.round(cleaned.words[0][0] * 1000) : startMs,
-          end_ms: endMs,
-          text: cleaned.text,
-          ...(cleaned.words?.length > 1 ? { words: cleaned.words } : {}),
-        });
+        cues.push(...cleanCaptionLine(startMs, endMs, rawJoined, rawWords, rawJoined));
       } else {
-        const text = cleanCaptionText(m[3]);
-        if (!text) continue;
-        cues.push({ start_ms: startMs, end_ms: endMs, text });
+        cues.push(...cleanCaptionLine(startMs, endMs, m[3]));
       }
     }
     if (!cues.length) {
       for (const m of xml.matchAll(/<text start="([\d.]+)"(?: dur="([\d.]+)")?[^>]*>([\s\S]*?)<\/text>/g)) {
         const startMs = Math.round(parseFloat(m[1]) * 1000);
         const endMs = startMs + Math.round(parseFloat(m[2] || "3") * 1000);
-        const text = cleanCaptionText(m[3]);
-        if (!text) continue;
-        cues.push({ start_ms: startMs, end_ms: endMs, text });
+        cues.push(...cleanCaptionLine(startMs, endMs, m[3]));
       }
     }
     return cues;
@@ -861,8 +916,11 @@
         const txt = await res.text();
         const cues = parseCapturedYouTubeText(txt);
         if (cues.length) {
+          const meta = state.ytMeta.get(ytId);
           return {
-            title: state.ytTitles.get(ytId) || cleanYtTitle(document.title) || ytId,
+            title: state.ytTitles.get(ytId) || meta?.title || cleanYtTitle(document.title) || ytId,
+            channel: meta?.channel || "",
+            description: meta?.description || "",
             lang,
             cues,
           };
@@ -882,8 +940,11 @@
     if (cached) {
       const cues = parseCapturedYouTubeText(cached.text);
       if (cues.length) {
+        const meta = state.ytMeta.get(ytId);
         return {
-          title: cached.title || state.ytTitles.get(ytId) || cleanYtTitle(document.title) || ytId,
+          title: cached.title || state.ytTitles.get(ytId) || meta?.title || cleanYtTitle(document.title) || ytId,
+          channel: cached.channel || meta?.channel || "",
+          description: cached.description || meta?.description || "",
           lang: cached.lang,
           cues,
         };
@@ -899,8 +960,11 @@
     if (hooked) {
       const cues = parseCapturedYouTubeText(hooked.text);
       if (cues.length) {
+        const meta = state.ytMeta.get(ytId);
         return {
-          title: hooked.title || state.ytTitles.get(ytId) || cleanYtTitle(document.title) || ytId,
+          title: hooked.title || state.ytTitles.get(ytId) || meta?.title || cleanYtTitle(document.title) || ytId,
+          channel: hooked.channel || meta?.channel || "",
+          description: hooked.description || meta?.description || "",
           lang: hooked.lang,
           cues,
         };
@@ -917,6 +981,8 @@
       if (!Array.isArray(tracks) || !tracks.length) return null;
 
       const title = playerResp?.videoDetails?.title || cleanYtTitle(document.title) || ytId;
+      const channel = String(playerResp?.videoDetails?.author || "").trim();
+      const description = String(playerResp?.videoDetails?.shortDescription || "").slice(0, 1500);
       const isAuto = (t) => t.kind === "asr" || String(t.vssId || "").startsWith("a.");
       const baseLang = (code) => String(code || "").toLowerCase().split(/[-_]/)[0];
       const origBase =
@@ -952,7 +1018,7 @@
           if (rJson.ok) {
             const cues = parseCapturedYouTubeText(await rJson.text());
             if (cues.length) {
-              return { title, lang: String(track.languageCode || "auto").toLowerCase(), cues };
+              return { title, channel, description, lang: String(track.languageCode || "auto").toLowerCase(), cues };
             }
           }
         } catch {}
@@ -964,7 +1030,7 @@
           if (rXml.ok) {
             const cues = parseCapturedYouTubeText(await rXml.text());
             if (cues.length) {
-              return { title, lang: String(track.languageCode || "auto").toLowerCase(), cues };
+              return { title, channel, description, lang: String(track.languageCode || "auto").toLowerCase(), cues };
             }
           }
         } catch {}
@@ -1337,6 +1403,8 @@
           {
             videoId: ytId,
             title: browserSubs.title,
+            ...(browserSubs.channel ? { channel: browserSubs.channel } : {}),
+            ...(browserSubs.description ? { description: browserSubs.description } : {}),
             sourceLang: browserSubs.lang,
             cues: browserSubs.cues,
           },
