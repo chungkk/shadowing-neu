@@ -11,8 +11,8 @@ import { removeAccount, validEmail } from "@/lib/account";
 import { slugify } from "@/lib/slug";
 import { earnableFreePoints, lockSettings, saveLockSettings } from "@/lib/access";
 import { LESSON_PRICE } from "@/lib/lesson-lock";
-import { saveChannel, deleteChannel } from "@/lib/db";
-import { channelVideosUrl, ytdlpChannel, YtdlpMissingError } from "@/lib/ytdlp";
+import { saveChannel, deleteChannel, getChannel } from "@/lib/db";
+import { channelIdVideosUrl, channelVideosUrl, clearChannelCache, ytdlpChannel, YtdlpMissingError } from "@/lib/ytdlp";
 
 export type FormState = { error?: string };
 
@@ -263,6 +263,14 @@ export async function addChannel(_: FormState, formData: FormData): Promise<Form
 }
 
 /** back: đang ở trang của chính kênh đó → về danh sách kênh */
+/** Lấy lại danh sách video mới nhất từ YouTube; trang giữ nguyên số video đang xem và bộ lọc */
+export async function refreshChannelVideos(id: number) {
+  await requireAdmin();
+  const channel = getChannel(id);
+  if (channel) clearChannelCache(channelIdVideosUrl(channel.channelId));
+  refresh();
+}
+
 export async function removeChannel(id: number, back = false) {
   await requireAdmin();
   deleteChannel(id);

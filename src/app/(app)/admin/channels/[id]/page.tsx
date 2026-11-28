@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, ExternalLink, Plus, RefreshCw, Tv } from "lucide-react";
+import { ArrowLeft, CircleCheck, ExternalLink, Plus, Tv } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { getChannel, lessonsByVideoIds, saveChannel } from "@/lib/db";
-import { ytdlpChannel } from "@/lib/ytdlp";
-import { removeChannel } from "../../actions";
+import { channelIdVideosUrl, ytdlpChannel } from "@/lib/ytdlp";
+import { refreshChannelVideos, removeChannel } from "../../actions";
+import RefreshButton from "./RefreshButton";
 import DeleteButton from "../../DeleteButton";
 import AdminPageHeader from "../../_components/AdminPageHeader";
 import { LessonGridSkeleton } from "@/components/Skeleton";
@@ -29,12 +30,11 @@ async function Videos({ params, searchParams }: PageProps<"/admin/channels/[id]"
   if (!channel) notFound();
   const sp = await searchParams;
   const limit = Math.min(MAX, Math.max(PAGE, Number(sp.n) || PAGE));
-  const fresh = sp.fresh === "1";
   const filter: VideoFilter = sp.f === "todo" || sp.f === "done" ? sp.f : "all";
 
   let listing;
   try {
-    listing = await ytdlpChannel(`https://www.youtube.com/channel/${channel.channelId}/videos`, limit, { fresh });
+    listing = await ytdlpChannel(channelIdVideosUrl(channel.channelId), limit);
   } catch (e) {
     return (
       <p role="alert" className="alert alert-err">
@@ -167,9 +167,7 @@ async function Header({ params }: PageProps<"/admin/channels/[id]">) {
           <a href={`https://www.youtube.com/channel/${channel.channelId}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
             <ExternalLink className="size-3.5" aria-hidden /> YouTube
           </a>
-          <Link href={`/admin/channels/${channel.id}?fresh=1`} className="btn btn-sm" title="Lấy lại danh sách video mới nhất từ YouTube">
-            <RefreshCw className="size-3.5" aria-hidden /> Làm mới
-          </Link>
+          <RefreshButton action={refreshChannelVideos.bind(null, channel.id)} />
           <DeleteButton
             action={removeChannel.bind(null, channel.id, true)}
             confirmText={`Xoá kênh “${channel.title}” khỏi danh sách? Bài học đã tạo từ kênh vẫn giữ nguyên.`}

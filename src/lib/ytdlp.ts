@@ -283,6 +283,9 @@ export type ChannelListing = { channelId: string; title: string; handle: string;
  * Link / @handle / mã kênh → URL tab "Video" của kênh. Không nhận ra → null.
  * Nhận: "@EasyGerman", "UCbxb2…", "https://www.youtube.com/@x/featured", "…/channel/UC…", "…/c/x", "…/user/x"
  */
+/** Link tab "Video" của kênh theo mã UC… (khoá cache của trang kênh) */
+export const channelIdVideosUrl = (channelId: string) => `https://www.youtube.com/channel/${channelId}/videos`;
+
 export function channelVideosUrl(input: string): string | null {
   const s = input.trim();
   if (/^@[\w.-]{2,}$/.test(s)) return `https://www.youtube.com/${s}/videos`;
@@ -302,13 +305,18 @@ export function channelVideosUrl(input: string): string | null {
 const CHANNEL_TTL = 15 * 60_000;
 const channelCache = new Map<string, { data: ChannelListing; exp: number }>();
 
+/** Bỏ danh sách đã lưu của kênh ở mọi mức `limit` (nút "Làm mới") */
+export function clearChannelCache(url: string) {
+  for (const k of channelCache.keys()) if (k.startsWith(`${url}|`)) channelCache.delete(k);
+}
+
 /** Thông tin kênh + `limit` video mới nhất (tab "Video", không gồm Shorts / livestream) */
-export async function ytdlpChannel(url: string, limit: number, { fresh = false } = {}): Promise<ChannelListing> {
+export async function ytdlpChannel(url: string, limit: number): Promise<ChannelListing> {
   const key = `${url}|${limit}`;
   const now = Date.now();
   for (const [k, v] of channelCache) if (v.exp <= now) channelCache.delete(k);
   const hit = channelCache.get(key);
-  if (hit && !fresh) return hit.data;
+  if (hit) return hit.data;
   const json = await withUpdate(() => run(["--flat-playlist", "-J", "--playlist-end", String(limit), url], 90_000));
   const d = JSON.parse(json) as {
     channel_id?: string;
