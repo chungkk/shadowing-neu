@@ -3,6 +3,8 @@ import { AppState } from "react-native";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
+import { setReminderUser } from "@/lib/reminderPrefs";
 import { pathFromResponse, syncDailyReminder } from "@/lib/reminders";
 
 // Thông báo đến lúc đang mở app vẫn hiện banner (mặc định iOS sẽ ẩn)
@@ -16,13 +18,16 @@ Notifications.setNotificationHandler({
  */
 export function ReminderSync() {
   const { user } = useAuth();
-  const loggedIn = !!user;
+  const { lang } = useI18n();
+  const uid = user?.id ?? null;
+  const loggedIn = uid !== null;
 
   useEffect(() => {
-    syncDailyReminder(loggedIn);
-    const sub = AppState.addEventListener("change", (s) => s === "active" && syncDailyReminder(loggedIn));
+    setReminderUser(uid);
+    void syncDailyReminder(loggedIn);
+    const sub = AppState.addEventListener("change", (s) => s === "active" && void syncDailyReminder(loggedIn));
     return () => sub.remove();
-  }, [loggedIn]);
+  }, [uid, loggedIn, lang]);
 
   useEffect(() => {
     const open = (res: Notifications.NotificationResponse | null) => {

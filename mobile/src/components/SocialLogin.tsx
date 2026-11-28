@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, View } from "react-native";
 import { Text } from "./Text";
 import { ApiError } from "@/lib/api";
@@ -14,6 +14,7 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
   const { t } = useI18n();
   const [appleOk, setAppleOk] = useState(false);
   const [busy, setBusy] = useState<"apple" | "google" | null>(null);
+  const busyRef = useRef(false);
   const showGoogle = googleAvailable();
 
   useEffect(() => {
@@ -23,7 +24,8 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
   if (!appleOk && !showGoogle) return null;
 
   const run = async (provider: "apple" | "google", get: () => Promise<SocialResult>) => {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     onError("");
     setBusy(provider);
     try {
@@ -33,6 +35,7 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
       // Lỗi từ server đã có thông báo dễ hiểu; lỗi SDK (mã kỹ thuật) → thông báo chung
       onError(e instanceof ApiError ? e.message : t("auth.socialFailed"));
     } finally {
+      busyRef.current = false;
       setBusy(null);
     }
   };
@@ -46,7 +49,10 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
       </View>
 
       {appleOk && apple && (
-        <View style={{ height: 52, borderRadius: 12, overflow: "hidden", backgroundColor: isDark() ? "#fff" : "#000", opacity: busy === "google" ? 0.6 : 1 }}>
+        <View
+          pointerEvents={busy ? "none" : "auto"}
+          style={{ height: 52, borderRadius: 12, overflow: "hidden", backgroundColor: isDark() ? "#fff" : "#000", opacity: busy === "google" ? 0.6 : 1 }}
+        >
           {busy === "apple" ? (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <ActivityIndicator color={isDark() ? "#000" : "#fff"} />
@@ -69,6 +75,8 @@ export function SocialLogin({ onError }: { onError: (message: string) => void })
           onPress={() => run("google", signInWithGoogle)}
           disabled={!!busy}
           accessibilityRole="button"
+          accessibilityLabel={t("auth.google")}
+          accessibilityState={{ busy: busy === "google", disabled: !!busy }}
           style={({ pressed }) => ({
             height: 52,
             borderRadius: 12,

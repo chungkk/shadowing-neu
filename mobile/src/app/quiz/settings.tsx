@@ -1,25 +1,61 @@
+import { useEffect, useState } from "react";
+import { Image } from "expo-image";
 import { Pressable, Switch, View } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Text } from "@/components/Text";
+import { Segmented } from "@/components/ui";
 import { Group, QuizPage } from "@/components/quiz/QuizParts";
+import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { CLASS_GROUPS, classInfo, classQuestionIds, type ClassId } from "@/lib/quiz/fuehrerschein";
 import { STATES } from "@/lib/quiz/lid";
-import { setPrefs, usePrefs } from "@/lib/quiz/store";
+import { getQuizOwner, setPrefs, syncQuiz, usePrefs } from "@/lib/quiz/store";
 import { haptic } from "@/lib/haptics";
 import { useL } from "@/lib/quiz/strings";
+import { WAPPEN } from "@/lib/quiz/wappen";
 
-/** Cài đặt phần Lái xe (hạng bằng) / LiD (bang) + hiện/ẩn bản dịch tiếng Việt (dùng chung 2 phần) */
+/** Cài đặt phần Lái xe (hạng bằng) / LiD (bang) + hiện/ẩn bản dịch tiếng Việt */
 export default function QuizSettingsScreen() {
   const L = useL();
-  const p = useLocalSearchParams<{ module: string }>();
-  const lid = p.module === "lid";
+  const { user } = useAuth();
+  const p = useLocalSearchParams<{ module?: string }>();
+  const [tab, setTab] = useState<"fuehrerschein" | "lid">(p.module === "lid" ? "lid" : "fuehrerschein");
+  const lid = (p.module ? p.module === "lid" : tab === "lid");
   const prefs = usePrefs();
+
+  useEffect(() => {
+    if (user && getQuizOwner() !== user.id) void syncQuiz(user);
+  }, [user]);
 
   return (
     <QuizPage>
-      <Stack.Screen options={{ title: L("Cài đặt", "Einstellungen") }} />
+      <Stack.Screen
+        options={{
+          title: L("Cài đặt", "Einstellungen"),
+          headerLeft: () => (
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={L("Đóng", "Schließen")}
+            >
+              <SymbolView name="xmark" size={18} weight="bold" tintColor={C.muted} />
+            </Pressable>
+          ),
+        }}
+      />
+
+      {!p.module && (
+        <Segmented
+          options={[
+            ["fuehrerschein", L("Lái xe", "Führerschein")],
+            ["lid", "Leben in DE"],
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      )}
 
       <Group>
         <Toggle first title={L("Hiện bản dịch khi học", "Übersetzung beim Lernen")} value={prefs.trLearn} onChange={(v) => setPrefs({ trLearn: v })} />
@@ -30,7 +66,15 @@ export default function QuizSettingsScreen() {
       {lid ? (
         <Group title={L("Bang của bạn", "Dein Bundesland")}>
           {STATES.map((s, i) => (
-            <Choice key={s.code} first={i === 0} title={s.name} subtitle={s.capital} on={prefs.state === s.code} onPress={() => setPrefs({ state: s.code })} />
+            <Choice
+              key={s.code}
+              first={i === 0}
+              icon={WAPPEN[s.code]}
+              title={s.name}
+              subtitle={s.capital}
+              on={prefs.state === s.code}
+              onPress={() => setPrefs({ state: s.code, stateChosen: true }, user)}
+            />
           ))}
         </Group>
       ) : (
@@ -45,7 +89,7 @@ export default function QuizSettingsScreen() {
                   title={`${L("Hạng", "Klasse")} ${c.name}`}
                   subtitle={`${L(c.vi, c.description)} · ${classQuestionIds(id).length} ${L("câu", "Fragen")} · ${c.exam.questions} ${L("câu thi", "Prüfungsfragen")}`}
                   on={prefs.cls === id}
-                  onPress={() => setPrefs({ cls: id })}
+                  onPress={() => setPrefs({ cls: id }, user)}
                 />
               );
             })}
@@ -56,7 +100,7 @@ export default function QuizSettingsScreen() {
   );
 }
 
-function Choice({ title, subtitle, on, first, onPress }: { title: string; subtitle?: string; on: boolean; first?: boolean; onPress: () => void }) {
+function Choice({ title, subtitle, icon, on, first, onPress }: { title: string; subtitle?: string; icon?: ReturnType<typeof require>; on: boolean; first?: boolean; onPress: () => void }) {
   return (
     <Pressable
       onPress={() => {
@@ -67,6 +111,7 @@ function Choice({ title, subtitle, on, first, onPress }: { title: string; subtit
       accessibilityState={{ checked: on }}
       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: 52, borderTopWidth: first ? 0 : 1, borderTopColor: C.line, backgroundColor: pressed ? C.card2 : "transparent" })}
     >
+      {!!icon && <Image source={icon} style={{ width: 26, height: 30 }} contentFit="contain" />}
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ color: C.text, fontSize: 16, fontWeight: on ? "700" : "500" }}>{title}</Text>
         {!!subtitle && <Text style={{ color: C.muted, fontSize: 13 }}>{subtitle}</Text>}

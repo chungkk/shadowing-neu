@@ -15,31 +15,34 @@ function AppStack() {
     colors: { ...DefaultTheme.colors, background: C.background, card: C.card, primary: C.accentText, text: C.text, border: C.border },
   };
   return (
-        <ThemeProvider value={theme}>
-          <StatusBar style={isDark() ? "light" : "dark"} />
-          <Stack screenOptions={{ headerTintColor: C.link, headerTitleStyle: { color: C.text, fontFamily: DISPLAY, fontWeight: "800" }, headerBackButtonDisplayMode: "minimal" }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="lesson/[id]" options={{ title: "" }} />
-            <Stack.Screen name="watch/[videoId]" options={{ title: "" }} />
-            <Stack.Screen name="dub/[videoId]" options={{ title: "" }} />
-            <Stack.Screen name="admin/users" options={{ title: "" }} />
-            <Stack.Screen name="review" options={{ title: "" }} />
-            <Stack.Screen name="stats" options={{ title: "" }} />
-            <Stack.Screen name="leaderboard" options={{ title: "" }} />
-            <Stack.Screen name="vocab-add" options={{ title: "", presentation: "modal" }} />
-            <Stack.Screen name="vocab" options={{ title: "" }} />
-            <Stack.Screen name="notebook" options={{ title: "" }} />
-            <Stack.Screen name="deck/[slug]" options={{ title: "" }} />
-            <Stack.Screen name="privacy" options={{ title: "" }} />
-            <Stack.Screen name="quiz/run" options={{ title: "" }} />
-            <Stack.Screen name="quiz/stats" options={{ title: "" }} />
-            <Stack.Screen name="quiz/settings" options={{ title: "", presentation: "modal" }} />
-            <Stack.Screen name="laixe/learn" options={{ title: "" }} />
-            <Stack.Screen name="laixe/bogen" options={{ title: "" }} />
-            <Stack.Screen name="feedback" options={{ title: "", presentation: "modal" }} />
-          </Stack>
-          <ReminderSync />
-        </ThemeProvider>
+    <ThemeProvider value={theme}>
+      <StatusBar style={isDark() ? "light" : "dark"} />
+      <Stack screenOptions={{ headerTintColor: C.link, headerTitleStyle: { color: C.text, fontFamily: DISPLAY, fontWeight: "800" }, headerBackButtonDisplayMode: "minimal" }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="lesson/[id]" options={{ title: "" }} />
+        <Stack.Screen name="watch/[videoId]" options={{ title: "" }} />
+        <Stack.Screen name="dub/[videoId]" options={{ title: "" }} />
+        <Stack.Screen name="admin/users" options={{ title: "" }} />
+        <Stack.Screen name="review" options={{ title: "" }} />
+        <Stack.Screen name="stats" options={{ title: "" }} />
+        <Stack.Screen name="leaderboard" options={{ title: "" }} />
+        <Stack.Screen name="vocab-add" options={{ title: "", presentation: "modal" }} />
+        <Stack.Screen name="vocab" options={{ title: "" }} />
+        <Stack.Screen name="notebook" options={{ title: "" }} />
+        <Stack.Screen name="deck/[slug]/index" options={{ title: "" }} />
+        <Stack.Screen name="deck/[slug]/[topic]" options={{ title: "" }} />
+        <Stack.Screen name="privacy" options={{ title: "" }} />
+        <Stack.Screen name="quiz/run" options={{ title: "" }} />
+        <Stack.Screen name="quiz/stats" options={{ title: "" }} />
+        <Stack.Screen name="quiz/settings" options={{ title: "", presentation: "modal" }} />
+        <Stack.Screen name="laixe/learn" options={{ title: "" }} />
+        <Stack.Screen name="laixe/bogen" options={{ title: "" }} />
+        <Stack.Screen name="lid/learn" options={{ title: "" }} />
+        <Stack.Screen name="grammar/index" options={{ title: "" }} />
+        <Stack.Screen name="grammar/[slug]" options={{ title: "" }} />
+        <Stack.Screen name="feedback" options={{ title: "", presentation: "modal" }} />
+      </Stack>
+    </ThemeProvider>
   );
 }
 
@@ -50,6 +53,7 @@ export default function RootLayout() {
         <ThemeRoot>
           <AppStack />
         </ThemeRoot>
+        <ReminderSync />
       </AuthProvider>
     </I18nProvider>
   );

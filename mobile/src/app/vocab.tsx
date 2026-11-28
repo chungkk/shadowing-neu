@@ -2,11 +2,11 @@ import { MascotMessage } from "@/components/Mascot";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
-import { ErrorText, styles } from "@/components/ui";
+import { Button, ErrorText, styles } from "@/components/ui";
 import { api, getVocabVersion, type DeckSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setDueCount } from "@/lib/due";
@@ -27,12 +27,12 @@ function byCategory(decks: DeckSummary[]): { title: string; data: DeckSummary[] 
 }
 
 /** Banner đầu tab: sổ từ cá nhân (từ lưu khi học bài / video / bộ từ) — kèm nút ôn khi có mục đến hạn */
-function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; loggedIn: boolean }) {
+function NotebookBanner({ notebook, loggedIn, error }: { notebook: Notebook | null; loggedIn: boolean; error?: boolean }) {
   const { t } = useI18n();
   const due = notebook?.due ?? 0;
   return (
     <Pressable
-      onPress={() => (loggedIn ? router.push("/notebook") : router.back())}
+      onPress={() => router.push(loggedIn ? "/notebook" : "/settings")}
       accessibilityRole="button"
       style={({ pressed }) => ({
         flexDirection: "row",
@@ -54,7 +54,9 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
             ? t("decks.notebookGuest")
             : notebook
               ? [t("vocab.count", { n: notebook.total }), due ? t("decks.due", { n: due }) : ""].filter(Boolean).join(" · ")
-              : t("loading")}
+              : error
+                ? ""
+                : t("loading")}
         </Text>
       </View>
       {due > 0 ? (
@@ -74,7 +76,7 @@ function NotebookBanner({ notebook, loggedIn }: { notebook: Notebook | null; log
           })}
         >
           <SymbolView name="rectangle.stack" size={13} tintColor="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>{t("vocab.review")}</Text>
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>{t("vocab.reviewDue", { n: due })}</Text>
         </Pressable>
       ) : (
         <SymbolView name="chevron.right" size={15} tintColor={C.muted} />
@@ -141,19 +143,25 @@ export default function VocabTab() {
       const r = await api<{ decks: DeckSummary[]; notebook: Notebook | null }>("/vocab/decks");
       setDecks(r.decks);
       setNotebook(r.notebook);
-      setDueCount(r.notebook?.due ?? 0); // badge tab Cài đặt
+      setDueCount(r.notebook?.due ?? 0); // badge tab Tiếng Đức
       loaded.current = { version, at: Date.now() };
     } catch (e) {
       setError((e as Error).message);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Đổi tài khoản → số liệu sổ / "đã có trong sổ" của người khác
+  const [prevUid, setPrevUid] = useState(user?.id ?? null);
+  if (prevUid !== (user?.id ?? null)) {
+    setPrevUid(user?.id ?? null);
+    setDecks(null);
+    setNotebook(null);
+    setError("");
+  }
   useEffect(() => {
     loaded.current = null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- xoá dữ liệu của tài khoản trước
-    setNotebook(null);
-  }, [user]);
+  }, [user?.id]);
 
   // Mở tab: tải lại khi sổ đã đổi (lưu / ôn / thêm bộ từ ở màn khác) hoặc lâu chưa tải
   useFocusEffect(
@@ -172,6 +180,7 @@ export default function VocabTab() {
   return (
     <SafeAreaView style={styles.screen} edges={[]}>
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         style={{ width: "100%", maxWidth: CONTENT_MAX + 2 * PAD, alignSelf: "center" }}
         contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: tablet ? 20 : 12, paddingBottom: 40, gap: 16 }}
         refreshControl={
@@ -195,8 +204,10 @@ export default function VocabTab() {
             </Pressable>
           )}
         </View>
-        <NotebookBanner notebook={notebook} loggedIn={!!user} />
+        <NotebookBanner notebook={notebook} loggedIn={!!user} error={!!error} />
         <ErrorText>{error}</ErrorText>
+        {!decks && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 32 }} />}
+        {!decks && !!error && <Button title={t("retry")} onPress={load} />}
         {sections.map((s) => (
           <View key={s.title} style={{ gap: 12, marginTop: 8 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

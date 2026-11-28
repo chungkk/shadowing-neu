@@ -4,6 +4,7 @@ import { Appearance } from "react-native";
 import { useSyncExternalStore } from "react";
 
 export type Scheme = "light" | "dark";
+export type ThemePref = Scheme | "system";
 
 /**
  * Design system "Nhãn vở" — cùng token với web (src/app/(app)/globals.css, DESIGN.md).
@@ -109,34 +110,78 @@ export const PALETTE: Record<Scheme, typeof LIGHT> = { light: LIGHT, dark: DARK 
 
 const STORE_KEY = "ds-theme"; // cùng tên khoá với web
 
-/** Mặc định sáng như web, không theo cài đặt hệ điều hành; đọc đồng bộ để màn đầu tiên đã đúng màu */
-function readStored(): Scheme {
+function readPref(): ThemePref {
   try {
-    return SecureStore.getItem(STORE_KEY) === "dark" ? "dark" : "light";
+    const v = SecureStore.getItem(STORE_KEY);
+    return v === "dark" || v === "system" ? v : "light";
   } catch {
     return "light";
   }
 }
 
-let scheme = readStored();
+const resolve = (p: ThemePref): Scheme => {
+  if (p !== "system") return p;
+  return Appearance.getColorScheme() === "dark" ? "dark" : "light";
+};
+
+let pref: ThemePref = readPref();
+let scheme: Scheme = resolve(pref);
 const listeners = new Set<() => void>();
+let pendingSysTimer: ReturnType<typeof setTimeout> | undefined;
+
+const applyScheme = (next: Scheme) => {
+  if (pendingSysTimer) {
+    clearTimeout(pendingSysTimer);
+    pendingSysTimer = undefined;
+  }
+  if (next === scheme) {
+    SystemUI.setBackgroundColorAsync(PALETTE[scheme].background).catch(() => {});
+    return false;
+  }
+  scheme = next;
+  SystemUI.setBackgroundColorAsync(PALETTE[scheme].background).catch(() => {});
+  return true;
+};
 
 /** Thanh tab, thanh tiêu đề, bàn phím, hộp thoại hệ thống đi theo giao diện của app */
 function applyNative() {
-  Appearance.setColorScheme(scheme);
+  Appearance.setColorScheme(pref === "system" ? "auto" : pref);
+  scheme = resolve(pref);
   SystemUI.setBackgroundColorAsync(PALETTE[scheme].background).catch(() => {});
 }
 applyNative();
 
+Appearance.addChangeListener(({ colorScheme }) => {
+  if (pref !== "system") return;
+  const next: Scheme = colorScheme === "dark" ? "dark" : "light";
+  if (applyScheme(next)) listeners.forEach((l) => l());
+});
+
 export const isDark = () => scheme === "dark";
 export const getScheme = () => scheme;
+export const getThemePref = () => pref;
+
+export function setThemePref(next: ThemePref) {
+  if (next === pref) return;
+  const wasSystem = pref === "system";
+  pref = next;
+  SecureStore.setItemAsync(STORE_KEY, next).catch(() => {});
+  if (next === "system" && !wasSystem) {
+    Appearance.setColorScheme("auto");
+    if (pendingSysTimer) clearTimeout(pendingSysTimer);
+    pendingSysTimer = setTimeout(() => {
+      pendingSysTimer = undefined;
+      if (pref !== "system") return;
+      if (applyScheme(resolve("system"))) listeners.forEach((l) => l());
+    }, 120);
+  } else {
+    applyNative();
+  }
+  listeners.forEach((l) => l());
+}
 
 export function setScheme(next: Scheme) {
-  if (next === scheme) return;
-  scheme = next;
-  applyNative();
-  SecureStore.setItemAsync(STORE_KEY, next).catch(() => {});
-  listeners.forEach((l) => l());
+  setThemePref(next);
 }
 
 const subscribe = (l: () => void) => {
@@ -144,6 +189,7 @@ const subscribe = (l: () => void) => {
   return () => void listeners.delete(l);
 };
 export const useScheme = () => useSyncExternalStore(subscribe, getScheme);
+export const useThemePref = () => useSyncExternalStore(subscribe, getThemePref);
 
 /**
  * Giá trị đọc theo giao diện hiện tại, dùng như một object thường (kể cả ở cấp module).
@@ -197,18 +243,26 @@ export const SEC = themed((): Record<Sec, SecColors> => ({
   de: { sec: C.accent, secDark: C.accentDark, secSoft: C.accentSoft, secText: C.accentText, onSec: "#ffffff" },
   laixe: { sec: C.gold, secDark: C.goldDark, secSoft: C.goldSoft, secText: C.amber, onSec: "#16203a" },
   lid: { sec: C.coral, secDark: C.coralDark, secSoft: C.coralSoft, secText: C.coralText, onSec: "#16203a" },
-  dub: { sec: C.grape, secDark: C.grapeDark, secSoft: C.grapeSoft, secText: C.grapeText, onSec: "#ffffff" },
+  dub: { sec: C.grape, secDark: C.grapeDark, secSoft: C.grapeSoft, secText: C.grapeText, onSec: isDark() ? "#16203a" : "#ffffff" },
   ink: isDark()
     ? { sec: "#26314f", secDark: "#1a233d", secSoft: C.card2, secText: C.text, onSec: "#ffffff" }
     : { sec: "#16203a", secDark: "#0b1226", secSoft: C.card2, secText: C.text, onSec: "#ffffff" },
 }));
 
 /** Nhãn trình độ: A xanh lá · B xanh lam · C tím — tông nhạt, chữ đậm (như .badge của web) */
-export const LEVEL_COLORS: Record<string, { bg: string; fg: string }> = {
-  A: { bg: "#d6f2e0", fg: "#0f5130" },
-  B: { bg: "#dbe3ff", fg: "#1a2f99" },
-  C: { bg: "#e6defe", fg: "#3f2a9c" },
-};
+export const LEVEL_COLORS: Record<string, { bg: string; fg: string }> = themed(() =>
+  isDark()
+    ? {
+        A: { bg: C.okSoft, fg: C.okText },
+        B: { bg: C.accentSoft, fg: C.accentText },
+        C: { bg: C.grapeSoft, fg: C.grapeText },
+      }
+    : {
+        A: { bg: "#d6f2e0", fg: "#0f5130" },
+        B: { bg: "#dbe3ff", fg: "#1a2f99" },
+        C: { bg: "#e6defe", fg: "#3f2a9c" },
+      },
+);
 
 export const LEVELS = [
   { level: "A1", name: "Mới bắt đầu" },

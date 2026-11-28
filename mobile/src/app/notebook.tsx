@@ -5,7 +5,6 @@ import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useS
 import {
   ActionSheetIOS,
   ActivityIndicator,
-  Alert,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -17,11 +16,11 @@ import {
   type TextStyle,
 } from "react-native";
 import { Text, TextInput } from "@/components/Text";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokenize, type Phrase } from "@shared/phrase-match";
 import { isPhrase, isSentence, spokenWord } from "@shared/review";
 import { isDue } from "@shared/srs";
-import { Button, Card, ErrorText, Input, styles } from "@/components/ui";
+import { ActionSheetModal, Button, Card, ErrorText, Input, styles } from "@/components/ui";
 import { WordSheet } from "@/components/WordSheet";
 import { api, ApiError, getVocabVersion, type VocabItem } from "@/lib/api";
 import { notice, showError } from "@/lib/dialogs";
@@ -35,8 +34,8 @@ import { groupBySaved } from "@/lib/vocabGroups";
 
 type Sort = "new" | "az";
 type Section = { title: string; data: VocabItem[] };
-/** Lọc theo tình trạng ôn (đến hạn · hay quên · chưa ghi nghĩa) và theo loại mục (từ · cụm từ · câu ⭐) — mỗi nhóm chọn tối đa 1 */
-type Status = "due" | "weak" | "empty";
+/** Lọc theo tình trạng ôn (mới lưu · đến hạn · hay quên · thuộc lâu · chưa ghi nghĩa) và theo loại mục (từ · cụm từ · câu ⭐) — mỗi nhóm chọn tối đa 1 */
+type Status = "new" | "due" | "weak" | "mastered" | "empty";
 type Kind = "word" | "phrase" | "sentence";
 
 const STALE_MS = 10 * 60_000; // quá lâu chưa tải → mở tab thì tải lại (mục tới hạn ôn theo thời gian)
@@ -416,7 +415,19 @@ function VocabRow({
           )}
           {!!v.context && (
             <View style={{ backgroundColor: C.background, padding: 12, borderRadius: 12, gap: 6 }}>
-              <Sentence text={v.context} phrases={phrase ? own : phrases} word={v.word} onLook={onLook} style={{ color: C.muted, fontSize: 15, lineHeight: 21 }} />
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Sentence text={v.context} phrases={phrase ? own : phrases} word={v.word} onLook={onLook} style={{ color: C.muted, fontSize: 15, lineHeight: 21 }} />
+                </View>
+                <Pressable
+                  onPress={() => speakGerman(v.context).catch(() => {})}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("vocab.listen")}
+                >
+                  <SymbolView name="speaker.wave.2" size={15} tintColor={C.muted} />
+                </Pressable>
+              </View>
               {!phrase && <PhraseLines phrases={phrases} />}
             </View>
           )}
@@ -431,10 +442,18 @@ function VocabRow({
                 const exSource = ex.sourceUrl?.match(/^\/(lesson|watch)\/([\w-]+)$/);
                 return (
                   <View key={ex.id} style={{ backgroundColor: C.background, padding: 12, borderRadius: 12, gap: 6 }}>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
                       <View style={{ flex: 1 }}>
                         <Sentence text={ex.context} phrases={phrasesOf(ex.context)} word={v.word} onLook={onLook} style={{ color: C.muted, fontSize: 15, lineHeight: 21 }} />
                       </View>
+                      <Pressable
+                        onPress={() => speakGerman(ex.context).catch(() => {})}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("vocab.listen")}
+                      >
+                        <SymbolView name="speaker.wave.2" size={15} tintColor={C.muted} />
+                      </Pressable>
                       <Pressable onPress={() => onDeleteExample(ex.id)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("vocab.removeExample")}>
                         <SymbolView name="xmark" size={13} tintColor={C.muted} />
                       </Pressable>
@@ -469,6 +488,10 @@ function VocabRow({
                   {v.sourceTitle || t("vocab.openLesson")}
                 </Text>
               </Pressable>
+            ) : v.sourceTitle ? (
+              <Text style={{ flex: 1, color: C.muted, fontSize: 14, fontWeight: "500" }} numberOfLines={1}>
+                {v.sourceTitle}
+              </Text>
             ) : (
               <View style={{ flex: 1 }} />
             )}
@@ -532,12 +555,21 @@ export default function NotebookScreen() {
     }
   }, [user]);
 
-  // Đổi tài khoản → bỏ sổ cũ
+  const insets = useSafeAreaInsets();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [prevUid, setPrevUid] = useState(user?.id ?? null);
+  if (prevUid !== (user?.id ?? null)) {
+    setPrevUid(user?.id ?? null);
+    setItems(null);
+    setSelected(null);
+    setOpenId(null);
+    setLookup(null);
+    setMenuOpen(false);
+  }
+  // Đổi tài khoản → bỏ mốc cache cũ
   useEffect(() => {
     loaded.current = null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- xoá dữ liệu của tài khoản trước
-    setItems(null);
-  }, [user]);
+  }, [user?.id]);
 
   // Mở tab: chỉ tải lại khi sổ đã đổi (lưu / sửa / ôn ở màn khác) hoặc lâu chưa tải — sổ lớn tải lại mỗi lần rất chậm
   useFocusEffect(
@@ -547,15 +579,21 @@ export default function NotebookScreen() {
     }, [load]),
   );
 
-  /** Xoá thật trên server (1 mục, hoặc nhiều mục 1 lần); lỗi → trả các mục về danh sách + báo lỗi */
-  const commitDelete = (list: VocabItem[]) =>
-    (list.length === 1
-      ? api(`/vocab/${list[0].id}`, { method: "DELETE" })
-      : api("/vocab", { method: "DELETE", body: { ids: list.map((v) => v.id) } })
-    ).catch((e) => {
+  /** Xoá thật trên server (1 mục, hoặc nhiều mục theo từng đợt tối đa 500 mục); lỗi → trả các mục về danh sách + báo lỗi */
+  const commitDelete = (list: VocabItem[]) => {
+    const req =
+      list.length === 1
+        ? api(`/vocab/${list[0].id}`, { method: "DELETE" })
+        : (async () => {
+            for (let i = 0; i < list.length; i += 500) {
+              await api("/vocab", { method: "DELETE", body: { ids: list.slice(i, i + 500).map((v) => v.id) } });
+            }
+          })();
+    return req.catch((e) => {
       setItems((cur) => (cur ? [...cur, ...list].sort(byNewest) : cur));
       showError(e, t("vocab.deleteFailed"));
     });
+  };
   /** Mục đang chờ hoàn tác → xoá thật ngay */
   const flushTrash = () => {
     const p = trashRef.current;
@@ -570,7 +608,15 @@ export default function NotebookScreen() {
   useEffect(() => {
     flushRef.current = flushTrash;
   });
-  useFocusEffect(useCallback(() => () => flushRef.current(), []));
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        flushRef.current();
+        void stopSpeaking();
+      },
+      [],
+    ),
+  );
 
   const all = useMemo(() => items ?? [], [items]);
 
@@ -625,8 +671,10 @@ export default function NotebookScreen() {
   // ---- Lọc + nhóm ----
   const counts = useMemo(
     () => ({
+      new: all.filter((v) => (v.stage ?? 0) === 0).length,
       due: all.filter((v) => isDue({ stage: v.stage ?? 0, dueAt: v.dueAt ?? null }, loadedAt)).length,
       weak: all.filter((v) => (v.lapses ?? 0) > 0).length,
+      mastered: all.filter((v) => masteryOfItem({ stage: v.stage ?? 0, mastery: v.mastery }) === "mastered").length,
       empty: all.filter((v) => !v.meaning).length,
       word: all.filter((v) => kindOf(v) === "word").length,
       phrase: all.filter((v) => kindOf(v) === "phrase").length,
@@ -638,8 +686,10 @@ export default function NotebookScreen() {
     () =>
       all.filter(
         (v) =>
+          (status !== "new" || (v.stage ?? 0) === 0) &&
           (status !== "due" || isDue({ stage: v.stage ?? 0, dueAt: v.dueAt ?? null }, loadedAt)) &&
           (status !== "weak" || (v.lapses ?? 0) > 0) &&
+          (status !== "mastered" || masteryOfItem({ stage: v.stage ?? 0, mastery: v.mastery }) === "mastered") &&
           (status !== "empty" || !v.meaning) &&
           (!kind || kindOf(v) === kind) &&
           (!query ||
@@ -657,12 +707,18 @@ export default function NotebookScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={[styles.screen, { padding: PAD, gap: 16 }]} edges={[]}>
-        <Text style={styles.h1}>{t("vocab.title")}</Text>
-        <Card style={{ maxWidth: FORM_MAX }}>
-          <Text style={styles.muted}>{t("vocab.loginHint")}</Text>
-          <Button title={t("login")} variant="primary" onPress={() => router.push("/settings")} />
-        </Card>
+      <SafeAreaView style={styles.screen} edges={[]}>
+        <Stack.Screen options={{ title: "" }} />
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: PAD, gap: 16 }}
+        >
+          <Text style={styles.h1}>{t("vocab.title")}</Text>
+          <Card>
+            <Text style={styles.muted}>{t("vocab.loginHint")}</Text>
+            <Button title={t("login")} variant="primary" onPress={() => router.push("/settings")} />
+          </Card>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -774,13 +830,17 @@ export default function NotebookScreen() {
     else if (failed) notice(t("vocab.aiFillFailed", { n: failed }));
   };
 
-  /** Xuất các mục đang hiện (theo lọc / tìm kiếm) dạng bảng TSV: từ · nghĩa · câu ví dụ — dán vào Anki / bảng tính */
+  /** Xuất các mục đang hiện (theo lọc / tìm kiếm) dạng bảng TSV 7 cột — dán vào Anki / bảng tính */
   const exportList = () => {
     const clean = (s: string) => s.replace(/[\t\n]+/g, " ").trim();
-    const tsv = shown
-      .map((v) => [v.word, v.meaning, v.context, (v.examples ?? []).map((e) => e.context).join(" | ")].map(clean).join("\t"))
-      .join("\n");
-    Share.share({ message: tsv, title: t("vocab.export") }).catch(() => {});
+    const header = ["word", "gender", "plural", "meaning", "context", "sourceTitle", "examples"].join("\t");
+    const rows = shown.map((v) => {
+      const g = v.gender === "der" || v.gender === "die" || v.gender === "das" ? v.gender : "";
+      return [v.word, g, v.plural ?? "", v.meaning, v.context, v.sourceTitle ?? "", (v.examples ?? []).map((e) => e.context).join(" | ")]
+        .map(clean)
+        .join("\t");
+    });
+    Share.share({ message: [header, ...rows].join("\n"), title: t("vocab.export") }).catch(() => {});
   };
 
   const toggle = (id: number) => {
@@ -792,8 +852,10 @@ export default function NotebookScreen() {
   const filtered = !!(query || status || kind);
   // Mỗi nút lọc chỉ hiện khi có mục — trừ khi đang bật (để luôn tắt được, kể cả khi vừa hết mục khớp)
   const statusChips: { key: Status; label: string; n: number }[] = [
+    { key: "new", label: t("vocab.new"), n: counts.new },
     { key: "due", label: t("vocab.due"), n: counts.due },
     { key: "weak", label: t("vocab.weak"), n: counts.weak },
+    { key: "mastered", label: t("vocab.mastered"), n: counts.mastered },
     { key: "empty", label: t("vocab.noMeaning"), n: counts.empty },
   ];
   const kindChips: { key: Kind; label: string; n: number }[] = [
@@ -803,23 +865,22 @@ export default function NotebookScreen() {
   // Chỉ có 1 loại mục thì lọc theo loại vô nghĩa
   const showKinds = kindChips.filter((c) => c.n > 0).length > 1 || !!kind;
 
-  /** Menu ⋯: sắp xếp · chọn nhiều · xuất */
+  const menuActions: [string, () => void][] = [
+    [t("vocab.reviewAll", { n: all.length }), () => router.push({ pathname: "/review", params: { mode: "all" } })],
+    [sort === "new" ? t("vocab.sortToAz") : t("vocab.sortToNew"), () => setSort(sort === "new" ? "az" : "new")],
+    [t("vocab.select"), () => startSelect()],
+    [t("vocab.export"), exportList],
+  ];
+
+  /** Menu ⋯: ôn tất cả · sắp xếp · chọn nhiều · xuất */
   const openMenu = () => {
-    const actions: [string, () => void][] = [
-      [sort === "new" ? t("vocab.sortToAz") : t("vocab.sortToNew"), () => setSort(sort === "new" ? "az" : "new")],
-      [t("vocab.select"), () => startSelect()],
-      [t("vocab.export"), exportList],
-    ];
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...actions.map(([label]) => label), t("cancel")], cancelButtonIndex: actions.length },
-        (i) => actions[i]?.[1](),
+        { options: [...menuActions.map(([label]) => label), t("cancel")], cancelButtonIndex: menuActions.length },
+        (i) => menuActions[i]?.[1](),
       );
     } else {
-      Alert.alert(t("vocab.more"), undefined, [
-        ...actions.map(([text, onPress]) => ({ text, onPress })),
-        { text: t("cancel"), style: "cancel" as const },
-      ]);
+      setMenuOpen(true);
     }
   };
 
@@ -874,7 +935,13 @@ export default function NotebookScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.h1}>{t("vocab.title")}</Text>
-                <Text style={[styles.muted, { fontSize: 14 }]}>{items ? t("vocab.count", { n: all.length }) : t("loading")}</Text>
+                <Text style={[styles.muted, { fontSize: 14 }]}>
+                  {items
+                    ? `${t("vocab.count", { n: all.length })}${counts.mastered ? ` · ${t("vocab.masteredCount", { n: counts.mastered })}` : ""}`
+                    : error
+                      ? ""
+                      : t("loading")}
+                </Text>
               </View>
               {/* Có mục đến hạn → viên xanh kèm số mục */}
               {all.length > 0 && (
@@ -1010,44 +1077,72 @@ export default function NotebookScreen() {
                 />
               )}
             </View>
-          ) : undefined
+          ) : error ? (
+            <Button title={t("retry")} onPress={load} style={{ marginTop: 16, alignSelf: "center" }} />
+          ) : (
+            <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />
+          )
         }
       />
       {/* Vừa xoá: hoàn tác trong vài giây */}
       {trash && (
         <View
+          pointerEvents="box-none"
           style={{
             position: "absolute",
             left: PAD,
             right: PAD,
-            bottom: 16,
-            flexDirection: "row",
+            bottom: Math.max(insets.bottom, 16),
             alignItems: "center",
-            gap: 12,
-            padding: 14,
-            borderRadius: 14,
-            backgroundColor: C.card2,
-            borderWidth: 1,
-            borderColor: C.border,
           }}
         >
-          <Text style={{ flex: 1, color: C.text }} numberOfLines={1}>
-            {trash.length === 1 ? t("vocab.deleted", { w: trash[0].word }) : t("vocab.deletedMany", { n: trash.length })}
-          </Text>
-          <Pressable onPress={undo} hitSlop={10} accessibilityRole="button">
-            <Text style={{ color: C.amber, fontWeight: "800" }}>{t("vocab.undo")}</Text>
-          </Pressable>
+          <View
+            style={{
+              width: "100%",
+              maxWidth: CONTENT_MAX,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              padding: 14,
+              borderRadius: 14,
+              backgroundColor: C.card2,
+              borderWidth: 1,
+              borderColor: C.border,
+            }}
+          >
+            <Text style={{ flex: 1, color: C.text }} numberOfLines={1}>
+              {trash.length === 1 ? t("vocab.deleted", { w: trash[0].word }) : t("vocab.deletedMany", { n: trash.length })}
+            </Text>
+            <Pressable onPress={undo} hitSlop={10} accessibilityRole="button">
+              <Text style={{ color: C.amber, fontWeight: "800" }}>{t("vocab.undo")}</Text>
+            </Pressable>
+          </View>
         </View>
       )}
-      <WordSheet
-        word={lookup?.word ?? null}
-        context={lookup?.context ?? ""}
-        marks={lookup?.marks}
-        saved={!!lookup && !!findSaved(lookup.word)}
-        onSave={(meaning) => (lookup ? saveLooked(lookup.word, lookup.context, meaning, lookup.source) : Promise.resolve())}
-        onRemove={() => (lookup ? unsaveLooked(lookup.word) : Promise.resolve())}
-        onClose={() => setLookup(null)}
-      />
+      {Platform.OS !== "ios" && (
+        <ActionSheetModal
+          visible={menuOpen}
+          title={t("vocab.more")}
+          onClose={() => setMenuOpen(false)}
+          options={menuActions.map(([label, onPress]) => ({ label, onPress }))}
+        />
+      )}
+      {(() => {
+        const matchedSaved = lookup ? findSaved(lookup.word) : undefined;
+        return (
+          <WordSheet
+            word={lookup?.word ?? null}
+            context={lookup?.context ?? ""}
+            marks={lookup?.marks}
+            initialMeaning={matchedSaved?.meaning}
+            extraExamples={matchedSaved?.examples}
+            saved={!!matchedSaved}
+            onSave={(meaning) => (lookup ? saveLooked(lookup.word, lookup.context, meaning, lookup.source) : Promise.resolve())}
+            onRemove={() => (lookup ? unsaveLooked(lookup.word) : Promise.resolve())}
+            onClose={() => setLookup(null)}
+          />
+        );
+      })()}
     </SafeAreaView>
   );
 }

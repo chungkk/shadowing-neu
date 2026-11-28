@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Stack, useFocusEffect } from "expo-router";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync, type PermissionResponse } from "expo-audio";
-import { ActivityIndicator, Alert, AppState, Linking, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { ICON, Row, Section } from "@/components/SettingsList";
 import { styles } from "@/components/ui";
@@ -69,9 +69,17 @@ export default function PrivacyScreen() {
 
   const micValue = !mic ? undefined : mic.granted ? t("priv.granted") : mic.status === "undetermined" ? t("priv.undetermined") : t("priv.denied");
   const onMic = async () => {
-    // Chưa hỏi lần nào → hỏi ngay trong app; đã cho phép / đã từ chối → chỉ đổi được trong Cài đặt của máy
-    if (mic?.status === "undetermined" && mic.canAskAgain) setMic(await requestRecordingPermissionsAsync());
-    else Linking.openSettings().catch(() => {});
+    // Chưa hỏi lần nào → hỏi ngay trong app (Android: chưa cho phép nhưng vẫn còn hỏi lại được → hỏi trực tiếp)
+    const canAsk = mic?.status === "undetermined" ? mic.canAskAgain : Platform.OS === "android" && !mic?.granted && !!mic?.canAskAgain;
+    if (canAsk) {
+      try {
+        setMic(await requestRecordingPermissionsAsync());
+      } catch {
+        Linking.openSettings().catch(() => {});
+      }
+    } else {
+      Linking.openSettings().catch(() => {});
+    }
   };
 
   const exportData = () => {

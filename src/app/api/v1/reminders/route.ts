@@ -12,5 +12,11 @@ export async function GET(req: NextRequest) {
   if (user instanceof Response) return user;
   const tz = Number(req.nextUrl.searchParams.get("tz"));
   const q = req.nextUrl.searchParams;
-  return Response.json(listReminders(user.id, Number.isFinite(tz) && Math.abs(tz) <= 840 ? tz : 0, { cls: q.get("cls"), state: q.get("state") }));
+  return Response.json(
+    listReminders(user.id, Number.isFinite(tz) && Math.abs(tz) <= 840 ? tz : 0, {
+      cls: q.get("cls"),
+      state: q.get("state"),
+      lang: q.get("lang"),
+    }),
+  );
 }

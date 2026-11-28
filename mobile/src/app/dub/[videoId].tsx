@@ -5,6 +5,9 @@ import DubPlayer from "@/components/DubPlayer";
 import { Text } from "@/components/Text";
 import { Button, Card, ErrorText } from "@/components/ui";
 import {
+  ensureDubVoiceLoaded,
+  getDubVoice,
+  isDubVoiceId,
   saveRecentDub,
   startDubPrepareStream,
   type DubBgProgress,
@@ -18,10 +21,6 @@ import { C, SEC, alpha } from "@/lib/theme";
 /** Chờ trước mỗi lần tự nối lại stream dịch ngầm */
 const RECONNECT_DELAYS_MS = [1_500, 4_000, 10_000, 20_000];
 
-/**
- * Gộp dữ liệu mới từ server vào phiên đang xem mà không làm mất câu đã dịch:
- * nối lại có thể nhận bản `ready` ít câu dịch hơn (server phải chạy lại từ đầu).
- */
 function mergeSession(prev: DubResult, next: DubResult): DubResult {
   if (prev.videoId !== next.videoId || prev.cues.length !== next.cues.length) return next;
   return {
@@ -42,47 +41,61 @@ function mergeSession(prev: DubResult, next: DubResult): DubResult {
  */
 export default function DubWatchScreen() {
   const { videoId, voice } = useLocalSearchParams<{ videoId: string; voice?: string }>();
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const sec = SEC.dub;
 
-  const initialVoice: DubVoiceId =
-    voice === "edge:vi-VN-HoaiMyNeural" ? "edge:vi-VN-HoaiMyNeural" : "edge:vi-VN-NamMinhNeural";
+  const initialVoice: DubVoiceId = isDubVoiceId(voice) ? voice : getDubVoice();
 
   const [session, setSession] = useState<DubResult | null>(null);
+  const [activeVoice, setActiveVoice] = useState<DubVoiceId>(initialVoice);
   const [prep, setPrep] = useState<DubProgress>({ pct: 3, stage: t("dub.connecting") });
   const [bgProgress, setBgProgress] = useState<DubBgProgress | null>(null);
-  // Trạng thái kết nối dịch ngầm khi player đã mở: đang nối lại / hết lượt nối lại
   const [bgStatus, setBgStatus] = useState<"reconnecting" | "failed" | null>(null);
+  const [bgError, setBgError] = useState("");
+  const [repairing, setRepairing] = useState(false);
   const [error, setError] = useState("");
   const abortRef = useRef<(() => void) | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const waitActiveRef = useRef(false);
+  const mountedRef = useRef(true);
+  const loadSeqRef = useRef(0);
   const tRef = useRef(t);
-  // Cho hẹn giờ nối lại gọi bản connect mới nhất (connect không tự tham chiếu được trong useCallback)
-  const connectRef = useRef<(resume: boolean, attempt: number) => void>(() => {});
+  const voiceRef = useRef<DubVoiceId>(initialVoice);
+  const connectRef = useRef<(resume: boolean, attempt: number, opts?: { force?: boolean; repair?: boolean }) => void>(
+    () => {},
+  );
+  const lastOptsRef = useRef<{ force?: boolean; repair?: boolean } | undefined>(undefined);
   useEffect(() => {
     tRef.current = t;
   });
 
-  /**
-   * Mở stream chuẩn bị. `resume` = player đang mở: giữ nguyên phiên, chỉ nhận tiếp phần dịch.
-   * Server vẫn dịch tiếp khi app mất kết nối, nên nối lại sẽ nhận ngay bản mới nhất.
-   */
   const connect = useCallback(
-    (resume: boolean, attempt: number) => {
-      if (!videoId) return;
+    (resume: boolean, attempt: number, opts?: { force?: boolean; repair?: boolean }) => {
+      waitActiveRef.current = false;
+      if (!videoId) {
+        setError(tRef.current("dub.ytInvalid"));
+        return;
+      }
       abortRef.current?.();
       clearTimeout(retryTimerRef.current);
+      lastOptsRef.current = opts;
+      setBgError("");
+      if (opts?.repair) setRepairing(true);
       if (!resume) {
         setError("");
         setSession(null);
         setBgProgress(null);
         setBgStatus(null);
+        setRepairing(false);
         setPrep({ pct: 3, stage: tRef.current("dub.connecting") });
       }
 
       let becameReady = resume;
       const { promise, abort } = startDubPrepareStream(videoId, {
+        voiceId: voiceRef.current,
+        speed: 1.15,
+        force: opts?.force,
+        repair: opts?.repair,
         onProgress: (p) => {
           if (!resume) setPrep(p);
         },
@@ -90,25 +103,29 @@ export default function DubWatchScreen() {
           if (!becameReady) saveRecentDub(partial.videoId, partial.title || partial.videoId);
           becameReady = true;
           setBgStatus(null);
+          setBgError("");
           setSession((prev) => (prev ? mergeSession(prev, partial) : partial));
           setBgProgress(bg);
         },
-        onChunk: (start, translations, bg) => {
+        onChunk: (start, translations, skipped, bg) => {
           setBgStatus(null);
+          setBgError("");
           setBgProgress(bg);
+          const skipSet = new Set(skipped);
           setSession((prev) => {
             if (!prev || prev.videoId !== videoId) return prev;
             const nextCues = prev.cues.slice();
             translations.forEach((tr, k) => {
               const idx = start + k;
               if (nextCues[idx]) {
+                const isSkip = skipSet.has(k);
                 nextCues[idx] = {
                   start_ms: nextCues[idx].start_ms,
                   end_ms: nextCues[idx].end_ms,
-                  // "" = AI chưa dịch được → không đọc (đừng thay bằng câu gốc)
                   text: tr,
                   orig: nextCues[idx].orig,
-                  ...(tr ? {} : { untranslated: true }),
+                  spk: nextCues[idx].spk,
+                  ...(tr || isSkip ? {} : { untranslated: true }),
                 };
               }
             });
@@ -120,20 +137,26 @@ export default function DubWatchScreen() {
 
       promise
         .then((full) => {
+          waitActiveRef.current = false;
+          lastOptsRef.current = undefined;
+          setRepairing(false);
           setSession((prev) => (prev ? mergeSession(prev, full) : full));
           setBgProgress(null);
           setBgStatus(null);
+          setBgError("");
           if (!becameReady) saveRecentDub(full.videoId, full.title || full.videoId);
         })
         .catch((e: Error) => {
           if (e.name === "AbortError") return;
           if (!becameReady) {
+            setRepairing(false);
             setError(e.message);
             return;
           }
-          // Player đã mở → không xoá phiên, tự nối lại (đợi app quay lại nền trước nếu đang ẩn)
           if (attempt >= RECONNECT_DELAYS_MS.length) {
+            setRepairing(false);
             setBgStatus("failed");
+            setBgError(e.message);
             return;
           }
           setBgStatus("reconnecting");
@@ -141,7 +164,7 @@ export default function DubWatchScreen() {
             waitActiveRef.current = true;
             return;
           }
-          retryTimerRef.current = setTimeout(() => connectRef.current(true, attempt + 1), RECONNECT_DELAYS_MS[attempt]);
+          retryTimerRef.current = setTimeout(() => connectRef.current(true, attempt + 1, opts), RECONNECT_DELAYS_MS[attempt]);
         });
     },
     [videoId],
@@ -151,32 +174,61 @@ export default function DubWatchScreen() {
     connectRef.current = connect;
   });
 
-  const load = useCallback(() => connect(false, 0), [connect]);
+  const load = useCallback(() => {
+    const seq = ++loadSeqRef.current;
+    void ensureDubVoiceLoaded().then((v) => {
+      if (!mountedRef.current || seq !== loadSeqRef.current) return;
+      if (!isDubVoiceId(voice)) {
+        voiceRef.current = v;
+        setActiveVoice(v);
+      }
+      connect(false, 0);
+    });
+  }, [connect, voice]);
   const retryBg = useCallback(() => {
     setBgStatus("reconnecting");
-    connect(true, 0);
+    setBgError("");
+    connect(true, 0, lastOptsRef.current);
+  }, [connect]);
+  const retranslate = useCallback(() => connect(false, 0, { force: true }), [connect]);
+  const repair = useCallback(() => {
+    setBgStatus(null);
+    setBgError("");
+    connect(true, 0, { repair: true });
   }, [connect]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- khởi chạy stream chuẩn bị thuyết minh khi vào màn
+    mountedRef.current = true;
     load();
     return () => {
+      mountedRef.current = false;
+      waitActiveRef.current = false;
       clearTimeout(retryTimerRef.current);
       abortRef.current?.();
       abortRef.current = null;
     };
   }, [load]);
 
-  // Quay lại app sau khi bị ẩn lúc đang dịch ngầm → nối lại ngay
   useEffect(() => {
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active" && waitActiveRef.current) {
         waitActiveRef.current = false;
-        connect(true, 0);
+        connect(true, 0, lastOptsRef.current);
       }
     });
     return () => sub.remove();
   }, [connect]);
+
+  const prepLabel =
+    lang === "de"
+      ? prep.done != null && prep.total != null && prep.total > 0
+        ? `Übersetze ins Vietnamesische (${prep.done}/${prep.total})…`
+        : prep.pct >= 45
+          ? "Übersetze Untertitel ins Vietnamesische…"
+          : prep.pct >= 15
+            ? "Untertitel werden geladen…"
+            : t("dub.connecting")
+      : prep.stage;
 
   if (!session) {
     return (
@@ -196,7 +248,7 @@ export default function DubWatchScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                   <ActivityIndicator color={sec.secText} />
-                  <Text style={{ color: C.text, fontSize: 15, fontWeight: "700", flex: 1 }}>{prep.stage}</Text>
+                  <Text style={{ color: C.text, fontSize: 15, fontWeight: "700", flex: 1 }}>{prepLabel}</Text>
                 </View>
                 <Text style={{ color: sec.secText, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
                   {prep.pct}%
@@ -223,14 +275,23 @@ export default function DubWatchScreen() {
 
   return (
     <DubPlayer
+      key={session.videoId}
       videoId={session.videoId}
       title={session.title || session.videoId}
       sourceLang={session.sourceLang}
       cues={session.cues}
-      initialVoice={initialVoice}
+      initialVoice={activeVoice}
+      onVoiceChange={(v) => {
+        voiceRef.current = v;
+        setActiveVoice(v);
+      }}
       bgProgress={bgProgress}
       bgStatus={bgStatus}
+      bgError={bgError}
+      repairing={repairing}
       onRetryBg={retryBg}
+      onRetranslate={retranslate}
+      onRepair={repair}
     />
   );
 }

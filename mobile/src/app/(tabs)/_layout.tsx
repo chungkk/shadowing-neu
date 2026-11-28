@@ -12,17 +12,28 @@ export default function TabLayout() {
   const { user } = useAuth();
   const due = useDueCount();
 
+  const uid = user?.id ?? null;
+
   // Badge tab Cài đặt (lối vào Từ vựng): tải số mục đến hạn lúc mở app và mỗi lần quay lại app (số đến hạn đổi theo thời gian)
   useEffect(() => {
-    if (!user) return setDueCount(0);
+    if (uid === null) {
+      setDueCount(0);
+      return;
+    }
+    let alive = true;
     const load = () =>
       api<{ notebook: { due: number } | null }>("/vocab/decks")
-        .then((r) => setDueCount(r.notebook?.due ?? 0))
+        .then((r) => {
+          if (alive) setDueCount(r.notebook?.due ?? 0);
+        })
         .catch(() => {});
     load();
     const sub = AppState.addEventListener("change", (s) => s === "active" && load());
-    return () => sub.remove();
-  }, [user]);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [uid]);
 
   return (
     // iPad: thanh tab trên cùng, có thể mở thành sidebar (không ảnh hưởng iPhone)
@@ -30,6 +41,7 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t("tabs.lessons")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "books.vertical", selected: "books.vertical.fill" }} md="school" />
+        {due > 0 && <NativeTabs.Trigger.Badge>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="laixe">
         <NativeTabs.Trigger.Label>{t("tabs.driving")}</NativeTabs.Trigger.Label>
@@ -46,7 +58,6 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Label>{t("tabs.settings")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />
-        {due > 0 && <NativeTabs.Trigger.Badge>{due > 99 ? "99+" : String(due)}</NativeTabs.Trigger.Badge>}
       </NativeTabs.Trigger>
     </NativeTabs>
   );

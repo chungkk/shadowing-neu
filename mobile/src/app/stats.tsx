@@ -1,9 +1,9 @@
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { Gem } from "@/components/Points";
-import { ErrorText, styles } from "@/components/ui";
+import { Button, ErrorText, styles } from "@/components/ui";
 import { api, type Rate, type Stats } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -135,14 +135,22 @@ export default function StatsScreen() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  const [prevUid, setPrevUid] = useState(user?.id ?? null);
+  if (prevUid !== (user?.id ?? null)) {
+    setPrevUid(user?.id ?? null);
+    setStats(null);
+    setError("");
+  }
+
   const load = useCallback(async () => {
+    if (!user) return;
     try {
       setError("");
       setStats(await api<Stats>(`/stats?tz=${new Date().getTimezoneOffset()}`));
     } catch (e) {
       setError((e as Error).message);
     }
-  }, []);
+  }, [user]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu
     if (user) load();
@@ -156,25 +164,45 @@ export default function StatsScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", padding: 16, gap: 12, paddingBottom: 48 }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            tintColor={C.accentText}
-            onRefresh={async () => {
-              setRefreshing(true);
-              await load();
-              setRefreshing(false);
-            }}
-          />
+          user ? (
+            <RefreshControl
+              refreshing={refreshing}
+              tintColor={C.accentText}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await load();
+                setRefreshing(false);
+              }}
+            />
+          ) : undefined
         }
       >
         <ErrorText>{error}</ErrorText>
-        {!s && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
-        {s && (
+        {!user ? (
+          <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 18, gap: 12 }}>
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: "700", lineHeight: 21 }}>{t("stats.guestTitle")}</Text>
+            <Button title={t("login")} variant="primary" onPress={() => router.push("/settings")} />
+          </View>
+        ) : (
+          !s &&
+          (!error ? (
+            <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />
+          ) : (
+            <Button title={t("retry")} onPress={load} />
+          ))
+        )}
+        {user && s && (
           <>
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Tile label={t("stats.streak")} value={`${s.streak}`} />
               <Tile label={t("stats.due")} value={`${s.dueToday}`} />
             </View>
+            {(s.lessons != null || s.sentences != null) && (
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                {s.lessons != null && <Tile label={t("stats.lessons")} value={`${s.lessons}`} color={C.accentText} />}
+                {s.sentences != null && <Tile label={t("stats.sentences")} value={`${s.sentences}`} color={C.accentText} />}
+              </View>
+            )}
             {s.points && (
               <Tile
                 icon={<Gem size={24} />}
@@ -216,6 +244,16 @@ export default function StatsScreen() {
                 ))}
               </Card>
             )}
+
+            <Card title={t("stats.continueTitle")}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <Button title={t("stats.goDictation")} variant="primary" onPress={() => router.push("/")} style={{ flexGrow: 1 }} />
+                <Button title={t("stats.goReview")} onPress={() => router.push("/review")} style={{ flexGrow: 1 }} />
+                <Button title={t("stats.goLaixe")} onPress={() => router.push("/laixe")} style={{ flexGrow: 1 }} />
+                <Button title={t("stats.goLid")} onPress={() => router.push("/lid")} style={{ flexGrow: 1 }} />
+                <Button title={t("stats.goBoard")} onPress={() => router.push("/leaderboard")} style={{ flexGrow: 1 }} />
+              </View>
+            </Card>
           </>
         )}
       </ScrollView>

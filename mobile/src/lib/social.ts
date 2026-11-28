@@ -72,6 +72,6 @@ export async function signInWithGoogle(): Promise<SocialResult> {
 }
 
 /** Đăng xuất phía Google (lần sau được chọn tài khoản khác) — không có Google thì bỏ qua */
-export function signOutGoogle() {
-  if (googleReady) google()?.GoogleSignin.signOut().catch(() => {});
+export async function signOutGoogle() {
+  await google()?.GoogleSignin.signOut().catch(() => {});
 }

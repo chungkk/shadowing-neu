@@ -40,12 +40,13 @@ function Field({
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
-          height: 46,
+          minHeight: 48,
+          paddingVertical: 8,
           paddingHorizontal: 14,
           borderRadius: 12,
           borderWidth: 1.5,
           borderColor,
-          backgroundColor: C.background,
+          backgroundColor: C.card,
         }}
       >
         <SymbolView name={icon} size={18} tintColor={focused ? C.accentText : C.muted} />
@@ -62,10 +63,15 @@ function Field({
             setFocused(false);
             props.onBlur?.(e);
           }}
-          style={[{ flex: 1, color: C.text, fontSize: 16, height: "100%" }, props.style]}
+          style={[{ flex: 1, color: C.text, fontSize: 16 }, props.style]}
         />
         {secure && (
-          <Pressable onPress={() => setHidden((h) => !h)} hitSlop={10} accessibilityLabel={hidden ? t("auth.showPw") : t("auth.hidePw")}>
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? t("auth.showPw") : t("auth.hidePw")}
+          >
             <SymbolView name={hidden ? "eye" : "eye.slash"} size={18} tintColor={C.muted} />
           </Pressable>
         )}
@@ -109,11 +115,14 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const busyRef = useRef(false);
   const passwordRef = useRef<InputRef>(null);
+  const confirmRef = useRef<InputRef>(null);
   const invalidEmail = !EMAIL_RE.test(email.trim());
 
   useEffect(() => {
@@ -123,6 +132,8 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
   }, [cooldown]);
 
   const run = async (fn: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     setNotice("");
@@ -131,6 +142,7 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -138,15 +150,17 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
   const send = (resend = false) =>
     run(async () => {
       await sendPasswordReset(email.trim());
+      setCode("");
       setStep("code");
       setCooldown(60);
       if (resend) setNotice(t("auth.resent"));
     });
 
   const pwError = password && password.length < 8 ? t("auth.errPwShort") : undefined;
-  const canSave = code.length === 6 && password.length >= 8;
+  const confirmError = confirmPw && confirmPw !== password ? t("auth.errPwMismatch") : undefined;
+  const canSave = code.length === 6 && password.length >= 8 && password === confirmPw;
   const save = () => {
-    if (!canSave || busy) return;
+    if (!canSave || busyRef.current) return;
     run(() => resetPassword(email.trim(), code, password)); // thành công → đã đăng nhập, màn này tự đóng
   };
 
@@ -177,9 +191,10 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="email"
+            textContentType="emailAddress"
             keyboardType="email-address"
             returnKeyType="send"
-            onSubmitEditing={() => !invalidEmail && send()}
+            onSubmitEditing={() => !invalidEmail && !busyRef.current && send()}
             autoFocus={!initialEmail}
           />
         ) : (
@@ -212,14 +227,34 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
               autoCapitalize="none"
               autoComplete="new-password"
               textContentType="newPassword"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => confirmRef.current?.focus()}
+              error={pwError}
+            />
+            <Field
+              ref={confirmRef}
+              label={t("auth.confirmPw")}
+              icon="lock"
+              secure
+              value={confirmPw}
+              onChangeText={setConfirmPw}
+              placeholder={t("auth.confirmPwPh")}
+              autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
               returnKeyType="go"
               onSubmitEditing={save}
-              error={pwError}
+              error={confirmError}
             />
           </>
         )}
 
-        {!!error && <Text style={{ color: C.redText, fontSize: 14 }}>{error}</Text>}
+        {!!error && (
+          <Text accessibilityRole="alert" style={{ color: C.redText, fontSize: 14 }}>
+            {error}
+          </Text>
+        )}
         {!!notice && <Text style={{ color: C.accentText, fontSize: 14, textAlign: "center" }}>{notice}</Text>}
 
         {step === "email" ? (
@@ -230,10 +265,28 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
 
         {step === "code" && (
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Pressable onPress={() => setStep("email")} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                setStep("email");
+                setCode("");
+                setPassword("");
+                setConfirmPw("");
+                setCooldown(0);
+                setError("");
+                setNotice("");
+              }}
+              accessibilityRole="button"
+              hitSlop={12}
+            >
               <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
             </Pressable>
-            <Pressable onPress={() => send(true)} disabled={cooldown > 0 || busy} hitSlop={8}>
+            <Pressable
+              onPress={() => send(true)}
+              disabled={cooldown > 0 || busy}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: cooldown > 0 || busy }}
+              hitSlop={12}
+            >
               <Text style={{ color: cooldown > 0 ? C.muted : C.accentText, fontSize: 15, fontWeight: "700" }}>
                 {cooldown > 0 ? t("auth.resendIn", { s: cooldown }) : t("auth.resend")}
               </Text>
@@ -242,7 +295,7 @@ function ForgotPassword({ initialEmail, onBack }: { initialEmail: string; onBack
         )}
       </View>
 
-      <Pressable onPress={onBack} hitSlop={8} style={{ alignSelf: "center" }}>
+      <Pressable onPress={onBack} accessibilityRole="button" hitSlop={12} style={{ alignSelf: "center" }}>
         <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "800" }}>← {t("auth.backToLogin")}</Text>
       </Pressable>
     </View>
@@ -267,6 +320,7 @@ export function AuthForm() {
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0); // giây chờ trước khi được gửi lại mã
   const [notice, setNotice] = useState("");
+  const busyRef = useRef(false);
   const emailRef = useRef<InputRef>(null);
   const passwordRef = useRef<InputRef>(null);
 
@@ -286,6 +340,8 @@ export function AuthForm() {
   }, [cooldown]);
 
   const run = async (fn: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     setNotice("");
@@ -294,6 +350,7 @@ export function AuthForm() {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -308,13 +365,13 @@ export function AuthForm() {
     });
 
   const confirm = (c = code) => {
-    if (c.length !== 6 || busy) return;
+    if (c.length !== 6 || busyRef.current) return;
     run(() => register(name.trim(), email.trim(), password, c));
   };
 
   const submit = () => {
     setTouched(true);
-    if (!valid || busy) return;
+    if (!valid || busyRef.current) return;
     if (isRegister) sendCode();
     else run(() => login(email.trim(), password));
   };
@@ -324,6 +381,9 @@ export function AuthForm() {
     setStep("info");
     setTouched(false);
     setError("");
+    setNotice("");
+    setCode("");
+    setCooldown(0);
   };
 
   const codeStep = isRegister && step === "code";
@@ -450,13 +510,23 @@ export function AuthForm() {
           />
         )}
         {mode === "login" && (
-          <Pressable onPress={() => setMode("forgot")} hitSlop={8} style={{ alignSelf: "flex-end", marginTop: -4 }}>
+          <Pressable
+            onPress={() => {
+              setMode("forgot");
+              setError("");
+              setNotice("");
+            }}
+            accessibilityRole="button"
+            hitSlop={12}
+            style={{ alignSelf: "flex-end", marginTop: -4 }}
+          >
             <Text style={{ color: C.accentText, fontSize: 14, fontWeight: "700" }}>{t("auth.forgot")}</Text>
           </Pressable>
         )}
 
         {!!error && (
           <View
+            accessibilityRole="alert"
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -483,6 +553,7 @@ export function AuthForm() {
           }}
           disabled={busy || (codeStep && code.length !== 6)}
           accessibilityRole="button"
+          accessibilityState={{ busy: !!busy, disabled: busy || (codeStep && code.length !== 6) }}
           style={({ pressed }) => ({
             height: 52,
             marginTop: 2,
@@ -509,10 +580,26 @@ export function AuthForm() {
       {/* Bước nhập mã: đổi email / gửi lại mã */}
       {codeStep && (
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -6 }}>
-          <Pressable onPress={() => setStep("info")} hitSlop={8}>
+          <Pressable
+            onPress={() => {
+              setStep("info");
+              setCode("");
+              setCooldown(0);
+              setError("");
+              setNotice("");
+            }}
+            accessibilityRole="button"
+            hitSlop={12}
+          >
             <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "700" }}>← {t("auth.changeEmail")}</Text>
           </Pressable>
-          <Pressable onPress={() => sendCode(true)} disabled={cooldown > 0 || busy} hitSlop={8}>
+          <Pressable
+            onPress={() => sendCode(true)}
+            disabled={cooldown > 0 || busy}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: cooldown > 0 || busy }}
+            hitSlop={12}
+          >
             <Text style={{ color: cooldown > 0 ? C.muted : C.accentText, fontSize: 15, fontWeight: "700" }}>
               {cooldown > 0 ? t("auth.resendIn", { s: cooldown }) : t("auth.resend")}
             </Text>
@@ -523,7 +610,7 @@ export function AuthForm() {
       {/* Chuyển chế độ */}
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 6 }}>
         <Text style={{ color: C.muted, fontSize: 15 }}>{isRegister ? t("auth.hasAccount") : t("auth.noAccount")}</Text>
-        <Pressable onPress={switchMode} hitSlop={8}>
+        <Pressable onPress={switchMode} accessibilityRole="button" hitSlop={12}>
           <Text style={{ color: C.accentText, fontSize: 15, fontWeight: "800" }}>{isRegister ? t("login") : t("auth.signupFree")}</Text>
         </Pressable>
       </View>

@@ -1,8 +1,10 @@
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import type { ComponentRef, ReactNode, Ref } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps, type TextInputProps, type ViewStyle } from "react-native";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View, type PressableProps, type TextInputProps, type ViewStyle } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { haptic } from "@/lib/haptics";
-import { C, LEVEL_COLORS, R, SEC, STICKER, alpha, themed, type Sec } from "@/lib/theme";
+import { useI18n } from "@/lib/i18n";
+import { C, LEVEL_COLORS, R, SEC, STICKER, alpha, isDark, themed, type Sec } from "@/lib/theme";
 import { DISPLAY, Text, TextInput } from "./Text";
 
 /**
@@ -59,7 +61,7 @@ export function Button({
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={v.fg} /> : icon}
+      {loading ? <ActivityIndicator color={disabled ? C.muted : v.fg} /> : icon}
       <Text style={[styles.btnText, { color: disabled ? C.muted : v.fg }]}>{title}</Text>
     </Pressable>
   );
@@ -140,6 +142,7 @@ export function Segmented<T extends string>({
               if (!on) haptic.select();
               onChange(v);
             }}
+            hitSlop={{ top: 5, bottom: 5 }}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             style={[styles.segItem, shrink && { flexShrink: 1, paddingHorizontal: 10 }, on && styles.segOn]}
@@ -325,6 +328,127 @@ export function Loading({ style }: { style?: ViewStyle }) {
   return <ActivityIndicator color={C.accentText} style={[{ marginTop: 40 }, style]} />;
 }
 
+export type ActionSheetOption = {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+  checked?: boolean;
+  icon?: SFSymbol;
+};
+
+/** Bảng chọn hành động từ cạnh dưới — dùng thay ActionSheetIOS / Alert > 3 nút trên Android */
+export function ActionSheetModal({
+  visible,
+  title,
+  options,
+  onClose,
+}: {
+  visible: boolean;
+  title?: string;
+  options: ActionSheetOption[];
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+      supportedOrientations={["portrait", "portrait-upside-down", "landscape-left", "landscape-right"]}
+    >
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Pressable
+          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("close")}
+        />
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 520,
+            alignSelf: "center",
+            backgroundColor: C.card,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            borderTopWidth: 1,
+            borderColor: C.border,
+            paddingTop: 10,
+            paddingBottom: Math.max(insets.bottom, 16) + 8,
+            paddingHorizontal: 16,
+            gap: 8,
+          }}
+        >
+          <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, marginBottom: 4 }} />
+          {!!title && (
+            <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700", textAlign: "center", paddingBottom: 4 }}>
+              {title}
+            </Text>
+          )}
+          <ScrollView style={{ maxHeight: 360 }} bounces={false}>
+            <View style={{ borderRadius: 16, backgroundColor: C.background, ...STICKER, overflow: "hidden" }}>
+              {options.map((opt, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => {
+                    haptic.select();
+                    onClose();
+                    opt.onPress();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={opt.checked !== undefined ? { selected: opt.checked } : undefined}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    minHeight: 50,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderTopWidth: i === 0 ? 0 : 1,
+                    borderTopColor: C.line,
+                    backgroundColor: pressed ? C.card2 : "transparent",
+                  })}
+                >
+                  {opt.icon && <SymbolView name={opt.icon} size={17} tintColor={opt.destructive ? C.redText : C.text} />}
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 16,
+                      fontWeight: opt.checked ? "700" : "600",
+                      color: opt.destructive ? C.redText : opt.checked ? C.accentText : C.text,
+                    }}
+                  >
+                    {opt.label}
+                  </Text>
+                  {opt.checked && <SymbolView name="checkmark" size={16} tintColor={C.accentText} weight="bold" />}
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              minHeight: 48,
+              borderRadius: 14,
+              backgroundColor: pressed ? C.card2 : C.background,
+              ...STICKER,
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 2,
+            })}
+          >
+            <Text style={{ color: C.text, fontSize: 16, fontWeight: "700" }}>{t("cancel")}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export const styles = themed(() =>
   StyleSheet.create({
     // Giấy trắng ấm phẳng như web (không chấm bi, không vầng sáng)
@@ -340,10 +464,12 @@ export const styles = themed(() =>
       paddingVertical: 12,
       paddingHorizontal: 16,
     },
-    btnText: { fontWeight: "700", fontSize: 16 },
+    btnText: { fontWeight: "700", fontSize: 16, flexShrink: 1, textAlign: "center" },
     seg: { flexDirection: "row", backgroundColor: C.card2, borderRadius: R.md, padding: 3, alignSelf: "center", borderWidth: 1, borderColor: C.line },
     segItem: { borderRadius: 9, minHeight: 34, justifyContent: "center", paddingHorizontal: 16 },
-    segOn: { backgroundColor: C.card, boxShadow: "0 1px 3px rgba(22,32,58,0.14)" },
+    segOn: isDark()
+      ? { backgroundColor: "#283559", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }
+      : { backgroundColor: C.card, boxShadow: "0 1px 3px rgba(22,32,58,0.14)" },
     segText: { fontWeight: "700", fontSize: 14 },
     card: { backgroundColor: C.card, ...STICKER, borderRadius: R.lg, padding: 16, gap: 12 },
     input: {

@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useEffect, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, Alert, Pressable, ScrollView, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActionSheetIOS, ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, View } from "react-native";
+import { FREE_PICKS } from "@shared/lesson-lock";
 import { Text } from "@/components/Text";
 import { Image } from "expo-image";
 import { LessonSheet } from "@/components/LessonSheet";
 import Player from "@/components/Player";
 import { Gem } from "@/components/Points";
-import { Button, LevelBadge } from "@/components/ui";
+import { ActionSheetModal, Button, LevelBadge } from "@/components/ui";
 import { api, ApiError, thumb, type Lesson, type LessonSummary, type LockInfo } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { confirmDestructive, showError } from "@/lib/dialogs";
@@ -18,16 +19,13 @@ import { C } from "@/lib/theme";
 type Locked = { lesson: LessonSummary; lock: LockInfo };
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 
-/**
- * Bài đang bị khoá (admin bật khoá bài học trên web): khách → đăng nhập · còn lượt chọn → mở miễn phí · hết lượt → trả điểm.
- * Mở xong gọi onUnlocked để tải lại bài.
- */
-function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => void }) {
+function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => Promise<unknown> }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const short = lock.points < lock.price;
 
-  const unlock = () =>
+  const unlock = () => {
+    if (busy) return;
     Alert.alert(
       lesson.title,
       lock.picksLeft > 0 ? t("lock.pickConfirm", { n: lock.picksLeft }) : t("lock.buyConfirm", { price: fmt(lock.price), points: fmt(lock.points) }),
@@ -37,18 +35,28 @@ function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => v
           text: t("lock.unlock"),
           onPress: () => {
             setBusy(true);
-            api(`/lessons/${lesson.id}/unlock`, { method: "POST", body: { expected: lock.picksLeft > 0 ? "pick" : "buy" } }).then(onUnlocked, (e: Error) => {
-              setBusy(false);
-              showError(e);
-              if (e instanceof ApiError && e.status === 409) onUnlocked(); // màn hình đã cũ → tải lại để hiện đúng cách mở
-            });
+            api(`/lessons/${lesson.id}/unlock`, { method: "POST", body: { expected: lock.picksLeft > 0 ? "pick" : "buy" } }).then(
+              () => void Promise.resolve(onUnlocked()).finally(() => setBusy(false)),
+              (e: Error) => {
+                showError(e);
+                if (e instanceof ApiError && e.status === 409) {
+                  void Promise.resolve(onUnlocked()).finally(() => setBusy(false));
+                } else {
+                  setBusy(false);
+                }
+              },
+            );
           },
         },
       ],
     );
+  };
 
   return (
-    <ScrollView contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 20, gap: 14 }}>
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 20, gap: 14 }}
+    >
       <View style={{ borderRadius: 16, overflow: "hidden" }}>
         <Image source={thumb(lesson.videoId, "hq")} alt="" style={{ width: "100%", aspectRatio: 16 / 9, opacity: 0.4 }} contentFit="cover" />
         <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
@@ -63,7 +71,7 @@ function LockedView({ lesson, lock, onUnlocked }: Locked & { onUnlocked: () => v
       <Text style={{ color: C.text, fontSize: 16, fontWeight: "800" }}>{t("lock.title")}</Text>
       {!lock.loggedIn ? (
         <>
-          <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lock.guest", { n: 2 }) /* FREE_PICKS bên server (src/lib/lesson-lock.ts) */}</Text>
+          <Text style={{ color: C.muted, fontSize: 15, lineHeight: 21 }}>{t("lock.guest", { n: FREE_PICKS })}</Text>
           <Button title={t("loginOrRegister")} variant="primary" onPress={() => router.push("/settings")} />
         </>
       ) : lock.picksLeft > 0 ? (
@@ -101,23 +109,48 @@ export default function LessonScreen() {
   const [locked, setLocked] = useState<Locked | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
+  const scopeKey = `${id ?? ""}|${user?.id ?? "guest"}`;
+  const [curScopeKey, setCurScopeKey] = useState(scopeKey);
+  if (curScopeKey !== scopeKey) {
+    setCurScopeKey(scopeKey);
+    setLesson(null);
+    setLocked(null);
+    setError("");
+    setEditing(false);
+    setMenuOpen(false);
+  }
+
+  const reqSeqRef = useRef(0);
   const load = useCallback(() => {
+    const seq = ++reqSeqRef.current;
     return api<{ lesson: Lesson }>(`/lessons/${id}`).then(
-        (r) => {
+      (r) => {
+        if (seq !== reqSeqRef.current) return;
+        setLocked(null);
+        setError("");
+        setLesson(r.lesson);
+      },
+      (e: Error) => {
+        if (seq !== reqSeqRef.current) return;
+        setLesson(null);
+        if (e instanceof ApiError && e.data.locked) {
+          setLocked(e.data as unknown as Locked);
+          setError("");
+        } else {
           setLocked(null);
-          setLesson(r.lesson);
-        },
-        (e: Error) => {
-          if (e instanceof ApiError && e.data.locked) setLocked(e.data as unknown as Locked);
-          else setError(e.message);
-        },
-      );
+          setError(e.message);
+        }
+      },
+    );
   }, [id]);
 
-  // Tải lại khi đổi tài khoản (vd. khách đăng nhập từ màn khoá rồi quay lại)
   useEffect(() => {
-    load();
+    void load();
+    return () => {
+      reqSeqRef.current += 1;
+    };
   }, [load, user?.id]);
 
   if (locked && !lesson) return <LockedView {...locked} onUnlocked={load} />;
@@ -143,7 +176,6 @@ export default function LessonScreen() {
     );
   }
 
-  /** Admin: đăng / chuyển về nháp */
   const togglePublished = () =>
     api(`/lessons/${lesson.id}`, { method: "PATCH", body: { published: !lesson.published } }).then(
       () => setLesson({ ...lesson, published: !lesson.published }),
@@ -158,8 +190,11 @@ export default function LessonScreen() {
       ),
     );
 
-  /** Menu admin: Sửa · Đăng / Ẩn · Xoá */
-  const menu = () =>
+  const menu = () => {
+    if (Platform.OS !== "ios") {
+      setMenuOpen(true);
+      return;
+    }
     ActionSheetIOS.showActionSheetWithOptions(
       {
         title: lesson.title,
@@ -174,31 +209,74 @@ export default function LessonScreen() {
         else if (i === 2) remove();
       },
     );
+  };
+
+  const shareLesson = () => {
+    const path = lesson.slug ? `/tieng-duc/${lesson.slug}` : `/lesson/${lesson.id}`;
+    void Share.share({
+      title: lesson.title,
+      url: `https://hallovn.de${path}`,
+      message: `${lesson.title}\nhttps://hallovn.de${path}`,
+    }).catch(() => {});
+  };
+
+  const isOwn = lesson.ownerId != null;
 
   return (
     <>
       <Player
+        key={`${lesson.id}-${user?.id ?? "guest"}`}
         title={lesson.title}
         videoId={lesson.videoId}
         segments={lesson.segments}
         sourceUrl={`/lesson/${lesson.id}`}
         allowDictation={lesson.dictation}
+        earnPoints={!isOwn}
+        topBanner={
+          isOwn ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: C.card2, borderBottomWidth: 1, borderBottomColor: C.border }}>
+              <SymbolView name="lock.fill" size={13} tintColor={C.muted} />
+              <Text style={{ flex: 1, color: C.muted, fontSize: 12, fontWeight: "600" }}>{t("watch.privateNotice")}</Text>
+            </View>
+          ) : undefined
+        }
         headerRight={
-          user?.role === "admin" ? (
-            <Pressable onPress={menu} hitSlop={10} accessibilityLabel={t("admin.manageLesson")}>
-              <SymbolView name="ellipsis.circle" size={22} tintColor={C.amber} />
-            </Pressable>
+          !isOwn || user?.role === "admin" ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              {!isOwn && (
+                <Pressable onPress={shareLesson} hitSlop={8}>
+                  <SymbolView name="square.and.arrow.up" size={20} tintColor={C.link} weight="semibold" />
+                </Pressable>
+              )}
+              {user?.role === "admin" && (
+                <Pressable onPress={menu} hitSlop={10} accessibilityLabel={t("admin.manageLesson")}>
+                  <SymbolView name="ellipsis.circle" size={22} tintColor={C.amber} />
+                </Pressable>
+              )}
+            </View>
           ) : undefined
         }
       />
-      {user?.role === "admin" && (
+      {user?.role === "admin" && editing && (
         <LessonSheet
-          key={`${lesson.title}|${lesson.level}|${lesson.published}|${lesson.dictation}`} // mở lại form → lấy giá trị mới nhất
-          visible={editing}
+          key={lesson.id}
+          visible
           onClose={() => setEditing(false)}
           videoId={lesson.videoId}
           lesson={lesson}
           onSaved={(l) => setLesson({ ...lesson, ...l, segments: lesson.segments })}
+        />
+      )}
+      {user?.role === "admin" && (
+        <ActionSheetModal
+          visible={menuOpen}
+          title={lesson.title}
+          onClose={() => setMenuOpen(false)}
+          options={[
+            { label: t("admin.edit"), icon: "pencil", onPress: () => setEditing(true) },
+            { label: lesson.published ? t("admin.unpublish") : t("admin.publish"), icon: lesson.published ? "eye.slash" : "eye", onPress: () => void togglePublished() },
+            { label: t("admin.deleteLesson"), icon: "trash", destructive: true, onPress: remove },
+          ]}
         />
       )}
     </>

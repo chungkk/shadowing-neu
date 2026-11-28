@@ -1,11 +1,13 @@
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Switch, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "./Text";
 import { ErrorText, Input, styles } from "@/components/ui";
 import { api, ApiError, thumb, type LessonSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { FORM_MAX } from "@/lib/layout";
 import { C, LEVEL_COLORS, LEVELS, themed } from "@/lib/theme";
 
 type Editable = Pick<LessonSummary, "id" | "title" | "level" | "description" | "published" | "dictation">;
@@ -31,6 +33,7 @@ export function LessonSheet({
   onSaved?: (l: LessonSummary) => void;
 }) {
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const editing = !!lesson;
   const [title, setTitle] = useState(lesson?.title ?? defaultTitle);
   const [level, setLevel] = useState<string>(lesson?.level ?? "B1");
@@ -40,9 +43,28 @@ export function LessonSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const syncKey = `${visible ? 1 : 0}|${lesson?.id ?? 0}|${videoId}|${lesson?.title ?? defaultTitle}|${lesson?.level ?? "B1"}|${lesson?.description ?? ""}|${lesson?.published ?? true}|${lesson?.dictation ?? true}`;
+  const [prevSyncKey, setPrevSyncKey] = useState(syncKey);
+  if (prevSyncKey !== syncKey) {
+    setPrevSyncKey(syncKey);
+    if (visible) {
+      setTitle(lesson?.title ?? defaultTitle);
+      setLevel(lesson?.level ?? "B1");
+      setDescription(lesson?.description ?? "");
+      setPublished(lesson?.published ?? true);
+      setDictation(lesson?.dictation ?? true);
+      setError("");
+    }
+  }
+
   const openLesson = (id: unknown) => router.replace(`/lesson/${id}`);
 
+  const closeSafely = () => {
+    if (!busy) onClose();
+  };
+
   const save = async () => {
+    if (busy || !title.trim()) return;
     setBusy(true);
     setError("");
     try {
@@ -57,19 +79,25 @@ export function LessonSheet({
       }
       const r = await api<{ id: number }>("/lessons", { method: "POST", body: { videoId, title, level, description, published, dictation } });
       onClose();
-      // Giữ Alert riêng: cần nút "Mở bài" (các hộp thoại khác dùng @/lib/dialogs)
-      Alert.alert(t("addLesson.added"), published ? t("addLesson.publishedNote") : t("addLesson.draftNote"), [
-        { text: t("close"), style: "cancel" },
-        { text: t("addLesson.open"), onPress: () => openLesson(r.id) },
-      ]);
+      // Đợi modal đóng hoàn toàn trên iOS rồi mới mở Alert
+      setTimeout(() => {
+        Alert.alert(t("addLesson.added"), published ? t("addLesson.publishedNote") : t("addLesson.draftNote"), [
+          { text: t("close"), style: "cancel" },
+          { text: t("addLesson.open"), onPress: () => openLesson(r.id) },
+        ]);
+      }, 350);
     } catch (e) {
       // Video đã có bài → cho mở bài đó
       if (e instanceof ApiError && e.status === 409 && e.data.id) {
+        const existingId = e.data.id;
+        const msg = e.message;
         onClose();
-        Alert.alert(t("addLesson.existsTitle"), e.message, [
-          { text: t("close"), style: "cancel" },
-          { text: t("addLesson.open"), onPress: () => openLesson(e.data.id) },
-        ]);
+        setTimeout(() => {
+          Alert.alert(t("addLesson.existsTitle"), msg, [
+            { text: t("close"), style: "cancel" },
+            { text: t("addLesson.open"), onPress: () => openLesson(existingId) },
+          ]);
+        }, 350);
       } else setError((e as Error).message);
     } finally {
       setBusy(false);
@@ -77,8 +105,14 @@ export function LessonSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: C.background }}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      supportedOrientations={["portrait", "portrait-upside-down", "landscape-left", "landscape-right"]}
+      onRequestClose={closeSafely}
+    >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: C.background, paddingTop: Platform.OS === "ios" ? 0 : insets.top }}>
         {/* Thanh trên: Huỷ · tiêu đề · Lưu */}
         <View
           style={{
@@ -90,7 +124,7 @@ export function LessonSheet({
             borderBottomColor: C.border,
           }}
         >
-          <Pressable onPress={onClose} hitSlop={10} style={{ flex: 1 }}>
+          <Pressable onPress={closeSafely} disabled={busy} hitSlop={10} style={{ flex: 1, opacity: busy ? 0.5 : 1 }}>
             <Text style={{ color: C.muted, fontSize: 16 }}>{t("cancel")}</Text>
           </Pressable>
           <Text style={{ color: C.text, fontSize: 17, fontWeight: "700" }}>{editing ? t("addLesson.editTitle") : t("addLesson.title")}</Text>
@@ -105,12 +139,16 @@ export function LessonSheet({
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 18, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 16, gap: 18, paddingBottom: Math.max(insets.bottom, 20) + 20 }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
           <Image source={thumb(videoId)} style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 14, backgroundColor: C.card }} />
 
           <View style={{ gap: 8 }}>
             <Text style={label}>{t("addLesson.name")}</Text>
-            <Input value={title} onChangeText={setTitle} multiline style={{ minHeight: 52 }} />
+            <Input value={title} onChangeText={setTitle} multiline maxLength={200} style={{ minHeight: 52 }} />
           </View>
 
           <View style={{ gap: 8 }}>
@@ -143,7 +181,7 @@ export function LessonSheet({
 
           <View style={{ gap: 8 }}>
             <Text style={label}>{t("addLesson.desc")}</Text>
-            <Input value={description} onChangeText={setDescription} multiline style={{ minHeight: 90, textAlignVertical: "top" }} />
+            <Input value={description} onChangeText={setDescription} multiline maxLength={2000} style={{ minHeight: 90, textAlignVertical: "top" }} />
           </View>
 
           <View style={[styles.card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
@@ -164,7 +202,7 @@ export function LessonSheet({
 
           <ErrorText>{error}</ErrorText>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

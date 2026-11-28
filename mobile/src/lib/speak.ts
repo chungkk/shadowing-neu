@@ -54,7 +54,7 @@ function hash(s: string) {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
-const clean = (text: string) => text.replace(/\s+/g, " ").trim();
+const clean = (text: string) => text.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
 
 /** File mp3 giọng neural của `text` (tải về nếu chưa có); null = không lấy được → dùng giọng máy */
 function neuralFile(text: string): Promise<File | null> {
@@ -97,7 +97,16 @@ export const prefetchGerman = (text: string) => void neuralFile(text);
 let player: AudioPlayer | null = null;
 /** onEnd của lần phát neural đang chạy — gọi đúng 1 lần (hết câu hoặc bị dừng, như onStopped của giọng máy) */
 let playing: (() => void) | undefined;
+let activeNeural = false;
+let playWatchdog: ReturnType<typeof setTimeout> | undefined;
+let playFallback: (() => void) | undefined;
 const finish = () => {
+  if (playWatchdog) {
+    clearTimeout(playWatchdog);
+    playWatchdog = undefined;
+  }
+  playFallback = undefined;
+  activeNeural = false;
   const cb = playing;
   playing = undefined;
   cb?.();
@@ -106,7 +115,9 @@ const finish = () => {
 function neuralPlayer() {
   if (!player) {
     player = createAudioPlayer(null);
-    player.addListener("playbackStatusUpdate", (s) => s.didJustFinish && finish());
+    player.addListener("playbackStatusUpdate", (s) => {
+      if (s.didJustFinish) finish();
+    });
   }
   return player;
 }
@@ -122,33 +133,67 @@ async function halt() {
 let gen = 0;
 
 export async function speakGerman(text: string, opts: { slow?: boolean; speed?: number; voice?: string; onEnd?: () => void } = {}) {
+  const cleaned = clean(text);
   const my = ++gen;
   await halt();
   if (my !== gen) return opts.onEnd?.(); // như onStopped của câu bị dừng
+  if (!cleaned) return opts.onEnd?.();
   // Vẫn có tiếng khi gạt công tắc im lặng
   await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
+
+  const speakDevice = async () => {
+    const voice = opts.voice ?? (await germanVoices())[0]?.identifier;
+    if (my !== gen) return opts.onEnd?.();
+    Speech.speak(cleaned, {
+      language: "de-DE",
+      voice,
+      rate: opts.slow ? SLOW_RATE : NORMAL_RATE * (opts.speed ?? 1),
+      onDone: opts.onEnd,
+      onStopped: opts.onEnd,
+      onError: opts.onEnd,
+    });
+  };
+
   // Chọn giọng máy cụ thể (opts.voice) → không dùng neural
-  const file = opts.voice ? null : await neuralFile(text);
+  const file = opts.voice ? null : await neuralFile(cleaned);
   // Bị dừng giữa lúc chuẩn bị (vd. bấm thu âm) → không phát chồng lên lượt thu
   if (my !== gen) return opts.onEnd?.();
   if (file) {
-    const p = neuralPlayer();
-    p.replace({ uri: file.uri });
-    p.setPlaybackRate(opts.slow ? SLOW_NEURAL : (opts.speed ?? 1), "high");
-    playing = opts.onEnd;
-    p.play();
-    return;
+    try {
+      const p = neuralPlayer();
+      p.replace({ uri: file.uri });
+      p.setPlaybackRate(opts.slow ? SLOW_NEURAL : (opts.speed ?? 1), "high");
+      playing = opts.onEnd;
+      activeNeural = true;
+      playFallback = () => {
+        if (my !== gen) return;
+        activeNeural = false;
+        playing = undefined;
+        try { file.delete(); } catch {}
+        void speakDevice();
+      };
+      // Nếu file mp3 lỗi / không bao giờ didJustFinish -> tránh kẹt nút loa, fallback sang giọng máy
+      playWatchdog = setTimeout(() => {
+        if (!p.playing && activeNeural && my === gen) {
+          const fb = playFallback;
+          playFallback = undefined;
+          fb?.();
+        }
+      }, 2500);
+      p.play();
+      return;
+    } catch {
+      if (playWatchdog) {
+        clearTimeout(playWatchdog);
+        playWatchdog = undefined;
+      }
+      playFallback = undefined;
+      playing = undefined;
+      activeNeural = false;
+      try { file.delete(); } catch {}
+    }
   }
-  const voice = opts.voice ?? (await germanVoices())[0]?.identifier;
-  if (my !== gen) return opts.onEnd?.();
-  Speech.speak(text, {
-    language: "de-DE",
-    voice,
-    rate: opts.slow ? SLOW_RATE : NORMAL_RATE * (opts.speed ?? 1),
-    onDone: opts.onEnd,
-    onStopped: opts.onEnd,
-    onError: opts.onEnd,
-  });
+  await speakDevice();
 }
 
 export const stopSpeaking = () => {

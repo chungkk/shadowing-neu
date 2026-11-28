@@ -1,6 +1,7 @@
 import data from "@content/lid/questions.json";
 import type { DrivingQ, Tr } from "@shared/laixe/rules";
 import { STATE_CODES } from "./ids";
+import { l } from "./strings";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi "Leben in Deutschland" — cùng file dữ liệu với web (src/content/lid), đóng gói trong app.
@@ -60,21 +61,21 @@ export function listSets() {
   });
 }
 
-/** Phạm vi học: "hoc" (câu chung + câu của bang), "tat-ca" (300 câu chung), chủ đề, bộ 30 câu ("1".."10") hoặc "state" (câu của bang) */
+/** Phạm vi học: "hoc" / "all" (câu chung + câu của bang), "tat-ca" (300 câu chung), chủ đề, bộ 30 câu ("1".."10") hoặc "state" (câu của bang) */
 export function getSet(id: string, stateCode: string): { title: string; subtitle: string; ids: string[] } | null {
-  if (id === "hoc") return { title: "Học tất cả", subtitle: `${GENERAL.length} câu chung + 10 câu của bang`, ids: [...generalIds(), ...stateIds(stateCode)] };
-  if (id === "tat-ca") return { title: "300 câu chung", subtitle: `${GENERAL.length} câu`, ids: generalIds() };
+  if (id === "hoc" || id === "all") return { title: l("Học tất cả", "Alle lernen"), subtitle: l(`${GENERAL.length} câu chung + 10 câu của bang`, `${GENERAL.length} allgemeine + 10 Landesfragen`), ids: [...generalIds(), ...stateIds(stateCode)] };
+  if (id === "tat-ca") return { title: l("300 câu chung", "300 allgemeine Fragen"), subtitle: l(`${GENERAL.length} câu`, `${GENERAL.length} Fragen`), ids: generalIds() };
   const cat = CATEGORIES.find((c) => c.key === id);
   if (cat) {
     const ids = GENERAL.filter((x) => x.q.topic === cat.key).map((x) => x.q.id);
-    return ids.length ? { title: cat.vi, subtitle: `${cat.de} · ${ids.length} câu`, ids } : null;
+    return ids.length ? { title: l(cat.vi, cat.de), subtitle: l(`${cat.de} · ${ids.length} câu`, `${ids.length} Fragen`), ids } : null;
   }
   if (id === "state") {
     const state = getState(stateCode);
-    return state ? { title: state.name, subtitle: `Thủ phủ: ${state.capital} · 10 câu`, ids: stateIds(state.code) } : null;
+    return state ? { title: state.name, subtitle: l(`Thủ phủ: ${state.capital} · 10 câu`, `Hauptstadt: ${state.capital} · 10 Fragen`), ids: stateIds(state.code) } : null;
   }
   const set = listSets().find((s) => s.id === id);
-  return set ? { title: `Câu ${set.from}–${set.to}`, subtitle: "300 câu chung", ids: set.ids } : null;
+  return set ? { title: l(`Câu ${set.from}–${set.to}`, `Fragen ${set.from}–${set.to}`), subtitle: l("300 câu chung", "300 allgemeine Fragen"), ids: set.ids } : null;
 }
 
 /** Đề thi thử: 30 câu chung ngẫu nhiên + 3 câu của bang */
@@ -94,7 +95,7 @@ export function questions(ids: string[]): DrivingQ[] {
     return [
       {
         id: q.id,
-        chapter: x.general ? `Câu ${x.nr}` : `${getState(q.id.replace(/\d+$/, ""))?.name ?? ""} · câu ${x.nr}`,
+        chapter: x.general ? l(`Câu ${x.nr}`, `Frage ${x.nr}`) : `${getState(q.id.replace(/\d+$/, ""))?.name ?? ""} · ${l(`câu ${x.nr}`, `Frage ${x.nr}`)}`,
         points: 1,
         grund: x.general,
         q: q.q,

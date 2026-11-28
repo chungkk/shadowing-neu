@@ -1,58 +1,36 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
-import { Stack } from "expo-router";
+import { Stack, useFocusEffect } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Platform, Pressable, ScrollView, Share, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, AppState, FlatList, Platform, Pressable, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
 import { formatTime } from "@shared/subtitles";
 import { Text } from "./Text";
-import { Label } from "./ui";
-import { DUB_VOICES, fetchFittedDubCue, type DubBgProgress, type DubCue, type DubVoiceId } from "@/lib/dub";
+import { ActionSheetModal, ErrorText, Label } from "./ui";
+import { DUB_VOICES, fetchFittedDubCue, setDubVoice, type DubBgProgress, type DubCue, type DubVoiceId } from "@/lib/dub";
 import { haptic } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX, useLayout } from "@/lib/layout";
 import { C, R, SEC, alpha } from "@/lib/theme";
 
 const SPEEDS = [1, 1.15, 1.25, 1.35] as const;
+const DUB_VOL_LEVELS = [100, 60, 0] as const;
 
 /** Các mức âm lượng tiếng gốc khi chỉnh được thật (Android, hoặc iOS khi Web Audio chạy). */
 const ORIG_LEVELS = [0, 15, 30, 60, 100] as const;
 /** iOS khi không có Web Audio: WebKit khoá âm lượng video, chỉ tắt/bật được. */
 const ORIG_TOGGLE = [0, 100] as const;
 
-/**
- * Trạng thái chỉnh âm lượng tiếng gốc:
- * - native: Android, setVolume của YouTube chạy bình thường.
- * - pending: iOS, đang chờ khung YouTube nối Web Audio (chỉ nối được khi video bắt đầu phát).
- * - ok: iOS, đã nối GainNode → chỉnh âm lượng thật.
- * - unsupported: iOS, không nối được hoặc bị câm → quay về tắt/bật.
- */
 type GainStatus = "native" | "pending" | "ok" | "unsupported";
-
-/** Tiền tố tin nhắn trạng thái gain, đi nhờ kênh playerQualityChange vì thư viện bỏ qua eventType lạ. */
 const GAIN_MSG = "__dubgain:";
 
-/**
- * Đoạn JS chèn vào WebView. Với injectedJavaScriptForMainFrameOnly=false nó chạy ở mọi khung:
- *
- * Khung chính (trang của react-native-youtube-iframe):
- * - Hỗ trợ lệnh play/pause/volume/mute ổn định trên WKWebView iOS, tự tắt phụ đề YouTube.
- * - Giữ __dubMuted để khi người dùng bấm thẳng vào iframe trên iOS không bị tự bỏ mute.
- * - Chuyển mức âm lượng xuống khung YouTube và chuyển trạng thái gain từ khung YouTube về app
- *   (ReactNativeWebView chỉ có ở khung chính).
- *
- * Khung youtube.com/embed (chỉ khi allowGain):
- * - iOS khoá HTMLMediaElement.volume, nên nối <video> qua Web Audio GainNode để chỉnh âm lượng thật.
- * - Chỉ nối khi nguồn là blob: (MSE); luồng HLS gốc bị lỗi WebKit làm câm khi nối Web Audio.
- * - Kiểm tra bằng AnalyserNode: phát có tiếng nhưng đo toàn im lặng ~6 giây → báo "silent" để app tải lại không nối.
- */
-function buildShim(allowGain: boolean): string {
+function buildShim(allowGain: boolean, mutedInit: boolean): string {
   return `
 (function () {
   if (window.top !== window) return;
-  window.__dubMuted = true;
+  window.__dubMuted = ${mutedInit ? "true" : "false"};
   window.__dubVol = 100;
   function sendGain() {
     try {
@@ -102,7 +80,7 @@ function buildShim(allowGain: boolean): string {
 })();
 (function () {
   if (!${allowGain ? "true" : "false"} || window.top === window) return;
-  if (!/(^|\.)youtube(-nocookie)?\.com$/.test(location.hostname)) return;
+  if (!/(^|\\.)youtube(-nocookie)?\\.com$/.test(location.hostname)) return;
   var AC = window.AudioContext || window.webkitAudioContext;
   var ctx = null, gainNode = null, gain = 1, reported = false;
   function post(s) { try { window.parent.postMessage(JSON.stringify({ __dubGain: s }), "*"); } catch (_) {} }
@@ -163,7 +141,7 @@ function buildShim(allowGain: boolean): string {
       });
     }
     if (!v.paused) tryHook(v);
-    setTimeout(findVideo, 1500);
+    if (!v.__dubHooked) setTimeout(findVideo, 1500);
   })();
   post("hello");
 })();
@@ -175,16 +153,19 @@ function Pill({
   icon,
   label,
   on = false,
+  disabled = false,
   onPress,
 }: {
   icon: SFSymbol;
   label: string;
   on?: boolean;
+  disabled?: boolean;
   onPress: () => void;
 }) {
   const sec = SEC.dub;
   return (
     <Pressable
+      disabled={disabled}
       onPress={() => {
         haptic.tap();
         onPress();
@@ -200,7 +181,7 @@ function Pill({
         gap: 5,
         backgroundColor: on ? sec.secSoft : C.card2,
         borderColor: on ? sec.sec : C.border,
-        opacity: pressed ? 0.72 : 1,
+        opacity: disabled ? 0.45 : pressed ? 0.72 : 1,
       })}
     >
       <SymbolView name={icon} size={14} tintColor={on ? sec.secText : C.muted} weight="semibold" />
@@ -215,19 +196,28 @@ export default function DubPlayer({
   sourceLang,
   cues,
   initialVoice = "edge:vi-VN-NamMinhNeural",
+  onVoiceChange,
   bgProgress = null,
   bgStatus = null,
+  bgError = "",
+  repairing = false,
   onRetryBg,
+  onRetranslate,
+  onRepair,
 }: {
   videoId: string;
   title: string;
   sourceLang?: string;
   cues: DubCue[];
   initialVoice?: DubVoiceId;
+  onVoiceChange?: (v: DubVoiceId) => void;
   bgProgress?: DubBgProgress | null;
-  /** Kết nối dịch ngầm: đang tự nối lại / đã hết lượt nối lại */
   bgStatus?: "reconnecting" | "failed" | null;
+  bgError?: string;
+  repairing?: boolean;
   onRetryBg?: () => void;
+  onRetranslate?: () => void;
+  onRepair?: () => void;
 }) {
   const { t } = useI18n();
   const { width, tablet, split } = useLayout();
@@ -239,6 +229,7 @@ export default function DubPlayer({
   const listRef = useRef<FlatList<DubCue>>(null);
   const audioRef = useRef<AudioPlayer | null>(null);
   const lastSpokenIdxRef = useRef(-1);
+  const prevCuesRef = useRef<DubCue[]>(cues);
   const lastYtTimeRef = useRef(0);
   const lastPollWallRef = useRef(0);
   const speakGenRef = useRef(0);
@@ -246,32 +237,67 @@ export default function DubPlayer({
   const pausedCueRef = useRef<{ cueIndex: number; voiceId: DubVoiceId; speed: number } | null>(null);
 
   const [playing, setPlaying] = useState(false);
+  const [ytReady, setYtReady] = useState(false);
+  const ytReadyRef = useRef(false);
+  const ytStateRef = useRef<string>("");
+  const pendingSeekRef = useRef<{ targetSec: number; until: number } | null>(null);
+  const warmGenRef = useRef(0);
+  const mountedRef = useRef(true);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [voiceMenuOpen, setVoiceMenuOpen] = useState(false);
+  const [warmingFirst, setWarmingFirst] = useState(false);
   const [voiceId, setVoiceId] = useState<DubVoiceId>(initialVoice);
   const [speedIdx, setSpeedIdx] = useState(1); // mặc định 1.15x
-  // Âm lượng tiếng gốc 0–100; mặc định tắt để nghe tiếng Việt rõ
   const [origVol, setOrigVol] = useState(0);
   const [gainStatus, setGainStatus] = useState<GainStatus>(Platform.OS === "ios" ? "pending" : "native");
-  // Tắt hẳn việc nối Web Audio (sau khi phát hiện bị câm) → tải lại player không nối, quay về tắt/bật
   const [gainAllowed, setGainAllowed] = useState(Platform.OS === "ios");
   const [playerKey, setPlayerKey] = useState(0);
   const [playerStart, setPlayerStart] = useState(0);
-  const shim = useMemo(() => buildShim(gainAllowed), [gainAllowed]);
+  const [origMutedInit, setOrigMutedInit] = useState(true);
+  const origMutedInitRef = useRef(true);
+  const shim = useMemo(() => buildShim(gainAllowed, origMutedInit), [gainAllowed, origMutedInit]);
   const canGain = gainStatus === "native" || gainStatus === "ok";
-  const [dubMuted, setDubMuted] = useState(false);
+  const [dubVol, setDubVol] = useState<number>(100);
   const [showOrig, setShowOrig] = useState(false);
   const [activeCueIdx, setActiveCueIdx] = useState(-1);
+  const activeCueIdxRef = useRef(-1);
+  const [engineErr, setEngineErr] = useState("");
+  const [ytErr, setYtErr] = useState("");
 
   const speed = SPEEDS[speedIdx];
   const hasOrig = useMemo(() => cues.some((c) => Boolean(c.orig)), [cues]);
+  const untranslatedCount = useMemo(() => cues.filter((c) => c.untranslated).length, [cues]);
   const activeCue = activeCueIdx >= 0 ? cues[activeCueIdx] : null;
 
-  const stateRef = useRef({ voiceId, speed, dubMuted, cues, playing });
+  const stateRef = useRef({ voiceId, speed, dubVol, cues, playing });
   useEffect(() => {
-    stateRef.current = { voiceId, speed, dubMuted, cues, playing };
+    stateRef.current = { voiceId, speed, dubVol, cues, playing };
+    activeCueIdxRef.current = activeCueIdx;
+    origMutedInitRef.current = origVol <= 0;
   });
 
-  // AVAudioSession: trộn tiếng video (WebView) với giọng thuyết minh.
-  // Không dùng duckOthers: nó chỉ hạ tiếng app khác, không hạ được video trong chính app.
+  // Remap các chỉ số đang phát/đã đọc theo `start_ms` khi danh sách `cues` co lại (do `done` bỏ câu [SKIP])
+  useEffect(() => {
+    const prev = prevCuesRef.current;
+    prevCuesRef.current = cues;
+    if (prev === cues || prev.length === cues.length) return;
+    const remap = (idx: number) => {
+      if (idx < 0 || idx >= prev.length) return idx;
+      const targetMs = prev[idx].start_ms;
+      const found = cues.findIndex((c) => c.start_ms === targetMs);
+      if (found >= 0) return found;
+      let fallback = -1;
+      for (let i = 0; i < cues.length; i++) {
+        if (cues[i].start_ms <= targetMs) fallback = i;
+        else break;
+      }
+      return fallback;
+    };
+    lastSpokenIdxRef.current = remap(lastSpokenIdxRef.current);
+    if (playingCueRef.current) playingCueRef.current.cueIndex = remap(playingCueRef.current.cueIndex);
+    if (pausedCueRef.current) pausedCueRef.current.cueIndex = remap(pausedCueRef.current.cueIndex);
+  }, [cues]);
+
   useEffect(() => {
     void setAudioModeAsync({
       playsInSilentMode: true,
@@ -280,7 +306,6 @@ export default function DubPlayer({
     }).catch(() => {});
   }, []);
 
-  // Trạng thái Web Audio từ khung YouTube (đi nhờ sự kiện playerQualityChange)
   const onGainMessage = useCallback((msg: string) => {
     if (!msg.startsWith(GAIN_MSG)) return;
     const status = msg.slice(GAIN_MSG.length);
@@ -289,16 +314,17 @@ export default function DubPlayer({
     } else if (status === "unsupported") {
       setGainStatus((s) => (s === "ok" ? s : "unsupported"));
     } else if (status === "silent") {
-      // Nối Web Audio nhưng ra im lặng (lỗi WebKit) → tải lại player không nối, giữ vị trí đang xem
       setGainStatus("unsupported");
       setGainAllowed(false);
       setOrigVol((v) => (v > 0 ? 100 : 0));
+      setOrigMutedInit(origMutedInitRef.current);
       setPlayerStart(Math.floor(lastYtTimeRef.current));
+      ytReadyRef.current = false;
+      setYtReady(false);
       setPlayerKey((k) => k + 1);
     }
   }, []);
 
-  /** Dừng hẳn giọng đọc và xoá trạng thái tạm dừng (dùng khi tua, đổi giọng, đổi tốc độ, hết video). */
   const stopDub = useCallback(() => {
     speakGenRef.current += 1;
     playingCueRef.current = null;
@@ -308,7 +334,6 @@ export default function DubPlayer({
     } catch {}
   }, []);
 
-  /** Tạm dừng giọng đọc và nhớ câu đang đọc dở để bấm Phát lại là đọc tiếp ngay lập tức. */
   const pauseDub = useCallback(() => {
     speakGenRef.current += 1;
     const p = audioRef.current;
@@ -323,36 +348,53 @@ export default function DubPlayer({
     } catch {}
   }, []);
 
-  const resumeDub = useCallback(() => {
+  const resumeDub = useCallback(async () => {
     const p = audioRef.current;
     const paused = pausedCueRef.current;
     if (!p || !paused) return;
     pausedCueRef.current = null;
 
-    const { voiceId: vId, speed: spd, dubMuted: muted, cues: list } = stateRef.current;
+    const myGen = speakGenRef.current;
+    const { voiceId: vId, speed: spd, cues: list } = stateRef.current;
     if (
-      paused.cueIndex === lastSpokenIdxRef.current &&
-      paused.voiceId === vId &&
-      paused.speed === spd &&
-      (p.duration <= 0 || p.currentTime < p.duration - 0.15)
+      paused.cueIndex !== lastSpokenIdxRef.current ||
+      paused.voiceId !== vId ||
+      paused.speed !== spd ||
+      (p.duration > 0 && p.currentTime >= p.duration - 0.15)
     ) {
-      try {
-        p.muted = muted;
-        p.volume = muted ? 0 : 1;
-        p.play();
-      } catch {}
+      return;
+    }
+
+    const cue = list[paused.cueIndex];
+    if (!cue || !ytRef.current || !ytReadyRef.current) return;
+    try {
+      const tSec = await Promise.race([
+        ytRef.current.getCurrentTime(),
+        new Promise<number>((_, rej) => setTimeout(() => rej(new Error("yt_timeout")), 500)),
+      ]);
+      if (!mountedRef.current || myGen !== speakGenRef.current || !stateRef.current.playing) return;
+      const tMs = tSec * 1000;
+      const nextStart = list[paused.cueIndex + 1]?.start_ms ?? cue.end_ms + 5000;
+      if (tMs < cue.start_ms - 400 || tMs >= Math.min(nextStart - 60, cue.end_ms + 800)) return;
+      const curVol = stateRef.current.dubVol;
+      p.muted = curVol <= 0;
+      p.volume = Math.max(0, Math.min(1, curVol / 100));
+      p.play();
       for (let k = paused.cueIndex + 1; k <= Math.min(list.length - 1, paused.cueIndex + 4); k++) {
         void fetchFittedDubCue(list, k, vId, spd);
       }
-    }
+    } catch {}
   }, []);
 
-  // Khởi tạo AudioPlayer native cho giọng thuyết minh
   useEffect(() => {
+    mountedRef.current = true;
     const p = createAudioPlayer(null, { keepAudioSessionActive: true });
     audioRef.current = p;
 
     return () => {
+      mountedRef.current = false;
+      warmGenRef.current += 1;
+      clearTimeout(scrollTimerRef.current);
       stopDub();
       try {
         p.remove();
@@ -361,23 +403,43 @@ export default function DubPlayer({
     };
   }, [stopDub]);
 
-  // Cập nhật mute của giọng tiếng Việt ngay lập tức
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active" && stateRef.current.playing) {
+        setPlaying(false);
+        pauseDub();
+      }
+    });
+    return () => sub.remove();
+  }, [pauseDub]);
+
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        setPlaying(false);
+        pauseDub();
+      },
+      [pauseDub],
+    ),
+  );
+
   useEffect(() => {
     const p = audioRef.current;
     if (p) {
-      p.muted = dubMuted;
-      p.volume = dubMuted ? 0 : 1;
+      p.muted = dubVol <= 0;
+      p.volume = Math.max(0, Math.min(1, dubVol / 100));
     }
-  }, [dubMuted]);
+  }, [dubVol]);
 
-  // Prefetch trước 3 câu đầu ngay khi mở màn hình
+  // Prefetch trước từ vị trí hiện tại
   useEffect(() => {
-    for (let k = 0; k < Math.min(3, cues.length); k++) {
+    const startIdx = Math.max(0, activeCueIdxRef.current);
+    const count = voiceId.startsWith("piper:") ? 2 : 3;
+    for (let k = startIdx; k < Math.min(cues.length, startIdx + count); k++) {
       void fetchFittedDubCue(cues, k, voiceId, speed);
     }
   }, [cues, voiceId, speed]);
 
-  // Cuộn danh sách lời thoại theo câu đang phát
   useEffect(() => {
     if (activeCueIdx >= 0 && listRef.current) {
       try {
@@ -387,40 +449,51 @@ export default function DubPlayer({
   }, [activeCueIdx]);
 
   const speakCue = useCallback(async (cueIndex: number) => {
-    const { voiceId: vId, speed: spd, cues: list, dubMuted: muted } = stateRef.current;
+    const { voiceId: vId, speed: spd, cues: list } = stateRef.current;
     const cue = list[cueIndex];
     if (!cue || cue.pending || !cue.text.trim()) return;
 
     const myGen = ++speakGenRef.current;
-
-    // Tải trước 4 câu tiếp theo vào cache máy
-    for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + 4); k++) {
-      void fetchFittedDubCue(list, k, vId, spd);
-    }
-
-    const rollbackIfCancelled = () => {
-      if (
-        lastSpokenIdxRef.current === cueIndex &&
-        playingCueRef.current?.cueIndex !== cueIndex &&
-        pausedCueRef.current?.cueIndex !== cueIndex
-      ) {
+    const rollbackIfStillCurrent = () => {
+      if (lastSpokenIdxRef.current === cueIndex) {
         lastSpokenIdxRef.current = cueIndex - 1;
       }
     };
 
-    const file = await fetchFittedDubCue(list, cueIndex, vId, spd);
+    const file = await fetchFittedDubCue(list, cueIndex, vId, spd, {
+      urgent: true,
+      onError: (msg) => setEngineErr(t("dub.ttsError", { msg })),
+    });
     if (!file) {
-      rollbackIfCancelled();
+      // Không rollback khi lỗi TTS để tránh vòng lặp retry 140ms
       return;
     }
+    setEngineErr("");
     if (myGen !== speakGenRef.current || !stateRef.current.playing) {
-      rollbackIfCancelled();
+      rollbackIfStillCurrent();
       return;
     }
     if (lastSpokenIdxRef.current !== cueIndex || stateRef.current.voiceId !== vId) return;
 
+    const lookahead = vId.startsWith("piper:") ? 2 : 4;
+    for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + lookahead); k++) {
+      void fetchFittedDubCue(list, k, vId, spd);
+    }
+
     const p = audioRef.current;
     if (!p) return;
+
+    // Nếu câu trước vẫn còn đang đọc dở (≤ 2.2s), chờ nó kết thúc để tránh cắt ngang
+    if (p.playing && p.duration > 0) {
+      const remMs = (p.duration - p.currentTime) * 1000;
+      if (remMs > 60 && remMs <= 2200) {
+        await new Promise((r) => setTimeout(r, Math.min(remMs + 20, 2200)));
+        if (myGen !== speakGenRef.current || !stateRef.current.playing) {
+          rollbackIfStillCurrent();
+          return;
+        }
+      }
+    }
 
     try {
       await setAudioModeAsync({
@@ -429,21 +502,26 @@ export default function DubPlayer({
         interruptionMode: "mixWithOthers",
       }).catch(() => {});
       if (myGen !== speakGenRef.current || !stateRef.current.playing) {
-        rollbackIfCancelled();
+        rollbackIfStillCurrent();
         return;
       }
       if (lastSpokenIdxRef.current !== cueIndex || stateRef.current.voiceId !== vId) return;
       pausedCueRef.current = null;
       playingCueRef.current = { cueIndex, voiceId: vId, speed: spd };
       p.replace({ uri: file.uri });
-      p.muted = muted;
-      p.volume = muted ? 0 : 1;
-      p.setPlaybackRate(1, "high");
+      const curVol = stateRef.current.dubVol;
+      p.muted = curVol <= 0;
+      p.volume = Math.max(0, Math.min(1, curVol / 100));
+      const nextCue = list[cueIndex + 1];
+      const slotSec = nextCue ? Math.max(0.5, (nextCue.start_ms - cue.start_ms) / 1000) : 0;
+      const isPiper = vId.startsWith("piper:");
+      const estAudioSec = isPiper ? Math.max(0, file.size - 44) / 44100 : file.size / 6000;
+      const squeeze = slotSec > 0 && estAudioSec > slotSec ? Math.min(1.16, estAudioSec / slotSec) : 1;
+      p.setPlaybackRate(squeeze, "high");
       p.play();
     } catch {}
-  }, []);
+  }, [t]);
 
-  // Vòng đồng bộ 140ms theo thời gian thực của YouTube player
   useEffect(() => {
     if (!playing) {
       lastPollWallRef.current = 0;
@@ -452,11 +530,25 @@ export default function DubPlayer({
     lastPollWallRef.current = 0;
     let busy = false;
     const timer = setInterval(async () => {
-      if (busy || !ytRef.current) return;
+      if (busy || !ytRef.current || !ytReadyRef.current || ytStateRef.current === PLAYER_STATES.BUFFERING) {
+        if (ytStateRef.current === PLAYER_STATES.BUFFERING) lastPollWallRef.current = 0;
+        return;
+      }
       busy = true;
       try {
-        const tSec = await ytRef.current.getCurrentTime();
-        if (!Number.isFinite(tSec)) return;
+        const tSec = await Promise.race([
+          ytRef.current.getCurrentTime(),
+          new Promise<number>((_, rej) => setTimeout(() => rej(new Error("yt_timeout")), 1000)),
+        ]);
+        if (!Number.isFinite(tSec) || ytStateRef.current === PLAYER_STATES.BUFFERING) return;
+        const ps = pendingSeekRef.current;
+        if (ps) {
+          if (Math.abs(tSec - ps.targetSec) <= 1.5 || Date.now() >= ps.until) {
+            pendingSeekRef.current = null;
+          } else {
+            return;
+          }
+        }
         const nowWall = Date.now();
         const dtWall = lastPollWallRef.current > 0 ? Math.max(0, (nowWall - lastPollWallRef.current) / 1000) : 0;
         lastPollWallRef.current = nowWall;
@@ -465,7 +557,6 @@ export default function DubPlayer({
         const dtVideo = tSec - lastYtTimeRef.current;
         lastYtTimeRef.current = tSec;
 
-        // Chỉ coi là tua thật khi lùi > 0.5s hoặc nhảy tới vượt xa thời gian thực đã trôi qua
         const seekedBack = dtVideo < -0.5;
         const seekedForward = dtVideo > Math.max(1.5, dtWall * 1.5 + 1.2);
         const jumped = seekedBack || seekedForward;
@@ -488,7 +579,6 @@ export default function DubPlayer({
           }
         }
 
-        // Chống giật lùi câu khi getCurrentTime() dao động nhẹ vài chục ms quanh mốc chuyển câu
         if (!seekedBack && curIdx !== -1 && curIdx < lastSpokenIdxRef.current) {
           curIdx = lastSpokenIdxRef.current;
         }
@@ -504,7 +594,6 @@ export default function DubPlayer({
               lastSpokenIdxRef.current = curIdx;
               void speakCue(curIdx);
             } else {
-              // Tua rơi đúng phần đuôi câu → đánh dấu bỏ qua để tick sau không đọc muộn
               lastSpokenIdxRef.current = curIdx;
             }
           }
@@ -518,50 +607,106 @@ export default function DubPlayer({
     return () => clearInterval(timer);
   }, [playing, speakCue, stopDub]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
+    if (ytErr || !ytReadyRef.current) return;
     haptic.tap();
     if (playing) {
+      warmGenRef.current += 1;
       setPlaying(false);
       pauseDub();
-    } else {
-      setPlaying(true);
+      return;
     }
+    const myWarmGen = ++warmGenRef.current;
+    // Tải trước câu sắp đọc để video & giọng Việt bắt đầu khớp nhau
+    const targetIdx = activeCueIdx >= 0 ? activeCueIdx : cues.findIndex((c) => !c.pending && c.text.trim());
+    if (targetIdx >= 0 && lastSpokenIdxRef.current < targetIdx) {
+      setWarmingFirst(true);
+      let warmTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          fetchFittedDubCue(cues, targetIdx, voiceId, speed, { urgent: true }),
+          new Promise<void>((r) => {
+            warmTimer = setTimeout(r, 2500);
+          }),
+        ]);
+      } finally {
+        clearTimeout(warmTimer);
+        if (mountedRef.current) setWarmingFirst(false);
+      }
+    }
+    if (!mountedRef.current || myWarmGen !== warmGenRef.current || ytErr) return;
+    setPlaying(true);
   };
 
   const restart = () => {
+    if (ytErr || !ytReadyRef.current) return;
     haptic.tap();
+    warmGenRef.current += 1;
     stopDub();
     lastSpokenIdxRef.current = -1;
     lastYtTimeRef.current = 0;
     lastPollWallRef.current = 0;
+    pendingSeekRef.current = { targetSec: 0, until: Date.now() + 1500 };
     setActiveCueIdx(-1);
     ytRef.current?.seekTo(0, true);
     setPlaying(true);
   };
 
   const seekToCue = (index: number) => {
+    if (ytErr || !ytReadyRef.current) return;
     const cue = cues[index];
     if (!cue) return;
     haptic.tap();
+    warmGenRef.current += 1;
     stopDub();
     lastSpokenIdxRef.current = -1;
     const targetSec = cue.start_ms / 1000;
     lastYtTimeRef.current = targetSec;
     lastPollWallRef.current = 0;
+    // eslint-disable-next-line react-hooks/purity -- chỉ chạy khi người dùng bấm chọn câu, không phải lúc render
+    pendingSeekRef.current = { targetSec, until: Date.now() + 1500 };
     setActiveCueIdx(index);
     ytRef.current?.seekTo(targetSec, true);
     setPlaying(true);
   };
 
-  const cycleVoice = () => {
+  const applyVoice = (next: DubVoiceId) => {
+    if (next === voiceId) return;
     stopDub();
     lastSpokenIdxRef.current = -1;
-    setVoiceId((v) => (v === DUB_VOICES[0].id ? DUB_VOICES[1].id : DUB_VOICES[0].id));
+    setVoiceId(next);
+    setDubVoice(next);
+    onVoiceChange?.(next);
+  };
+
+  const pickVoice = () => {
+    if (Platform.OS === "ios") {
+      const labels = DUB_VOICES.map((v) => t(v.shortKey));
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: t("dub.voicePick"),
+          options: [...labels, t("cancel")],
+          cancelButtonIndex: labels.length,
+        },
+        (idx) => {
+          if (idx >= 0 && idx < DUB_VOICES.length) applyVoice(DUB_VOICES[idx].id);
+        },
+      );
+      return;
+    }
+    setVoiceMenuOpen(true);
   };
 
   const cycleOrigVol = () => {
     const levels: readonly number[] = canGain ? ORIG_LEVELS : ORIG_TOGGLE;
     setOrigVol((v) => levels.find((l) => l > v) ?? 0);
+  };
+
+  const cycleDubVol = () => {
+    setDubVol((v) => {
+      const idx = DUB_VOL_LEVELS.indexOf(v as 100 | 60 | 0);
+      return DUB_VOL_LEVELS[(idx + 1) % DUB_VOL_LEVELS.length];
+    });
   };
 
   const cycleSpeed = () => {
@@ -578,13 +723,40 @@ export default function DubPlayer({
     }).catch(() => {});
   };
 
+  const onYtError = (codeStr: string) => {
+    const code = codeStr ? Number(codeStr) : NaN;
+    warmGenRef.current += 1;
+    stopDub();
+    setPlaying(false);
+    if (codeStr === "embed_not_allowed" || code === 101 || code === 150) {
+      setYtErr(t("dub.ytBlocked", { code: Number.isFinite(code) ? code : 150 }));
+    } else if (codeStr === "video_not_found" || code === 100) {
+      setYtErr(t("dub.ytNotFound"));
+    } else if (codeStr === "invalid_parameter" || code === 2) {
+      setYtErr(t("dub.ytInvalid"));
+    } else if (codeStr === "HTML5_error" || code === 5) {
+      setYtErr(t("dub.ytHtml5"));
+    } else {
+      setYtErr(t("dub.ytGeneric", { code: Number.isFinite(code) ? code : codeStr || "?" }));
+    }
+  };
+
   const videoWidth = split ? Math.min(Math.floor(width * 0.48), 540) : Math.min(width, CONTENT_MAX);
-  const voiceLabel = voiceId === DUB_VOICES[0].id ? t("dub.voiceMale") : t("dub.voiceFemale");
+  const voiceObj = DUB_VOICES.find((v) => v.id === voiceId) ?? DUB_VOICES[0];
+  const voiceLabel = t(voiceObj.shortKey);
   const origLabel =
     origVol <= 0 ? t("dub.origOff") : !canGain || origVol >= 100 ? t("dub.origOn") : t("dub.origPct", { n: origVol });
+  const dubLabel = dubVol <= 0 ? t("dub.dubMuted") : dubVol < 100 ? t("dub.dubVol", { n: dubVol }) : t("dub.dubOn");
+
+  const showBgFailedInProgress = !!(bgProgress && bgProgress.done < bgProgress.total && bgStatus === "failed");
 
   const videoPane = (
-    <View style={{ width: split ? videoWidth : "100%", alignItems: "center", backgroundColor: C.background }}>
+    <ScrollView
+      bounces={false}
+      scrollEnabled={split}
+      style={{ width: split ? videoWidth : "100%", flexGrow: 0, backgroundColor: C.background }}
+      contentContainerStyle={{ alignItems: "center", paddingBottom: split ? insets.bottom + 12 : 0 }}
+    >
       <View style={{ width: videoWidth, height: Math.round((videoWidth * 9) / 16), backgroundColor: "#000" }}>
         <YoutubePlayer
           key={playerKey}
@@ -606,28 +778,132 @@ export default function DubPlayer({
           }}
           webViewProps={{
             injectedJavaScript: shim,
-            // iOS: chạy cả trong khung youtube.com để nối Web Audio chỉnh âm lượng gốc
             injectedJavaScriptForMainFrameOnly: false,
             allowsInlineMediaPlayback: true,
             mediaPlaybackRequiresUserAction: false,
           }}
+          onReady={() => {
+            ytReadyRef.current = true;
+            setYtReady(true);
+          }}
+          onError={onYtError}
           onPlaybackQualityChange={onGainMessage}
           onChangeState={(s: string) => {
+            ytStateRef.current = s;
             if (s === PLAYER_STATES.PLAYING) {
               setPlaying(true);
-              resumeDub();
+              void resumeDub();
             } else if (s === PLAYER_STATES.PAUSED || s === PLAYER_STATES.BUFFERING) {
               if (s === PLAYER_STATES.PAUSED) setPlaying(false);
               pauseDub();
             } else if (s === PLAYER_STATES.ENDED) {
               setPlaying(false);
               stopDub();
+              lastSpokenIdxRef.current = -1;
+              setActiveCueIdx(-1);
             }
           }}
         />
       </View>
 
-      {/* Thanh tiến trình dịch ngầm khi đang phát cuốn chiếu */}
+      {!!ytErr && (
+        <View style={{ width: "100%", maxWidth: CONTENT_MAX, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: C.redSoft, borderBottomWidth: 1, borderBottomColor: C.border }}>
+          <ErrorText>{ytErr}</ErrorText>
+        </View>
+      )}
+
+      {!!engineErr && (
+        <View style={{ width: "100%", maxWidth: CONTENT_MAX, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: C.redSoft, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <ErrorText>{engineErr}</ErrorText>
+          </View>
+          <Pressable
+            onPress={() => {
+              setEngineErr("");
+              if (activeCueIdx >= 0) {
+                lastSpokenIdxRef.current = activeCueIdx;
+                setPlaying(true);
+                stateRef.current.playing = true;
+                void speakCue(activeCueIdx);
+              }
+            }}
+            style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: C.red }}
+          >
+            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>{t("retry")}</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!!bgError && !showBgFailedInProgress && (
+        <View style={{ width: "100%", maxWidth: CONTENT_MAX, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: C.redSoft, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <ErrorText>{bgError}</ErrorText>
+          </View>
+          {onRetryBg && (
+            <Pressable
+              onPress={() => {
+                haptic.tap();
+                onRetryBg();
+              }}
+              style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: C.red }}
+            >
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>{t("retry")}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {untranslatedCount > 0 && onRepair && !repairing && (!bgProgress || bgProgress.done >= bgProgress.total) && (
+        <Pressable
+          onPress={() => {
+            haptic.tap();
+            stopDub();
+            setPlaying(false);
+            onRepair();
+          }}
+          style={{
+            width: "100%",
+            maxWidth: CONTENT_MAX,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            backgroundColor: C.goldSoft,
+            borderBottomWidth: 1,
+            borderBottomColor: C.border,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <Text style={{ color: C.amber, fontSize: 12, fontWeight: "700", flex: 1 }}>
+            {t("dub.repairBanner", { n: untranslatedCount })}
+          </Text>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: C.gold }}>
+            <Text style={{ color: C.onAmber, fontSize: 12, fontWeight: "800" }}>{t("dub.repairBtn")}</Text>
+          </View>
+        </Pressable>
+      )}
+
+      {repairing && !bgProgress && !bgError && (
+        <View
+          style={{
+            width: "100%",
+            maxWidth: CONTENT_MAX,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            backgroundColor: sec.secSoft,
+            borderBottomWidth: 1,
+            borderBottomColor: C.border,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <ActivityIndicator size="small" color={sec.secText} />
+          <Text style={{ color: C.text, fontSize: 12, fontWeight: "600", flex: 1 }}>{t("dub.repairing")}</Text>
+        </View>
+      )}
+
       {bgProgress && bgProgress.done < bgProgress.total && (
         <View
           style={{
@@ -650,7 +926,7 @@ export default function DubPlayer({
               )}
               <Text style={{ color: C.text, fontSize: 12, fontWeight: "600", flex: 1 }} numberOfLines={1}>
                 {bgStatus === "failed"
-                  ? t("dub.bgFailed")
+                  ? bgError || t("dub.bgFailed")
                   : bgStatus === "reconnecting"
                     ? t("dub.reconnecting")
                     : t("dub.bgTranslating", { d: bgProgress.done, n: bgProgress.total })}
@@ -726,7 +1002,7 @@ export default function DubPlayer({
         )}
       </View>
 
-      {/* Thanh điều khiển ngang gọn gàng */}
+      {/* Thanh điều khiển ngang */}
       <View style={{ width: "100%", maxWidth: CONTENT_MAX, borderBottomWidth: 1, borderBottomColor: C.border }}>
         <ScrollView
           horizontal
@@ -734,27 +1010,33 @@ export default function DubPlayer({
           contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 10, gap: 8, alignItems: "center" }}
         >
           <Pressable
-            onPress={togglePlay}
+            onPress={() => void togglePlay()}
+            disabled={!ytReady || !!ytErr || warmingFirst}
             accessibilityRole="button"
             style={({ pressed }) => ({
               height: 36,
               paddingHorizontal: 14,
               borderRadius: 18,
-              backgroundColor: sec.sec,
+              backgroundColor: !ytReady || ytErr ? C.card2 : sec.sec,
               flexDirection: "row",
               alignItems: "center",
               gap: 6,
-              opacity: pressed ? 0.85 : 1,
+              opacity: !ytReady && !ytErr ? 0.65 : pressed ? 0.85 : 1,
             })}
           >
-            <SymbolView name={playing ? "pause.fill" : "play.fill"} size={14} tintColor="#fff" weight="bold" />
-            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "800" }}>
+            {warmingFirst || (!ytReady && !ytErr) ? (
+              <ActivityIndicator size="small" color={ytReady ? "#fff" : C.muted} />
+            ) : (
+              <SymbolView name={playing ? "pause.fill" : "play.fill"} size={14} tintColor={ytErr ? C.muted : "#fff"} weight="bold" />
+            )}
+            <Text style={{ color: !ytReady || ytErr ? C.muted : "#fff", fontSize: 14, fontWeight: "800" }}>
               {playing ? t("dub.pause") : t("dub.play")}
             </Text>
           </Pressable>
 
           <Pressable
             onPress={restart}
+            disabled={!ytReady || !!ytErr}
             accessibilityRole="button"
             accessibilityLabel={t("player.restart")}
             style={({ pressed }) => ({
@@ -766,13 +1048,13 @@ export default function DubPlayer({
               borderColor: C.border,
               alignItems: "center",
               justifyContent: "center",
-              opacity: pressed ? 0.72 : 1,
+              opacity: !ytReady || ytErr ? 0.45 : pressed ? 0.72 : 1,
             })}
           >
             <SymbolView name="gobackward" size={15} tintColor={C.text} weight="semibold" />
           </Pressable>
 
-          <Pill icon="waveform" label={voiceLabel} on onPress={cycleVoice} />
+          <Pill icon="waveform" label={voiceLabel} on onPress={pickVoice} />
           <Pill icon="gauge.with.dots.needle.67percent" label={`${speed.toFixed(2).replace(/\.00$/, "")}×`} onPress={cycleSpeed} />
           <Pill
             icon={origVol <= 0 ? "speaker.slash" : origVol < 50 && canGain ? "speaker.wave.1" : "speaker.wave.2"}
@@ -781,17 +1063,29 @@ export default function DubPlayer({
             onPress={cycleOrigVol}
           />
           <Pill
-            icon={dubMuted ? "speaker.slash.fill" : "speaker.wave.3.fill"}
-            label={dubMuted ? t("dub.dubMuted") : t("dub.dubOn")}
-            on={!dubMuted}
-            onPress={() => setDubMuted((m) => !m)}
+            icon={dubVol <= 0 ? "speaker.slash.fill" : dubVol < 100 ? "speaker.wave.2.fill" : "speaker.wave.3.fill"}
+            label={dubLabel}
+            on={dubVol > 0}
+            onPress={cycleDubVol}
           />
           {hasOrig && (
             <Pill icon="captions.bubble" label={t("dub.bilingual")} on={showOrig} onPress={() => setShowOrig((v) => !v)} />
           )}
+          {onRetranslate && (
+            <Pill
+              icon="arrow.clockwise"
+              label={t("dub.retranslate")}
+              disabled={repairing || !!(bgProgress && bgProgress.done < bgProgress.total)}
+              onPress={() => {
+                stopDub();
+                setPlaying(false);
+                onRetranslate();
+              }}
+            />
+          )}
         </ScrollView>
       </View>
-    </View>
+    </ScrollView>
   );
 
   const scriptList = (
@@ -807,8 +1101,15 @@ export default function DubPlayer({
         gap: 6,
       }}
       onScrollToIndexFailed={({ index, averageItemLength }) => {
-        listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
-        setTimeout(() => listRef.current?.scrollToIndex({ index, viewPosition: 0.25, animated: true }), 100);
+        try {
+          listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
+        } catch {}
+        clearTimeout(scrollTimerRef.current);
+        scrollTimerRef.current = setTimeout(() => {
+          try {
+            listRef.current?.scrollToIndex({ index, viewPosition: 0.25, animated: true });
+          } catch {}
+        }, 100);
       }}
       ListHeaderComponent={
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -886,17 +1187,20 @@ export default function DubPlayer({
           ),
         }}
       />
-      {split ? (
-        <View style={{ flex: 1, flexDirection: "row" }}>
-          <View style={{ borderRightWidth: 1, borderRightColor: C.border }}>{videoPane}</View>
-          {scriptList}
-        </View>
-      ) : (
-        <>
-          {videoPane}
-          {scriptList}
-        </>
-      )}
+      <View style={{ flex: 1, flexDirection: split ? "row" : "column" }}>
+        <View style={split ? { borderRightWidth: 1, borderRightColor: C.border } : undefined}>{videoPane}</View>
+        {scriptList}
+      </View>
+      <ActionSheetModal
+        visible={voiceMenuOpen}
+        title={t("dub.voicePick")}
+        onClose={() => setVoiceMenuOpen(false)}
+        options={DUB_VOICES.map((v) => ({
+          label: t(v.shortKey),
+          checked: v.id === voiceId,
+          onPress: () => applyVoice(v.id),
+        }))}
+      />
     </View>
   );
 }

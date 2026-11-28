@@ -4,10 +4,10 @@ import { createContext, Fragment, use, useEffect, useState, type ReactNode } fro
 import { Animated, Easing, Pressable, StyleSheet } from "react-native";
 import { haptic } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
-import { C, PALETTE, getScheme, setScheme, useScheme, type Scheme } from "@/lib/theme";
+import { C, PALETTE, getScheme, setThemePref, useScheme, type Scheme, type ThemePref } from "@/lib/theme";
 import { useReduceMotion } from "./Points";
 
-const SwitchCtx = createContext<(next: Scheme) => void>(setScheme);
+const SwitchCtx = createContext<(next: ThemePref) => void>(setThemePref);
 /** Đổi giao diện kèm màn chuyển có linh vật */
 export const useSwitchTheme = () => use(SwitchCtx);
 
@@ -16,11 +16,25 @@ function Veil({ next, onCovered, onDone }: { next: Scheme; onCovered: () => void
   const [fade] = useState(() => new Animated.Value(0));
   const [pop] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.spring(pop, { toValue: 1, friction: 5, tension: 120, useNativeDriver: true }).start();
-    Animated.timing(fade, { toValue: 1, duration: 150, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+    let alive = true;
+    const popAnim = Animated.spring(pop, { toValue: 1, friction: 5, tension: 120, useNativeDriver: true });
+    let fadeOutAnim: Animated.CompositeAnimation | null = null;
+    const fadeInAnim = Animated.timing(fade, { toValue: 1, duration: 150, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    popAnim.start();
+    fadeInAnim.start(({ finished }) => {
+      if (!finished || !alive) return;
       onCovered();
-      Animated.timing(fade, { toValue: 0, duration: 280, delay: 320, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(onDone);
+      fadeOutAnim = Animated.timing(fade, { toValue: 0, duration: 280, delay: 320, easing: Easing.in(Easing.quad), useNativeDriver: true });
+      fadeOutAnim.start(({ finished: outDone }) => {
+        if (outDone && alive) onDone();
+      });
     });
+    return () => {
+      alive = false;
+      popAnim.stop();
+      fadeInAnim.stop();
+      fadeOutAnim?.stop();
+    };
     // Chỉ chạy một lần cho mỗi lần đổi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -29,7 +43,10 @@ function Veil({ next, onCovered, onDone }: { next: Scheme; onCovered: () => void
     <Animated.View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[StyleSheet.absoluteFill, { backgroundColor: p.background, opacity: fade, alignItems: "center", justifyContent: "center" }]}
+      style={[
+        StyleSheet.absoluteFill,
+        { zIndex: 9999, elevation: 9999, backgroundColor: p.background, opacity: fade, alignItems: "center", justifyContent: "center" },
+      ]}
     >
       <Animated.View style={{ transform: [{ scale: pop }] }}>
         <Image source={require("@/assets/images/mascot.svg")} alt="" style={{ width: 132, height: 132 }} />
@@ -62,15 +79,18 @@ export function ThemeRoot({ children }: { children: ReactNode }) {
   const scheme = useScheme();
   const reduce = useReduceMotion();
   const [veil, setVeil] = useState<{ next: Scheme; id: number } | null>(null);
-  const switchTo = (next: Scheme) => {
-    if (next === getScheme() || veil) return;
-    if (reduce) setScheme(next);
-    else setVeil({ next, id: Date.now() });
+  const switchTo = (next: ThemePref) => {
+    if (veil) return;
+    if (next === "system" || next === getScheme() || reduce) {
+      setThemePref(next);
+      return;
+    }
+    setVeil({ next, id: Date.now() });
   };
   return (
     <SwitchCtx value={switchTo}>
       <Fragment key={scheme}>{children}</Fragment>
-      {veil && <Veil key={veil.id} next={veil.next} onCovered={() => setScheme(veil.next)} onDone={() => setVeil(null)} />}
+      {veil && <Veil key={veil.id} next={veil.next} onCovered={() => setThemePref(veil.next)} onDone={() => setVeil(null)} />}
     </SwitchCtx>
   );
 }

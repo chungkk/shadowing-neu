@@ -6,54 +6,43 @@ import { ApiError, api } from "../api";
 import type { ClassId } from "./fuehrerschein";
 import { DEFAULT_CLASS, DEFAULT_STATE, isClassId, isStateCode } from "./ids";
 
-/**
- * Tiến độ tab Lái xe + Leben in Deutschland, lưu trong file trên máy → khách học được, không cần mạng.
- * Đăng nhập: mỗi câu trả lời / đánh dấu / bài thi / xoá tiến độ vào hàng đợi `outbox` (lưu cùng file) rồi gửi lên
- * server (/api/v1/quiz — chung với web). Mục chỉ rời hàng đợi khi server nhận → mất mạng không mất kết quả.
- * Mở tab: gửi hết hàng đợi trước, rồi mới tải tiến độ trên server về (server là bản chính).
- * Lần đầu đăng nhập: tiến độ khi là khách cũng đi qua hàng đợi.
- */
-
 export type QuizModule = "fuehrerschein" | "lid";
 export const MODULES: QuizModule[] = ["fuehrerschein", "lid"];
 
 /** Bài thi lưu trên máy (kèm đáp án để xem lại) */
 export type LocalExam = Omit<ExamRecord, "id"> & { id: string; serverId?: number; answers: ExamAnswer[] };
 
+export type RemoteExamDetail = ExamRecord & { answers: ExamAnswer[] };
+
 type ModuleData = {
   stats: Record<string, QuizStat>;
   marked: string[];
   exams: LocalExam[];
-  /** Bài thi lưu trên server mà máy này không có (làm trên web) — chỉ xem điểm */
   remote: ExamRecord[];
 };
 
 export type Prefs = {
   cls: ClassId;
   state: string;
-  /** Ngôn ngữ bản dịch câu hỏi */
+  stateChosen?: boolean;
   lang: Lang;
   trLearn: boolean;
   trExam: boolean;
-  /** LiD: làm sai tự đánh dấu ⭐, làm đúng tự bỏ */
   autoMark: boolean;
 };
 
-/** Việc chờ gửi lên server, gửi lần lượt theo thứ tự */
 type OutItem =
   | { m: QuizModule; t: "answers"; answers: { qid: string; ok: boolean }[] }
   | { m: QuizModule; t: "mark"; qid: string; on: boolean }
-  /** Bài thi trên máy (theo id) chưa có serverId */
   | { m: QuizModule; t: "exam"; id: string }
-  | { m: QuizModule; t: "reset"; all: boolean };
+  | { m: QuizModule; t: "reset"; all: boolean }
+  | { m: QuizModule; t: "pref"; cls?: ClassId; state?: string };
 
 type Data = {
   v: 1;
-  /** Tài khoản có tiến độ này: null = khách (chưa đẩy lên server) */
   owner: number | null;
   prefs: Prefs;
   mods: Record<QuizModule, ModuleData>;
-  /** Câu đang học dở theo phạm vi (mở lại đúng chỗ) */
   pos: Record<string, string>;
   outbox: OutItem[];
 };
@@ -62,7 +51,7 @@ const emptyModule = (): ModuleData => ({ stats: {}, marked: [], exams: [], remot
 const DEFAULTS: Data = {
   v: 1,
   owner: null,
-  prefs: { cls: DEFAULT_CLASS, state: DEFAULT_STATE, lang: "vi", trLearn: true, trExam: false, autoMark: true },
+  prefs: { cls: DEFAULT_CLASS, state: DEFAULT_STATE, stateChosen: false, lang: "vi", trLearn: true, trExam: false, autoMark: true },
   mods: { fuehrerschein: emptyModule(), lid: emptyModule() },
   pos: {},
   outbox: [],
@@ -77,7 +66,6 @@ function load(): Data {
     const d = JSON.parse(FILE.textSync()) as Partial<Data>;
     const p = { ...DEFAULTS.prefs, ...d.prefs };
     const owner = typeof d.owner === "number" ? d.owner : null;
-    // File cũ (chưa có hàng đợi): bài thi của tài khoản chưa lên server được → gửi lại
     const legacy: OutItem[] =
       owner !== null && !Array.isArray(d.outbox)
         ? MODULES.flatMap((m) => (d.mods?.[m]?.exams ?? []).filter((e) => !e.serverId).reverse().map((e) => ({ m, t: "exam" as const, id: e.id })))
@@ -85,7 +73,13 @@ function load(): Data {
     return {
       v: 1,
       owner,
-      prefs: { ...p, cls: isClassId(p.cls) ? p.cls : DEFAULT_CLASS, state: isStateCode(p.state) ? p.state : DEFAULT_STATE, lang: isLang(p.lang) ? p.lang : "vi" },
+      prefs: {
+        ...p,
+        cls: isClassId(p.cls) ? p.cls : DEFAULT_CLASS,
+        state: isStateCode(p.state) ? p.state : DEFAULT_STATE,
+        stateChosen: !!p.stateChosen,
+        lang: isLang(p.lang) ? p.lang : "vi",
+      },
       mods: { fuehrerschein: { ...emptyModule(), ...d.mods?.fuehrerschein }, lid: { ...emptyModule(), ...d.mods?.lid } },
       pos: d.pos ?? {},
       outbox: Array.isArray(d.outbox) ? d.outbox : legacy,
@@ -104,15 +98,12 @@ const save = () => {
   FILE.write(JSON.stringify(data)).catch(() => {});
 };
 
-/** Ghi file ngay (đồng bộ) — dùng cho việc không được mất khi app bị tắt ngay sau đó */
 const saveNow = () => {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = null;
   try {
     FILE.writeSync(JSON.stringify(data));
-  } catch {
-    // hết chỗ / lỗi ghi: lần commit sau ghi lại
-  }
+  } catch {}
 };
 
 function commit(next: Data) {
@@ -135,8 +126,22 @@ export const useModule = (m: QuizModule) => useSyncExternalStore(subscribe, () =
 export const usePrefs = () => useSyncExternalStore(subscribe, () => data.prefs);
 export const getPrefs = () => data.prefs;
 export const getModule = (m: QuizModule) => data.mods[m];
+export const getQuizOwner = () => data.owner;
 
-export const setPrefs = (p: Partial<Prefs>) => commit({ ...data, prefs: { ...data.prefs, ...p } });
+export const setPrefs = (p: Partial<Prefs>, user?: UserLike) => {
+  commit({ ...data, prefs: { ...data.prefs, ...p } });
+  if (user && (p.cls !== undefined || p.state !== undefined)) {
+    enqueue(
+      {
+        m: p.state !== undefined ? "lid" : "fuehrerschein",
+        t: "pref",
+        ...(p.cls !== undefined ? { cls: p.cls } : {}),
+        ...(p.state !== undefined ? { state: p.state } : {}),
+      },
+      user,
+    );
+  }
+};
 
 export const getPos = (key: string) => data.pos[key];
 export const setPos = (key: string, qid: string) => {
@@ -145,19 +150,18 @@ export const setPos = (key: string, qid: string) => {
 
 type UserLike = { id: number } | null;
 
-/** Hàng đợi chỉ dành cho tài khoản sở hữu tiến độ trên máy (owner === null: chưa đồng bộ lần đầu, syncQuiz sẽ đẩy) */
 function enqueue(item: OutItem, user: UserLike) {
-  if (!user || data.owner !== user.id) return;
+  if (!user) return;
+  if (data.owner === null) adoptGuest(user.id);
+  if (data.owner !== user.id) return;
   const box = data.outbox;
   const last = box[box.length - 1];
-  // Gộp các câu trả lời liên tiếp của cùng phần (server nhận tối đa 100 câu / lần)
   if (item.t === "answers" && last?.t === "answers" && last.m === item.m && last.answers.length + item.answers.length <= 100)
     commit({ ...data, outbox: [...box.slice(0, -1), { ...last, answers: [...last.answers, ...item.answers] }] });
   else commit({ ...data, outbox: [...box, item] });
   void flush(user);
 }
 
-/** Lỗi không thử lại được (dữ liệu không hợp lệ với server): bỏ mục đó để không chặn cả hàng đợi */
 const permanent = (e: unknown) => e instanceof ApiError && e.status >= 400 && e.status < 500 && ![401, 403, 408, 429].includes(e.status);
 
 async function send(item: OutItem) {
@@ -165,9 +169,17 @@ async function send(item: OutItem) {
   if (item.t === "answers") await api("/quiz", { method: "POST", body: { module: m, answers: item.answers } });
   else if (item.t === "mark") await api("/quiz/bookmarks", { method: "POST", body: { module: m, qid: item.qid, on: item.on } });
   else if (item.t === "reset") await api("/quiz", { method: "DELETE", body: { module: m, all: item.all } });
-  else {
+  else if (item.t === "pref") {
+    await api("/quiz/prefs", {
+      method: "PUT",
+      body: {
+        ...(item.cls !== undefined ? { cls: item.cls } : {}),
+        ...(item.state !== undefined ? { state: item.state } : {}),
+      },
+    });
+  } else {
     const e = data.mods[m].exams.find((x) => x.id === item.id);
-    if (!e || e.serverId) return; // đã xoá / đã gửi
+    if (!e || e.serverId) return;
     const r = await api<{ id: number }>("/quiz/exams", {
       method: "POST",
       body: { module: m, kind: e.kind, ref: e.ref, cls: e.cls, durationS: e.durationS, answers: e.answers },
@@ -178,7 +190,6 @@ async function send(item: OutItem) {
 
 let flushing: Promise<boolean> | null = null;
 
-/** Gửi lần lượt hàng đợi; lỗi mạng / server thì dừng, giữ phần còn lại cho lần sau. true = đã gửi hết */
 function flush(user: UserLike): Promise<boolean> {
   if (!user || data.owner !== user.id) return Promise.resolve(false);
   if (flushing) return flushing;
@@ -191,7 +202,6 @@ function flush(user: UserLike): Promise<boolean> {
         } catch (e) {
           if (!permanent(e)) return false;
         }
-        // Mục đầu có thể vừa được gộp thêm câu trả lời trong lúc gửi → chỉ bỏ đúng phần đã gửi
         const head = data.outbox[0];
         if (head === item) commit({ ...data, outbox: data.outbox.slice(1) });
         else if (head?.t === "answers" && item.t === "answers" && head.m === item.m)
@@ -205,7 +215,6 @@ function flush(user: UserLike): Promise<boolean> {
   return flushing;
 }
 
-/** Ghi kết quả 1 câu (luyện) */
 export function recordAnswer(m: QuizModule, qid: string, ok: boolean, user: UserLike) {
   patchModule(m, (d) => {
     const s = d.stats[qid];
@@ -214,7 +223,6 @@ export function recordAnswer(m: QuizModule, qid: string, ok: boolean, user: User
   enqueue({ m, t: "answers", answers: [{ qid, ok }] }, user);
 }
 
-/** Ghi kết quả cả bài thi vào thống kê từng câu (câu bỏ trống không tính) */
 function recordMany(m: QuizModule, answers: { qid: string; ok: boolean }[]) {
   patchModule(m, (d) => {
     const stats = { ...d.stats };
@@ -231,7 +239,6 @@ export function setMarked(m: QuizModule, qid: string, on: boolean, user: UserLik
   enqueue({ m, t: "mark", qid, on }, user);
 }
 
-/** Lưu bài thi vừa nộp (trên máy + server khi đăng nhập) → id trên máy */
 export function saveExam(
   m: QuizModule,
   exam: { kind: "random" | "bogen"; ref: string; cls: string; maxErrorPoints: number; durationS: number; answers: ExamAnswer[]; result: ExamResult; results: { qid: string; ok: boolean }[] },
@@ -257,29 +264,48 @@ export function saveExam(
   patchModule(m, (d) => ({ exams: [rec, ...d.exams].slice(0, MAX_EXAMS) }));
   recordMany(m, exam.results);
   enqueue({ m, t: "exam", id }, user);
-  saveNow(); // bài thi vừa nộp: ghi file ngay, không chờ debounce
+  saveNow();
   return id;
 }
 
-/** Xoá tiến độ của 1 phần (all: cả câu đánh dấu + lịch sử thi) */
 export function resetModule(m: QuizModule, all: boolean, user: UserLike) {
   patchModule(m, () => (all ? emptyModule() : { stats: {} }));
   commit({ ...data, pos: Object.fromEntries(Object.entries(data.pos).filter(([k]) => !k.startsWith(`${m}:`))) });
-  // Câu trả lời chờ gửi của phần này không còn ý nghĩa sau khi xoá; chỉ xoá thống kê thì vẫn gửi đánh dấu + bài thi (lịch sử còn)
   commit({ ...data, outbox: data.outbox.filter((i) => i.m !== m || (!all && i.t !== "answers")) });
   enqueue({ m, t: "reset", all }, user);
+}
+
+const remoteExamCache = new Map<string, RemoteExamDetail>();
+
+/** Tải chi tiết 1 bài thi từ server (bài thi làm trên Web) để xem lại trên iOS */
+export async function fetchRemoteExam(m: QuizModule, serverId: number): Promise<RemoteExamDetail> {
+  const key = `${m}:${serverId}`;
+  const hit = remoteExamCache.get(key);
+  if (hit) return hit;
+  const res = await api<{ exam: RemoteExamDetail }>(`/quiz/exams/${serverId}?module=${m}`);
+  remoteExamCache.set(key, res.exam);
+  return res.exam;
 }
 
 // ---- Đồng bộ với server ----
 
 let syncing: Promise<void> | null = null;
 
-/** Tiến độ khi là khách → hàng đợi của tài khoản vừa đăng nhập (chỉ lần đầu). Bài thi khi là khách vẫn chỉ ở trên máy */
 function adoptGuest(userId: number) {
   const outbox: OutItem[] = [...data.outbox];
   for (const m of MODULES) {
     const d = data.mods[m];
-    const answers = Object.entries(d.stats).map(([qid, s]) => ({ qid, ok: s.lastOk }));
+    const pendingExams = [...d.exams].reverse().filter((e) => !e.serverId);
+    const examAnswerCount = new Map<string, number>();
+    for (const e of pendingExams) {
+      outbox.push({ m, t: "exam", id: e.id });
+      for (const a of e.answers) {
+        if (a.picked.length > 0) examAnswerCount.set(a.qid, (examAnswerCount.get(a.qid) ?? 0) + 1);
+      }
+    }
+    const answers = Object.entries(d.stats)
+      .filter(([qid, s]) => s.correct + s.wrong > (examAnswerCount.get(qid) ?? 0))
+      .map(([qid, s]) => ({ qid, ok: s.lastOk }));
     for (let i = 0; i < answers.length; i += 100) outbox.push({ m, t: "answers", answers: answers.slice(i, i + 100) });
     for (const qid of d.marked) outbox.push({ m, t: "mark", qid, on: true });
   }
@@ -287,8 +313,20 @@ function adoptGuest(userId: number) {
   saveNow();
 }
 
-/** Gửi hàng đợi rồi tải tiến độ trên server về (gọi khi mở tab Lái xe / LiD). Mất mạng thì giữ bản trên máy */
-// Mở lại tab trong vòng 60 giây: chỉ gửi hàng đợi, không tải lại 6 API (kéo để làm mới = force)
+export function clearQuizOnLogout() {
+  remoteExamCache.clear();
+  lastPull = null;
+  commit({
+    ...data,
+    owner: null,
+    prefs: { ...data.prefs, cls: DEFAULT_CLASS, state: DEFAULT_STATE, stateChosen: false },
+    mods: { fuehrerschein: emptyModule(), lid: emptyModule() },
+    pos: {},
+    outbox: [],
+  });
+  saveNow();
+}
+
 const PULL_EVERY_MS = 60_000;
 let lastPull: { user: number; at: number } | null = null;
 
@@ -300,24 +338,53 @@ export function syncQuiz(user: UserLike, opts?: { force?: boolean }): Promise<vo
   }
   syncing = (async () => {
     try {
-      if (data.owner === null) adoptGuest(user.id);
+      const wasGuest = data.owner === null;
+      const guestPrefs = wasGuest ? { ...data.prefs } : null;
+      if (wasGuest) adoptGuest(user.id);
       else if (data.owner !== user.id) {
-        // Tài khoản khác đã dùng máy này: bỏ tiến độ + hàng đợi của tài khoản cũ (vẫn còn trên server của họ)
-        commit({ ...data, owner: user.id, mods: { fuehrerschein: emptyModule(), lid: emptyModule() }, pos: {}, outbox: [] });
+        remoteExamCache.clear();
+        commit({
+          ...data,
+          owner: user.id,
+          prefs: { ...data.prefs, cls: DEFAULT_CLASS, state: DEFAULT_STATE, stateChosen: false },
+          mods: { fuehrerschein: emptyModule(), lid: emptyModule() },
+          pos: {},
+          outbox: [],
+        });
       }
-      // Chưa gửi hết thì không lấy bản server về: sẽ ghi đè kết quả chưa gửi
       if (!(await flush(user))) return;
+
+      // Đồng bộ hạng bằng lái & bang LiD từ server (hoặc đẩy lựa chọn của khách lên tài khoản mới)
+      const prefsRes = await api<{ cls: string | null; state: string | null }>("/quiz/prefs").catch(() => null);
+      if (prefsRes) {
+        const nextPrefs: Partial<Prefs> = {};
+        if (prefsRes.cls && isClassId(prefsRes.cls)) nextPrefs.cls = prefsRes.cls;
+        if (prefsRes.state && isStateCode(prefsRes.state)) {
+          nextPrefs.state = prefsRes.state;
+          nextPrefs.stateChosen = true;
+        }
+        if (Object.keys(nextPrefs).length) setPrefs(nextPrefs);
+        if (guestPrefs) {
+          const uploadCls = !prefsRes.cls ? guestPrefs.cls : undefined;
+          const uploadState = !prefsRes.state && guestPrefs.stateChosen ? guestPrefs.state : undefined;
+          if (uploadCls || uploadState) {
+            setPrefs({ ...(uploadCls ? { cls: uploadCls } : {}), ...(uploadState ? { state: uploadState } : {}) }, user);
+          }
+        }
+      }
+
       for (const m of MODULES) {
         const [s, b, e] = await Promise.all([
           api<{ stats: Record<string, QuizStat> }>(`/quiz?module=${m}`),
           api<{ ids: string[] }>(`/quiz/bookmarks?module=${m}`),
           api<{ exams: ExamRecord[] }>(`/quiz/exams?module=${m}`),
         ]);
-        // Có việc mới vào hàng đợi trong lúc tải: giữ bản trên máy, lần sau đồng bộ lại
-        if (data.owner !== user.id || data.outbox.some((i) => i.m === m)) continue;
+        if (data.owner !== user.id || data.outbox.some((i) => i.m === m && i.t !== "pref")) continue;
         patchModule(m, (d) => {
-          const mine = new Set(d.exams.map((x) => x.serverId).filter(Boolean));
-          return { stats: s.stats, marked: b.ids, remote: e.exams.filter((x) => !mine.has(x.id)) };
+          const serverIds = new Set(e.exams.map((x) => x.id));
+          const keptExams = d.exams.filter((x) => !x.serverId || serverIds.has(x.serverId));
+          const mine = new Set(keptExams.map((x) => x.serverId).filter(Boolean));
+          return { stats: s.stats, marked: b.ids, exams: keptExams, remote: e.exams.filter((x) => !mine.has(x.id)) };
         });
       }
       lastPull = { user: user.id, at: Date.now() };

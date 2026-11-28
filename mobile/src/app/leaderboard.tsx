@@ -1,11 +1,11 @@
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { MascotMessage } from "@/components/Mascot";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { Gem } from "@/components/Points";
-import { ErrorText, styles } from "@/components/ui";
+import { Button, ErrorText, styles } from "@/components/ui";
 import { api, avatarSource, type Leaderboard, type LeaderboardEntry } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -15,16 +15,16 @@ import { C, STICKER, alpha, themed } from "@/lib/theme";
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 /** Nền · chữ của số hạng 3 người đầu */
 const PODIUM = themed((): [string, string][] => [
-  [C.amber, C.onAmber],
+  [C.gold, C.onAmber],
   [C.border, C.text],
-  [alpha(C.amber, 0.25), C.amber],
+  [alpha(C.gold, 0.35), C.text],
 ]);
 
 /** Ảnh đại diện chỉ chính chủ xem được → người khác hiện chữ cái đầu tên */
 function Face({ name, url, size }: { name: string; url?: string | null; size: number }) {
   if (url) return <Image source={avatarSource(url)} alt="" style={{ width: size, height: size, borderRadius: size / 2 }} contentFit="cover" />;
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.amber, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: C.onAmber, fontSize: size * 0.45, fontWeight: "800" }}>{name.trim()[0]?.toUpperCase() ?? "?"}</Text>
     </View>
   );
@@ -67,6 +67,12 @@ export default function LeaderboardScreen() {
   const [board, setBoard] = useState<Leaderboard | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [prevUid, setPrevUid] = useState(user?.id ?? null);
+  if (prevUid !== (user?.id ?? null)) {
+    setPrevUid(user?.id ?? null);
+    setBoard(null);
+    setError("");
+  }
 
   const load = useCallback(async () => {
     try {
@@ -77,8 +83,8 @@ export default function LeaderboardScreen() {
     }
   }, []);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu
-    if (user) load();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu (cả khách lẫn đã đăng nhập)
+    load();
   }, [user, load]);
 
   return (
@@ -101,33 +107,45 @@ export default function LeaderboardScreen() {
       >
         <ErrorText>{error}</ErrorText>
         {!board && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
-        {board && user && (
+        {board && (
           <>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 16 }}>
-              <Face name={user.name} url={user.avatarUrl} size={46} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700" }}>{t("board.yourRank")}</Text>
-                {board.me.rank === null ? (
-                  <>
-                    <Text style={{ color: C.text, fontSize: 18, fontWeight: "800" }}>{t("board.unranked")}</Text>
-                    <Text style={{ color: C.muted, fontSize: 13, lineHeight: 17 }}>{t("board.unrankedHint")}</Text>
-                  </>
-                ) : (
-                  <Text style={{ color: C.text, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
-                    #{fmt(board.me.rank)} <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{t("board.ofPlayers", { n: fmt(board.players) })}</Text>
-                  </Text>
-                )}
+            {user ? (
+              <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 16, gap: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <Face name={user.name} url={user.avatarUrl} size={46} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700" }}>{t("board.yourRank")}</Text>
+                    {board.me.rank === null ? (
+                      <>
+                        <Text style={{ color: C.text, fontSize: 18, fontWeight: "800" }}>{t("board.unranked")}</Text>
+                        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 17 }}>{t("board.unrankedHint")}</Text>
+                      </>
+                    ) : (
+                      <Text style={{ color: C.text, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+                        #{fmt(board.me.rank)} <Text style={{ color: C.muted, fontSize: 13, fontWeight: "700" }}>{t("board.ofPlayers", { n: fmt(board.players) })}</Text>
+                      </Text>
+                    )}
+                  </View>
+                  <Gem size={22} />
+                  <Text style={{ color: C.gem, fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{fmt(board.me.total)}</Text>
+                </View>
+                {board.me.rank === null && <Button title={t("board.startCta")} variant="primary" onPress={() => router.push("/")} />}
               </View>
-              <Gem size={22} />
-              <Text style={{ color: C.gem, fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{fmt(board.me.total)}</Text>
-            </View>
+            ) : (
+              <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 16, gap: 12 }}>
+                <Text style={{ color: C.text, fontSize: 15, fontWeight: "700", lineHeight: 21 }}>{t("board.guestTitle")}</Text>
+                <Button title={t("board.guestCta")} variant="primary" onPress={() => router.push("/settings")} />
+              </View>
+            )}
+
+            <Text style={{ color: C.muted, fontSize: 12, lineHeight: 17, paddingHorizontal: 4 }}>{t("board.rules")}</Text>
 
             {board.top.length === 0 ? (
               <MascotMessage text={t("board.empty")} />
             ) : (
               <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, overflow: "hidden" }}>
                 {board.top.map((r, i) => (
-                  <BoardRow key={r.id} r={r} first={i === 0} mine={r.id === user.id} url={user.avatarUrl} />
+                  <BoardRow key={r.id} r={r} first={i === 0} mine={!!user && r.id === user.id} url={user?.avatarUrl} />
                 ))}
               </View>
             )}

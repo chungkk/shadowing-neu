@@ -24,7 +24,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, CoverTag, ErrorText, Input, Nhan, Segmented, styles } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
 import { ICON, Row, Section } from "@/components/SettingsList";
-import { useSwitchTheme } from "@/components/ThemeRoot";
 import {
   api,
   API_URL,
@@ -35,10 +34,11 @@ import {
 } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { BrandBar } from "@/components/Brand";
+import { useSwitchTheme } from "@/components/ThemeRoot";
 import { useAuth } from "@/lib/auth";
 import { useDueCount } from "@/lib/due";
 import { openLegal } from "@/lib/legal";
-import { C, SEC, useScheme } from "@/lib/theme";
+import { C, SEC, useScheme, useThemePref } from "@/lib/theme";
 import { LANGS, useI18n } from "@/lib/i18n";
 import { FORM_MAX, useLayout } from "@/lib/layout";
 import { germanVoices, speakGerman, stopSpeaking } from "@/lib/speak";
@@ -77,15 +77,15 @@ function Avatar({ user }: { user: User }) {
   const [busy, setBusy] = useState(false);
 
   const upload = async () => {
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (picked.canceled || !picked.assets[0]) return;
-    setBusy(true);
     try {
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (picked.canceled || !picked.assets[0]) return;
+      setBusy(true);
       // Cắt vuông (đã chọn khung ở bước trên) → thu nhỏ → JPEG trước khi gửi
       const img = await ImageManipulator.manipulate(picked.assets[0].uri)
         .resize({ width: AVATAR_SIZE, height: AVATAR_SIZE })
@@ -384,6 +384,7 @@ function SettingsSection() {
   );
 
   const scheme = useScheme();
+  const themePref = useThemePref();
   const switchTheme = useSwitchTheme();
   const voiceNote =
     voices === null
@@ -405,8 +406,9 @@ function SettingsSection() {
             options={[
               ["light", t("theme.light")],
               ["dark", t("theme.dark")],
+              ["system", t("theme.system")],
             ]}
-            value={scheme}
+            value={themePref}
             onChange={switchTheme}
           />
         }
@@ -574,6 +576,27 @@ function MoreSections() {
           external
           onPress={() => openLegal("terms")}
         />
+        <Row
+          icon="building.2.fill"
+          iconBg={ICON.slate}
+          title={t("legal.impressum")}
+          external
+          onPress={() => openLegal("impressum")}
+        />
+        <Row
+          icon="questionmark.circle.fill"
+          iconBg={ICON.slate}
+          title={t("legal.support")}
+          external
+          onPress={() => openLegal("support")}
+        />
+        <Row
+          icon="info.circle.fill"
+          iconBg={ICON.slate}
+          title={t("legal.about")}
+          external
+          onPress={() => openLegal("about")}
+        />
       </Section>
     </>
   );
@@ -626,6 +649,7 @@ function Signed({ user }: { user: User }) {
   const [emailPw, setEmailPw] = useState("");
   const [emailCode, setEmailCode] = useState("");
   const [codeSentTo, setCodeSentTo] = useState(""); // khác rỗng = đã gửi mã tới email mới, đang chờ nhập
+  const [emailCooldown, setEmailCooldown] = useState(0);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -634,6 +658,12 @@ function Signed({ user }: { user: User }) {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const hasPassword = user.hasPassword !== false; // tài khoản Google / Apple: chưa có mật khẩu
+
+  useEffect(() => {
+    if (emailCooldown <= 0) return;
+    const id = setTimeout(() => setEmailCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [emailCooldown]);
 
   // Số từ đã lưu + chuỗi ngày / mục đến hạn: tải lại mỗi lần mở tab
   useFocusEffect(
@@ -675,15 +705,17 @@ function Signed({ user }: { user: User }) {
       setMsg(t("acc.saved"));
     });
 
-  const sendEmailCode = () =>
+  const sendEmailCode = (resend = false) =>
     run(async () => {
+      const target = codeSentTo || newEmail.trim().toLowerCase();
       await api("/me/email/code", {
         method: "POST",
-        body: { email: newEmail, password: emailPw },
+        body: { email: target, password: emailPw },
       });
-      setCodeSentTo(newEmail.trim().toLowerCase());
-      setEmailPw("");
-      setEmailCode("");
+      setCodeSentTo(target);
+      setEmailCooldown(60);
+      if (resend) setMsg(t("auth.resent"));
+      else setEmailCode("");
     });
 
   const confirmEmail = () =>
@@ -695,7 +727,9 @@ function Signed({ user }: { user: User }) {
       setUser(r.user);
       setCodeSentTo("");
       setNewEmail("");
+      setEmailPw("");
       setEmailCode("");
+      setEmailCooldown(0);
       setMsg(t("acc.emailChanged"));
     });
 
@@ -766,16 +800,6 @@ function Signed({ user }: { user: User }) {
     <>
       <ProfileCard user={user} stats={stats} />
 
-      <Section>
-        <Row
-          first
-          icon="trophy.fill"
-          iconBg={ICON.gold}
-          title={t("board.title")}
-          onPress={() => router.push("/leaderboard")}
-        />
-      </Section>
-
       <Section title={t("acc.sectionAccount")}>
         <Row
           first
@@ -817,7 +841,7 @@ function Signed({ user }: { user: User }) {
                   </Text>
                   <Input
                     value={emailCode}
-                    onChangeText={setEmailCode}
+                    onChangeText={(v) => setEmailCode(v.replace(/\D/g, "").slice(0, 6))}
                     placeholder={t("auth.code")}
                     keyboardType="number-pad"
                     maxLength={6}
@@ -833,8 +857,18 @@ function Signed({ user }: { user: User }) {
                     disabled={emailCode.length !== 6}
                   />
                   <Button
+                    title={emailCooldown > 0 ? t("auth.resendIn", { s: emailCooldown }) : t("auth.resend")}
+                    onPress={() => sendEmailCode(true)}
+                    disabled={emailCooldown > 0 || busy}
+                  />
+                  <Button
                     title={t("acc.backEmail")}
-                    onPress={() => setCodeSentTo("")}
+                    onPress={() => {
+                      setCodeSentTo("");
+                      setEmailCooldown(0);
+                      setErr("");
+                      setMsg("");
+                    }}
                   />
                 </>
               ) : (
@@ -863,7 +897,7 @@ function Signed({ user }: { user: User }) {
                   <Button
                     title={t("auth.sendCode")}
                     variant="primary"
-                    onPress={sendEmailCode}
+                    onPress={() => sendEmailCode(false)}
                     loading={busy}
                     disabled={!newEmail.trim() || (hasPassword && !emailPw)}
                   />
@@ -1018,7 +1052,7 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.h1}>{t("tabs.settings")}</Text>
-          {ready && !!user && (
+          {ready && (
             <Section>
               <Row
                 first
@@ -1028,6 +1062,19 @@ export default function SettingsScreen() {
                 value={due ? t("decks.due", { n: due }) : undefined}
                 valueColor={C.amber}
                 onPress={() => router.push("/vocab")}
+              />
+              <Row
+                icon="trophy.fill"
+                iconBg={ICON.gold}
+                title={t("board.title")}
+                onPress={() => router.push("/leaderboard")}
+              />
+              <Row
+                icon="slider.horizontal.3"
+                iconBg={ICON.gem}
+                title={t("acc.learning")}
+                subtitle={t("acc.learningSub")}
+                onPress={() => router.push("/quiz/settings")}
               />
             </Section>
           )}

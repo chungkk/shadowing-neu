@@ -1,8 +1,9 @@
 import * as SecureStore from "expo-secure-store";
-import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, API_URL, setApiToken, type User } from "./api";
 import { currentLang, isLang, useI18n, type Lang } from "./i18n";
 import { signOutGoogle } from "./social";
+import { clearQuizOnLogout, syncQuiz } from "./quiz/store";
 
 /**
  * Đăng nhập: token lưu trong Keychain (expo-secure-store), gửi kèm mọi request API.
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const { setLang } = useI18n();
+  const authSeqRef = useRef(0);
 
   /** Cập nhật tài khoản và lưu lại trên máy */
   const remember = useCallback((u: User) => {
@@ -73,10 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Mở app: hiện ngay tài khoản đã lưu, rồi kiểm tra với server
   useEffect(() => {
+    const seq = authSeqRef.current;
     (async () => {
       const [saved, server, cached] = await Promise.all(
         [KEY, SERVER_KEY, USER_KEY].map((k) => SecureStore.getItemAsync(k).catch(() => null)),
       );
+      if (authSeqRef.current !== seq) return;
       // Token của server khác (vd. đang chạy thử với localhost) → không dùng, cũng không xoá
       if (!saved || (server && server !== API_URL)) {
         setReady(true);
@@ -93,16 +97,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const r = await api<{ user: User; token?: string }>("/me");
+        if (authSeqRef.current !== seq) return;
         if (r.token) await setToken(r.token); // gia hạn thêm 30 ngày
+        if (authSeqRef.current !== seq) return;
         setUser(r.user);
+        void syncQuiz(r.user);
       } catch (e) {
+        if (authSeqRef.current !== seq) return;
         if (e instanceof ApiError && e.status === 401) {
+          await signOutGoogle();
           await setToken(null); // hết hạn / đã đổi mật khẩu / tài khoản bị xoá
+          clearQuizOnLogout();
+          if (authSeqRef.current !== seq) return;
           setUserState(null);
         }
         // Lỗi mạng / server tạm lỗi → giữ đăng nhập
       }
-      setReady(true);
+      if (authSeqRef.current === seq) setReady(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy lúc mở app
   }, []);
@@ -113,16 +124,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       login: async (email, password) => {
         const r = await api<{ token: string; user: User }>("/auth/login", { method: "POST", body: { email, password } });
+        authSeqRef.current += 1;
         await setToken(r.token);
         setUser(r.user);
+        void syncQuiz(r.user);
       },
       oauthLogin: async (provider, idToken, extra) => {
         const r = await api<{ token: string; user: User }>("/auth/oauth", {
           method: "POST",
           body: { provider, idToken, ...extra, lang: currentLang() },
         });
+        authSeqRef.current += 1;
         await setToken(r.token);
         setUser(r.user);
+        void syncQuiz(r.user);
       },
       sendSignupCode: async (name, email, password) => {
         await api("/auth/register/code", { method: "POST", body: { name, email, password, lang: currentLang() } });
@@ -132,27 +147,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       resetPassword: async (email, code, password) => {
         const r = await api<{ token: string; user: User }>("/auth/reset", { method: "POST", body: { email, code, password } });
+        authSeqRef.current += 1;
         await setToken(r.token);
         setUser(r.user);
+        void syncQuiz(r.user);
       },
       register: async (name, email, password, code) => {
         const r = await api<{ token: string; user: User }>("/auth/register", {
           method: "POST",
           body: { name, email, password, code, lang: currentLang() },
         });
+        authSeqRef.current += 1;
         await setToken(r.token);
         setUser(r.user);
+        void syncQuiz(r.user);
       },
       logout: async () => {
-        signOutGoogle(); // lần sau được chọn lại tài khoản Google
+        authSeqRef.current += 1;
+        await signOutGoogle(); // lần sau được chọn lại tài khoản Google
         await setToken(null);
+        clearQuizOnLogout();
         setUserState(null);
       },
       setUser: remember,
       setToken: (t: string) => setToken(t),
       changeLang: (l) => {
         setLang(l);
-        if (user) api<{ user: User }>("/me", { method: "PATCH", body: { lang: l } }).then((r) => remember(r.user), () => {});
+        if (user) {
+          const seq = authSeqRef.current;
+          api<{ user: User }>("/me", { method: "PATCH", body: { lang: l } }).then(
+            (r) => {
+              if (authSeqRef.current === seq) remember(r.user);
+            },
+            () => {},
+          );
+        }
       },
     }),
     [user, ready, setToken, setUser, setLang, remember],

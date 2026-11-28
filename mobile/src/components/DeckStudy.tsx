@@ -1,7 +1,8 @@
+import { router } from "expo-router";
 import { Image } from "expo-image";
 import { Mascot } from "@/components/Mascot";
 import { SymbolView } from "expo-symbols";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Text, TextInput } from "./Text";
 import { haptic } from "@/lib/haptics";
@@ -11,10 +12,10 @@ import { Button } from "@/components/ui";
 import { deckCover, type DeckWord } from "@/lib/api";
 import { C, alpha, themed } from "@/lib/theme";
 import { useI18n, type TFn } from "@/lib/i18n";
-import { speakGerman } from "@/lib/speak";
+import { speakGerman, stopSpeaking } from "@/lib/speak";
 
 export type Mode = StudyMode | "list";
-export const MODES: Mode[] = ["guess", "flash", "quiz", "reverse", "listen", "list"];
+export const MODES: Mode[] = ["flash", "quiz", "reverse", "guess", "listen", "list"];
 export const modeLabel = (m: Mode, t: TFn) => t(`study.${m}`);
 
 /** Màu mạo từ theo giống — như sổ từ: der xanh dương · die đỏ · das xanh lá */
@@ -31,12 +32,31 @@ function German({ w, size }: { w: DeckWord; size: number }) {
   );
 }
 
-function SpeakButton({ w }: { w: DeckWord }) {
+function SpeakButton({ w, showSlow = false }: { w: DeckWord; showSlow?: boolean }) {
   const { t } = useI18n();
   return (
-    <Pressable onPress={() => say(w)} hitSlop={8} style={{ padding: 8 }} accessibilityLabel={t("vocab.listen")}>
-      <SymbolView name="speaker.wave.2.fill" size={20} tintColor={C.amber} />
-    </Pressable>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <Pressable onPress={() => say(w)} hitSlop={8} style={{ padding: 8 }} accessibilityLabel={t("vocab.listen")}>
+        <SymbolView name="speaker.wave.2.fill" size={20} tintColor={C.amber} />
+      </Pressable>
+      {showSlow && (
+        <Pressable
+          onPress={() => say(w, 0.7)}
+          hitSlop={8}
+          accessibilityLabel={t("study.slow")}
+          style={({ pressed }) => ({
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 99,
+            borderWidth: 1,
+            borderColor: C.border,
+            backgroundColor: pressed ? C.card2 : C.card,
+          })}
+        >
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: "700" }}>0.7×</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -98,15 +118,24 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
   const [picked, setPicked] = useState<string | null>(null);
   const [options] = useState(() => (mode === "quiz" || mode === "reverse" ? quizOptions(w, pool, mode === "reverse") : []));
   const blanked = useMemo(() => blankExample(w), [w]);
+  const doneRef = useRef(false);
+  const finish = (ok: boolean) => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDone(ok);
+  };
 
   // Nghe viết: đọc từ ngay khi hiện thẻ
   useEffect(() => {
     if (mode === "listen") say(w, 0.85);
+    return () => {
+      void stopSpeaking();
+    };
   }, [mode, w]);
 
   const correct = picked !== null ? picked === answerOf(w, mode) : result === "ok" || result === "almost";
   const next = (
-    <Button title={t("study.next")} variant={correct ? "primary" : "red"} onPress={() => onDone(correct)} style={{ alignSelf: "stretch" }} />
+    <Button title={t("study.next")} variant={correct ? "primary" : "red"} onPress={() => finish(correct)} style={{ alignSelf: "stretch" }} />
   );
 
   if (mode === "flash")
@@ -143,11 +172,11 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
             </>
           )}
         </Pressable>
-        <SpeakButton w={w} />
+        <SpeakButton w={w} showSlow />
         {flipped ? (
           <View style={{ flexDirection: "row", gap: 12, alignSelf: "stretch" }}>
-            <Button title={t("study.notYet")} variant="red" onPress={() => onDone(false)} style={{ flex: 1 }} />
-            <Button title={t("study.know")} variant="primary" onPress={() => onDone(true)} style={{ flex: 1 }} />
+            <Button title={t("study.notYet")} variant="red" onPress={() => finish(false)} style={{ flex: 1 }} />
+            <Button title={t("study.know")} variant="primary" onPress={() => finish(true)} style={{ flex: 1 }} />
           </View>
         ) : (
           <Button title={t("study.flip")} variant="amber" onPress={() => setFlipped(true)} style={{ alignSelf: "stretch" }} />
@@ -163,7 +192,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
         {mode === "quiz" ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
             <German w={w} size={28} />
-            <SpeakButton w={w} />
+            <SpeakButton w={w} showSlow />
           </View>
         ) : (
           <Text style={{ color: C.amber, fontSize: 24, fontWeight: "800", textAlign: "center" }}>{w.meaning}</Text>
@@ -199,7 +228,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
         </View>
         {picked !== null && (
           <>
-            {picked !== right && <Reveal w={w} ok={false} title={t("study.wrongPick")} />}
+            <Reveal w={w} ok={picked === right} title={picked === right ? t("study.correct") : t("study.wrongPick")} />
             {next}
           </>
         )}
@@ -209,6 +238,7 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
 
   // Đoán từ / Nghe viết
   const check = (skip: boolean) => {
+    if (result !== null) return;
     if (!skip && !input.trim()) return;
     const r = skip ? "skip" : checkGuess(input, w);
     setResult(r);
@@ -219,12 +249,32 @@ function StudyCard({ w, mode, pool, icon, onDone }: { w: DeckWord; mode: StudyMo
       {/* Nghe viết: ảnh gợi ý quá nhiều → chỉ biểu tượng chủ đề */}
       <Icon icon={icon} image={mode === "listen" ? null : w.image} />
       {mode === "listen" ? (
-        <Button
-          title={t("study.replay")}
-          variant="amber"
-          icon={<SymbolView name="speaker.wave.2.fill" size={18} tintColor={C.amber} />}
-          onPress={() => say(w, 0.85)}
-        />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Button
+            title={t("study.replay")}
+            variant="amber"
+            icon={<SymbolView name="speaker.wave.2.fill" size={18} tintColor={C.onAmber} />}
+            onPress={() => say(w, 0.85)}
+          />
+          <Pressable
+            onPress={() => say(w, 0.7)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("study.slow")}
+            style={({ pressed }) => ({
+              height: 44,
+              paddingHorizontal: 14,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: C.border,
+              backgroundColor: pressed ? C.card2 : C.card,
+              alignItems: "center",
+              justifyContent: "center",
+            })}
+          >
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: "700" }}>0.7×</Text>
+          </Pressable>
+        </View>
       ) : (
         <>
           <Text style={{ color: C.amber, fontSize: 24, fontWeight: "800", textAlign: "center" }}>{w.meaning}</Text>
@@ -322,16 +372,20 @@ export function StudySession({
   mode,
   icon,
   practice,
+  loggedIn = true,
   onLearned,
   onPractice,
+  nextTopic,
 }: {
   words: DeckWord[];
   pool: DeckWord[];
   mode: StudyMode;
   icon: string;
   practice: boolean;
+  loggedIn?: boolean;
   onLearned: (w: DeckWord) => void;
   onPractice: () => void;
+  nextTopic?: { title: string; onPress: () => void };
 }) {
   const { t } = useI18n();
   const [queue, setQueue] = useState(() => (practice ? shuffle(words) : words.filter((w) => !w.learned)));
@@ -344,14 +398,28 @@ export function StudySession({
         <Text style={{ color: C.text, fontSize: 20, fontWeight: "800", textAlign: "center" }}>
           {t(practice ? "study.practiceDone" : "study.doneTitle")}
         </Text>
-        <Text style={{ color: C.muted, fontSize: 14, textAlign: "center" }}>{t("study.doneHint")}</Text>
-        <Button
-          title={t("study.practice")}
-          variant="primary"
-          icon={<SymbolView name="arrow.counterclockwise" size={15} tintColor="#fff" />}
-          onPress={onPractice}
-          style={{ marginTop: 6 }}
-        />
+        <Text style={{ color: C.muted, fontSize: 14, textAlign: "center" }}>
+          {loggedIn ? t("study.doneHint") : t("study.doneGuestHint")}
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 }}>
+          {!loggedIn && (
+            <Button title={t("login")} variant="primary" onPress={() => router.push("/settings")} />
+          )}
+          <Button
+            title={t("study.practice")}
+            variant={!loggedIn || nextTopic ? "plain" : "primary"}
+            icon={<SymbolView name="arrow.counterclockwise" size={15} tintColor={!loggedIn || nextTopic ? C.text : "#fff"} />}
+            onPress={onPractice}
+          />
+          {nextTopic && (
+            <Button
+              title={t("study.nextTopic", { title: nextTopic.title })}
+              variant="primary"
+              icon={<SymbolView name="arrow.right" size={15} tintColor="#fff" />}
+              onPress={nextTopic.onPress}
+            />
+          )}
+        </View>
       </View>
     );
   return (

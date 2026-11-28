@@ -23,8 +23,16 @@ export function QuizTabScreen({ children, refreshing, onRefresh }: { children: R
     <SafeAreaView style={styles.screen} edges={[]}>
       <BrandBar />
       <ScrollView
-        style={{ width: "100%", maxWidth: CONTENT_MAX + 2 * PAD, alignSelf: "center" }}
-        contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: tablet ? 20 : 12, paddingBottom: 120, gap: 16 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          width: "100%",
+          maxWidth: CONTENT_MAX + 2 * PAD,
+          alignSelf: "center",
+          paddingHorizontal: PAD,
+          paddingTop: tablet ? 20 : 12,
+          paddingBottom: 120,
+          gap: 16,
+        }}
         refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={C.accentText} /> : undefined}
       >
         {children}

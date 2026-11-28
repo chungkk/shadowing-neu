@@ -1,9 +1,10 @@
 import { getCurrentUser } from "@/lib/auth";
-import { createLesson, LEVELS, listLessons, type Level } from "@/lib/db";
+import { createLesson, LEVELS, listChannels, listLessons, type Level } from "@/lib/db";
 import { extractVideoId, getSavedTranscript, getYouTubeTranscript } from "@/lib/youtube";
 import { apiAdmin, body, fail, str } from "@/lib/api";
 import { prewarmPhrases } from "@/lib/phrases";
 import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
+import { fillLessonChannels } from "@/lib/channels";
 
 /**
  * GET → danh sách bài đã đăng + bài ẩn người này đã trả để mở (admin thấy cả bản nháp), không kèm phụ đề.
@@ -12,10 +13,16 @@ import { accessOf, lessonsFor, lockInfo } from "@/lib/access";
  */
 export async function GET() {
   const user = await getCurrentUser();
+  fillLessonChannels();
   const access = accessOf(user);
+  const avatars = new Map(listChannels().flatMap((c) => (c.handle && c.avatar ? [[c.handle.toLowerCase(), c.avatar] as const] : [])));
   const lessons = user?.role === "admin" ? listLessons({ includeDrafts: true }) : lessonsFor(user?.id ?? null).map((l) => ({ ...l, published: true }));
   return Response.json({
-    lessons: lessons.map((l) => ({ ...l, access: access(l.id) })),
+    lessons: lessons.map((l) => ({
+      ...l,
+      channelAvatar: avatars.get(l.channelUrl?.match(/\/(@[^/?#]+)/)?.[1]?.toLowerCase() ?? "") ?? null,
+      access: access(l.id),
+    })),
     lock: lockInfo(user),
   });
 }

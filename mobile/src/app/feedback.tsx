@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Stack, router, useLocalSearchParams, usePreventRemove } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
-import { Platform, Pressable, ScrollView, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { Button, Input, Segmented, styles } from "@/components/ui";
 import { api } from "@/lib/api";
-import { confirmDestructive, notice, showError } from "@/lib/dialogs";
+import { confirmDestructive, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { FORM_MAX } from "@/lib/layout";
@@ -45,6 +45,7 @@ export default function FeedbackScreen() {
   const device = deviceInfo();
 
   const text = message.trim();
+  const canSend = text.length >= 5 && message.length <= MAX && !sending;
   const dirty = !!text && !sent && !leaving;
 
   // Chặn đóng modal khi còn nội dung chưa gửi
@@ -55,19 +56,13 @@ export default function FeedbackScreen() {
     }),
   );
 
-  // Đóng sau khi đã render lại với sent = true — gọi router.back() ngay trong send() thì usePreventRemove
-  // còn thấy dirty cũ → hỏi "bỏ nội dung?" dù đã gửi xong
-  useEffect(() => {
-    if (sent) router.back();
-  }, [sent]);
-
   const send = async () => {
-    if (!text || sending) return;
+    if (!canSend) return;
     setSending(true);
     try {
       await api("/feedback", { method: "POST", body: { kind, message: text, email: user ? undefined : email.trim(), device } });
       setSent(true);
-      notice(t("fb.sent"), t("fb.sentBody"));
+      Alert.alert(t("fb.sent"), t("fb.sentBody"), [{ text: "OK", onPress: () => router.back() }]);
     } catch (e) {
       showError(e);
     } finally {
@@ -89,12 +84,13 @@ export default function FeedbackScreen() {
           ),
         }}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 16, gap: 18, paddingBottom: 40 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "android" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ width: "100%", maxWidth: FORM_MAX, alignSelf: "center", padding: 16, gap: 18, paddingBottom: 40 }}
+        >
         <View style={{ gap: 8 }}>
           {label(t("fb.kind"))}
           <Segmented options={KINDS.map((k) => [k, t(`fb.${k}`)] as const)} value={kind} onChange={setKind} />
@@ -129,13 +125,14 @@ export default function FeedbackScreen() {
           </View>
         )}
 
-        <Button title={t("fb.send")} variant="primary" icon={<SymbolView name="paperplane.fill" size={15} tintColor="#fff" />} onPress={send} loading={sending} disabled={!text || message.length > MAX} />
+        <Button title={t("fb.send")} variant="primary" icon={<SymbolView name="paperplane.fill" size={15} tintColor="#fff" />} onPress={send} loading={sending} disabled={!canSend} />
 
         <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
           <SymbolView name="info.circle" size={14} tintColor={C.muted} style={{ marginTop: 2 }} />
           <Text style={{ flex: 1, color: C.muted, fontSize: 12, lineHeight: 17 }}>{t("fb.deviceNote", { device })}</Text>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

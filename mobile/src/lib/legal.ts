@@ -4,9 +4,8 @@ import { showError } from "./dialogs";
 import { currentLang } from "./i18n";
 import { C } from "./theme";
 
-/** Chính sách quyền riêng tư / Điều khoản sử dụng: trang web của server (hallovn.de/privacy?lang=vi|de, /terms…) mở trong trình duyệt nhúng.
- * Gọi thẳng đường dẫn mới — đường cũ /deutsch-shadowing/… chỉ còn chuyển hướng 308. */
-export type LegalDoc = "privacy" | "terms";
+/** Chính sách quyền riêng tư / Điều khoản sử dụng / Impressum / Hỗ trợ / Giới thiệu: trang web của server (hallovn.de/<doc>?lang=vi|de) mở trong trình duyệt nhúng. */
+export type LegalDoc = "privacy" | "terms" | "impressum" | "support" | "about";
 
 export const legalUrl = (doc: LegalDoc) => `${API_URL}/${doc}?lang=${currentLang() === "de" ? "de" : "vi"}`;
 

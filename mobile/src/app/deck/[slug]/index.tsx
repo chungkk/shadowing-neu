@@ -1,12 +1,13 @@
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from "react-native";
-import { Text } from "@/components/Text";
+import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeckCover } from "@/components/DeckCover";
-import { ModeBar, StudySession, type Mode } from "@/components/DeckStudy";
+import { MODES, ModeBar, StudySession, type Mode } from "@/components/DeckStudy";
 import { Button, ErrorText, LevelBadge, styles } from "@/components/ui";
 import { api, deckCover, type Deck, type DeckTopic, type DeckWord } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -22,8 +23,9 @@ const GENDER = themed((): Record<string, string> => ({
   die: C.redText,
   das: C.okText,
 }));
-/** Chế độ học chọn lần trước (giữ khi mở chủ đề khác trong lúc dùng app) */
-let lastMode: Mode = "guess";
+const STUDY_MODE_KEY = "deck-study-mode";
+/** Chế độ học chọn lần trước (mặc định Thẻ lật, lưu vào máy) */
+let lastMode: Mode = "flash";
 
 /** Thêm nhiều hơn chừng này từ 1 lần → hỏi lại (sổ đầy từ mới, lịch ôn dồn dập) */
 const CONFIRM_OVER = 100;
@@ -201,18 +203,51 @@ export default function DeckScreen() {
   const [speaking, setSpeaking] = useState<string | null>(null); // khoá mục đang đọc
   const [busy, setBusy] = useState<Set<string> | "all">(new Set()); // mục đang thêm · "all" = đang thêm cả bộ
   const [mode, setModeState] = useState<Mode>(lastMode);
+  const scopeKey = `${slug}|${topic ?? ""}`;
+  const [curScopeKey, setCurScopeKey] = useState(scopeKey);
   const [practice, setPractice] = useState(0); // > 0: đang ôn lại chủ đề đã học xong (mỗi lần bấm tăng 1 → lượt mới)
+  const [q, setQ] = useState("");
+  if (curScopeKey !== scopeKey) {
+    setCurScopeKey(scopeKey);
+    setDeck(null);
+    setSpeaking(null);
+    setPractice(0);
+    setQ("");
+  }
+  const pickedMode = useRef(false);
+  const modeRef = useRef<Mode>(lastMode);
   const PAD = tablet ? 24 : 16;
   const setMode = (m: Mode) => {
+    void stopSpeaking();
+    setSpeaking(null);
+    pickedMode.current = true;
+    modeRef.current = m;
     lastMode = m;
     setModeState(m);
+    SecureStore.setItemAsync(STUDY_MODE_KEY, m).catch(() => {});
   };
 
   const load = useCallback(async () => {
     try {
       setError("");
-      const q = topic ? `?topic=${encodeURIComponent(topic)}` : "";
-      setDeck((await api<{ deck: Deck }>(`/vocab/decks/${encodeURIComponent(slug)}${q}`)).deck);
+      const saved = await SecureStore.getItemAsync(STUDY_MODE_KEY).catch(() => null);
+      if (saved && (MODES as string[]).includes(saved) && !pickedMode.current) {
+        modeRef.current = saved as Mode;
+        lastMode = saved as Mode;
+        setModeState(saved as Mode);
+      }
+      const qs = topic ? `?topic=${encodeURIComponent(topic)}` : "";
+      const got = (await api<{ deck: Deck }>(`/vocab/decks/${encodeURIComponent(slug)}${qs}`)).deck;
+      setDeck(got);
+      if (
+        !pickedMode.current &&
+        modeRef.current !== "list" &&
+        (got.topic || (!got.topics.length && got.words.length > 0)) &&
+        got.words.filter((w) => w.learned).length === 0
+      ) {
+        modeRef.current = "flash";
+        setModeState("flash");
+      }
     } catch (e) {
       setError((e as Error).message);
     }
@@ -223,14 +258,15 @@ export default function DeckScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      return () => {
+        void stopSpeaking();
+        setSpeaking(null);
+      };
     }, [load]),
   );
-  useEffect(
-    () => () => {
-      stopSpeaking();
-    },
-    [],
-  );
+  useEffect(() => {
+    void stopSpeaking();
+  }, [scopeKey]);
 
   /** Đọc từ (danh từ đọc kèm mạo từ); chạm lần nữa để dừng */
   const speak = ({ key, word, gender }: DeckWord) => {
@@ -310,37 +346,74 @@ export default function DeckScreen() {
       );
   };
 
-  const words = deck?.words ?? [];
+  const words = useMemo(() => deck?.words ?? [], [deck]);
   const saved = words.filter((w) => w.saved).length;
   const left = words.length - saved;
   const learned = words.filter((w) => w.learned).length;
   // Bộ chia chủ đề, chưa chọn chủ đề → danh sách chủ đề thay cho danh sách từ
   const topics = deck && !topic && deck.topics.length ? deck.topics : null;
+  const canStudy = Boolean(deck && !topics && words.length > 0);
+  const shownWords = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return words;
+    return words.filter(
+      (w) =>
+        w.word.toLowerCase().includes(s) ||
+        w.plural.toLowerCase().includes(s) ||
+        w.meaning.toLowerCase().includes(s) ||
+        w.example.toLowerCase().includes(s),
+    );
+  }, [words, q]);
+  const studyPool = useMemo(
+    () => (words.length < 4 && deck?.distractors?.length ? [...words, ...deck.distractors] : words),
+    [words, deck],
+  );
+  const nextTopic = useMemo(() => {
+    if (!deck?.topic || !deck.topics.length) return undefined;
+    const idx = deck.topics.findIndex((tp) => tp.id === deck.topic!.id);
+    const nxt = idx >= 0 && idx + 1 < deck.topics.length ? deck.topics[idx + 1] : null;
+    return nxt
+      ? {
+          title: nxt.title,
+          onPress: () => router.replace({ pathname: "/deck/[slug]/[topic]", params: { slug, topic: nxt.id } }),
+        }
+      : undefined;
+  }, [deck, slug]);
 
-  // Trang chủ đề: biểu tượng · tên · tiến độ · chọn chế độ học
-  const topicHeader = deck?.topic && (
+  // Trang chủ đề hoặc bộ từ không chia chủ đề: biểu tượng · tên · tiến độ · chọn chế độ học
+  const studyHeader = canStudy && deck && (
     <View style={{ gap: 14 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <View
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            backgroundColor: C.card2,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text style={{ fontSize: 30 }}>{deck.topic.icon}</Text>
+      {deck.topic ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              backgroundColor: C.card2,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 30 }}>{deck.topic.icon}</Text>
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.h1}>{deck.topic.title}</Text>
+            <Text style={{ color: C.muted, fontSize: 14, fontWeight: "600" }}>
+              {deck.title} · {t("decks.words", { n: words.length })}
+              {!!user && learned > 0 && ` · ${t("decks.progress", { s: learned, n: words.length })}`}
+            </Text>
+          </View>
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.h1}>{deck.topic.title}</Text>
+      ) : (
+        <View style={{ gap: 4 }}>
+          <Text style={styles.h1}>{deck.title}</Text>
           <Text style={{ color: C.muted, fontSize: 14, fontWeight: "600" }}>
-            {deck.title} · {t("decks.words", { n: words.length })}
+            {t("decks.words", { n: words.length })}
             {!!user && learned > 0 && ` · ${t("decks.progress", { s: learned, n: words.length })}`}
           </Text>
         </View>
-      </View>
+      )}
       <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card2, overflow: "hidden" }}>
         <View style={{ width: `${(learned * 100) / Math.max(1, words.length)}%`, height: "100%", backgroundColor: C.ok }} />
       </View>
@@ -349,11 +422,11 @@ export default function DeckScreen() {
     </View>
   );
 
-  // Trang chủ đề, chế độ học (không phải "Danh sách") → thẻ học thay cho danh sách từ
-  if (deck?.topic && mode !== "list")
+  // Chế độ học (không phải "Danh sách") → thẻ học thay cho danh sách từ
+  if (canStudy && mode !== "list")
     return (
       <SafeAreaView style={styles.screen} edges={[]}>
-        <Stack.Screen options={{ title: deck.topic.title }} />
+        <Stack.Screen options={{ title: deck?.topic?.title ?? deck?.title ?? "" }} />
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
@@ -361,16 +434,18 @@ export default function DeckScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          {topicHeader}
+          {studyHeader}
           <StudySession
-            key={`${mode}|${practice}`}
+            key={`${deck?.topic?.id ?? slug}|${mode}|${practice}|${user?.id ?? 0}`}
             words={words}
-            pool={words}
+            pool={studyPool}
             mode={mode}
-            icon={deck.topic.icon}
+            icon={deck?.topic?.icon ?? "📚"}
             practice={practice > 0}
+            loggedIn={!!user}
             onLearned={learn}
             onPractice={() => setPractice((p) => p + 1)}
+            nextTopic={nextTopic}
           />
         </ScrollView>
       </SafeAreaView>
@@ -381,7 +456,7 @@ export default function DeckScreen() {
       <Stack.Screen options={{ title: deck?.topic?.title ?? deck?.title ?? "" }} />
       <FlatList<DeckWord | DeckTopic>
         contentInsetAdjustmentBehavior="automatic"
-        data={topics ?? words}
+        data={topics ?? shownWords}
         keyExtractor={(x, i) => ("id" in x ? x.id : `${i}`)} // từ đồng âm ("die Bank" ngân hàng / ghế băng) → không dùng từ làm khoá
         style={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
         contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 60 }}
@@ -389,8 +464,9 @@ export default function DeckScreen() {
           <View style={{ gap: 14, paddingTop: 8, paddingBottom: 18 }}>
             <ErrorText>{error}</ErrorText>
             {!deck && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 40 }} />}
-            {topicHeader}
-            {deck && !deck.topic && (
+            {!deck && !!error && <Button title={t("retry")} onPress={load} />}
+            {studyHeader}
+            {deck && !canStudy && !deck.topic && (
               <>
                 <DeckCover deck={deck} big />
                 <View style={{ gap: 8 }}>
@@ -433,6 +509,22 @@ export default function DeckScreen() {
                     onPress={() => router.push("/review")}
                   />
                 )}
+                {words.length > 0 && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 40, paddingHorizontal: 12, borderRadius: 10, backgroundColor: C.card2 }}>
+                    <SymbolView name="magnifyingglass" size={16} tintColor={C.muted} />
+                    <TextInput
+                      value={q}
+                      onChangeText={setQ}
+                      placeholder={t("vocab.search")}
+                      placeholderTextColor={C.muted}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      clearButtonMode="while-editing"
+                      returnKeyType="search"
+                      style={{ flex: 1, color: C.text, fontSize: 16, height: "100%" }}
+                    />
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -454,7 +546,7 @@ export default function DeckScreen() {
             <WordRow
               w={item}
               first={index === 0}
-              last={index === words.length - 1}
+              last={index === shownWords.length - 1}
               speaking={speaking === item.key}
               busy={busy === "all" ? !item.saved : busy.has(item.key)}
               canAdd={!!user}
@@ -462,6 +554,11 @@ export default function DeckScreen() {
               onAdd={() => addOne(item.key)}
             />
           )
+        }
+        ListEmptyComponent={
+          deck && !topics && words.length > 0 && q.trim() ? (
+            <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", paddingVertical: 28 }}>{t("vocab.noMatch")}</Text>
+          ) : undefined
         }
       />
     </SafeAreaView>

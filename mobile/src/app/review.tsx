@@ -1,10 +1,10 @@
 import { useAudioPlayer } from "expo-audio";
 import { Mascot, MascotMessage } from "@/components/Mascot";
-import { Stack, router } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, View, type ViewStyle } from "react-native";
 import { DISPLAY, Text, TextInput } from "@/components/Text";
 import { haptic } from "@/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -235,10 +235,12 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const { t } = useI18n();
   const okSound = useAudioPlayer(require("@/assets/sounds/correct.wav"));
   const badSound = useAudioPlayer(require("@/assets/sounds/wrong.wav"));
-  const [sound, setSound] = useState(true);
+  const [sound, setSound] = useState(() => SecureStore.getItem(SOUND_KEY) !== "0");
   const [streak, setStreak] = useState(0); // chuỗi ngày ôn (server, cùng số với màn Thống kê) — lấy khi xong buổi
   const sayTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // đọc từ sau tiếng đúng / sai
   const pending = useRef<Promise<unknown>[]>([]); // các lần chấm đang gửi → đợi xong rồi mới hỏi chuỗi ngày
+  const answeredStepRef = useRef<number | null>(null);
+  const advancingPosRef = useRef<number | null>(null);
   const [queue, setQueue] = useState(() => {
     const q = buildQueue(items);
     return q.length ? [resolveStep(q[0], pool, true), ...q.slice(1)] : q;
@@ -258,6 +260,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const [graded, setGraded] = useState<Graded[]>([]);
   const [practice, setPractice] = useState(false); // luyện thêm từ sai: không chấm lại vào lịch ôn
   const [changed, setChanged] = useState(false); // đã chấm vào lịch ôn → quay lại thì tải lại sổ từ
+  const [unsaved, setUnsaved] = useState(0);
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
   const [xp, setXp] = useState(0);
@@ -298,9 +301,6 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   const headSize = sentence ? 22 : 32;
 
   useEffect(() => {
-    SecureStore.getItemAsync(SOUND_KEY)
-      .then((s) => s === "0" && setSound(false))
-      .catch(() => {});
     return () => {
       if (sayTimer.current) clearTimeout(sayTimer.current); // đóng màn ngay sau khi trả lời → không đọc từ nữa
       void stopSpeaking();
@@ -325,6 +325,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   };
 
   const answer = (ok: boolean, note?: string) => {
+    if (answeredStepRef.current === pos) return;
+    answeredStepRef.current = pos;
     const s = step!;
     const nextCombo = ok ? combo + 1 : 0;
     if (ok) haptic.success();
@@ -346,12 +348,15 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
       if (!practice) {
         setChanged(true);
         // Ghi kèm dạng bài: thẻ lật "Tôi biết" là tự khai báo → không tính làm bằng chứng thành thạo
-        const req = api<{ stage: number; dueAt: number; mastery?: Mastery }>(`/vocab/${v.id}/review`, {
-          method: "POST",
-          body: { correct: ok, mode: "duolingo", exercise: s.kind },
-        })
+        const submitReview = () =>
+          api<{ stage: number; dueAt: number; mastery?: Mastery }>(`/vocab/${v.id}/review`, {
+            method: "POST",
+            body: { correct: ok, mode: "duolingo", exercise: s.kind },
+          });
+        const req = submitReview()
+          .catch(() => new Promise<Awaited<ReturnType<typeof submitReview>>>((res, rej) => setTimeout(() => submitReview().then(res, rej), 2000)))
           .then((res) => setGraded((g) => g.map((x) => (x === entry ? { ...x, stage: res.stage, mastery: res.mastery } : x))))
-          .catch(() => {});
+          .catch(() => setUnsaved((u) => u + 1));
         pending.current.push(req);
       }
     }
@@ -397,6 +402,8 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   };
 
   const next = () => {
+    if (advancingPosRef.current === pos) return;
+    advancingPosRef.current = pos;
     const n = pos + 1;
     if (queue[n]) setQueue((q) => q.map((s, i) => (i === n ? resolveStep(s, pool, true) : s)));
     else {
@@ -414,11 +421,14 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
   };
 
   const restart = (list: Word[]) => {
+    answeredStepRef.current = null;
+    advancingPosRef.current = null;
     const q = buildQueue(list);
     setQueue(q.length ? [resolveStep(q[0], pool, true), ...q.slice(1)] : q);
     setPos(0);
     reset();
     setGraded([]);
+    setUnsaved(0);
     setPractice(true);
     setCombo(0);
     setBestCombo(0);
@@ -565,7 +575,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                 built.includes(i) ? (
                   <View key={i} style={{ minWidth: 44, height: 52, borderRadius: 16, backgroundColor: C.card2 }} />
                 ) : (
-                  <Tile key={i} disabled={!!feedback} onPress={() => setBuilt((b) => [...b, i])} style={{ minWidth: 44, height: 52, paddingHorizontal: 10 }}>
+                  <Tile key={i} disabled={!!feedback} onPress={() => setBuilt((b) => (b.includes(i) ? b : [...b, i]))} style={{ minWidth: 44, height: 52, paddingHorizontal: 10 }}>
                     <Text style={tileText("idle", 24)}>{c}</Text>
                   </Tile>
                 ),
@@ -698,10 +708,15 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
                     <Text style={[tileText("idle", 18), { opacity: 0 }]}>{w}</Text>
                   </View>
                 ) : (
-                  <Tile key={i} disabled={!!feedback} onPress={() => setBuilt((b) => [...b, i])} style={cell}>
+                  <Tile key={i} disabled={!!feedback} onPress={() => setBuilt((b) => (b.includes(i) ? b : [...b, i]))} style={cell}>
                     <Text style={tileText("idle", 18)}>{w}</Text>
                   </Tile>
                 ),
+              )}
+              {!feedback && built.length > 0 && (
+                <Pressable onPress={() => setBuilt((b) => b.slice(0, -1))} hitSlop={8} style={{ width: 44, height: 46, alignItems: "center", justifyContent: "center" }}>
+                  <SymbolView name="delete.left" size={22} tintColor={C.muted} />
+                </Pressable>
               )}
             </View>
           </View>
@@ -802,7 +817,7 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
     <LookupCtx value={canLook ? lookUp : null}>
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView style={{ flex: 1, width: "100%", maxWidth: FORM_MAX, alignSelf: "center" }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1, width: "100%", maxWidth: FORM_MAX, alignSelf: "center" }} behavior="padding">
         {/* Thanh trên: thoát · tiến độ · chuỗi đúng · âm thanh */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
           <Pressable onPress={() => onClose(changed || look.changed)} hitSlop={12}>
@@ -843,6 +858,11 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
               ))}
             </View>
             <Text style={[styles.muted, { textAlign: "center" }]}>{t("review.summary", { ok: firstTry, n: graded.length, best: bestCombo })}</Text>
+            {unsaved > 0 && (
+              <View style={{ alignSelf: "stretch", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: alpha(C.red, 0.35), backgroundColor: C.redSoft }}>
+                <Text style={{ color: C.redText, fontSize: 13, fontWeight: "700", textAlign: "center" }}>{t("review.unsaved", { n: unsaved })}</Text>
+              </View>
+            )}
             {wrong.length > 0 && (
               <View style={{ alignSelf: "stretch", borderWidth: 1, borderColor: C.border, backgroundColor: C.card, borderRadius: 16, padding: 14, gap: 10 }}>
                 <Text style={{ color: C.redText, fontWeight: "800" }}>{t("review.watch")}</Text>
@@ -896,14 +916,29 @@ function Session({ items, pool, onClose }: { items: Word[]; pool: Word[]; onClos
  * dòng phụ → chọn từ lưu theo từng ngày. Câu ⭐ chỉ là đánh dấu trong bài học, không ôn ở đây.
  */
 export default function ReviewScreen() {
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const { user } = useAuth();
   const { lang, t } = useI18n();
   const [data, setData] = useState<{ items: Word[]; at: number } | null>(null);
   const [error, setError] = useState("");
   const [picked, setPicked] = useState<Word[] | null>(null);
   const [wordsOpen, setWordsOpen] = useState(false); // thẻ Từ vựng: đã bấm → hiện lựa chọn Tất cả / theo ngày
+  const [refreshing, setRefreshing] = useState(false);
+  const autoAllStarted = useRef(false);
   const { tablet } = useLayout();
   const items = data?.items ?? null;
+
+  const [prevUid, setPrevUid] = useState(user?.id ?? null);
+  if (prevUid !== (user?.id ?? null)) {
+    setPrevUid(user?.id ?? null);
+    setData(null);
+    setError("");
+    setPicked(null);
+    setWordsOpen(false);
+  }
+  useEffect(() => {
+    autoAllStarted.current = false;
+  }, [user?.id]);
 
   const load = useCallback(async () => {
     try {
@@ -920,6 +955,13 @@ export default function ReviewScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu
     if (user) load();
   }, [user, load]);
+
+  useEffect(() => {
+    if (mode === "all" && items?.length && !autoAllStarted.current) {
+      autoAllStarted.current = true;
+      setPicked(items);
+    }
+  }, [mode, items]);
 
   const plan = useMemo(() => {
     const all = data?.items ?? [];
@@ -968,11 +1010,34 @@ export default function ReviewScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center", padding: tablet ? 24 : 16, gap: 12, paddingBottom: 60 }}
+        refreshControl={
+          user ? (
+            <RefreshControl
+              refreshing={refreshing}
+              tintColor={C.accentText}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await load();
+                setRefreshing(false);
+              }}
+            />
+          ) : undefined
+        }
       >
         <ErrorText>{error}</ErrorText>
-        {!items && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 24 }} />}
-        {items && !items.length && <MascotMessage text={t("vocab.empty")} marginTop={32} />}
-        {!!items?.length && (
+        {!user ? (
+          <View style={{ backgroundColor: C.card, borderRadius: 16, ...STICKER, padding: 18, gap: 12 }}>
+            <Text style={styles.muted}>{t("vocab.loginHint")}</Text>
+            <Button title={t("login")} variant="primary" onPress={() => router.push("/settings")} />
+          </View>
+        ) : (
+          <>
+            {!items && !error && <ActivityIndicator color={C.accentText} style={{ marginTop: 24 }} />}
+            {!items && !!error && <Button title={t("retry")} onPress={load} />}
+            {items && !items.length && <MascotMessage text={t("vocab.empty")} marginTop={32} />}
+          </>
+        )}
+        {!!user && !!items?.length && (
           <>
             {/* Từ vựng: nút chính → ôn ngay các mục cần ôn; dòng phụ → chọn từ lưu theo từng ngày */}
             {w.total > 0 && (

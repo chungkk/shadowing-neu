@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Image } from "expo-image";
-import { useFocusEffect } from "expo-router";
-import { AccessibilityInfo, Animated, Easing, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { AccessibilityInfo, Animated, Easing, Pressable, View } from "react-native";
 import { FONT, Text } from "./Text";
 import { api, type Points } from "@/lib/api";
 import { C, alpha, themed } from "@/lib/theme";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 import { setPointsTotal, usePoints } from "@/lib/points";
 
 /** Điểm chính tả (bản di động của PointsBadge trên web): gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 */
@@ -38,6 +39,7 @@ const POP_MS = 1100;
  * Giảm chuyển động → chỉ "+`gain`" hiện rồi mờ.
  */
 export function PointsPill({ total, earned, gain = 0 }: { total: number; earned: number; gain?: number }) {
+  const { lang } = useI18n();
   const reduce = useReduceMotion();
   const [bump] = useState(() => new Animated.Value(0));
   const [pop] = useState(() => new Animated.Value(0));
@@ -56,6 +58,7 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
   const rotate = reduce ? "0deg" : bump.interpolate({ inputRange: [0, 0.35, 1], outputRange: ["0deg", "-12deg", "0deg"] });
   return (
     <View
+      accessible
       accessibilityLabel={`${total}`}
       style={{
         flexDirection: "row",
@@ -72,6 +75,8 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
     >
       <Animated.Text
         pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no"
         style={{
           position: "absolute",
           right: "100%",
@@ -119,7 +124,9 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
           </View>
         )}
       </View>
-      <Text style={{ color: C.gem, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>{total.toLocaleString("vi-VN")}</Text>
+      <Text style={{ color: C.gem, fontWeight: "800", fontSize: 14, fontVariant: ["tabular-nums"] }}>
+        {total.toLocaleString(lang === "de" ? "de-DE" : "vi-VN")}
+      </Text>
     </View>
   );
 }
@@ -127,13 +134,28 @@ export function PointsPill({ total, earned, gain = 0 }: { total: number; earned:
 /** Huy hiệu tổng điểm trên đầu các tab (như thanh trên cùng của web): mở tab → lấy số mới nhất; khách không hiện */
 export function PointsBadge() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const id = user?.id;
   const total = usePoints(id);
   useFocusEffect(
     useCallback(() => {
       if (id === undefined) return;
-      api<Points>(`/points?tz=${new Date().getTimezoneOffset()}`).then((r) => setPointsTotal(id, r.total), () => {});
+      let alive = true;
+      api<Points>(`/points?tz=${new Date().getTimezoneOffset()}`).then(
+        (r) => {
+          if (alive) setPointsTotal(id, r.total);
+        },
+        () => {},
+      );
+      return () => {
+        alive = false;
+      };
     }, [id]),
   );
-  return total === null ? null : <PointsPill total={total} earned={0} />;
+  if (total === null) return null;
+  return (
+    <Pressable onPress={() => router.push("/leaderboard")} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("board.title")}>
+      <PointsPill total={total} earned={0} />
+    </Pressable>
+  );
 }

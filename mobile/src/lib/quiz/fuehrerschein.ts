@@ -3,6 +3,7 @@ import { NUM_HINTS } from "@shared/laixe/units";
 import type { DrivingQ, ExamConfig } from "@shared/laixe/rules";
 import { CLASS_IDS as LIGHT_CLASS_IDS } from "./ids";
 import { hallovnMedia } from "./media";
+import { l } from "./strings";
 import { shuffle } from "./util";
 
 // Bộ câu hỏi lý thuyết lái xe cho mọi hạng — cùng file dữ liệu với tab Lái xe của web (src/content/fuehrerschein),
@@ -73,13 +74,14 @@ export function learnTree(cls: ClassId): PartNode[] {
 
 /** Phạm vi học: "all" / "grund" / "zusatz" / chủ đề "1.1" / chương "1.1.01" (chỉ câu thuộc hạng đang học) */
 export function scopeQuestions(scope: string, cls: ClassId): { title: string; subtitle: string; ids: string[] } | null {
-  if (scope === "all") return { title: `Klasse ${cls}`, subtitle: classInfo(cls).vi, ids: classQuestionIds(cls) };
+  const info = classInfo(cls);
+  if (scope === "all") return { title: `${l("Hạng", "Klasse")} ${cls}`, subtitle: l(info.vi, info.description), ids: classQuestionIds(cls) };
   for (const p of learnTree(cls)) {
     if (p.key === scope) return { title: p.title, subtitle: "", ids: p.ids };
     for (const t of p.themes) {
-      if (t.id === scope) return { title: t.vi || t.de, subtitle: `Thema ${t.id} · ${t.de}`, ids: t.ids };
+      if (t.id === scope) return { title: l(t.vi || t.de, t.de), subtitle: `Thema ${t.id} · ${t.de}`, ids: t.ids };
       const c = t.chapters.find((x) => x.id === scope);
-      if (c) return { title: c.vi || c.de, subtitle: `Kapitel ${c.id} · ${c.de}`, ids: c.ids };
+      if (c) return { title: l(c.vi || c.de, c.de), subtitle: `Kapitel ${c.id} · ${c.de}`, ids: c.ids };
     }
   }
   return null;

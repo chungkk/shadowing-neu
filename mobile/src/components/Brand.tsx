@@ -3,13 +3,20 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C } from "@/lib/theme";
 import { PointsBadge } from "./Points";
+import { ReminderBell } from "./ReminderBell";
 import { DISPLAY, Text } from "./Text";
 import { ThemeToggle } from "./ThemeRoot";
 
 /** Chữ "HalloVN" như logo web: "Hallo" mực + "VN" xanh lam thương hiệu */
 export function Wordmark({ size = 21 }: { size?: number }) {
   return (
-    <Text numberOfLines={1} style={{ fontFamily: DISPLAY, fontWeight: "800", fontSize: size, letterSpacing: -0.5, color: C.text }} accessibilityRole="header">
+    <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}
+      style={{ fontFamily: DISPLAY, fontWeight: "800", fontSize: size, letterSpacing: -0.5, color: C.text }}
+      accessibilityRole="header"
+    >
       Hallo<Text style={{ fontFamily: DISPLAY, fontWeight: "800", color: C.accentText }}>VN</Text>
     </Text>
   );
@@ -26,6 +33,7 @@ export function BrandBar() {
           <Wordmark />
         </View>
         <PointsBadge />
+        <ReminderBell />
         <ThemeToggle />
       </View>
     </View>

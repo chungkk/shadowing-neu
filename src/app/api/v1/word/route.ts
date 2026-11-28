@@ -21,7 +21,8 @@ export async function POST(req: Request) {
   const context = str(b.context).trim();
   const lang: WordLang = b.lang === "en" || b.lang === "de" ? b.lang : "vi";
   const sentence = b.detail !== true && word.includes(" ") && !context;
-  if (!word || word.length > (sentence ? 500 : 60)) return fail("Thiếu từ hoặc từ quá dài");
+  const maxLen = b.detail === true ? 80 : word.includes(" ") ? 500 : 80;
+  if (!word || word.length > maxLen) return fail("Thiếu từ hoặc từ quá dài");
   if (context.length > 500) return fail("Câu quá dài");
 
   try {

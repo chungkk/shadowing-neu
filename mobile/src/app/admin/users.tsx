@@ -1,15 +1,16 @@
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, TextInput } from "@/components/Text";
-import { ErrorText, Segmented, styles } from "@/components/ui";
+import { ActionSheetModal, Button, ErrorText, Input, Segmented, styles } from "@/components/ui";
 import { api, type User } from "@/lib/api";
 import { confirmDestructive, notice, showError } from "@/lib/dialogs";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { CONTENT_MAX } from "@/lib/layout";
-import { C, alpha } from "@/lib/theme";
+import { C, STICKER, alpha } from "@/lib/theme";
 
 type AdminUser = User & { locked: boolean }; // locked: chính mình / admin cố định → không sửa được
 
@@ -25,11 +26,26 @@ const initials = (name: string) =>
 export default function UsersScreen() {
   const { user: me } = useAuth();
   const { t, lang } = useI18n();
+  const insets = useSafeAreaInsets();
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "admin">("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [actionUser, setActionUser] = useState<AdminUser | null>(null);
+  const [pwUser, setPwUser] = useState<AdminUser | null>(null);
+  const [pwVal, setPwVal] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+
+  const [prevUid, setPrevUid] = useState(me?.id ?? null);
+  if (prevUid !== (me?.id ?? null)) {
+    setPrevUid(me?.id ?? null);
+    setUsers(null);
+    setError("");
+    setActionUser(null);
+    setPwUser(null);
+    setPwVal("");
+  }
 
   const load = useCallback(async () => {
     try {
@@ -40,19 +56,34 @@ export default function UsersScreen() {
     }
   }, []);
 
+  const meId = me?.id;
+  const isAdmin = me?.role === "admin";
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu
-    load();
-  }, [load]);
+    if (meId !== undefined && !isAdmin) {
+      if (router.canGoBack()) router.back();
+      else router.replace("/settings");
+      return;
+    }
+    if (isAdmin) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu
+      load();
+    }
+  }, [meId, isAdmin, load]);
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
     return (users ?? []).filter(
-      (u) => (filter === "all" || u.role === "admin") && (!s || u.name.toLowerCase().includes(s) || u.email.includes(s)),
+      (u) => (filter === "all" || u.role === "admin") && (!s || u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)),
     );
   }, [users, q, filter]);
 
-  if (me?.role !== "admin") return null;
+  if (!isAdmin) {
+    return (
+      <View style={styles.screen}>
+        <Stack.Screen options={{ title: t("admin.users") }} />
+      </View>
+    );
+  }
 
   const setRole = (u: AdminUser, role: User["role"]) =>
     api<{ user: AdminUser }>(`/admin/users/${u.id}`, { method: "PATCH", body: { role } }).then(
@@ -61,25 +92,26 @@ export default function UsersScreen() {
     );
 
   /** Đặt mật khẩu mới (chữ hiện rõ để admin báo lại cho người dùng); server kiểm tra độ dài */
-  const setPassword = (u: AdminUser) =>
-    Alert.prompt(
-      t("admin.setPasswordTitle", { email: u.email }),
-      t("admin.setPasswordBody"),
-      [
-        { text: t("cancel"), style: "cancel" },
-        {
-          text: t("admin.setPasswordSave"),
-          onPress: (password?: string) =>
-            api(`/admin/users/${u.id}`, { method: "PATCH", body: { password: password ?? "" } }).then(
-              () => notice(t("admin.passwordChanged"), t("admin.passwordChangedBody", { email: u.email })),
-              (e: Error) => showError(e),
-            ),
-        },
-      ],
-      "plain-text",
-      "",
-      "default",
-    );
+  const setPassword = (u: AdminUser) => {
+    setPwVal("");
+    setPwUser(u);
+  };
+
+  const submitPassword = async () => {
+    if (!pwUser || pwBusy) return;
+    const target = pwUser;
+    setPwBusy(true);
+    try {
+      await api(`/admin/users/${target.id}`, { method: "PATCH", body: { password: pwVal } });
+      setPwUser(null);
+      setPwVal("");
+      notice(t("admin.passwordChanged"), t("admin.passwordChangedBody", { email: target.email }));
+    } catch (e) {
+      showError(e);
+    } finally {
+      setPwBusy(false);
+    }
+  };
 
   const remove = (u: AdminUser) =>
     confirmDestructive(t("admin.deleteUserConfirm", { email: u.email }), t("admin.deleteUserSub"), t("delete"), () =>
@@ -91,6 +123,10 @@ export default function UsersScreen() {
 
   const menu = (u: AdminUser) => {
     if (u.locked) return notice(t("admin.lockedTitle"), u.id === me.id ? t("admin.isYou") : t("admin.isMainAdmin"));
+    if (Platform.OS !== "ios") {
+      setActionUser(u);
+      return;
+    }
     const makeAdmin = u.role !== "admin";
     ActionSheetIOS.showActionSheetWithOptions(
       {
@@ -205,6 +241,72 @@ export default function UsersScreen() {
         )}
         ListEmptyComponent={users ? <Text style={[styles.muted, { textAlign: "center", marginTop: 24 }]}>{t("admin.noUsers")}</Text> : error ? undefined : <ActivityIndicator color={C.accentText} />}
       />
+      {Platform.OS !== "ios" && (
+        <ActionSheetModal
+          visible={!!actionUser}
+          title={actionUser ? `${actionUser.name} · ${actionUser.email}` : undefined}
+          onClose={() => setActionUser(null)}
+          options={
+            actionUser
+              ? [
+                  {
+                    label: actionUser.role !== "admin" ? t("admin.makeAdmin") : t("admin.removeAdmin"),
+                    onPress: () => setRole(actionUser, actionUser.role !== "admin" ? "admin" : "user"),
+                  },
+                  {
+                    label: t("admin.setPassword"),
+                    onPress: () => setPassword(actionUser),
+                  },
+                  {
+                    label: t("admin.deleteUser"),
+                    destructive: true,
+                    onPress: () => remove(actionUser),
+                  },
+                ]
+              : []
+          }
+        />
+      )}
+      <Modal
+        visible={!!pwUser}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {
+          if (!pwBusy) setPwUser(null);
+        }}
+        supportedOrientations={["portrait", "portrait-upside-down", "landscape-left", "landscape-right"]}
+      >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, justifyContent: "center", padding: 20, paddingBottom: Math.max(insets.bottom, 20) }}>
+          <Pressable
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+            onPress={() => !pwBusy && setPwUser(null)}
+            accessibilityRole="button"
+            accessibilityLabel={t("close")}
+          />
+          <View style={{ width: "100%", maxWidth: 420, alignSelf: "center", backgroundColor: C.card, borderRadius: 20, ...STICKER, padding: 18, gap: 12 }}>
+            <Text style={{ color: C.text, fontSize: 17, fontWeight: "800" }}>
+              {pwUser ? t("admin.setPasswordTitle", { email: pwUser.email }) : ""}
+            </Text>
+            <Text style={styles.muted}>{t("admin.setPasswordBody")}</Text>
+            <Input
+              value={pwVal}
+              onChangeText={setPwVal}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              returnKeyType="done"
+              onSubmitEditing={submitPassword}
+              editable={!pwBusy}
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Button title={t("cancel")} onPress={() => setPwUser(null)} disabled={pwBusy} style={{ flex: 1 }} />
+              <Button title={t("admin.setPasswordSave")} variant="primary" onPress={submitPassword} loading={pwBusy} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

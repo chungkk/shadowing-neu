@@ -4,6 +4,7 @@ import { extractVideoId, getSavedTranscript, getYouTubeTranscript, MAX_VIDEO_SEC
 import { apiUser, body, fail } from "@/lib/api";
 import { clientIp } from "@/lib/rate-limit";
 import { lockedLessonOfVideo } from "@/lib/access";
+import { ownLessonOfVideo } from "@/lib/db";
 import type { User } from "@/lib/auth";
 
 /** Video của bài đang khoá → 403 { error, locked: true, lessonId } (app chuyển sang màn mở khoá bài đó) */
@@ -24,17 +25,21 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/youtube/[
   const locked = lockedVideo(user, videoId);
   if (locked) return locked;
 
+  const own = user ? ownLessonOfVideo(user.id, videoId) : null;
+  const ownFields = own ? { ownLessonId: own.id, ownLessonSlug: own.slug } : { ownLessonId: null, ownLessonSlug: null };
+
   if (req.nextUrl.searchParams.get("saved")) {
     const saved = await getSavedTranscript(videoId);
-    return saved ? Response.json(saved) : fail("Chưa có phụ đề lưu sẵn", 404);
+    return saved ? Response.json({ ...saved, ...ownFields }) : fail("Chưa có phụ đề lưu sẵn", 404);
   }
 
   try {
-    return Response.json(await getYouTubeTranscript(videoId, undefined, {
-        whisper: !!user,
-        quotaKey: user ? `u:${user.id}` : `ip:${await clientIp()}`,
-        maxSeconds: user?.role === "admin" ? undefined : MAX_VIDEO_SECONDS,
-      }));
+    const tr = await getYouTubeTranscript(videoId, undefined, {
+      whisper: !!user,
+      quotaKey: user ? `u:${user.id}` : `ip:${await clientIp()}`,
+      maxSeconds: user?.role === "admin" ? undefined : MAX_VIDEO_SECONDS,
+    });
+    return Response.json({ ...tr, ...ownFields });
   } catch (e) {
     return fail((e as Error).message, 502);
   }

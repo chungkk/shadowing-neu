@@ -19,6 +19,13 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/dec
   const topic = topicId ? deck.topics.find((t) => t.id === topicId) : undefined;
   if (topicId && !topic) return fail("Không tìm thấy chủ đề", 404);
   const words = topic ? deck.words.filter((w) => w.topic === topic.id) : deck.topics.length ? [] : deck.words;
+  const distractors =
+    topic && words.length < 4
+      ? deck.words
+          .filter((w) => w.topic !== topic.id)
+          .slice(0, 12)
+          .map((w) => markWord(deck, w, marks))
+      : undefined;
   return Response.json({
     deck: {
       ...deck,
@@ -27,6 +34,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/vocab/dec
       wordCount: deck.words.length,
       ...deckCounts(deck, marks),
       words: words.map((w) => markWord(deck, w, marks)),
+      ...(distractors ? { distractors } : {}),
     },
   });
 }

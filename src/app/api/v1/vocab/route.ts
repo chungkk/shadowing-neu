@@ -1,5 +1,5 @@
 import { addStar, addWord } from "@/lib/account";
-import { deleteVocabs, listStarred, listVocab, type StarredSentence } from "@/lib/db";
+import { deleteVocabs, listStarred, listVocab, updateVocabMeaning, type StarredSentence } from "@/lib/db";
 import { apiUser, body, fail, str } from "@/lib/api";
 
 /**
@@ -39,7 +39,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await apiUser();
   if (user instanceof Response) return user;
-  const b = await body<{ word: string; context: string; sourceUrl: string; sourceTitle: string }>(req);
+  const b = await body<{ word: string; context: string; sourceUrl: string; sourceTitle: string; meaning?: string }>(req);
   // App bản cũ đánh dấu ⭐: lưu nguyên câu từ bài học, không câu ví dụ
   if (str(b.word).trim().includes(" ") && !str(b.context).trim() && str(b.sourceUrl)) {
     const star = addStar(user, { text: str(b.word), sourceUrl: str(b.sourceUrl), sourceTitle: str(b.sourceTitle) });
@@ -53,6 +53,8 @@ export async function POST(req: Request) {
     sourceTitle: str(b.sourceTitle),
   });
   if (typeof item === "string") return fail(item);
+  const meaning = str(b.meaning).trim().slice(0, 500);
+  if (meaning && !item.meaning && updateVocabMeaning(user.id, item.id, meaning)) item.meaning = meaning;
   return Response.json({ item, vocab: [item] }, { status: 201 });
 }
 

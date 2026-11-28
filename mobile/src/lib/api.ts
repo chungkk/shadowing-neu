@@ -21,15 +21,22 @@ export type User = {
 
 export type LessonSummary = {
   id: number;
+  slug?: string;
   title: string;
   videoId: string;
   description: string;
   level: string;
   published: boolean;
   dictation: boolean; // admin bật luyện Chính tả cho bài (tắt = chỉ Shadowing)
+  ownerId?: number | null;
+  channel?: string;
+  channelUrl?: string | null;
+  channelAvatar?: string | null;
   createdAt: string;
   segmentCount: number; // số dòng phụ đề thô
   sentenceCount?: number; // số câu sau khi gộp, như màn học đếm (server cũ không gửi → dùng segmentCount)
+  wordCount?: number;
+  duration?: number;
   // Khoá bài học (admin bật trên web): open = không khoá · free = bài miễn phí · unlocked = đã mở · locked (server cũ không gửi)
   access?: "open" | "free" | "unlocked" | "locked";
 };
@@ -51,10 +58,12 @@ export type Progress = {
   dictPick?: number[]; // Chính tả: các câu của lượt đang làm (server cũ không gửi)
   dictRoundPts?: Record<number, number>; // điểm được của từng câu trong lượt đang làm (server cũ không gửi)
   dictRoundSpent?: Record<number, number>; // số từ đã xem của từng câu trong lượt đang làm (server cũ không gửi)
+  dictDrafts?: Record<string, { input: string; revealed: number[] }>;
+  completed?: number;
   updatedAt: number;
 };
 /** Mục trong danh sách tiến độ (GET /progress không có source) */
-export type ProgressSummary = Omit<Progress, "dictDone" | "seen" | "dictPick"> & { dictCount: number; seenCount?: number };
+export type ProgressSummary = Omit<Progress, "dictDone" | "seen" | "dictPick" | "dictDrafts"> & { dictCount: number; seenCount?: number };
 /** Thống kê học tập (GET /stats?tz=…) — ok = số lần nhớ được trên n lần ôn */
 export type Rate = { n: number; ok: number };
 export type Stats = {
@@ -67,6 +76,8 @@ export type Stats = {
   mastery: Record<Mastery, number>;
   forgotten: { id: number; word: string; meaning: string; lapses: number }[];
   points?: Points; // server cũ không gửi
+  lessons?: number;
+  sentences?: number;
 };
 /** Điểm chính tả (GET/POST /points): gõ đúng 1 từ → +1 ngay, mỗi từ của câu chỉ tính 1 lần; mỗi từ bấm xem → −2 · today theo giờ máy (có thể âm) */
 export type Points = { total: number; today: number };
@@ -76,17 +87,27 @@ export type LeaderboardEntry = { rank: number; id: number; name: string; total: 
 export type Leaderboard = { top: LeaderboardEntry[]; me: { rank: number | null; total: number }; players: number };
 
 export type Track = { languageCode: string; name: string; auto: boolean };
-export type Transcript = { videoId: string; title: string; track: Track; tracks: Track[]; segments: Segment[] };
+export type Transcript = {
+  videoId: string;
+  title: string;
+  track: Track;
+  tracks: Track[];
+  segments: Segment[];
+  ownLessonId?: number | null;
+  ownLessonSlug?: string | null;
+};
 
 /** Nghĩa 1 từ theo ngữ cảnh câu, kiểu nói hằng ngày (POST /word) */
 export type WordInfo = { word: string; meaning: string };
 /** Chi tiết cho tab Ví dụ / Giải thích (POST /word { detail: true }); từ cần học trong ví dụ được bọc **…** */
 export type WordDetail = {
   lemma: string;
+  ipa?: string;
   pos: string;
   grammar: string;
   explanation: string;
   examples: { de: string; tr: string }[];
+  synonyms?: { word: string; note?: string }[];
   // Các nghĩa phổ biến (nghĩa trong câu đứng đầu, current = true) — server cũ không gửi
   senses?: { meaning: string; use: string; de: string; tr: string; current: boolean }[];
   forms?: { form: string; note: string }[]; // các dạng quan trọng
@@ -152,6 +173,7 @@ export type Deck = Omit<DeckSummary, "topicCount"> & {
   topics: DeckTopic[];
   topic: Omit<DeckTopic, "wordCount" | "saved" | "learned"> | null;
   words: DeckWord[];
+  distractors?: DeckWord[];
 };
 /** Ảnh bìa bộ từ → URL đầy đủ */
 export const deckCover = (cover: string) => (/^https?:\/\//.test(cover) ? cover : API_URL + cover);
@@ -184,14 +206,14 @@ export const getLessonsVersion = () => lessonsVersion;
 const API_TIMEOUT_MS = 30_000;
 const UPLOAD_TIMEOUT_MS = 90_000;
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: string; body?: unknown; timeoutMs?: number } = {}): Promise<T> {
   let res: Response;
   // FormData (gửi file ghi âm) → fetch tự đặt Content-Type multipart
   const form = init.body instanceof FormData;
   // Mạng yếu: không để màn hình chờ ~60 giây (mặc định của iOS) — quá hạn → báo mất kết nối như lỗi mạng.
-  // Gửi file (ghi âm / ảnh) cho lâu hơn. AbortSignal.timeout chưa chắc có trên Hermes → tự hẹn giờ.
+  // Gửi file (ghi âm / ảnh) hoặc Whisper cho lâu hơn. AbortSignal.timeout chưa chắc có trên Hermes → tự hẹn giờ.
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), form ? UPLOAD_TIMEOUT_MS : API_TIMEOUT_MS);
+  const timer = setTimeout(() => abort.abort(), init.timeoutMs ?? (form ? UPLOAD_TIMEOUT_MS : API_TIMEOUT_MS));
   try {
     res = await fetch(API_URL + "/api/v1" + path, {
       signal: abort.signal,

@@ -129,6 +129,9 @@ export function DictationPanel({
   const focusInput = () => inputRef.current?.focus();
   // Vừa nhảy ô: JS xoá ô nhập nhưng gõ nhanh thì bản gốc có thể chưa kịp xoá ("also" + "n" → "alson") → cắt phần từ trước đi
   const justDone = useRef("");
+  useEffect(() => {
+    justDone.current = "";
+  }, [activeSlot]);
   const moveTo = (k: number) => {
     if (k !== activeSlot && slots[activeSlot] && isOpenWord(result.words[activeSlot])) onBreakStreak?.();
     justDone.current = "";
@@ -168,10 +171,12 @@ export function DictationPanel({
   /** Gõ vào ô đang chọn; từ gõ đúng → nhảy sang ô chưa xong kế tiếp */
   const type = (raw: string) => {
     if (result.done || !refWords.length) return;
-    if (raw === `${slots[activeSlot]} `) return onTogglePlay();
     let fresh = raw;
-    if (justDone.current && raw.startsWith(justDone.current)) fresh = raw.slice(justDone.current.length);
-    else justDone.current = "";
+    if (justDone.current && raw.length > justDone.current.length && raw.startsWith(justDone.current)) {
+      fresh = raw.slice(justDone.current.length);
+    }
+    justDone.current = "";
+    if (fresh === `${slots[activeSlot]} `) return onTogglePlay();
     const value = fresh.replace(/\s/g, "").replace(/^[^\p{L}\p{N}]+/u, ""); // dấu câu gõ theo thói quen ngay sau khi nhảy ô thì bỏ
     const at = slotForTyped(result.words, activeSlot, value);
     const next = [...slots];
@@ -281,7 +286,7 @@ export function DictationPanel({
                 backgroundColor: streak >= 10 ? alpha(C.gem, 0.12) : streak >= 5 ? alpha(C.coral, 0.12) : C.goldSoft,
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: "800", color: streak >= 10 ? C.gem : streak >= 5 ? C.coral : C.amber }}>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: streak >= 10 ? C.gem : streak >= 5 ? C.coralText : C.amber }}>
                 🔥 {streak}{onHint && comboPoints(streak) > 1 ? ` · +${comboPoints(streak)}💎` : ""}
               </Text>
             </View>
@@ -305,10 +310,11 @@ export function DictationPanel({
             onChangeText={type}
             onSubmitEditing={submit}
             onKeyPress={({ nativeEvent: { key } }) => {
-              // Ô trống → lùi về ô trước (kể cả ô vừa tự nhảy qua: "ein" đúng nhưng định gõ "einen"); bỏ qua từ hiện sẵn & từ đã xem
+              // Ô trống → lùi về ô trước đang mở (bỏ qua từ đã đúng / đã xem / hiện sẵn)
               if (key !== "Backspace" || slots[activeSlot] || result.done) return;
-              for (let k = activeSlot - 1; k >= 1; k--) {
-                if (!revealed.has(k) && result.words[k]?.state !== "given") return moveTo(k);
+              for (let k = activeSlot - 1; k >= 0; k--) {
+                const w = result.words[k];
+                if (w && isOpenWord(w)) return moveTo(k);
               }
             }}
             autoFocus={autoFocus}

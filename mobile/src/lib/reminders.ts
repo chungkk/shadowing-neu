@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 import { api } from "./api";
 import { currentLang, t } from "./i18n";
 import { getPrefs } from "./quiz/store";
+import { loadReminderMutes, type ReminderSection } from "./reminderPrefs";
 
 /**
  * Nhắc học hằng ngày bằng thông báo CỤC BỘ (lên lịch ngay trên máy — không cần máy chủ push / APNs).
@@ -14,14 +15,18 @@ import { getPrefs } from "./quiz/store";
  */
 
 /** Giống src/lib/reminders.ts của web (chỉ các trường app dùng) */
-type Reminder = {
+export type Reminder = {
   id: string;
-  section: "de" | "laixe" | "lid";
+  section: ReminderSection;
   kind: "streak" | "review" | "lesson" | "deck" | "chapter" | "wrong";
   ref?: string;
   title: string;
   detail: string;
   href: string;
+  percent?: number;
+  at?: number;
+  daily?: boolean;
+  level?: number;
   quiet?: boolean;
 };
 
@@ -56,11 +61,11 @@ export async function ensurePermission(): Promise<boolean> {
   if (cur.granted || cur.ios?.status === IosAuthorizationStatus.PROVISIONAL) return true;
   if (!cur.canAskAgain) return false;
   const req = await Notifications.requestPermissionsAsync();
-  return req.granted;
+  return req.granted || req.ios?.status === IosAuthorizationStatus.PROVISIONAL;
 }
 
 /** Màn hình của app ứng với 1 nhắc nhở (href của server là đường dẫn web — app tự đổi theo kind + ref) */
-function pathOf(r: Reminder): string {
+export function pathOfReminder(r: Reminder): string {
   switch (r.kind) {
     case "review":
       return "/review";
@@ -91,18 +96,22 @@ function contentOf(list: Reminder[]): Notifications.NotificationContentInput | n
   return {
     title: more > 0 ? t("remind.titleMore", { n: more }) : t("remind.title"),
     body,
-    data: { path: pathOf(top) },
+    data: { path: pathOfReminder(top) },
   };
 }
 
 let running: Promise<void> | null = null;
+let queuedLoggedIn: boolean | null = null;
 
 /**
  * Đặt lại thông báo hằng ngày theo tiến độ mới nhất. Gọi khi mở app / quay lại app / đổi cài đặt / đăng nhập, đăng xuất.
  * loggedIn = false hoặc tắt nhắc → huỷ thông báo. Lỗi mạng → giữ thông báo đã đặt (nội dung cũ vẫn hơn không nhắc).
  */
 export function syncDailyReminder(loggedIn: boolean): Promise<void> {
-  if (running) return running;
+  if (running) {
+    queuedLoggedIn = loggedIn;
+    return running;
+  }
   running = (async () => {
     try {
       const prefs = await loadDailyPrefs();
@@ -110,10 +119,14 @@ export function syncDailyReminder(loggedIn: boolean): Promise<void> {
         await Notifications.cancelScheduledNotificationAsync(NOTIF_ID).catch(() => {});
         return;
       }
-      if (!(await Notifications.getPermissionsAsync()).granted) return; // không tự xin quyền ở đây — chỉ khi bật trong Cài đặt
+      const perm = await Notifications.getPermissionsAsync();
+      if (!perm.granted && perm.ios?.status !== IosAuthorizationStatus.PROVISIONAL) return; // không tự xin quyền ở đây — chỉ khi bật trong Cài đặt
       const { cls, state } = getPrefs();
-      const r = await api<{ reminders: Reminder[] }>(`/reminders?tz=${new Date().getTimezoneOffset()}&cls=${cls}&state=${state}`);
-      const content = contentOf(r.reminders.filter((x) => !x.quiet || x.kind === "review"));
+      const [r, mutes] = await Promise.all([
+        api<{ reminders: Reminder[] }>(`/reminders?tz=${new Date().getTimezoneOffset()}&cls=${cls}&state=${state}&lang=${currentLang()}`),
+        loadReminderMutes(),
+      ]);
+      const content = contentOf(r.reminders.filter((x) => !mutes[x.section] && (!x.quiet || x.kind === "review")));
       await Notifications.cancelScheduledNotificationAsync(NOTIF_ID).catch(() => {});
       if (!content) return; // không có việc dở → hôm nay không nhắc
       await Notifications.scheduleNotificationAsync({
@@ -125,6 +138,11 @@ export function syncDailyReminder(loggedIn: boolean): Promise<void> {
       // mất mạng / server lỗi → giữ thông báo đã đặt lần trước
     } finally {
       running = null;
+      if (queuedLoggedIn !== null) {
+        const next = queuedLoggedIn;
+        queuedLoggedIn = null;
+        void syncDailyReminder(next);
+      }
     }
   })();
   return running;

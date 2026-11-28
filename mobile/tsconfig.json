@@ -17,12 +17,15 @@
     "../src/lib/subtitles.ts",
     "../src/lib/dictation.ts",
     "../src/lib/youtube-id.ts",
+    "../src/lib/lesson-lock.ts",
     "../src/lib/phrase-match.ts",
     "../src/lib/review.ts",
     "../src/lib/srs.ts",
     "../src/lib/deck-study.ts",
     "../src/lib/laixe/rules.ts",
     "../src/lib/laixe/units.ts",
-    "../src/lib/quiz/types.ts"
+    "../src/lib/laixe/stems-vi.ts",
+    "../src/lib/quiz/types.ts",
+    "../src/content/grammar/*.ts"
   ]
 }
