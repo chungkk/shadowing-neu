@@ -8,7 +8,7 @@ import {
 } from './german-g2p';
 import { normalizeVietnameseSpeech } from './normalize-text';
 
-export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v8';
+export const FRONTEND_REVISION = 'sea-seap-v2-independent-kokoro-adapter-v9';
 export interface FrontendChunk {
   readonly text: string;
   readonly phonemes: string;
@@ -200,8 +200,11 @@ export const PRONUNCIATIONS: Readonly<Record<string, string>> = Object.assign(
 
 /** Acronyms said letter by letter although the dictionary has a (wrong) word reading for them. */
 const SPELLED: ReadonlySet<string> = new Set([
-  'aws', 'ide', 'otp', 'adk', 'adlc', 'ai', 'api', 'url', 'pdf', 'vpn', 'gps', 'usb', 'ssd', 'cpu', 'gpu', 'llm', 'tts',
+  'aws', 'ide', 'otp', 'adk', 'adlc', 'api', 'url', 'pdf', 'vpn', 'gps', 'usb', 'ssd', 'cpu', 'gpu', 'llm', 'tts',
 ]);
+
+/** Acronyms that collide with normal Vietnamese words (e.g. "ai"/"Ai" = who), so ONLY exact ALL-CAPS is spelled letter by letter. */
+const SPELLED_UPPER_ONLY: ReadonlySet<string> = new Set(['AI']);
 
 type Lookup = Pick<SeaDictionary, 'lookup'> & Partial<Pick<SeaDictionary, 'lookupEntry'>>;
 const ACRONYM = /^[A-Z]{2,}$/u;
@@ -523,6 +526,7 @@ export function phonemizeChunks(
       // Six or more capitals is a shouted word (OPENROUTER, NVIDIA), not letters to spell.
       const acronym = ACRONYM.test(token) && token.length <= 5;
       const pronOverride = PRONUNCIATIONS[lower] ?? null;
+      const isSpelled = SPELLED.has(lower) || SPELLED_UPPER_ONLY.has(token);
 
       // Decide if an ambiguous VI/EN common word should use English IPA in this local context
       let preferEnglish = acronym || mode === 'en';
@@ -549,7 +553,7 @@ export function phonemizeChunks(
         raw = spellGermanAcronym(token);
       }
       // 2. German clause mode: read German words via German G2P (keep explicit English brands/acronyms intact)
-      else if (mode === 'de' && !pronOverride && !(acronym && !m.isDeAcronym) && !SPELLED.has(lower)) {
+      else if (mode === 'de' && !pronOverride && !(acronym && !m.isDeAcronym) && !isSpelled) {
         raw = germanWordToIpa(token);
       }
       // 3. Priority German word inside a Vietnamese/mixed sentence (Berlin, Sparkasse, Tagesschau, Rewe, Anmeldung...)
@@ -557,7 +561,7 @@ export function phonemizeChunks(
         raw = germanWordToIpa(token);
       }
       // 4. Explicit spelled acronyms (AI, API, AWS, URL...)
-      else if (SPELLED.has(lower)) {
+      else if (isSpelled) {
         raw = Array.from(lower, (char) => LETTERS[char] ?? '').join(' ');
       }
       // 5. Curated English/brand pronunciations
