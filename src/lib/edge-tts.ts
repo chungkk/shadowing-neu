@@ -119,8 +119,26 @@ function cacheFileFor(voiceId: EdgeVoiceId, speed: number, text: string): string
   return path.join(DUB_TTS_DIR, `${key}.mp3`);
 }
 
+const MAX_MEM_EDGE = 64;
+const eg = globalThis as unknown as {
+  __edgeMemCache?: Map<string, Buffer>;
+  __edgeWarmingCount?: number;
+};
+const memCache = (eg.__edgeMemCache ??= new Map());
+
+function putEdgeMemCache(key: string, buf: Buffer) {
+  if (memCache.has(key)) memCache.delete(key);
+  memCache.set(key, buf);
+  while (memCache.size > MAX_MEM_EDGE) {
+    const oldest = memCache.keys().next().value;
+    if (oldest !== undefined) memCache.delete(oldest);
+    else break;
+  }
+}
+
 export function hasEdgeDubSpeech(voiceId: EdgeVoiceId, speed: number, text: string): boolean {
-  return fs.existsSync(cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim()));
+  const file = cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim());
+  return memCache.has(file) || fs.existsSync(file);
 }
 
 type PooledConn = {
@@ -129,9 +147,9 @@ type PooledConn = {
   idleTimer: ReturnType<typeof setTimeout> | null;
 };
 
-const MAX_POOL = 3;
-const IDLE_TTL_MS = 25_000;
-const MAX_TURNS = 16;
+const MAX_POOL = 6;
+const IDLE_TTL_MS = 60_000;
+const MAX_TURNS = 30;
 const HANDSHAKE_TIMEOUT_MS = 5_500;
 const TURN_TIMEOUT_MS = 6_500;
 
@@ -369,14 +387,51 @@ async function runEdgeOnce(voiceName: string, rate: string, text: string): Promi
   }
 }
 
-/** Tạo (hoặc lấy từ cache đĩa) MP3 tiếng Việt bằng Microsoft Edge Neural TTS (miễn phí, 0đ). */
+/** Mở sẵn kết nối WebSocket Edge TTS khi bắt đầu chuẩn bị phụ đề để giảm ~200–400ms TLS handshake ở câu đầu tiên. */
+export function warmEdgeSocket(targetCount = 2): void {
+  const current = idlePool.length + (eg.__edgeWarmingCount ?? 0);
+  const needed = Math.min(MAX_POOL, Math.max(0, targetCount - current));
+  for (let i = 0; i < needed; i++) {
+    eg.__edgeWarmingCount = (eg.__edgeWarmingCount ?? 0) + 1;
+    void openEdgeSocket()
+      .then((conn) => releaseEdgeSocket(conn))
+      .catch(() => {})
+      .finally(() => {
+        eg.__edgeWarmingCount = Math.max(0, (eg.__edgeWarmingCount ?? 1) - 1);
+      });
+  }
+}
+
+async function writeEdgeDiskCacheAsync(file: string, audio: Buffer): Promise<void> {
+  try {
+    await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
+    // Ghi file tạm rồi rename (atomic) để tránh lưu file MP3 cụt/hỏng vào cache nếu lỗi giữa chừng
+    const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+    try {
+      await fs.promises.writeFile(tmp, audio);
+      await fs.promises.rename(tmp, file);
+      noteDubTtsCacheWrite(audio.byteLength);
+    } catch {
+      await fs.promises.rm(tmp, { force: true }).catch(() => {});
+    }
+  } catch {}
+}
+
+/** Tạo (hoặc lấy từ cache RAM / đĩa) MP3 tiếng Việt bằng Microsoft Edge Neural TTS (miễn phí, 0đ). */
 export async function synthesizeEdgeDub(text: string, voiceId: EdgeVoiceId, speed = 1.15): Promise<Buffer> {
   const clean = text.replace(/\s+/g, " ").trim();
   const spd = normalizeEdgeSpeed(speed);
   const file = cacheFileFor(voiceId, spd, clean);
 
+  const memHit = memCache.get(file);
+  if (memHit) {
+    putEdgeMemCache(file, memHit);
+    return memHit;
+  }
+
   try {
     const data = await fs.promises.readFile(file);
+    putEdgeMemCache(file, data);
     touchDubTtsFile(file);
     return data;
   } catch {}
@@ -390,17 +445,8 @@ export async function synthesizeEdgeDub(text: string, voiceId: EdgeVoiceId, spee
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const audio = await runEdgeOnce(voiceName, rate, clean);
-          await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
-          // Ghi file tạm rồi rename (atomic) để tránh lưu file MP3 cụt/hỏng vào cache nếu lỗi giữa chừng
-          const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
-          try {
-            await fs.promises.writeFile(tmp, audio);
-            await fs.promises.rename(tmp, file);
-          } catch (writeErr) {
-            await fs.promises.rm(tmp, { force: true }).catch(() => {});
-            throw writeErr;
-          }
-          noteDubTtsCacheWrite(audio.byteLength);
+          putEdgeMemCache(file, audio);
+          void writeEdgeDiskCacheAsync(file, audio);
           return audio;
         } catch (e) {
           lastErr = e;

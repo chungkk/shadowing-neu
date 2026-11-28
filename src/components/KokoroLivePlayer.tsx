@@ -103,11 +103,75 @@ export function preloadYouTubeIframeApi(): void {
 
 /** Tốc độ đọc tối đa khi phải đọc nhanh để kịp câu sau (trần của /api/v1/dub/tts) */
 const MAX_FIT_SPEED = 1.45;
-/** Giới hạn số AudioBuffer PCM giữ trong RAM (tránh tràn bộ nhớ trên Safari/iOS với video dài) */
-const MAX_BUF_CACHE = 48;
+const PREFETCH_EDGE = 5;
+const PREFETCH_PIPER = 4;
+const PIPER_PREFETCH_CONCURRENCY = 2;
 /** Trần độ trễ tối đa của hàng đợi audio so với hình; vượt ngưỡng sẽ cắt câu cũ để bắt kịp nhịp */
 const MAX_QUEUE_LAG_SEC = 2.2;
 const EDGE_MAX_CHARS = 600;
+
+/** Giải mã nhanh WAV 16-bit PCM đồng bộ (<0.5ms, không cần đợi decodeAudioData bất đồng bộ); MP3 giữ nguyên decodeAudioData. */
+function decodeAudioFast(ctx: AudioContext, ab: ArrayBuffer): Promise<AudioBuffer> {
+  if (ab.byteLength >= 44) {
+    const view = new DataView(ab);
+    if (view.getUint32(0, false) === 0x52494646 && view.getUint32(8, false) === 0x57415645) {
+      let off = 12;
+      let fmtCode = 0;
+      let channels = 0;
+      let sampleRate = 0;
+      let bitsPerSample = 0;
+      let dataOffset = -1;
+      let dataBytes = 0;
+      while (off + 8 <= ab.byteLength) {
+        const chunkId = view.getUint32(off, false);
+        const chunkSize = view.getUint32(off + 4, true);
+        const body = off + 8;
+        if (body + chunkSize > ab.byteLength) break;
+        if (chunkId === 0x666d7420 && chunkSize >= 16) {
+          fmtCode = view.getUint16(body, true);
+          channels = view.getUint16(body + 2, true);
+          sampleRate = view.getUint32(body + 4, true);
+          bitsPerSample = view.getUint16(body + 14, true);
+        } else if (chunkId === 0x64617461) {
+          dataOffset = body;
+          dataBytes = chunkSize;
+          break;
+        }
+        off = body + chunkSize + (chunkSize & 1);
+      }
+      if (
+        fmtCode === 1 &&
+        bitsPerSample === 16 &&
+        (channels === 1 || channels === 2) &&
+        sampleRate >= 8000 &&
+        sampleRate <= 96000 &&
+        dataOffset > 0 &&
+        dataBytes >= channels * 2
+      ) {
+        const frames = Math.floor(dataBytes / (channels * 2));
+        if (frames > 0) {
+          const buf = ctx.createBuffer(channels, frames, sampleRate);
+          if (channels === 1) {
+            const ch0 = buf.getChannelData(0);
+            for (let i = 0; i < frames; i++) {
+              ch0[i] = view.getInt16(dataOffset + i * 2, true) / 32768;
+            }
+          } else {
+            const ch0 = buf.getChannelData(0);
+            const ch1 = buf.getChannelData(1);
+            for (let i = 0; i < frames; i++) {
+              const p = dataOffset + i * 4;
+              ch0[i] = view.getInt16(p, true) / 32768;
+              ch1[i] = view.getInt16(p + 2, true) / 32768;
+            }
+          }
+          return Promise.resolve(buf);
+        }
+      }
+    }
+  }
+  return ctx.decodeAudioData(ab);
+}
 
 /** Ước lượng thời lượng đọc tiếng Việt (giây) để chọn tốc độ phù hợp ngay từ lần gọi TTS đầu tiên. */
 function estimateViDurSec(text: string, speed: number): number {
@@ -140,6 +204,9 @@ function detectIOS(): boolean {
   const ua = navigator.userAgent || "";
   return /iP(hone|ad|od)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
+
+/** Giới hạn số AudioBuffer PCM giữ trong RAM (iOS/Safari giữ 48 câu, desktop giữ 96 câu để tua mượt). */
+const MAX_BUF_CACHE = detectIOS() ? 48 : 96;
 
 function ytErrorMessage(code: number): string {
   if (code === 101 || code === 150) {
@@ -420,8 +487,31 @@ export default function KokoroLivePlayer({
         return hit;
       }
 
+      const next = stateRef.current.cues[cueIndex + 1];
+      const slot = next ? (next.start_ms - cue.start_ms) / 1000 / ytRate - 0.1 : 0;
+
+      // Ước lượng tốc độ cần thiết ngay từ đầu để tránh phải gọi TTS 2 lần cho cùng 1 câu
+      let firstSpd = normSpd;
+      if (slot > 0.4 && normSpd < MAX_FIT_SPEED) {
+        const estDur = estimateViDurSec(cue.text, normSpd);
+        if (estDur > slot + 0.15) {
+          firstSpd = Math.min(MAX_FIT_SPEED, Math.ceil(((normSpd * estDur) / slot) * 20) / 20);
+        }
+      }
+
       const existing = inflightRef.current.get(key);
-      if (existing) return existing;
+      if (existing) {
+        if (urgent && engKey && !stateRef.current.localWasmReady) {
+          const promoteQs = new URLSearchParams({
+            v: vId,
+            s: firstSpd.toFixed(2),
+            t: truncateTtsText(cue.text, EDGE_MAX_CHARS),
+            p: "1",
+          });
+          void fetch(`/api/v1/dub/tts?${promoteQs.toString()}`).catch(() => {});
+        }
+        return existing;
+      }
 
       /** Tổng hợp 1 câu ở tốc độ `speed` (WASM cục bộ nếu đã tải xong, còn lại dùng server native C++ / Edge TTS) */
       const synthAt = async (speed: number): Promise<AudioBuffer | null> => {
@@ -452,7 +542,7 @@ export default function KokoroLivePlayer({
           } catch (e) {
             lastErr = e;
           }
-          if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 150));
         }
         if (!res) throw lastErr instanceof Error ? lastErr : new Error("Không tải được âm thanh.");
         if (!res.ok) {
@@ -461,26 +551,14 @@ export default function KokoroLivePlayer({
         }
         const arr = await res.arrayBuffer();
         setLastSynthMs(Math.round(performance.now() - t0));
-        return getAudioCtx().decodeAudioData(arr);
+        return decodeAudioFast(getAudioCtx(), arr);
       };
 
       const p = (async (): Promise<AudioBuffer | null> => {
         try {
-          const next = stateRef.current.cues[cueIndex + 1];
-          const slot = next ? (next.start_ms - cue.start_ms) / 1000 / ytRate - 0.1 : 0;
-
-          // Ước lượng tốc độ cần thiết ngay từ đầu để tránh phải gọi TTS 2 lần cho cùng 1 câu
-          let firstSpd = normSpd;
-          if (slot > 0.4 && normSpd < MAX_FIT_SPEED) {
-            const estDur = estimateViDurSec(cue.text, normSpd);
-            if (estDur > slot + 0.15) {
-              firstSpd = Math.min(MAX_FIT_SPEED, Math.ceil(((normSpd * estDur) / slot) * 20) / 20);
-            }
-          }
-
           let buf = await synthAt(firstSpd);
-          // Câu đang cần phát ngay (`urgent`) không chặn chờ gọi TTS lần 2; chỉ tinh chỉnh khi prefetch ngầm bằng Edge
-          if (!urgent && !engKey && buf && slot > 0.4 && buf.duration > slot + 0.45 && firstSpd < MAX_FIT_SPEED) {
+          // Câu đang cần phát ngay (`urgent`) không chặn chờ gọi TTS lần 2; chỉ tinh chỉnh khi prefetch ngầm bằng Edge và lệch rõ rệt
+          if (!urgent && !engKey && buf && slot > 0.4 && buf.duration > slot * 1.18 + 0.4 && firstSpd < MAX_FIT_SPEED) {
             const need = Math.min(MAX_FIT_SPEED, Math.ceil(((firstSpd * buf.duration) / slot) * 20) / 20);
             if (need > firstSpd) {
               const fitted = await synthAt(need).catch(() => null);
@@ -506,18 +584,43 @@ export default function KokoroLivePlayer({
     [getAudioCtx, putBufCache],
   );
 
-  // Phát câu hiện tại & prefetch ngay lập tức qua server C++; nếu chọn giọng trình duyệt thì tải ngầm WASM để đọc offline về sau
+  const prefetchAfter = useCallback(
+    (startIdx: number, vId: LiveVoiceId, spd: number) => {
+      const list = stateRef.current.cues;
+      const isPiper = getPiperVoiceKey(vId) !== null && !stateRef.current.localWasmReady;
+      const count = isPiper ? PREFETCH_PIPER : PREFETCH_EDGE;
+      const endIdx = Math.min(list.length - 1, startIdx + count - 1);
+      if (startIdx > endIdx) return;
+
+      if (isPiper) {
+        let nextIdx = startIdx;
+        const worker = async () => {
+          while (nextIdx <= endIdx) {
+            if (stateRef.current.voiceId !== vId) return;
+            const k = nextIdx++;
+            await getCueBuffer(k, vId, spd, false);
+          }
+        };
+        for (let w = 0; w < Math.min(PIPER_PREFETCH_CONCURRENCY, endIdx - startIdx + 1); w++) {
+          void worker();
+        }
+      } else {
+        for (let k = startIdx; k <= endIdx; k++) {
+          void getCueBuffer(k, vId, spd, false);
+        }
+      }
+    },
+    [getCueBuffer],
+  );
+
+  // Phát câu hiện tại & prefetch song song ngay lập tức qua server C++; nếu chọn giọng trình duyệt thì tải ngầm WASM để đọc offline về sau
   useEffect(() => {
     let active = true;
     const start = Math.max(0, stateRef.current.activeCueIdx);
     const spd = stateRef.current.speed;
     if (start < cues.length) {
-      void getCueBuffer(start, voiceId, spd, true).then(() => {
-        if (!active) return;
-        for (let k = start + 1; k < Math.min(start + 3, cues.length); k++) {
-          void getCueBuffer(k, voiceId, spd, false);
-        }
-      });
+      void getCueBuffer(start, voiceId, spd, true);
+      prefetchAfter(start + 1, voiceId, spd);
     }
 
     if (!localEngineKey || readyEngines[localEngineKey]) {
@@ -541,7 +644,7 @@ export default function KokoroLivePlayer({
     return () => {
       active = false;
     };
-  }, [localEngineKey, voiceId, cues, readyEngines, getCueBuffer]);
+  }, [localEngineKey, voiceId, cues, readyEngines, getCueBuffer, prefetchAfter]);
 
   // Apply volume updates
   useEffect(() => {
@@ -618,12 +721,9 @@ export default function KokoroLivePlayer({
       }
     };
 
-    // Prefetch lại 2–3 câu kế tiếp để sẵn sàng ngay sau câu đang đọc tiếp
-    const count = getPiperVoiceKey(vId) ? 2 : 3;
-    for (let k = pb.cueIndex + 1; k <= Math.min(list.length - 1, pb.cueIndex + count); k++) {
-      void getCueBuffer(k, vId, spd, false);
-    }
-  }, [getAudioCtx, getCueBuffer]);
+    // Prefetch lại các câu kế tiếp để sẵn sàng ngay sau câu đang đọc tiếp
+    prefetchAfter(pb.cueIndex + 1, vId, spd);
+  }, [getAudioCtx, prefetchAfter]);
 
   // Nếu người dùng bấm Play trực tiếp trong iframe YouTube (AudioContext bị treo do autoplay policy),
   // tự mở khoá âm thanh ngay khi có tương tác đầu tiên bất kỳ trên trang và phát ngay câu hiện tại.
@@ -798,10 +898,7 @@ export default function KokoroLivePlayer({
       if (lastSpokenIdxRef.current !== cueIndex) return;
       if (stateRef.current.voiceId !== vId) return;
 
-      const prefetchCount = getPiperVoiceKey(vId) ? 2 : 3;
-      for (let k = cueIndex + 1; k <= Math.min(list.length - 1, cueIndex + prefetchCount); k++) {
-        void getCueBuffer(k, vId, spd, false);
-      }
+      prefetchAfter(cueIndex + 1, vId, spd);
 
       const ctx = getAudioCtx();
       const gain = gainRef.current;
@@ -823,7 +920,7 @@ export default function KokoroLivePlayer({
       const next = list[cueIndex + 1];
       const ytRate = Math.round((ytRef.current?.getPlaybackRate?.() || 1) * 20) / 20;
       const slot = next ? (next.start_ms - list[cueIndex].start_ms) / 1000 / ytRate - 0.1 : 0;
-      const pbRate = slot > 0.4 && buf.duration > slot + 0.3 ? Math.min(1.12, buf.duration / slot) : 1;
+      const pbRate = slot > 0.4 && buf.duration > slot + 0.3 ? Math.min(1.16, buf.duration / slot) : 1;
       const effectiveDur = buf.duration / pbRate;
 
       const now = ctx.currentTime;
@@ -920,10 +1017,10 @@ export default function KokoroLivePlayer({
           }
         }
       }
-    }, 100);
+    }, 60);
 
     return () => clearInterval(timer);
-  }, [getAudioCtx, getCueBuffer, stopActiveSources, stopSpeech]);
+  }, [getAudioCtx, getCueBuffer, prefetchAfter, stopActiveSources, stopSpeech]);
 
   const togglePlay = useCallback(async () => {
     const yt = ytRef.current;

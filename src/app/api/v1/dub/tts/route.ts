@@ -49,6 +49,9 @@ export async function GET(req: Request) {
       headers: {
         "Content-Type": edgeVoice ? "audio/mpeg" : "audio/wav",
         "Cache-Control": "public, max-age=604800, immutable",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "X-TTS-Cache",
+        "X-TTS-Cache": cachedOnDisk ? "HIT" : "MISS",
       },
     });
   } catch (e) {

@@ -14,7 +14,10 @@
   };
 
   const MAX_FIT_SPEED = 1.45;
-  const MAX_BUF_CACHE = 48;
+  const MAX_BUF_CACHE = 96;
+  const PREFETCH_EDGE = 5;
+  const PREFETCH_PIPER = 4;
+  const PIPER_PREFETCH_CONCURRENCY = 2;
   const MAX_QUEUE_LAG_SEC = 2.2;
   const EDGE_MAX_CHARS = 600;
   const BG_RECONNECT_DELAYS_MS = [2000, 3500, 5000];
@@ -49,6 +52,7 @@
     stopGen: 0,
     bufCache: new Map(),
     inflightTts: new Map(),
+    directTtsDisabled: false,
     lastSpokenIdx: -1,
     lastVideoTime: 0,
     lastPollWall: 0,
@@ -308,10 +312,101 @@
     }
   }
 
+  function decodeAudioFast(ctx, ab) {
+    if (ab && ab.byteLength >= 44) {
+      const view = new DataView(ab);
+      if (view.getUint32(0, false) === 0x52494646 && view.getUint32(8, false) === 0x57415645) {
+        let off = 12;
+        let fmtCode = 0;
+        let channels = 0;
+        let sampleRate = 0;
+        let bitsPerSample = 0;
+        let dataOffset = -1;
+        let dataBytes = 0;
+        while (off + 8 <= ab.byteLength) {
+          const chunkId = view.getUint32(off, false);
+          const chunkSize = view.getUint32(off + 4, true);
+          const body = off + 8;
+          if (body + chunkSize > ab.byteLength) break;
+          if (chunkId === 0x666d7420 && chunkSize >= 16) {
+            fmtCode = view.getUint16(body, true);
+            channels = view.getUint16(body + 2, true);
+            sampleRate = view.getUint32(body + 4, true);
+            bitsPerSample = view.getUint16(body + 14, true);
+          } else if (chunkId === 0x64617461) {
+            dataOffset = body;
+            dataBytes = chunkSize;
+            break;
+          }
+          off = body + chunkSize + (chunkSize & 1);
+        }
+        if (
+          fmtCode === 1 &&
+          bitsPerSample === 16 &&
+          (channels === 1 || channels === 2) &&
+          sampleRate >= 8000 &&
+          sampleRate <= 96000 &&
+          dataOffset > 0 &&
+          dataBytes >= channels * 2
+        ) {
+          const frames = Math.floor(dataBytes / (channels * 2));
+          if (frames > 0) {
+            const buf = ctx.createBuffer(channels, frames, sampleRate);
+            if (channels === 1) {
+              const ch0 = buf.getChannelData(0);
+              for (let i = 0; i < frames; i++) {
+                ch0[i] = view.getInt16(dataOffset + i * 2, true) / 32768;
+              }
+            } else {
+              const ch0 = buf.getChannelData(0);
+              const ch1 = buf.getChannelData(1);
+              for (let i = 0; i < frames; i++) {
+                const p = dataOffset + i * 4;
+                ch0[i] = view.getInt16(p, true) / 32768;
+                ch1[i] = view.getInt16(p + 2, true) / 32768;
+              }
+            }
+            return Promise.resolve(buf);
+          }
+        }
+      }
+    }
+    return ctx.decodeAudioData(ab);
+  }
+
   async function fetchTtsBuffer(text, voiceId, speed, urgent = false) {
+    const cleanText = truncateTtsText(text, EDGE_MAX_CHARS);
+    if (!state.directTtsDisabled) {
+      try {
+        const qs = new URLSearchParams({
+          v: String(voiceId),
+          s: Number(speed).toFixed(2),
+          t: cleanText,
+        });
+        if (urgent) qs.set("p", "1");
+        const url = `${state.settings.apiBase}/api/v1/dub/tts?${qs.toString()}`;
+        let res = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          res = await fetch(url, { mode: "cors", credentials: "omit" });
+          if (res.ok || (res.status !== 502 && res.status !== 503 && res.status !== 504)) break;
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 150));
+        }
+        if (res && res.ok) {
+          const ab = await res.arrayBuffer();
+          return decodeAudioFast(getAudioCtx(), ab);
+        }
+        // Nếu 429 (khách vượt hạn mức cần Bearer token) hoặc lỗi CORS/server → tắt direct cho phiên này để qua background
+        if (res && (res.status === 429 || res.status === 401 || res.status === 403)) {
+          state.directTtsDisabled = true;
+        }
+      } catch {
+        state.directTtsDisabled = true;
+      }
+    }
+
     const res = await chrome.runtime.sendMessage({
       type: "hvn:tts",
-      text: truncateTtsText(text, EDGE_MAX_CHARS),
+      text: cleanText,
       voiceId,
       speed,
       urgent: Boolean(urgent),
@@ -320,7 +415,7 @@
       throw new Error(res?.error || "Không tạo được giọng đọc.");
     }
     const ab = base64ToArrayBuffer(res.base64);
-    return getAudioCtx().decodeAudioData(ab);
+    return decodeAudioFast(getAudioCtx(), ab);
   }
 
   async function getCueBuffer(cueIndex, vId, spd, opts = {}) {
@@ -337,40 +432,53 @@
       putBufCache(key, hit);
       return hit;
     }
+
+    const next = state.cues[cueIndex + 1];
+    const slot = next ? (next.start_ms - cue.start_ms) / 1000 / rate - 0.1 : 0;
+    let firstSpd = normSpd;
+    if (slot > 0.4 && normSpd < MAX_FIT_SPEED) {
+      const estDur = estimateViDurSec(cue.text, normSpd);
+      if (estDur > slot + 0.15) {
+        firstSpd = Math.min(MAX_FIT_SPEED, Math.ceil(((normSpd * estDur) / slot) * 20) / 20);
+      }
+    }
+
     const existing = state.inflightTts.get(key);
     if (existing) {
-      // Nếu câu đang chờ từ prefetch nay thành câu cần đọc ngay → báo server ưu tiên
+      // Nếu câu đang chờ từ prefetch nay thành câu cần đọc ngay → báo server ưu tiên đúng mức tốc độ firstSpd
       if (urgent && String(vId).startsWith("piper:")) {
-        void chrome.runtime
-          .sendMessage({
-            type: "hvn:tts",
-            text: truncateTtsText(cue.text, EDGE_MAX_CHARS),
-            voiceId: vId,
-            speed: normSpd,
-            urgent: true,
-          })
-          .catch(() => {});
+        if (!state.directTtsDisabled) {
+          const promoteQs = new URLSearchParams({
+            v: String(vId),
+            s: firstSpd.toFixed(2),
+            t: truncateTtsText(cue.text, EDGE_MAX_CHARS),
+            p: "1",
+          });
+          void fetch(`${state.settings.apiBase}/api/v1/dub/tts?${promoteQs.toString()}`, {
+            mode: "cors",
+            credentials: "omit",
+          }).catch(() => {});
+        } else {
+          void chrome.runtime
+            .sendMessage({
+              type: "hvn:tts",
+              text: truncateTtsText(cue.text, EDGE_MAX_CHARS),
+              voiceId: vId,
+              speed: firstSpd,
+              urgent: true,
+            })
+            .catch(() => {});
+        }
       }
       return existing;
     }
 
     const p = (async () => {
       try {
-        const next = state.cues[cueIndex + 1];
-        const slot = next ? (next.start_ms - cue.start_ms) / 1000 / rate - 0.1 : 0;
-
-        let firstSpd = normSpd;
-        if (slot > 0.4 && normSpd < MAX_FIT_SPEED) {
-          const estDur = estimateViDurSec(cue.text, normSpd);
-          if (estDur > slot + 0.15) {
-            firstSpd = Math.min(MAX_FIT_SPEED, Math.ceil(((normSpd * estDur) / slot) * 20) / 20);
-          }
-        }
-
         let buf = await fetchTtsBuffer(cue.text, vId, firstSpd, urgent);
-        // Câu đang cần phát ngay (`urgent`) KHÔNG chặn thêm 1 vòng TTS nữa; chỉ tinh chỉnh khi đang prefetch ngầm với giọng Edge
+        // Câu đang cần phát ngay (`urgent`) KHÔNG chặn thêm 1 vòng TTS nữa; chỉ tinh chỉnh khi đang prefetch ngầm với giọng Edge và lệch rõ rệt
         const isEdge = String(vId).startsWith("edge:");
-        if (!urgent && isEdge && buf && slot > 0.4 && buf.duration > slot + 0.45 && firstSpd < MAX_FIT_SPEED) {
+        if (!urgent && isEdge && buf && slot > 0.4 && buf.duration > slot * 1.18 + 0.4 && firstSpd < MAX_FIT_SPEED) {
           const need = Math.min(MAX_FIT_SPEED, Math.ceil(((firstSpd * buf.duration) / slot) * 20) / 20);
           if (need > firstSpd) {
             const fitted = await fetchTtsBuffer(cue.text, vId, need, false).catch(() => null);
@@ -400,18 +508,22 @@
 
   function prefetchAfter(startIdx, vId, spd) {
     const isPiper = String(vId).startsWith("piper:");
-    const count = 3;
+    const count = isPiper ? PREFETCH_PIPER : PREFETCH_EDGE;
     const endIdx = Math.min(state.cues.length - 1, startIdx + count - 1);
     if (startIdx > endIdx) return;
 
     if (isPiper) {
-      // Piper chạy tuần tự prefetch để câu đang đọc (urgent) luôn được ưu tiên tuyệt đối
-      void (async () => {
-        for (let k = startIdx; k <= endIdx; k++) {
+      let nextIdx = startIdx;
+      const worker = async () => {
+        while (nextIdx <= endIdx) {
           if (!state.enabled || state.settings.voiceId !== vId) break;
+          const k = nextIdx++;
           await getCueBuffer(k, vId, spd, { urgent: false });
         }
-      })();
+      };
+      for (let w = 0; w < Math.min(PIPER_PREFETCH_CONCURRENCY, endIdx - startIdx + 1); w++) {
+        void worker();
+      }
     } else {
       for (let k = startIdx; k <= endIdx; k++) {
         void getCueBuffer(k, vId, spd, { urgent: false });
@@ -507,7 +619,7 @@
     const next = state.cues[cueIndex + 1];
     const rate = Math.round(((state.video && state.video.playbackRate) || 1) * 20) / 20;
     const slot = next ? (next.start_ms - state.cues[cueIndex].start_ms) / 1000 / rate - 0.1 : 0;
-    const pbRate = slot > 0.4 && buf.duration > slot + 0.3 ? Math.min(1.12, buf.duration / slot) : 1;
+    const pbRate = slot > 0.4 && buf.duration > slot + 0.3 ? Math.min(1.16, buf.duration / slot) : 1;
     const effectiveDur = buf.duration / pbRate;
 
     const now = ctx.currentTime;
@@ -1178,6 +1290,7 @@
       renderHud();
 
       void (async () => {
+        prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
         if (targetCue && !targetCue.pending && targetCue.text?.trim()) {
           await getCueBuffer(start, state.settings.voiceId, state.settings.speed, { urgent: true });
         }
@@ -1194,7 +1307,6 @@
         }
         updateYtButton();
         renderHud();
-        prefetchAfter(start + 1, state.settings.voiceId, state.settings.speed);
         if (state.pausedForLoad && state.video) {
           state.pausedForLoad = false;
           state.video.play().catch(() => {});
@@ -1338,7 +1450,15 @@
         if (state.port === port) state.port = null;
       });
 
-      port.postMessage({ type: reqType, payload: { ...payload, voiceId: state.settings.voiceId } });
+      port.postMessage({
+        type: reqType,
+        payload: {
+          ...payload,
+          voiceId: state.settings.voiceId,
+          speed: state.settings.speed,
+          startMs: state.video ? Math.round(state.video.currentTime * 1000) : 0,
+        },
+      });
     };
 
     connectAttempt();
@@ -1545,7 +1665,7 @@
         }
       }
     }
-  }, 100);
+  }, 60);
 
   // ---------------- HUD Overlay (Fullscreen-safe) ----------------
 

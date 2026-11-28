@@ -1,6 +1,8 @@
 import { body, fail, str } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { getCachedLiveDub, isLiveDubInflight, prepareLiveDub, streamPrepareResponse } from "@/lib/dub-live";
+import { getCachedLiveDub, isLiveDubInflight, prepareLiveDub, streamPrepareResponse, type LiveDubResult } from "@/lib/dub-live";
+import { prewarmDubAudio } from "@/lib/dub-tts-prewarm";
+import { isEdgeVoice, normalizeEdgeSpeed, warmEdgeSocket } from "@/lib/edge-tts";
 import { isServerPiperVoice, warmPiperVoice } from "@/lib/piper-tts";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { extractVideoId } from "@/lib/youtube-id";
@@ -10,6 +12,8 @@ type PublicPrepareBody = {
   videoId?: unknown;
   voiceId?: unknown;
   voice?: unknown;
+  speed?: unknown;
+  startMs?: unknown;
   force?: unknown;
   repair?: unknown;
 };
@@ -27,18 +31,28 @@ export async function POST(req: Request) {
 
   const b = await body<PublicPrepareBody>(req);
   const reqVoice = str(b.voiceId).trim() || str(b.voice).trim();
+  const reqSpeed = normalizeEdgeSpeed(Number(b.speed ?? 1.15));
+  const reqStartMs = Number.isFinite(Number(b.startMs)) ? Math.max(0, Number(b.startMs)) : 0;
   if (isServerPiperVoice(reqVoice)) warmPiperVoice(reqVoice);
+  else if (isEdgeVoice(reqVoice)) warmEdgeSocket(2);
   const raw = str(b.url).trim() || str(b.videoId).trim();
   const videoId = extractVideoId(raw);
   if (!videoId) return fail("Link YouTube không hợp lệ. Vui lòng dán link video YouTube đầy đủ hoặc mã video.");
 
   const force = b.force === true;
   const repair = b.repair === true;
+  let prewarmed = false;
+  const triggerPrewarm = (cues: LiveDubResult["cues"]) => {
+    if (prewarmed || !reqVoice || !cues.length) return;
+    prewarmed = true;
+    prewarmDubAudio(cues, reqVoice, reqSpeed, reqStartMs);
+  };
 
   // Cache hit → trả ngay lập tức, không tính hạn mức (trừ khi force hoặc repair khi còn câu chưa dịch)
   if (!force) {
     const cached = getCachedLiveDub(videoId);
     if (cached && (!repair || !cached.cues.some((c) => c.untranslated))) {
+      triggerPrewarm(cached.cues);
       if (wantStream) {
         return streamPrepareResponse(async (emit) => {
           emit({ pct: 100, stage: "Đã sẵn sàng từ bộ nhớ đệm" });
@@ -79,13 +93,24 @@ export async function POST(req: Request) {
   };
 
   if (wantStream) {
-    return streamPrepareResponse((emit, emitEvent) =>
-      prepareLiveDub(videoId, { ...runOpts, onProgress: emit, onEvent: emitEvent }),
-    );
+    return streamPrepareResponse(async (emit, emitEvent) => {
+      const res = await prepareLiveDub(videoId, {
+        ...runOpts,
+        onProgress: emit,
+        onEvent: (ev) => {
+          if (ev.type === "ready" && ev.data?.cues) triggerPrewarm(ev.data.cues);
+          emitEvent(ev);
+        },
+      });
+      triggerPrewarm(res.cues);
+      return res;
+    });
   }
 
   try {
-    return Response.json(await prepareLiveDub(videoId, runOpts));
+    const res = await prepareLiveDub(videoId, runOpts);
+    triggerPrewarm(res.cues);
+    return Response.json(res);
   } catch (e) {
     return fail((e as Error).message, 502);
   }

@@ -21,6 +21,8 @@ import {
   type PrepareProgress,
   type PrepareStreamEvent,
 } from "@/lib/dub-live";
+import { prewarmDubAudio } from "@/lib/dub-tts-prewarm";
+import { isEdgeVoice, normalizeEdgeSpeed, warmEdgeSocket } from "@/lib/edge-tts";
 import { isServerPiperVoice, warmPiperVoice } from "@/lib/piper-tts";
 import { allow, clientIp } from "@/lib/rate-limit";
 import type { Word } from "@/lib/subtitles";
@@ -36,6 +38,8 @@ type TranslateCuesBody = {
   cues?: unknown;
   voiceId?: unknown;
   voice?: unknown;
+  speed?: unknown;
+  startMs?: unknown;
 };
 
 const CACHE_PREFIX = "dub:ext:v2:";
@@ -103,17 +107,28 @@ export async function POST(req: Request) {
 
   const b = await body<TranslateCuesBody>(req);
   const reqVoice = str(b.voiceId).trim() || str(b.voice).trim();
+  const reqSpeed = normalizeEdgeSpeed(Number(b.speed ?? 1.15));
+  const reqStartMs = Number.isFinite(Number(b.startMs)) ? Math.max(0, Number(b.startMs)) : 0;
   if (isServerPiperVoice(reqVoice)) warmPiperVoice(reqVoice);
+  else if (isEdgeVoice(reqVoice)) warmEdgeSocket(2);
   const ytVideoId = extractVideoId(str(b.videoId).trim());
   const title = str(b.title).trim().slice(0, 200) || ytVideoId || "Video";
   const channel = str(b.channel).trim().slice(0, 120);
   const description = str(b.description).trim().slice(0, 1500);
   const rawLang = (str(b.sourceLang).trim() || "auto").toLowerCase().slice(0, 16);
 
+  let prewarmed = false;
+  const triggerPrewarm = (cues: LiveDubCue[]) => {
+    if (prewarmed || !reqVoice || !cues.length) return;
+    prewarmed = true;
+    prewarmDubAudio(cues, reqVoice, reqSpeed, reqStartMs);
+  };
+
   // Nếu là video YouTube đã có sẵn trong kho cache chung → trả về ngay tức thì (0ms, không trừ hạn mức)
   if (ytVideoId) {
     const ytHit = getCachedLiveDub(ytVideoId);
     if (ytHit) {
+      triggerPrewarm(ytHit.cues);
       if (wantStream) {
         return streamPrepareResponse(async (emit) => {
           emit({ pct: 100, stage: "Sẵn sàng" });
@@ -125,12 +140,22 @@ export async function POST(req: Request) {
     // Nếu video YouTube này đang được luồng chính prepareLiveDub xử lý → nghe chung luôn để tránh dịch trùng 2 lần
     if (isLiveDubInflight(ytVideoId)) {
       if (wantStream) {
-        return streamPrepareResponse((emit, emitEvent) =>
-          prepareLiveDub(ytVideoId, { onProgress: emit, onEvent: emitEvent }),
-        );
+        return streamPrepareResponse(async (emit, emitEvent) => {
+          const res = await prepareLiveDub(ytVideoId, {
+            onProgress: emit,
+            onEvent: (ev) => {
+              if (ev.type === "ready" && ev.data?.cues) triggerPrewarm(ev.data.cues);
+              emitEvent(ev);
+            },
+          });
+          triggerPrewarm(res.cues);
+          return res;
+        });
       }
       try {
-        return Response.json(await prepareLiveDub(ytVideoId));
+        const res = await prepareLiveDub(ytVideoId);
+        triggerPrewarm(res.cues);
+        return Response.json(res);
       } catch (e) {
         return fail((e as Error).message, 502);
       }
@@ -153,6 +178,7 @@ export async function POST(req: Request) {
   const cached = sanitizeCachedLiveDub(getCached<LiveDubResult>(cacheKey));
   const staleForRepair = cached && needsLiveDubRepair(cached) ? cached : null;
   if (cached && !staleForRepair) {
+    triggerPrewarm(cached.cues);
     if (wantStream) {
       return streamPrepareResponse(async (emit) => {
         emit({ pct: 100, stage: "Sẵn sàng" });
@@ -181,6 +207,7 @@ export async function POST(req: Request) {
     emitEvent?: (ev: PrepareStreamEvent) => void,
   ): Promise<LiveDubResult & { cached: boolean }> => {
     const forward = (ev: PrepareStreamEvent) => {
+      if (ev.type === "ready" && ev.data?.cues) triggerPrewarm(ev.data.cues);
       if (ev.type === "progress") emit?.({ pct: ev.pct, stage: ev.stage, done: ev.done, total: ev.total });
       emitEvent?.(ev);
     };
@@ -307,6 +334,7 @@ export async function POST(req: Request) {
                 cues: workingCues.map((c) => ({ ...c })),
               };
               entry.partial = { data: snapshot, pct, done, total };
+              triggerPrewarm(snapshot.cues);
               broadcast({ type: "ready", data: snapshot, pct, done, total });
             } else if (sentReady) {
               if (entry.partial) {
@@ -356,6 +384,7 @@ export async function POST(req: Request) {
         cues,
       });
       setCached(cacheKey, result, null);
+      triggerPrewarm(result.cues);
       // Nếu là video YouTube → lưu luôn vào kho cache chung của /thuyet-minh để mở lại tức thì (kể cả video ARD/WDR/ZDF!)
       if (ytVideoId) saveCachedLiveDub(ytVideoId, result);
       emitProgress({ pct: 100, stage: "Hoàn tất!" });

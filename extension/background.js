@@ -11,16 +11,38 @@ const DEFAULT_SETTINGS = {
   autoNextYouTube: false,
 };
 
+let cachedConfig = null;
+
+chrome.storage.onChanged.addListener(() => {
+  cachedConfig = null;
+});
+
 async function getConfig() {
+  if (cachedConfig) return cachedConfig;
   const [syncData, localData] = await Promise.all([
     chrome.storage.sync.get(DEFAULT_SETTINGS),
     chrome.storage.local.get({ authToken: "", authUser: null }),
   ]);
-  return {
+  cachedConfig = {
     settings: { ...DEFAULT_SETTINGS, ...syncData, apiBase: DEFAULT_API_BASE },
     authToken: typeof localData.authToken === "string" ? localData.authToken : "",
     authUser: localData.authUser || null,
   };
+  return cachedConfig;
+}
+
+const MAX_BG_TTS_CACHE = 48;
+const bgTtsCache = new Map();
+const bgTtsInflight = new Map();
+
+function putBgTtsCache(key, base64) {
+  if (bgTtsCache.has(key)) bgTtsCache.delete(key);
+  bgTtsCache.set(key, base64);
+  while (bgTtsCache.size > MAX_BG_TTS_CACHE) {
+    const oldest = bgTtsCache.keys().next().value;
+    if (oldest !== undefined) bgTtsCache.delete(oldest);
+    else break;
+  }
 }
 
 function authHeaders(token, extra = {}) {
@@ -151,37 +173,65 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     (async () => {
       try {
         const { settings, authToken } = await getConfig();
+        const voice = String(msg.voiceId || settings.voiceId);
+        const spdStr = Number(msg.speed || settings.speed).toFixed(2);
+        const text = String(msg.text || "").slice(0, 600);
+        const cacheKey = `${voice}|${spdStr}|${text}`;
+
+        const memHit = bgTtsCache.get(cacheKey);
+        if (memHit) {
+          putBgTtsCache(cacheKey, memHit);
+          sendResponse({ ok: true, base64: memHit });
+          return;
+        }
+
         const qs = new URLSearchParams({
-          v: String(msg.voiceId || settings.voiceId),
-          s: Number(msg.speed || settings.speed).toFixed(2),
-          t: String(msg.text || "").slice(0, 600),
+          v: voice,
+          s: spdStr,
+          t: text,
         });
         if (msg.urgent) qs.set("p", "1");
         const url = `${settings.apiBase}/api/v1/dub/tts?${qs.toString()}`;
-        const opts = { headers: authHeaders(authToken) };
 
-        let res = null;
-        let lastErr = null;
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            res = await fetch(url, opts);
-            if (res.ok || (res.status !== 502 && res.status !== 503 && res.status !== 504)) break;
-          } catch (e) {
-            lastErr = e;
+        // Nếu chưa có task inflight hoặc là urgent Piper (để thúc ưu tiên hàng đợi trên server)
+        let job = bgTtsInflight.get(cacheKey);
+        if (!job || (msg.urgent && voice.startsWith("piper:"))) {
+          const runFetch = async () => {
+            const opts = { headers: authHeaders(authToken) };
+            let res = null;
+            let lastErr = null;
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                res = await fetch(url, opts);
+                if (res.ok || (res.status !== 502 && res.status !== 503 && res.status !== 504)) break;
+              } catch (e) {
+                lastErr = e;
+              }
+              if (attempt === 0) await new Promise((r) => setTimeout(r, 150));
+            }
+            if (!res) {
+              throw lastErr || new Error("Không tải được âm thanh thuyết minh.");
+            }
+            if (!res.ok) {
+              const errJson = await res.json().catch(() => ({}));
+              throw new Error(errJson.error || `TTS HTTP ${res.status}`);
+            }
+            const ab = await res.arrayBuffer();
+            const b64 = arrayBufferToBase64(ab);
+            putBgTtsCache(cacheKey, b64);
+            return b64;
+          };
+          if (!job) {
+            job = runFetch().finally(() => bgTtsInflight.delete(cacheKey));
+            bgTtsInflight.set(cacheKey, job);
+          } else {
+            // Chạy song song request urgent để server promote job trong queue nhưng vẫn dùng chung kết quả đầu về
+            void runFetch().catch(() => {});
           }
-          if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
         }
 
-        if (!res) {
-          throw lastErr || new Error("Không tải được âm thanh thuyết minh.");
-        }
-        if (!res.ok) {
-          const errJson = await res.json().catch(() => ({}));
-          sendResponse({ ok: false, error: errJson.error || `TTS HTTP ${res.status}` });
-          return;
-        }
-        const ab = await res.arrayBuffer();
-        sendResponse({ ok: true, base64: arrayBufferToBase64(ab) });
+        const base64 = await job;
+        sendResponse({ ok: true, base64 });
       } catch (e) {
         sendResponse({ ok: false, error: e?.message || "Không tải được âm thanh thuyết minh." });
       }

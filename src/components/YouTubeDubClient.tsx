@@ -486,6 +486,7 @@ export default function YouTubeDubClient({
               {
                 videoId,
                 voiceId: voice,
+                speed: 1.15,
                 ...(opts?.force && bgAttempt === 0 ? { force: true } : {}),
                 ...(opts?.repair && bgAttempt === 0 ? { repair: true } : {}),
               },

@@ -82,10 +82,13 @@ type ServerPiperState = {
   sessions: Map<ServerPiperVoiceId, OrtSessionLike>;
   loading: Map<ServerPiperVoiceId, Promise<OrtSessionLike>>;
   pending: Map<string, Promise<Buffer>>;
+  memCache: Map<string, Buffer>;
   urgentQueue: QueuedPiperJob[];
   normalQueue: QueuedPiperJob[];
   activeCount: number;
 };
+
+const MAX_MEM_PIPER = 48;
 
 const gd = globalThis as unknown as {
   __serverPiper?: ServerPiperState;
@@ -98,6 +101,7 @@ const state: ServerPiperState = (gd.__serverPiper ??= {
   sessions: new Map(),
   loading: new Map(),
   pending: new Map(),
+  memCache: new Map(),
   urgentQueue: [],
   normalQueue: [],
   activeCount: 0,
@@ -105,14 +109,25 @@ const state: ServerPiperState = (gd.__serverPiper ??= {
 // Bảo đảm giữ tương thích nếu singleton đã khởi tạo trước hot-reload
 if (!Array.isArray(state.urgentQueue)) state.urgentQueue = [];
 if (!Array.isArray(state.normalQueue)) state.normalQueue = [];
+if (!(state.memCache instanceof Map)) state.memCache = new Map();
 if (typeof state.activeCount !== "number") state.activeCount = 0;
+
+function putPiperMemCache(key: string, buf: Buffer) {
+  if (state.memCache.has(key)) state.memCache.delete(key);
+  state.memCache.set(key, buf);
+  while (state.memCache.size > MAX_MEM_PIPER) {
+    const oldest = state.memCache.keys().next().value;
+    if (oldest !== undefined) state.memCache.delete(oldest);
+    else break;
+  }
+}
 
 function getPiperConcurrency(): number {
   if (state.backend !== "node") return 1;
   const envVal = Number(process.env.PIPER_CONCURRENCY);
   if (Number.isFinite(envVal) && envVal >= 1) return Math.min(4, Math.floor(envVal));
   const cpus = os.cpus().length;
-  return cpus >= 4 ? 2 : 1;
+  return cpus >= 6 ? 3 : cpus >= 4 ? 2 : 1;
 }
 
 function getIntraOpThreads(concurrency: number): number {
@@ -127,7 +142,8 @@ function cacheFileFor(voiceId: ServerPiperVoiceId, speed: number, text: string):
 }
 
 export function hasPiperDubSpeech(voiceId: ServerPiperVoiceId, speed: number, text: string): boolean {
-  return fs.existsSync(cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim()));
+  const file = cacheFileFor(voiceId, normalizeEdgeSpeed(speed), text.trim());
+  return state.memCache.has(file) || fs.existsSync(file);
 }
 
 async function ensureAssetOnDisk(localPath: string, remoteUrl: string): Promise<string> {
@@ -389,7 +405,21 @@ function promoteQueuedPiperJob(key: string, signal?: AbortSignal) {
   state.urgentQueue.push(job);
 }
 
-/** Tạo (hoặc lấy từ cache đĩa) WAV tiếng Việt bằng model Piper ONNX (Adam bựa / Lạc Phi) ngay trên server. */
+async function writePiperDiskCacheAsync(file: string, wav: Buffer): Promise<void> {
+  try {
+    await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
+    const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+    try {
+      await fs.promises.writeFile(tmp, wav);
+      await fs.promises.rename(tmp, file);
+      noteDubTtsCacheWrite(wav.byteLength);
+    } catch {
+      await fs.promises.rm(tmp, { force: true }).catch(() => {});
+    }
+  } catch {}
+}
+
+/** Tạo (hoặc lấy từ cache RAM / đĩa) WAV tiếng Việt bằng model Piper ONNX (Adam bựa / Lạc Phi) ngay trên server. */
 export async function synthesizePiperDub(
   text: string,
   voiceId: ServerPiperVoiceId,
@@ -401,8 +431,15 @@ export async function synthesizePiperDub(
   const file = cacheFileFor(voiceId, spd, clean);
   const priority: PiperPriority = opts?.priority ?? "normal";
 
+  const memHit = state.memCache.get(file);
+  if (memHit) {
+    putPiperMemCache(file, memHit);
+    return memHit;
+  }
+
   try {
     const data = await fs.promises.readFile(file);
+    putPiperMemCache(file, data);
     touchDubTtsFile(file);
     return data;
   } catch {}
@@ -415,16 +452,8 @@ export async function synthesizePiperDub(
 
   job = (async () => {
     const wav = await enqueueInference(file, priority, opts?.signal, () => runInferenceOnce(voiceId, clean, spd));
-    await fs.promises.mkdir(DUB_TTS_DIR, { recursive: true });
-    const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
-    try {
-      await fs.promises.writeFile(tmp, wav);
-      await fs.promises.rename(tmp, file);
-    } catch (e) {
-      await fs.promises.rm(tmp, { force: true }).catch(() => {});
-      throw e;
-    }
-    noteDubTtsCacheWrite(wav.byteLength);
+    putPiperMemCache(file, wav);
+    void writePiperDiskCacheAsync(file, wav);
     return wav;
   })().finally(() => state.pending.delete(file));
   state.pending.set(file, job);
